@@ -1,0 +1,107 @@
+{
+  "version": "eosio::abi/1.0",
+  "types": [{
+    "new_type_name": "account_name",
+    "type": "name"
+  }],
+  "structs": [{
+    "name": "token_vesting",
+    "base": "",
+    "fields": [
+      {"name": "vesting_in_system", "type": "asset"},
+      {"name": "tokens_in_vesting", "type": "asset"}
+    ]
+  },{
+    "name": "user_balance",
+    "base": "",
+    "fields": [
+      {"name": "vesting", "type": "asset"},
+      {"name": "delegate_vesting", "type": "asset"},
+      {"name": "received_vesting", "type": "asset"}
+    ]
+  },{
+    "name": "delegate",
+    "base": "",
+    "fields": [
+      {"name": "id", "type": "uint64"},
+      {"name": "sender", "type": "account_name"},
+      {"name": "recipient", "type": "account_name"},
+      {"name": "quantity_vesting", "type": "asset"},
+      {"name": "percentage_deductions", "type": "float32"},
+      {"name": "return_date", "type": "time_point_sec"}
+    ]
+  },{
+    "name": "return_delegate",
+    "base": "",
+    "fields": [
+      {"name": "recipient", "type": "account_name"},
+      {"name": "amount", "type": "asset"},
+      {"name": "date", "type": "time_point_sec"}
+    ]
+  },{
+    "name": "transfer_vesting",
+    "base": "",
+    "fields": [
+      {"name": "sender", "type": "account_name"},
+      {"name": "recipient", "type": "account_name"},
+      {"name": "quantity", "type": "asset"}
+    ]
+  },{
+    "name": "accrue_vesting",
+    "base": "",
+    "fields": [
+      {"name": "user", "type": "account_name"},
+      {"name": "quantity", "type": "asset"}
+    ]
+  },{
+    "name": "delegate_vesting",
+    "base": "transfer_vesting",
+    "fields": [
+      {"name": "percentage_deductions", "type": "float32"}
+    ]
+  }],
+  "actions": [{
+    "name": "buyvg",
+    "type": "transfer_vesting"
+  },{
+    "name": "accruevg",
+    "type": "accrue_vesting"
+  },{
+    "name": "convertvg",
+    "type": "transfer_vesting"
+  },{
+    "name": "delegatevg",
+    "type": "delegate_vesting"
+  },{
+    "name": "undelegatevg",
+    "type": "transfer_vesting"
+  }],
+  "tables": [{
+    "name": "vesting",
+    "type": "token_vesting",
+    "index_type": "i64",
+    "key_names" : ["currency"],
+    "key_types" : ["uint64"]
+  },{
+    "name": "balances",
+    "type": "user_balance",
+    "index_type": "i64",
+    "key_names" : ["currency"],
+    "key_types" : ["uint64"]
+  },{
+    "name": "delegate",
+    "type": "delegate",
+    "index_type": "i64",
+    "key_names" : ["id"],
+    "key_types" : ["uint64"]
+  },{
+    "name": "rdelegate",
+    "type": "return_delegate",
+    "index_type": "i64",
+    "key_names" : ["recipient"],
+    "key_types" : ["account_name"]
+  }],
+  "ricardian_clauses": [],
+  "error_messages": [],
+  "abi_extensions": []
+}
