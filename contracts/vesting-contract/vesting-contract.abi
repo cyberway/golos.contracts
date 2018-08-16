@@ -20,20 +20,31 @@
       {"name": "received_vesting", "type": "asset"}
     ]
   },{
-    "name": "delegate",
+    "name": "delegate_record",
     "base": "",
     "fields": [
       {"name": "id", "type": "uint64"},
-      {"name": "sender", "type": "account_name"},
       {"name": "recipient", "type": "account_name"},
-      {"name": "quantity_vesting", "type": "asset"},
+      {"name": "amount", "type": "asset"},
       {"name": "percentage_deductions", "type": "float32"},
       {"name": "return_date", "type": "time_point_sec"}
+    ]
+  },{
+    "name": "convert_of_tokens",
+    "base": "",
+    "fields": [
+      {"name": "sender", "type": "account_name"},
+      {"name": "recipient", "type": "account_name"},
+      {"name": "number_of_payments", "type": "uint8"},
+      {"name": "payout_period", "type": "uint64"},
+      {"name": "payout_part", "type": "asset"},
+      {"name": "balance_amount", "type": "asset"}
     ]
   },{
     "name": "return_delegate",
     "base": "",
     "fields": [
+      {"name": "id", "type": "uint64"},
       {"name": "recipient", "type": "account_name"},
       {"name": "amount", "type": "asset"},
       {"name": "date", "type": "time_point_sec"}
@@ -50,6 +61,7 @@
     "name": "accrue_vesting",
     "base": "",
     "fields": [
+      {"name": "sender", "type": "account_name"},
       {"name": "user", "type": "account_name"},
       {"name": "quantity", "type": "asset"}
     ]
@@ -58,6 +70,12 @@
     "base": "transfer_vesting",
     "fields": [
       {"name": "percentage_deductions", "type": "float32"}
+    ]
+  },{
+    "name": "hash",
+    "base": "",
+    "fields": [
+      {"name": "hash", "type": "uint64"}
     ]
   }],
   "actions": [{
@@ -75,6 +93,12 @@
   },{
     "name": "undelegatevg",
     "type": "transfer_vesting"
+  },{
+    "name": "timeoutrdel",
+    "type": "hash"
+  },{
+    "name": "timeoutconv",
+    "type": "hash"
   }],
   "tables": [{
     "name": "vesting",
@@ -90,7 +114,7 @@
     "key_types" : ["uint64"]
   },{
     "name": "delegate",
-    "type": "delegate",
+    "type": "delegate_record",
     "index_type": "i64",
     "key_names" : ["id"],
     "key_types" : ["uint64"]
@@ -98,8 +122,14 @@
     "name": "rdelegate",
     "type": "return_delegate",
     "index_type": "i64",
-    "key_names" : ["recipient"],
-    "key_types" : ["account_name"]
+    "key_names" : ["id"],
+    "key_types" : ["uint64"]
+  },{
+    "name": "converttable",
+    "type": "convert_of_tokens",
+    "index_type": "i64",
+    "key_names": ["account"],
+    "key_types": ["account_name"]
   }],
   "ricardian_clauses": [],
   "error_messages": [],
