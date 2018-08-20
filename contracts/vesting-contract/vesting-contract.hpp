@@ -20,9 +20,11 @@ class vesting : public eosio::contract {
 
   private:
     void add_balance(account_name owner, asset value, account_name ram_payer);
-    void sub_balance(account_name owner, asset value);
 
     asset convert_token_to_vesting(const asset &m_token);
+    asset convert_vesting_to_token(const asset &m_token);
+
+    void timeout_delay_trx();
 
   private:
     tables::convert_table _table_convert;

@@ -32,23 +32,26 @@ void vesting::apply(uint64_t /*code*/, uint64_t action) {
     if (N(init) == action)
         init_contract();
     else if (N(timeoutrdel) == action)
-        calculate_convert_vesting();
-    else if (N(timeoutconv) == action)
         calculate_delegate_vesting();
+    else if (N(timeoutconv) == action)
+        calculate_convert_vesting();
+    else if (N(timeout) == action)
+        timeout_delay_trx();
 }
 
+// need active permission users / Exemple: cleos set account permission golos active '{"threshold":1, "accounts":[{"permission":{"actor":"golos","permission":"eosio.code"}, "weight":1}]}' owner -p golos
 void vesting::buy_vesting(const structures::transfer_vesting &m_transfer_vesting) {
     require_auth(m_transfer_vesting.sender);
 
     INLINE_ACTION_SENDER(eosio::token, transfer)( N(eosio.token), {m_transfer_vesting.sender, N(active)},
-       { m_transfer_vesting.sender, N(eosio.null), m_transfer_vesting.quantity, std::string("buy vesting") } );
+       { m_transfer_vesting.sender, N(pool), m_transfer_vesting.quantity, std::string("buy vesting") } );
 
     // TODO расчёт вестинга по коэффициенту
     add_balance(m_transfer_vesting.recipient, convert_token_to_vesting(m_transfer_vesting.quantity), m_transfer_vesting.sender);
-    // TODO изменить таблицу статистики
 
-    tables::vesting_table vest(_self, TOKEN_VESTING.name());
-    auto existing = vest.find(TOKEN_VESTING.name());
+    return;
+    tables::vesting_table vest(_self, TOKEN_VESTING);
+    auto existing = vest.find(TOKEN_VESTING);
     if (existing != vest.end()) {
         vest.modify(existing, m_transfer_vesting.sender, [&](auto &item){
             item.vesting_in_system += convert_token_to_vesting(m_transfer_vesting.quantity);
@@ -109,10 +112,15 @@ void vesting::convert_vesting(const structures::transfer_vesting &m_transfer_ves
 }
 
 void vesting::delegate_vesting(const structures::delegate_vesting &m_delegate_vesting) {
-    tables::account_table account(_self, m_delegate_vesting.sender);
-    auto vest = account.find(m_delegate_vesting.quantity.symbol.name());
-    eosio_assert(vest != account.end(), "Not a token");
-    eosio_assert(vest->vesting >= m_delegate_vesting.quantity, "Not enough vesting");
+    tables::account_table account_sender(_self, m_delegate_vesting.sender);
+    eosio_assert(m_delegate_vesting.sender != m_delegate_vesting.recipient, "You can not delegate to yourself");
+
+    auto balance_sender = account_sender.find(m_delegate_vesting.quantity.symbol.name());
+    eosio_assert(balance_sender != account_sender.end(), "Not a token");
+    eosio_assert(balance_sender->vesting >= m_delegate_vesting.quantity, "Not enough vesting");
+    account_sender.modify(balance_sender, m_delegate_vesting.sender, [&](auto &item){
+        item.vesting -= m_delegate_vesting.quantity;
+    });
 
     tables::delegate_table table(_self, m_delegate_vesting.sender);
     auto it_recipient = table.find(m_delegate_vesting.recipient);
@@ -120,50 +128,60 @@ void vesting::delegate_vesting(const structures::delegate_vesting &m_delegate_ve
         table.modify(it_recipient, m_delegate_vesting.sender, [&](structures::delegate_record &item){
             item.quantity += m_delegate_vesting.quantity;
             item.percentage_deductions = m_delegate_vesting.percentage_deductions;
-            item.return_date = time_point_sec(OUTPUT_PAYOUT_PERIOD);
+            item.return_date = time_point_sec(now() + OUTPUT_PAYOUT_PERIOD);
         });
     } else {
         table.emplace(m_delegate_vesting.sender, [&](structures::delegate_record &item){
             item.recipient = m_delegate_vesting.recipient;
             item.quantity = m_delegate_vesting.quantity;
             item.percentage_deductions = m_delegate_vesting.percentage_deductions;
-            item.return_date = time_point_sec(OUTPUT_PAYOUT_PERIOD);
+//            item.return_date = time_point_sec(now() + OUTPUT_PAYOUT_PERIOD);
+            item.return_date = time_point_sec(now());
+        });
+    }
+
+    tables::account_table account_recipient(_self, m_delegate_vesting.recipient);
+    auto balance_recipient = account_recipient.find(m_delegate_vesting.quantity.symbol.name());
+    if (balance_recipient != account_recipient.end()) {
+        account_recipient.modify(balance_recipient, m_delegate_vesting.sender, [&](auto &item){
+            item.delegate_vesting += m_delegate_vesting.quantity;
+        });
+    } else {
+        account_recipient.emplace(m_delegate_vesting.sender, [&](auto &item){
+            item.delegate_vesting = m_delegate_vesting.quantity;
+            item.vesting = NULL_TOKEN_VESTING;
+            item.received_vesting = NULL_TOKEN_VESTING;
         });
     }
 }
 
 void vesting::undelegate_vesting(const structures::transfer_vesting &m_transfer_vesting) {
-    bool flag_valid_vesting_token = false;
     tables::delegate_table table(_self, m_transfer_vesting.sender);
-    auto index_recipient = table.template get_index<N(recipient)>();
-    auto it_recipient = index_recipient.find(m_transfer_vesting.recipient);
-    while (it_recipient != index_recipient.end() && it_recipient->recipient == m_transfer_vesting.recipient) {
-        if (it_recipient->quantity.symbol.name() != m_transfer_vesting.quantity.symbol.name()) {
-            ++it_recipient;
-            continue;
-        }
+    auto it_recipient = table.find(m_transfer_vesting.recipient);
+    eosio_assert(it_recipient != table.end(), "Not enough delegated vesting");
 
-        eosio_assert(it_recipient->quantity >= m_transfer_vesting.quantity, "Not enough delegated vesting");
-        flag_valid_vesting_token = true;
+    eosio_assert(it_recipient->return_date <= time_point_sec(now()), "Tokens are frozen until the end of the period");
 
-        if (it_recipient->quantity == m_transfer_vesting.quantity) {
-            index_recipient.erase(it_recipient);
-        } else {
-            index_recipient.modify(it_recipient, m_transfer_vesting.sender, [&](auto &item){
-                item.quantity -= m_transfer_vesting.quantity;
-            });
-        }
-
-        break;
+    if (it_recipient->quantity == m_transfer_vesting.quantity) {
+        table.erase(it_recipient);
+    } else {
+        table.modify(it_recipient, m_transfer_vesting.sender, [&](auto &item){
+            item.quantity -= m_transfer_vesting.quantity;
+        });
     }
-
-    eosio_assert(!flag_valid_vesting_token, "Not valid vesting token");
 
     _table_delegate_vesting.emplace(m_transfer_vesting.sender, [&](structures::return_delegate &item){
         item.id = _table_delegate_vesting.available_primary_key();
-        item.recipient = m_transfer_vesting.recipient;
+        item.recipient = m_transfer_vesting.sender;
         item.amount = m_transfer_vesting.quantity;
-        item.date = time_point_sec(OUTPUT_PAYOUT_PERIOD);
+        item.date = time_point_sec(now() + OUTPUT_PAYOUT_PERIOD);
+    });
+
+    tables::account_table account_recipient(_self, m_transfer_vesting.recipient);
+    auto balance = account_recipient.find(m_transfer_vesting.quantity.symbol.name());
+    eosio_assert(balance != account_recipient.end(), "This token is not on the balance sheet");
+    account_recipient.modify(balance, m_transfer_vesting.sender, [&](auto &item){
+        item.delegate_vesting -= m_transfer_vesting.quantity;
     });
 }
 
@@ -174,10 +192,73 @@ void vesting::init_contract() {
 
 void vesting::calculate_convert_vesting() {
     require_auth(_self);
+
+    for (auto obj = _table_convert.begin(); obj != _table_convert.end(); ) {
+        if (obj->number_of_payments > 0 && (obj->payout_period > 0 && obj->payout_period <= OUTPUT_PAYOUT_PERIOD)) {
+            _table_convert.modify(obj, _self, [&](auto &item){
+                item.payout_period -= TIMEOUT;
+                print(item.payout_period, "\n");
+            });
+        }
+
+        if (obj->number_of_payments > 0 && (obj->payout_period <= 0 || obj->payout_period > OUTPUT_PAYOUT_PERIOD)) {
+
+            _table_convert.modify(obj, _self, [&](auto &item) {
+                item.payout_period = OUTPUT_PAYOUT_PERIOD;
+                item.number_of_payments -= WEEK_PERIOD;
+
+                tables::account_table account(_self, obj->sender);
+                auto balance = account.find(obj->payout_part.symbol.name());
+                if (balance->vesting < obj->payout_part) {
+                    item.number_of_payments = NOT_TOKENS_WEEK_PERIOD;
+                } else if (obj->number_of_payments == WEEK_PERIOD) {
+                    account.modify(balance, _self, [&](auto &item){
+                        item.vesting -= obj->balance_amount - (obj->payout_part * (OUTPUT_WEEK_COUNT - WEEK_PERIOD));
+                    });
+
+                    INLINE_ACTION_SENDER(eosio::token, transfer)( N(eosio.token), {N(pool), N(active)},
+                       { N(pool), obj->recipient, convert_vesting_to_token(obj->balance_amount - (obj->payout_part * (OUTPUT_WEEK_COUNT - WEEK_PERIOD))), std::string("payment vesting") } );
+                } else {
+                    account.modify(balance, _self, [&](auto &item){
+                        item.vesting -= obj->payout_part;
+                    });
+
+                    INLINE_ACTION_SENDER(eosio::token, transfer)( N(eosio.token), {N(pool), N(active)},
+                       { N(pool), obj->recipient, convert_vesting_to_token(obj->payout_part), std::string("payment vesting") } );
+                }
+            });
+        }
+
+        if (obj->number_of_payments) {
+            ++obj;
+        } else {
+            obj = _table_convert.erase(obj);
+        }
+    }
 }
 
 void vesting::calculate_delegate_vesting() {
     require_auth(_self);
+
+    for (auto obj = _table_delegate_vesting.begin(); obj != _table_delegate_vesting.end(); ) {
+        if (obj->date <= time_point_sec(now())) {
+            tables::account_table account(_self, obj->recipient);
+            auto balance = account.find(obj->amount.symbol.name());
+            if (balance != account.end()) {
+                account.modify(balance, _self, [&](auto &item){
+                    item.vesting += obj->amount;
+                });
+            } else {
+                account.emplace(_self, [&](auto &item){
+                    item.vesting = obj->amount;
+                });
+            }
+
+            obj = _table_delegate_vesting.erase(obj);
+        } else {
+            ++obj;
+        }
+    }
 }
 
 void vesting::add_balance(account_name owner, asset value, account_name ram_payer) {
@@ -186,6 +267,8 @@ void vesting::add_balance(account_name owner, asset value, account_name ram_paye
     if( to == account.end() ) {
         account.emplace( ram_payer, [&]( auto& a ){
             a.vesting = value;
+            a.delegate_vesting.symbol = value.symbol;
+            a.received_vesting.symbol = value.symbol;
         });
     } else {
         account.modify( to, 0, [&]( auto& a ) {
@@ -194,32 +277,25 @@ void vesting::add_balance(account_name owner, asset value, account_name ram_paye
     }
 }
 
-void vesting::sub_balance(account_name owner, asset value) {
-    tables::account_table account(_self, owner);
-
-    const auto& from = account.get( value.symbol.name(), "no balance object found" );
-    eosio_assert( from.vesting.amount >= value.amount, "overdrawn balance" );
-
-    if( from.vesting.amount == value.amount ) {
-       account.erase( from );
-    } else {
-       account.modify( from, owner, [&]( auto& a ) {
-           a.vesting -= value;
-       });
-    }
-}
-
 asset vesting::convert_token_to_vesting(const asset &m_token) {
-    asset vest;
-    vest.symbol = TOKEN_VESTING;
+    asset vest = NULL_TOKEN_VESTING;
     vest.amount = m_token.amount;
     return vest;
 }
 
+asset vesting::convert_vesting_to_token(const asset &m_token) {
+    asset golos = NULL_TOKEN_GOLOS;
+    golos.amount = m_token.amount;
+    return golos;
+}
+
 void vesting::timeout_delay_trx() {
+    require_auth(_self);
+
     transaction trx;
-    trx.actions.emplace_back(action{permission_level(_self, N(active)), _self, N(timeoutrdel), {now()} });
-    trx.actions.emplace_back(action{permission_level(_self, N(active)), _self, N(timeoutconv), {now()} });
+    trx.actions.emplace_back(action{permission_level(_self, N(active)), _self, N(timeoutrdel), structures::shash{now()}});
+    trx.actions.emplace_back(action{permission_level(_self, N(active)), _self, N(timeoutconv), structures::shash{now()}});
+    trx.actions.emplace_back(action{permission_level(_self, N(active)), _self, N(timeout),     structures::shash{now()}});
     trx.delay_sec = TIMEOUT;
-    trx.send(now(), _self, true);
+    trx.send(_self, _self, true);
 }

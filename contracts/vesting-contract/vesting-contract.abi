@@ -23,9 +23,8 @@
     "name": "delegate_record",
     "base": "",
     "fields": [
-      {"name": "id", "type": "uint64"},
       {"name": "recipient", "type": "account_name"},
-      {"name": "amount", "type": "asset"},
+      {"name": "quantity", "type": "asset"},
       {"name": "percentage_deductions", "type": "float32"},
       {"name": "return_date", "type": "time_point_sec"}
     ]
@@ -98,6 +97,12 @@
     "type": "hash"
   },{
     "name": "timeoutconv",
+    "type": "hash"
+  },{
+    "name": "timeout",
+    "type": "hash"
+  },{
+    "name": "init",
     "type": "hash"
   }],
   "tables": [{

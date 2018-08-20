@@ -42,17 +42,12 @@ struct delegate_record
 {
     delegate_record() = default;
 
-    uint64_t id;
     account_name recipient;
     asset quantity;
     float percentage_deductions;
     time_point_sec return_date;
 
     auto primary_key() const {
-        return id;
-    }
-
-    auto secondary_key() const {
         return recipient;
     }
 
@@ -122,13 +117,19 @@ struct convert_of_tokens {
     EOSLIB_SERIALIZE( convert_of_tokens, (sender)(recipient)(number_of_payments)(payout_period)
                       (payout_part)(balance_amount) )
 };
+
+struct shash {
+
+    uint64_t hash;
+
+    EOSLIB_SERIALIZE( shash, (hash) )
+};
 }
 
 namespace tables {
     using vesting_table = eosio::multi_index<N(vesting), structures::token_vesting>;
     using account_table = eosio::multi_index<N(balances), structures::user_balance>;
-    using index_recipient = eosio::indexed_by<N(recipient), eosio::const_mem_fun<structures::delegate_record, account_name, &structures::delegate_record::secondary_key>>;
-    using delegate_table = eosio::multi_index<N(delegate), structures::delegate_record, index_recipient>;
+    using delegate_table = eosio::multi_index<N(delegate), structures::delegate_record>;
     using return_delegate_table = eosio::multi_index<N(rdelegate), structures::return_delegate>;
     using convert_table = eosio::multi_index<N(converttable), structures::convert_of_tokens>;
 }
