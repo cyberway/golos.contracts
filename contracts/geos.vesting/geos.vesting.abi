@@ -76,6 +76,13 @@
     "fields": [
       {"name": "hash", "type": "uint64"}
     ]
+  },{
+     "name": "issue",
+     "base": "",
+     "fields": [
+       {"name": "to", "type": "account_name"},
+       {"name": "quantity", "type": "asset"}
+     ]
   }],
   "actions": [{
     "name": "buyvg",
@@ -104,6 +111,9 @@
   },{
     "name": "init",
     "type": "hash"
+  },{
+    "name": "issue",
+    "type": "issue"
   }],
   "tables": [{
     "name": "vesting",

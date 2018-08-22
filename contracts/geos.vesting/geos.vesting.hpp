@@ -18,7 +18,12 @@ class vesting : public eosio::contract {
     void calculate_convert_vesting();
     void calculate_delegate_vesting();
 
+    void issue(const structures::issue_vesting &m_issue, bool is_autorization = true, bool is_buy = false);
+
   private:
+    void transfer(account_name from, account_name to, asset quantity);
+
+    void sub_balance(account_name owner, asset value);
     void add_balance(account_name owner, asset value, account_name ram_payer);
 
     asset convert_token_to_vesting(const asset &m_token);

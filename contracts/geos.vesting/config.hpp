@@ -1,8 +1,8 @@
 #pragma once
 
-#define TOKEN_VESTING symbol_type(N(VEST)).name()
 #define NULL_TOKEN_VESTING asset(0, string_to_symbol(4, "VEST"))
 #define NULL_TOKEN_GOLOS asset(0, string_to_symbol(4, "GOLOS"))
+#define TOKEN_GOLOS(amount) asset(int64_t(amount), string_to_symbol(4, "GOLOS"))
 
 
 // TODO test params

@@ -124,6 +124,14 @@ struct shash {
 
     EOSLIB_SERIALIZE( shash, (hash) )
 };
+
+struct issue_vesting {
+    issue_vesting() = default;
+
+    account_name to;
+    asset quantity;
+    EOSLIB_SERIALIZE( issue_vesting, (to)(quantity) )
+};
 }
 
 namespace tables {
