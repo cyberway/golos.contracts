@@ -13,14 +13,30 @@ struct token_vesting
 {
     token_vesting() = default;
 
-    asset vesting_in_system;
-    asset tokens_in_vesting;
+    uint64_t id;
+    asset vesting;
+    asset token;
 
     uint64_t primary_key() const {
-        return vesting_in_system.symbol.name();
+        return id;
     }
 
-    EOSLIB_SERIALIZE(token_vesting, (vesting_in_system)(tokens_in_vesting))
+    uint64_t vesting_key() const {
+        return vesting.symbol.name();
+    }
+
+    uint64_t token_key() const {
+        return token.symbol.name();
+    }
+
+    EOSLIB_SERIALIZE(token_vesting, (id)(vesting)(token))
+};
+
+struct pair_token_vesting {
+    asset token;
+    asset vesting;
+
+    EOSLIB_SERIALIZE(pair_token_vesting, (token)(vesting))
 };
 
 struct user_balance
@@ -48,7 +64,7 @@ struct delegate_record
     time_point_sec return_date;
 
     auto primary_key() const {
-        return recipient;
+        return quantity.symbol.name();
     }
 
     EOSLIB_SERIALIZE(delegate_record, (recipient)(quantity)(percentage_deductions)(return_date))
@@ -119,7 +135,6 @@ struct convert_of_tokens {
 };
 
 struct shash {
-
     uint64_t hash;
 
     EOSLIB_SERIALIZE( shash, (hash) )
@@ -135,7 +150,11 @@ struct issue_vesting {
 }
 
 namespace tables {
-    using vesting_table = eosio::multi_index<N(vesting), structures::token_vesting>;
+
+    using index_tokens  = indexed_by<N(token),  const_mem_fun<structures::token_vesting, uint64_t, &structures::token_vesting::token_key>>;
+    using index_vesting = indexed_by<N(vesting), const_mem_fun<structures::token_vesting, uint64_t, &structures::token_vesting::vesting_key>>;
+    using vesting_table = eosio::multi_index<N(vesting), structures::token_vesting, index_vesting, index_tokens>;
+
     using account_table = eosio::multi_index<N(balances), structures::user_balance>;
     using delegate_table = eosio::multi_index<N(delegate), structures::delegate_record>;
     using return_delegate_table = eosio::multi_index<N(rdelegate), structures::return_delegate>;

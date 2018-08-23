@@ -8,8 +8,16 @@
     "name": "token_vesting",
     "base": "",
     "fields": [
-      {"name": "vesting_in_system", "type": "asset"},
-      {"name": "tokens_in_vesting", "type": "asset"}
+      {"name": "id", "type": "uint64"},
+      {"name": "vesting", "type": "asset"},
+      {"name": "tokens",  "type": "asset"}
+    ]
+  },{
+    "name": "pair_tokens",
+    "base": "",
+    "fields": [
+      {"name": "token", "type": "asset"},
+      {"name": "vesting", "type": "asset"}
     ]
   },{
     "name": "user_balance",
@@ -111,6 +119,9 @@
   },{
     "name": "issue",
     "type": "issue"
+  },{
+    "name": "createpair",
+    "type": "pair_tokens"
   }],
   "tables": [{
     "name": "vesting",
@@ -140,8 +151,8 @@
     "name": "converttable",
     "type": "convert_of_tokens",
     "index_type": "i64",
-    "key_names": ["account"],
-    "key_types": ["account_name"]
+    "key_names": ["currency"],
+    "key_types": ["uint64"]
   }],
   "ricardian_clauses": [],
   "error_messages": [],

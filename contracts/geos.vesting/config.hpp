@@ -1,8 +1,11 @@
 #pragma once
 
-#define NULL_TOKEN_VESTING asset(0, string_to_symbol(4, "VEST"))
-#define NULL_TOKEN_GOLOS asset(0, string_to_symbol(4, "GOLOS"))
-#define TOKEN_GOLOS(amount) asset(int64_t(amount), string_to_symbol(4, "GOLOS"))
+#define NULL_TOKEN_VESTING(type) asset(0, string_to_symbol(4, #type))
+#define NULL_TOKEN(type) asset(0, string_to_symbol(4, #type))
+
+#define TEST(type) #type;
+
+#define TOKEN(amount, type) asset(int64_t(amount), string_to_symbol(4, #type))
 
 
 // TODO test params
