@@ -109,9 +109,6 @@
     "name": "timeout",
     "type": "hash"
   },{
-    "name": "init",
-    "type": "hash"
-  },{
     "name": "issue",
     "type": "issue"
   }],

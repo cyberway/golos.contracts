@@ -1,6 +1,4 @@
 #include "geos.vesting.hpp"
-#include "geos.token/geos.token.hpp"
-
 #include <eosiolib/transaction.hpp>
 
 
@@ -18,9 +16,10 @@ vesting::vesting(account_name self)
     , _table_delegate_vesting(_self, _self)
 {}
 
-void vesting::apply(uint64_t /*code*/, uint64_t action) {
-    if (N(buyvg) == action)
-        buy_vesting(unpack_action_data<structures::transfer_vesting>());
+void vesting::apply(uint64_t code, uint64_t action) {
+    if (N(transfer) == action && N(golos.token) == code)
+        buy_vesting(unpack_action_data<token::transfer_args>());
+
     else if (N(accruevg) == action)
         accrue_vesting(unpack_action_data<structures::accrue_vesting>());
     else if (N(convertvg) == action)
@@ -30,8 +29,6 @@ void vesting::apply(uint64_t /*code*/, uint64_t action) {
     else if (N(undelegatevg) == action)
         undelegate_vesting(unpack_action_data<structures::transfer_vesting>());
 
-    if (N(init) == action)
-        init_contract();
     else if (N(issue) == action)
         issue(unpack_action_data<structures::issue_vesting>());
     else if (N(timeoutrdel) == action)
@@ -42,11 +39,13 @@ void vesting::apply(uint64_t /*code*/, uint64_t action) {
         timeout_delay_trx();
 }
 
-void vesting::buy_vesting(const structures::transfer_vesting &m_transfer_vesting) {
-    require_auth(m_transfer_vesting.sender);
+void vesting::buy_vesting(const token::transfer_args &m_transfer) {
+    if(_self != m_transfer.from) // TODO account golos.vesting can not buy vesting
+        require_auth(m_transfer.from);
+    else return;
 
-    issue({m_transfer_vesting.sender, convert_token_to_vesting(m_transfer_vesting.quantity)}, false, true);
-    transfer(m_transfer_vesting.sender, m_transfer_vesting.recipient, m_transfer_vesting.quantity);
+    issue({_self, convert_token_to_vesting(m_transfer.quantity)}, false, true);
+    transfer(m_transfer.to, m_transfer.from, m_transfer.quantity, false);
 }
 
 void vesting::accrue_vesting(const structures::accrue_vesting &m_accrue_vesting) {
@@ -171,11 +170,6 @@ void vesting::undelegate_vesting(const structures::transfer_vesting &m_transfer_
     });
 }
 
-void vesting::init_contract() {
-    require_auth(_self);
-    timeout_delay_trx();
-}
-
 void vesting::calculate_convert_vesting() {
     require_auth(_self);
 
@@ -183,7 +177,7 @@ void vesting::calculate_convert_vesting() {
         if (obj->number_of_payments > 0 && (obj->payout_period > 0 && obj->payout_period <= OUTPUT_PAYOUT_PERIOD)) {
             _table_convert.modify(obj, _self, [&](auto &item){
                 item.payout_period -= TIMEOUT;
-//                print(item.payout_period, "\n");
+                print(item.payout_period, "\n");
             });
         }
 
@@ -196,7 +190,7 @@ void vesting::calculate_convert_vesting() {
                 auto balance = account.find(obj->payout_part.symbol.name());
 
                 auto lambda_action_sender = [&](asset quantity){
-                    account.modify(balance, _self, [&](auto &item){
+                    account.modify(balance, 0, [&](auto &item){
                         item.vesting -= quantity;
                     });
 
@@ -209,8 +203,8 @@ void vesting::calculate_convert_vesting() {
                         });
                     }
 
-                    INLINE_ACTION_SENDER(eosio::token, payment)( N(golos.token), {_self, N(active)},
-                       { _self, obj->recipient, convert_vesting_to_token(quantity) } );
+                    INLINE_ACTION_SENDER(eosio::token, transfer)( N(golos.token), {_self, N(active)},
+                    { _self, obj->recipient, convert_vesting_to_token(quantity), "Translation into tokens" } );
                 };
 
                 if (balance->vesting < obj->payout_part) {
@@ -284,9 +278,10 @@ void vesting::issue(const structures::issue_vesting &m_issue, bool is_autorizati
     add_balance(m_issue.to, m_issue.quantity, _self);
 }
 
-void vesting::transfer(account_name from, account_name to, asset quantity) {
+void vesting::transfer(account_name from, account_name to, asset quantity, bool is_autorization) {
     eosio_assert(from != to, "cannot transfer to self");
-    require_auth(from);
+    if (is_autorization)
+        require_auth(from);
     eosio_assert(is_account(to), "to account does not exist");
 
     require_recipient(from);
@@ -350,5 +345,5 @@ void vesting::timeout_delay_trx() {
     trx.actions.emplace_back(action{permission_level(_self, N(active)), _self, N(timeoutconv), structures::shash{now()}});
     trx.actions.emplace_back(action{permission_level(_self, N(active)), _self, N(timeout),     structures::shash{now()}});
     trx.delay_sec = TIMEOUT;
-    trx.send(_self, _self, true);
+    trx.send(_self, _self);
 }
