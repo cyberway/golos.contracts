@@ -1,4 +1,4 @@
-#include "geos.vesting.hpp"
+#include "golos.vesting.hpp"
 #include <eosiolib/transaction.hpp>
 
 

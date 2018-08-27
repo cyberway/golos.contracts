@@ -1,6 +1,6 @@
 #pragma once
 #include "objects.hpp"
-#include "eosio.token/eosio.token.hpp"
+#include "geos.token/geos.token.hpp"
 
 namespace eosio {
 
