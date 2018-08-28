@@ -43,9 +43,16 @@
       {"name": "sender", "type": "account_name"},
       {"name": "recipient", "type": "account_name"},
       {"name": "number_of_payments", "type": "uint8"},
-      {"name": "payout_period", "type": "uint64"},
+      {"name": "payout_time", "type": "time_point_sec"},
       {"name": "payout_part", "type": "asset"},
       {"name": "balance_amount", "type": "asset"}
+    ]
+  },{
+    "name": "cancel_convert_of_tokens",
+    "base": "",
+    "fields": [
+      {"name": "sender", "type": "account_name"},
+      {"name": "type", "type": "asset"}
     ]
   },{
     "name": "return_delegate",
@@ -102,6 +109,9 @@
     "name": "convertvg",
     "type": "transfer_vesting"
   },{
+    "name": "cancelvg",
+    "type": "cancel_convert_of_tokens"
+  },{
     "name": "delegatevg",
     "type": "delegate_vesting"
   },{
@@ -151,8 +161,8 @@
     "name": "converttable",
     "type": "convert_of_tokens",
     "index_type": "i64",
-    "key_names": ["currency"],
-    "key_types": ["uint64"]
+    "key_names": ["sender"],
+    "key_types": ["account_name"]
   }],
   "ricardian_clauses": [],
   "error_messages": [],

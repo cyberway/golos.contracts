@@ -9,16 +9,17 @@ class vesting : public eosio::contract {
     vesting(account_name self);
     void apply(uint64_t code, uint64_t action);
 
-    void buy_vesting(const token::transfer_args &m_transfer_vesting);
-    void accrue_vesting(const structures::accrue_vesting &m_accrue_vesting);
-    void convert_vesting(const structures::transfer_vesting &m_transfer_vesting);
-    void delegate_vesting(const structures::delegate_vesting &m_delegate_vesting);
-    void undelegate_vesting(const structures::transfer_vesting &m_transfer_vesting);
+    void buy_vesting(account_name  from, account_name  to, asset quantity, string);
+    void accrue_vesting(account_name sender, account_name user, asset quantity);
+    void convert_vesting(account_name sender, account_name recipient, asset quantity);
+    void cancel_convert_vesting(account_name sender, asset type);
+    void delegate_vesting(account_name sender, account_name recipient, asset quantity, uint16_t percentage_deductions);
+    void undelegate_vesting(account_name sender, account_name recipient, asset quantity);
 
     void calculate_convert_vesting();
     void calculate_delegate_vesting();
 
-    void create_pair(const structures::pair_token_vesting &token_vesting);
+    void create_pair(asset token, asset vesting);
 
     inline asset get_account_vesting(account_name account, symbol_type sym )const;
 
@@ -34,7 +35,6 @@ class vesting : public eosio::contract {
 
   private:
     tables::vesting_table _table_pair;
-    tables::convert_table _table_convert;
     tables::return_delegate_table _table_delegate_vesting;
 };
 

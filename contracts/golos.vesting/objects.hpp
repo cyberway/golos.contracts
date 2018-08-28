@@ -32,13 +32,6 @@ struct token_vesting
     EOSLIB_SERIALIZE(token_vesting, (id)(vesting)(token))
 };
 
-struct pair_token_vesting {
-    asset token;
-    asset vesting;
-
-    EOSLIB_SERIALIZE(pair_token_vesting, (token)(vesting))
-};
-
 struct user_balance
 {
     user_balance() = default;
@@ -60,7 +53,7 @@ struct delegate_record
 
     account_name recipient;
     asset quantity;
-    float percentage_deductions;
+    uint16_t percentage_deductions;
     time_point_sec return_date;
 
     auto primary_key() const {
@@ -83,37 +76,11 @@ struct return_delegate
         return id;
     }
 
+    uint64_t date_key() const {
+        return uint64_t(date.utc_seconds);
+    }
+
     EOSLIB_SERIALIZE(return_delegate, (id)(recipient)(amount)(date))
-};
-
-struct transfer_vesting
-{
-    transfer_vesting() = default;
-
-    account_name sender;
-    account_name recipient;
-    asset quantity;
-
-    EOSLIB_SERIALIZE(transfer_vesting, (sender)(recipient)(quantity))
-};
-
-struct accrue_vesting
-{
-    accrue_vesting() = default;
-
-    account_name sender;
-    account_name user;
-    asset quantity;
-
-    EOSLIB_SERIALIZE(accrue_vesting, (sender)(user)(quantity))
-};
-
-struct delegate_vesting : transfer_vesting
-{
-    delegate_vesting() = default;
-    float percentage_deductions;
-
-    EOSLIB_SERIALIZE(delegate_vesting, (sender)(recipient)(quantity)(percentage_deductions))
 };
 
 struct convert_of_tokens {
@@ -122,7 +89,7 @@ struct convert_of_tokens {
     account_name sender;
     account_name recipient;
     uint8_t number_of_payments;
-    uint64_t payout_period;
+    time_point_sec payout_time;
     asset payout_part;
     asset balance_amount;
 
@@ -130,7 +97,11 @@ struct convert_of_tokens {
         return sender;
     }
 
-    EOSLIB_SERIALIZE( convert_of_tokens, (sender)(recipient)(number_of_payments)(payout_period)
+    uint64_t payout_time_key() const {
+        return uint64_t(payout_time.utc_seconds);
+    }
+
+    EOSLIB_SERIALIZE( convert_of_tokens, (sender)(recipient)(number_of_payments)(payout_time)
                       (payout_part)(balance_amount) )
 };
 
@@ -150,14 +121,17 @@ struct issue_vesting {
 }
 
 namespace tables {
-
     using index_tokens  = indexed_by<N(token),  const_mem_fun<structures::token_vesting, uint64_t, &structures::token_vesting::token_key>>;
     using index_vesting = indexed_by<N(vesting), const_mem_fun<structures::token_vesting, uint64_t, &structures::token_vesting::vesting_key>>;
     using vesting_table = eosio::multi_index<N(vesting), structures::token_vesting, index_vesting, index_tokens>;
 
     using account_table = eosio::multi_index<N(balances), structures::user_balance>;
     using delegate_table = eosio::multi_index<N(delegate), structures::delegate_record>;
-    using return_delegate_table = eosio::multi_index<N(rdelegate), structures::return_delegate>;
-    using convert_table = eosio::multi_index<N(converttable), structures::convert_of_tokens>;
+
+    using index_date = indexed_by<N(date), const_mem_fun<structures::return_delegate, uint64_t, &structures::return_delegate::date_key>>;
+    using return_delegate_table = eosio::multi_index<N(rdelegate), structures::return_delegate, index_date>;
+
+    using index_payout_time = indexed_by<N(payout_time), const_mem_fun<structures::convert_of_tokens, uint64_t, &structures::convert_of_tokens::payout_time_key>>;
+    using convert_table = eosio::multi_index<N(converttable), structures::convert_of_tokens, index_payout_time>;
 }
 

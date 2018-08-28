@@ -1,4 +1,5 @@
 #pragma once
+
 // TODO test params
 //#define OUTPUT_WEEK_COUNT 10
 //#define OUTPUT_PAYOUT_PERIOD 15
