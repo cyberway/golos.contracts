@@ -60,7 +60,8 @@ public:
       return base_tester::push_action( std::move(act), uint64_t(signer));
    }
 
-   action_result push_action_golos_vesting( const account_name& signer, const action_name &name, const variant_object &data ) {
+   action_result push_action_golos_vesting( const account_name& signer, const action_name &name,
+                                            const variant_object &data ) {
       string action_type_name = abi_ser_v.get_action_type(name);
 
       action act;
@@ -79,25 +80,21 @@ public:
       return data.empty() ? fc::variant() : abi_ser_t.binary_to_variant( "currency_stats", data, abi_serializer_max_time );
    }
 
-   fc::variant get_account( account_name acc, const string& symbolname)
-   {
+   fc::variant get_account( account_name acc, const string& symbolname) {
       auto symb = eosio::chain::symbol::from_string(symbolname);
       auto symbol_code = symb.to_symbol_code().value;
       vector<char> data = get_row_by_account( N(eosio.token), acc, N(accounts), symbol_code );
       return data.empty() ? fc::variant() : abi_ser_t.binary_to_variant( "account", data, abi_serializer_max_time );
    }
 
-
-   fc::variant get_account_vesting( account_name acc, const string& symbolname)
-   {
+   fc::variant get_account_vesting( account_name acc, const string& symbolname) {
       auto symb = eosio::chain::symbol::from_string(symbolname);
       auto symbol_code = symb.to_symbol_code().value;
       vector<char> data = get_row_by_account( N(golos.vest), acc, N(balances), symbol_code );
       return data.empty() ? fc::variant() : abi_ser_v.binary_to_variant( "user_balance", data, abi_serializer_max_time );
    }
 
-   action_result create( account_name issuer,
-                         asset maximum_supply ) {
+   action_result create( account_name issuer, asset maximum_supply ) {
 
       return push_action( N(eosio.token), N(create), mvo()
            ( "issuer", issuer)
@@ -113,10 +110,7 @@ public:
       );
    }
 
-   action_result transfer( account_name from,
-                  account_name to,
-                  asset        quantity,
-                  string       memo ) {
+   action_result transfer( account_name from, account_name to, asset quantity, string memo ) {
       return push_action( from, N(transfer), mvo()
            ( "from", from)
            ( "to", to)
@@ -141,14 +135,12 @@ public:
        );
    }
 
-
    action_result cancel_convert_vesting(account_name sender, asset type) {
        return push_action_golos_vesting( sender, N(cancelvg), mvo()
             ( "sender", sender)
             ( "type", type)
        );
    }
-
 
    action_result delegate_vesting(account_name sender, account_name recipient, asset quantity, uint16_t percentage_deductions) {
        return push_action_golos_vesting( sender, N(delegatevg), mvo()
@@ -158,7 +150,6 @@ public:
             ( "percentage_deductions", percentage_deductions)
        );
    }
-
 
    action_result undelegate_vesting(account_name sender, account_name recipient, asset quantity) {
        return push_action_golos_vesting( sender, N(undelegatevg), mvo()
@@ -175,13 +166,17 @@ public:
                            );
    }
 
+   action_result start_timer_trx() {
+       return push_action_golos_vesting( N(golos.vest), N(timeout), mvo()("hash", 1));
+   }
+
    abi_serializer abi_ser_v;
    abi_serializer abi_ser_t;
 };
 
-BOOST_AUTO_TEST_SUITE(eosio_token_tests)
+BOOST_AUTO_TEST_SUITE(golos_vesting_tests)
 
-BOOST_FIXTURE_TEST_CASE( create_tokens, golos_vesting_tester ) try {
+BOOST_FIXTURE_TEST_CASE( test_create_tokens, golos_vesting_tester ) try {
    auto token = create( N(eosio.token), asset::from_string("100000.0000 GOLOS"));
    auto stats = get_stats("4,GOLOS");
 
@@ -194,11 +189,11 @@ BOOST_FIXTURE_TEST_CASE( create_tokens, golos_vesting_tester ) try {
 
 } FC_LOG_AND_RETHROW()
 
-BOOST_FIXTURE_TEST_CASE( create_pair_token_and_vesting, golos_vesting_tester ) try {
+BOOST_FIXTURE_TEST_CASE( test_create_pair_token_and_vesting, golos_vesting_tester ) try {
     create_pair(asset::from_string("0.0000 GOLOS"), asset::from_string("0.0000 VEST"));
 } FC_LOG_AND_RETHROW()
 
-BOOST_FIXTURE_TEST_CASE( issue_tokens_accounts, golos_vesting_tester ) try {
+BOOST_FIXTURE_TEST_CASE( test_issue_tokens_accounts, golos_vesting_tester ) try {
     auto token = create( N(eosio.token), asset::from_string("100000.0000 GOLOS"));
 
     issue( N(eosio.token), N(sania), asset::from_string("500.0000 GOLOS"), "issue tokens sania" );
@@ -225,7 +220,7 @@ BOOST_FIXTURE_TEST_CASE( issue_tokens_accounts, golos_vesting_tester ) try {
 
 } FC_LOG_AND_RETHROW()
 
-BOOST_FIXTURE_TEST_CASE( convert_token_to_vesting, golos_vesting_tester ) try {
+BOOST_FIXTURE_TEST_CASE( test_convert_token_to_vesting, golos_vesting_tester ) try {
     auto token = create( N(eosio.token), asset::from_string("100000.0000 GOLOS"));
 
     issue( N(eosio.token), N(sania), asset::from_string("500.0000 GOLOS"), "issue tokens sania" );
@@ -259,6 +254,267 @@ BOOST_FIXTURE_TEST_CASE( convert_token_to_vesting, golos_vesting_tester ) try {
                              ("received_vesting", "0.0000 VEST") );
 } FC_LOG_AND_RETHROW()
 
+BOOST_FIXTURE_TEST_CASE( test_convert_vesting_to_token, golos_vesting_tester ) try {
+    auto token = create( N(eosio.token), asset::from_string("100000.0000 GOLOS"));
+
+    issue( N(eosio.token), N(sania), asset::from_string("500.0000 GOLOS"), "issue tokens sania" );
+    issue( N(eosio.token), N(pasha), asset::from_string("500.0000 GOLOS"), "issue tokens pasha" );
+    produce_blocks(1);
+
+    auto status_create_pair = create_pair(asset::from_string("0.0000 GOLOS"), asset::from_string("0.0000 VEST"));
+    auto status_transfer_1 = transfer( N(sania), N(golos.vest), asset::from_string("100.0000 GOLOS"), "convert token to vesting" );
+    auto status_transfer_2 = transfer( N(pasha), N(golos.vest), asset::from_string("100.0000 GOLOS"), "convert token to vesting" );
+
+    produce_blocks(1);
+
+    auto sania_token_balance = get_account(N(sania), "4,GOLOS");
+    REQUIRE_MATCHING_OBJECT( sania_token_balance, mvo()
+                             ("balance", "400.0000 GOLOS") );
+
+    auto pasha_token_balance = get_account(N(pasha), "4,GOLOS");
+    REQUIRE_MATCHING_OBJECT( pasha_token_balance, mvo()
+                             ("balance", "400.0000 GOLOS") );
+
+    auto sania_vesting_balance = get_account_vesting(N(sania), "4,VEST");
+    REQUIRE_MATCHING_OBJECT( sania_vesting_balance, mvo()
+                             ("vesting", "100.0000 VEST")
+                             ("delegate_vesting", "0.0000 VEST")
+                             ("received_vesting", "0.0000 VEST") );
+
+    auto pasha_vesting_balance = get_account_vesting(N(pasha), "4,VEST");
+    REQUIRE_MATCHING_OBJECT( pasha_vesting_balance, mvo()
+                             ("vesting", "100.0000 VEST")
+                             ("delegate_vesting", "0.0000 VEST")
+                             ("received_vesting", "0.0000 VEST") );
+
+
+    auto status_action = convert_vesting(N(sania), N(sania), asset::from_string("10.0000 VEST"));
+    start_timer_trx();
+    auto delegated_auth = authority( 1, {},
+                           {
+                             { .permission = {N(golos.vest), config::eosio_code_name}, .weight = 1}
+                           });
+    set_authority( N(golos.vest),  config::active_name,  delegated_auth );
+
+    produce_blocks(31);
+    sania_vesting_balance = get_account_vesting(N(sania), "4,VEST");
+    REQUIRE_MATCHING_OBJECT( sania_vesting_balance, mvo()
+                             ("vesting", "99.0000 VEST")
+                             ("delegate_vesting", "0.0000 VEST")
+                             ("received_vesting", "0.0000 VEST") );
+
+    sania_token_balance = get_account(N(sania), "4,GOLOS");
+    REQUIRE_MATCHING_OBJECT( sania_token_balance, mvo()
+                             ("balance", "401.0000 GOLOS") );
+
+    produce_blocks(270);
+    sania_vesting_balance = get_account_vesting(N(sania), "4,VEST");
+    REQUIRE_MATCHING_OBJECT( sania_vesting_balance, mvo()
+                             ("vesting", "90.0000 VEST")
+                             ("delegate_vesting", "0.0000 VEST")
+                             ("received_vesting", "0.0000 VEST") );
+
+    sania_token_balance = get_account(N(sania), "4,GOLOS");
+    REQUIRE_MATCHING_OBJECT( sania_token_balance, mvo()
+                             ("balance", "410.0000 GOLOS") );
+
+} FC_LOG_AND_RETHROW()
+
+BOOST_FIXTURE_TEST_CASE( test_cancel_convert_vesting_to_token, golos_vesting_tester ) try {
+    auto token = create( N(eosio.token), asset::from_string("100000.0000 GOLOS"));
+
+    issue( N(eosio.token), N(sania), asset::from_string("500.0000 GOLOS"), "issue tokens sania" );
+    issue( N(eosio.token), N(pasha), asset::from_string("500.0000 GOLOS"), "issue tokens pasha" );
+    produce_blocks(1);
+
+    auto status_create_pair = create_pair(asset::from_string("0.0000 GOLOS"), asset::from_string("0.0000 VEST"));
+    auto status_transfer_1 = transfer( N(sania), N(golos.vest), asset::from_string("100.0000 GOLOS"), "convert token to vesting" );
+    auto status_transfer_2 = transfer( N(pasha), N(golos.vest), asset::from_string("100.0000 GOLOS"), "convert token to vesting" );
+
+    produce_blocks(1);
+
+    auto sania_token_balance = get_account(N(sania), "4,GOLOS");
+    REQUIRE_MATCHING_OBJECT( sania_token_balance, mvo()
+                             ("balance", "400.0000 GOLOS") );
+
+    auto pasha_token_balance = get_account(N(pasha), "4,GOLOS");
+    REQUIRE_MATCHING_OBJECT( pasha_token_balance, mvo()
+                             ("balance", "400.0000 GOLOS") );
+
+    auto sania_vesting_balance = get_account_vesting(N(sania), "4,VEST");
+    REQUIRE_MATCHING_OBJECT( sania_vesting_balance, mvo()
+                             ("vesting", "100.0000 VEST")
+                             ("delegate_vesting", "0.0000 VEST")
+                             ("received_vesting", "0.0000 VEST") );
+
+    auto pasha_vesting_balance = get_account_vesting(N(pasha), "4,VEST");
+    REQUIRE_MATCHING_OBJECT( pasha_vesting_balance, mvo()
+                             ("vesting", "100.0000 VEST")
+                             ("delegate_vesting", "0.0000 VEST")
+                             ("received_vesting", "0.0000 VEST") );
+
+
+    auto status_action = convert_vesting(N(sania), N(sania), asset::from_string("10.0000 VEST"));
+    start_timer_trx();
+    auto delegated_auth = authority( 1, {},
+                           {
+                             { .permission = {N(golos.vest), config::eosio_code_name}, .weight = 1}
+                           });
+    set_authority( N(golos.vest),  config::active_name,  delegated_auth );
+
+    produce_blocks(31);
+    sania_vesting_balance = get_account_vesting(N(sania), "4,VEST");
+    REQUIRE_MATCHING_OBJECT( sania_vesting_balance, mvo()
+                             ("vesting", "99.0000 VEST")
+                             ("delegate_vesting", "0.0000 VEST")
+                             ("received_vesting", "0.0000 VEST") );
+
+    sania_token_balance = get_account(N(sania), "4,GOLOS");
+    REQUIRE_MATCHING_OBJECT( sania_token_balance, mvo()
+                             ("balance", "401.0000 GOLOS") );
+
+    produce_blocks(120);
+    sania_vesting_balance = get_account_vesting(N(sania), "4,VEST");
+    REQUIRE_MATCHING_OBJECT( sania_vesting_balance, mvo()
+                             ("vesting", "95.0000 VEST")
+                             ("delegate_vesting", "0.0000 VEST")
+                             ("received_vesting", "0.0000 VEST") );
+
+    sania_token_balance = get_account(N(sania), "4,GOLOS");
+    REQUIRE_MATCHING_OBJECT( sania_token_balance, mvo()
+                             ("balance", "405.0000 GOLOS") );
+
+    cancel_convert_vesting(N(sania), asset::from_string("0.0000 VEST"));
+
+    produce_blocks(120);
+    sania_vesting_balance = get_account_vesting(N(sania), "4,VEST");
+    REQUIRE_MATCHING_OBJECT( sania_vesting_balance, mvo()
+                             ("vesting", "95.0000 VEST")
+                             ("delegate_vesting", "0.0000 VEST")
+                             ("received_vesting", "0.0000 VEST") );
+
+    sania_token_balance = get_account(N(sania), "4,GOLOS");
+    REQUIRE_MATCHING_OBJECT( sania_token_balance, mvo()
+                             ("balance", "405.0000 GOLOS") );
+} FC_LOG_AND_RETHROW()
+
+BOOST_FIXTURE_TEST_CASE( test_delegate_vesting, golos_vesting_tester ) try {
+    auto token = create( N(eosio.token), asset::from_string("100000.0000 GOLOS"));
+
+    issue( N(eosio.token), N(sania), asset::from_string("500.0000 GOLOS"), "issue tokens sania" );
+    issue( N(eosio.token), N(pasha), asset::from_string("500.0000 GOLOS"), "issue tokens pasha" );
+    produce_blocks(1);
+
+    auto status_create_pair = create_pair(asset::from_string("0.0000 GOLOS"), asset::from_string("0.0000 VEST"));
+    auto status_transfer_1 = transfer( N(sania), N(golos.vest), asset::from_string("100.0000 GOLOS"), "convert token to vesting" );
+    auto status_transfer_2 = transfer( N(pasha), N(golos.vest), asset::from_string("100.0000 GOLOS"), "convert token to vesting" );
+
+    produce_blocks(1);
+
+    auto sania_token_balance = get_account(N(sania), "4,GOLOS");
+    REQUIRE_MATCHING_OBJECT( sania_token_balance, mvo()
+                             ("balance", "400.0000 GOLOS") );
+
+    auto pasha_token_balance = get_account(N(pasha), "4,GOLOS");
+    REQUIRE_MATCHING_OBJECT( pasha_token_balance, mvo()
+                             ("balance", "400.0000 GOLOS") );
+
+    auto sania_vesting_balance = get_account_vesting(N(sania), "4,VEST");
+    REQUIRE_MATCHING_OBJECT( sania_vesting_balance, mvo()
+                             ("vesting", "100.0000 VEST")
+                             ("delegate_vesting", "0.0000 VEST")
+                             ("received_vesting", "0.0000 VEST") );
+
+    auto pasha_vesting_balance = get_account_vesting(N(pasha), "4,VEST");
+    REQUIRE_MATCHING_OBJECT( pasha_vesting_balance, mvo()
+                             ("vesting", "100.0000 VEST")
+                             ("delegate_vesting", "0.0000 VEST")
+                             ("received_vesting", "0.0000 VEST") );
+
+    auto status_delegate_sania = delegate_vesting(N(sania), N(pasha), asset::from_string("10.0000 VEST"), 5000);
+    auto pasha_vesting_balance_delegate = get_account_vesting(N(pasha), "4,VEST");
+    REQUIRE_MATCHING_OBJECT( pasha_vesting_balance_delegate, mvo()
+                             ("vesting", "100.0000 VEST")
+                             ("delegate_vesting", "10.0000 VEST")
+                             ("received_vesting", "0.0000 VEST") );
+
+    auto sania_vesting_balance_delegate = get_account_vesting(N(sania), "4,VEST");
+    REQUIRE_MATCHING_OBJECT( sania_vesting_balance_delegate, mvo()
+                             ("vesting", "90.0000 VEST")
+                             ("delegate_vesting", "0.0000 VEST")
+                             ("received_vesting", "0.0000 VEST") );
+} FC_LOG_AND_RETHROW()
+
+BOOST_FIXTURE_TEST_CASE( test_undelegate_vesting, golos_vesting_tester ) try { 
+    auto token = create( N(eosio.token), asset::from_string("100000.0000 GOLOS"));
+
+    issue( N(eosio.token), N(sania), asset::from_string("500.0000 GOLOS"), "issue tokens sania" );
+    issue( N(eosio.token), N(pasha), asset::from_string("500.0000 GOLOS"), "issue tokens pasha" );
+    produce_blocks(1);
+
+    auto status_create_pair = create_pair(asset::from_string("0.0000 GOLOS"), asset::from_string("0.0000 VEST"));
+    auto status_transfer_1 = transfer( N(sania), N(golos.vest), asset::from_string("100.0000 GOLOS"), "convert token to vesting" );
+    auto status_transfer_2 = transfer( N(pasha), N(golos.vest), asset::from_string("100.0000 GOLOS"), "convert token to vesting" );
+
+    produce_blocks(1);
+
+    auto sania_token_balance = get_account(N(sania), "4,GOLOS");
+    REQUIRE_MATCHING_OBJECT( sania_token_balance, mvo()
+                             ("balance", "400.0000 GOLOS") );
+
+    auto pasha_token_balance = get_account(N(pasha), "4,GOLOS");
+    REQUIRE_MATCHING_OBJECT( pasha_token_balance, mvo()
+                             ("balance", "400.0000 GOLOS") );
+
+    auto sania_vesting_balance = get_account_vesting(N(sania), "4,VEST");
+    REQUIRE_MATCHING_OBJECT( sania_vesting_balance, mvo()
+                             ("vesting", "100.0000 VEST")
+                             ("delegate_vesting", "0.0000 VEST")
+                             ("received_vesting", "0.0000 VEST") );
+
+    auto pasha_vesting_balance = get_account_vesting(N(pasha), "4,VEST");
+    REQUIRE_MATCHING_OBJECT( pasha_vesting_balance, mvo()
+                             ("vesting", "100.0000 VEST")
+                             ("delegate_vesting", "0.0000 VEST")
+                             ("received_vesting", "0.0000 VEST") );
+
+    auto status_delegate_sania = delegate_vesting(N(sania), N(pasha), asset::from_string("10.0000 VEST"), 5000);
+    auto pasha_vesting_balance_delegate = get_account_vesting(N(pasha), "4,VEST");
+    REQUIRE_MATCHING_OBJECT( pasha_vesting_balance_delegate, mvo()
+                             ("vesting", "100.0000 VEST")
+                             ("delegate_vesting", "10.0000 VEST")
+                             ("received_vesting", "0.0000 VEST") );
+
+    auto sania_vesting_balance_delegate = get_account_vesting(N(sania), "4,VEST");
+    REQUIRE_MATCHING_OBJECT( sania_vesting_balance_delegate, mvo()
+                             ("vesting", "90.0000 VEST")
+                             ("delegate_vesting", "0.0000 VEST")
+                             ("received_vesting", "0.0000 VEST") );
+
+    produce_blocks(100);
+
+    auto status_undelegate_sania = undelegate_vesting(N(sania), N(pasha), asset::from_string("5.0000 VEST"));
+    auto pasha_vesting_balance_undelegate = get_account_vesting(N(pasha), "4,VEST");
+    REQUIRE_MATCHING_OBJECT( pasha_vesting_balance_undelegate, mvo()
+                             ("vesting", "100.0000 VEST")
+                             ("delegate_vesting", "5.0000 VEST")
+                             ("received_vesting", "0.0000 VEST") );
+
+    start_timer_trx();
+    auto delegated_auth = authority( 1, {},
+                           {
+                             { .permission = {N(golos.vest), config::eosio_code_name}, .weight = 1}
+                           });
+    set_authority( N(golos.vest),  config::active_name,  delegated_auth );
+
+    produce_blocks(31);
+    sania_vesting_balance_delegate = get_account_vesting(N(sania), "4,VEST");
+    REQUIRE_MATCHING_OBJECT( sania_vesting_balance_delegate, mvo()
+                             ("vesting", "95.0000 VEST")
+                             ("delegate_vesting", "0.0000 VEST")
+                             ("received_vesting", "0.0000 VEST") );
+
+} FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE( accrue_vesting_user, golos_vesting_tester ) try {
     auto status = create_pair(asset::from_string("0.0000 GOLOS"), asset::from_string("0.0000 VEST"));

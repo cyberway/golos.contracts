@@ -77,16 +77,19 @@ void vesting::accrue_vesting(account_name sender, account_name user, asset quant
     // TODO deductions
     tables::account_table account(_self, user);
     auto balance = account.find(sym_name);
-    eosio_assert(balance != account.end(), "Not vesting tokens");
+//    eosio_assert(balance != account.end(), "Not vesting tokens");
+    asset efective_vesting;
+    efective_vesting.symbol = sym_name;
+    if (balance != account.end())
+        efective_vesting = balance->vesting + balance->delegate_vesting;
 
     asset summary_delegate;
     summary_delegate.symbol = quantity.symbol;
-    auto efective_vesting = balance->vesting + balance->delegate_vesting;
 
     tables::delegate_table table_delegate(_self, sym_name);
     auto index_delegate = table_delegate.get_index<N(recipient)>();
     auto it_index_user = index_delegate.find(user);
-    while (it_index_user != index_delegate.end() && it_index_user->recipient == user) {
+    while (it_index_user != index_delegate.end() && it_index_user->recipient == user && efective_vesting.amount) {
         auto proportion = it_index_user->quantity * FRACTION / efective_vesting;
 
         const auto &delegates_award = (((quantity * proportion) / FRACTION) * it_index_user->percentage_deductions) / FRACTION;
