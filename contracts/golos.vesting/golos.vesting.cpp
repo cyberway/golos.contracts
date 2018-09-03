@@ -77,11 +77,13 @@ void vesting::accrue_vesting(account_name sender, account_name user, asset quant
     // TODO deductions
     tables::account_table account(_self, user);
     auto balance = account.find(sym_name);
-//    eosio_assert(balance != account.end(), "Not vesting tokens");
-    asset efective_vesting;
-    efective_vesting.symbol = sym_name;
-    if (balance != account.end())
-        efective_vesting = balance->vesting + balance->delegate_vesting;
+
+    if (balance == account.end()) {
+        print("not balance");
+
+        add_balance(user, quantity, sender);
+        return;
+    }
 
     asset summary_delegate;
     summary_delegate.symbol = quantity.symbol;
@@ -89,11 +91,13 @@ void vesting::accrue_vesting(account_name sender, account_name user, asset quant
     tables::delegate_table table_delegate(_self, sym_name);
     auto index_delegate = table_delegate.get_index<N(recipient)>();
     auto it_index_user = index_delegate.find(user);
-    while (it_index_user != index_delegate.end() && it_index_user->recipient == user && efective_vesting.amount) {
-        auto proportion = it_index_user->quantity * FRACTION / efective_vesting;
 
+    asset efective_vesting = balance->vesting + balance->received_vesting;
+    while (it_index_user != index_delegate.end() && it_index_user->recipient == user && bool_asset(efective_vesting)) {
+        auto proportion = it_index_user->quantity * FRACTION / efective_vesting;
         const auto &delegates_award = (((quantity * proportion) / FRACTION) * it_index_user->percentage_deductions) / FRACTION;
-        index_delegate.modify(it_index_user, 0, [&](auto &item){
+        delegates_award.print();
+        index_delegate.modify(it_index_user, 0, [&](auto &item) {
             item.deductions += delegates_award;
         });
 
@@ -154,6 +158,7 @@ void vesting::delegate_vesting(account_name sender, account_name recipient, asse
 
     account_sender.modify(balance_sender, sender, [&](auto &item){
         item.vesting -= quantity;
+        item.delegate_vesting += quantity;
     });
 
     tables::delegate_table table(_self, quantity.symbol.name());
@@ -163,7 +168,6 @@ void vesting::delegate_vesting(account_name sender, account_name recipient, asse
     bool flag_update = false;
     while(it_index != index_table.end() && it_index->sender == sender && !flag_update) {
         if (it_index->recipient == recipient) {
-            print("update");
             index_table.modify(it_index, 0, [&](structures::delegate_record &item){
                 item.quantity += quantity;
                 item.percentage_deductions = percentage_deductions;
@@ -184,7 +188,6 @@ void vesting::delegate_vesting(account_name sender, account_name recipient, asse
             item.deductions.symbol = quantity.symbol;
             item.percentage_deductions = percentage_deductions;
             item.return_date = time_point_sec(now() + OUTPUT_PAYOUT_PERIOD);
-//            item.return_date = time_point_sec(now()); // TODO test
         });
     }
 
@@ -192,13 +195,13 @@ void vesting::delegate_vesting(account_name sender, account_name recipient, asse
     auto balance_recipient = account_recipient.find(quantity.symbol.name());
     if (balance_recipient != account_recipient.end()) {
         account_recipient.modify(balance_recipient, sender, [&](auto &item){
-            item.delegate_vesting += quantity;
+            item.received_vesting += quantity;
         });
     } else {
         account_recipient.emplace(sender, [&](auto &item){
-            item.delegate_vesting = quantity;
             item.vesting.symbol = quantity.symbol;
-            item.received_vesting.symbol = quantity.symbol;
+            item.delegate_vesting.symbol = quantity.symbol;
+            item.received_vesting = quantity;
         });
     }
 }
@@ -239,8 +242,15 @@ void vesting::undelegate_vesting(account_name sender, account_name recipient, as
 
             tables::account_table account_recipient(_self, recipient);
             auto balance = account_recipient.find(quantity.symbol.name());
-            eosio_assert(balance != account_recipient.end(), "This token is not on the balance sheet");
+            eosio_assert(balance != account_recipient.end(), "This token is not on the recipient balance sheet");
             account_recipient.modify(balance, sender, [&](auto &item){
+                item.received_vesting -= quantity;
+            });
+
+            tables::account_table account_sender(_self, sender);
+            auto balance_sender = account_sender.find(quantity.symbol.name());
+            eosio_assert(balance_sender != account_sender.end(), "This token is not on the sender balance sheet");
+            account_sender.modify(balance_sender, sender, [&](auto &item){
                 item.delegate_vesting -= quantity;
             });
 
@@ -262,7 +272,9 @@ void vesting::calculate_convert_vesting() {
                 if(obj->number_of_payments > 0) {
                     index.modify(obj, 0, [&](auto &item) {
                         item.payout_time = time_point_sec(now() + OUTPUT_PAYOUT_PERIOD);
-                        item.number_of_payments -= WEEK_PERIOD;
+                        --item.number_of_payments;
+
+                        print(uint64_t(item.number_of_payments));
 
                         tables::account_table account(_self, obj->sender);
                         auto balance = account.find(obj->payout_part.symbol.name());
@@ -288,7 +300,7 @@ void vesting::calculate_convert_vesting() {
 
                         if (balance->vesting < obj->payout_part) {
                             item.number_of_payments = NOT_TOKENS_WEEK_PERIOD;
-                        } else if (obj->number_of_payments == WEEK_PERIOD) {
+                        } else if (obj->number_of_payments == NOT_TOKENS_WEEK_PERIOD) {
                             lambda_action_sender(obj->balance_amount - (obj->payout_part * (OUTPUT_WEEK_COUNT - WEEK_PERIOD)));
                         } else {
                             lambda_action_sender(obj->payout_part);
@@ -322,6 +334,8 @@ void vesting::calculate_delegate_vesting() {
             } else {
                 account.emplace(_self, [&](auto &item){
                     item.vesting = obj->amount;
+                    item.delegate_vesting.symbol = obj->amount.symbol;
+                    item.received_vesting.symbol = obj->amount.symbol;
                 });
             }
 
@@ -398,13 +412,9 @@ void vesting::sub_balance(account_name owner, asset value) {
     const auto& from = account.get(value.symbol.name(), "no balance object found");
     eosio_assert(from.vesting >= value, "overdrawn balance");
 
-    if(from.vesting == value) {
-       account.erase(from);
-    } else {
-       account.modify(from, 0, [&]( auto& a) {
-           a.vesting -= value;
-       });
-    }
+    account.modify(from, 0, [&]( auto& a) {
+        a.vesting -= value;
+    });
 }
 
 void vesting::add_balance(account_name owner, asset value, account_name ram_payer) {
@@ -421,6 +431,10 @@ void vesting::add_balance(account_name owner, asset value, account_name ram_paye
             a.vesting += value;
         });
     }
+}
+
+const bool vesting::bool_asset(const asset &obj) const {
+    return obj.amount;
 }
 
 asset vesting::convert_token(const asset &m_token, symbol_type type) {

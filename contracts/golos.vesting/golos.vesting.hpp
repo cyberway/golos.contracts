@@ -29,6 +29,7 @@ class vesting : public eosio::contract {
 
     void sub_balance(account_name owner, asset value);
     void add_balance(account_name owner, asset value, account_name ram_payer);
+    const bool bool_asset(const asset &obj) const;
 
     asset convert_token(const asset &m_token, symbol_type type);
     void timeout_delay_trx();
