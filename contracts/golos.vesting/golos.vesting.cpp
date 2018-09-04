@@ -30,6 +30,8 @@ void vesting::apply(uint64_t code, uint64_t action) {
         execute_action(this, &vesting::undelegate_vesting);
     else if (N(cancelvg) == action)
         execute_action(this, &vesting::cancel_convert_vesting);
+    else if (N(expbattary) == action)
+        execute_action(this, &vesting::expend_battery);
 
     else if (N(issue) == action)
 //        issue(unpack_action_data<structures::issue_vesting>());
@@ -79,7 +81,7 @@ void vesting::accrue_vesting(account_name sender, account_name user, asset quant
     auto balance = account.find(sym_name);
 
     if (balance == account.end()) {
-        print("not balance");
+        print("Not balance");
 
         add_balance(user, quantity, sender);
         return;
@@ -96,7 +98,7 @@ void vesting::accrue_vesting(account_name sender, account_name user, asset quant
     while (it_index_user != index_delegate.end() && it_index_user->recipient == user && bool_asset(efective_vesting)) {
         auto proportion = it_index_user->quantity * FRACTION / efective_vesting;
         const auto &delegates_award = (((quantity * proportion) / FRACTION) * it_index_user->percentage_deductions) / FRACTION;
-        delegates_award.print();
+
         index_delegate.modify(it_index_user, 0, [&](auto &item) {
             item.deductions += delegates_award;
         });
@@ -202,6 +204,8 @@ void vesting::delegate_vesting(account_name sender, account_name recipient, asse
             item.vesting.symbol = quantity.symbol;
             item.delegate_vesting.symbol = quantity.symbol;
             item.received_vesting = quantity;
+            item.battery.charge = UPPER_BOUND;
+            item.battery.renewal = time_point_sec(now());
         });
     }
 }
@@ -214,6 +218,7 @@ void vesting::undelegate_vesting(account_name sender, account_name recipient, as
     auto it_index = index_table.find(sender);
     eosio_assert(it_index != index_table.end(), "Not enough delegated vesting");
 
+    bool flag_recipient = false;
     while(it_index != index_table.end() && it_index->sender == sender) {
         if(it_index->recipient == recipient) {
             eosio_assert(it_index->return_date <= time_point_sec(now()), "Tokens are frozen until the end of the period");
@@ -254,11 +259,14 @@ void vesting::undelegate_vesting(account_name sender, account_name recipient, as
                 item.delegate_vesting -= quantity;
             });
 
+            flag_recipient = true;
             break;
         }
 
         ++it_index;
     }
+
+    eosio_assert(flag_recipient, "Error undeligate, not found recipient");
 }
 
 void vesting::calculate_convert_vesting() {
@@ -336,6 +344,8 @@ void vesting::calculate_delegate_vesting() {
                     item.vesting = obj->amount;
                     item.delegate_vesting.symbol = obj->amount.symbol;
                     item.received_vesting.symbol = obj->amount.symbol;
+                    item.battery.charge = UPPER_BOUND;
+                    item.battery.renewal = time_point_sec(now());
                 });
             }
 
@@ -361,6 +371,38 @@ void vesting::create_pair(asset token, asset vesting) {
         item.id = _table_pair.available_primary_key();
         item.vesting.symbol = vesting.symbol;
         item.token.symbol   = token.symbol;
+    });
+}
+
+void vesting::expend_battery(account_name user, uint16_t persent_battery, asset type) {
+    require_auth(user);
+
+    eosio_assert(persent_battery <= UPPER_BOUND && persent_battery >= LOWER_BOUND, "Invalid persent battary");
+
+    tables::account_table account(_self, user);
+    auto balance = account.find(type.symbol.name());
+    eosio_assert(balance != account.end(), "Not found balance this account");
+
+    auto battery = balance->battery;
+
+    const auto current_time = now();
+    auto recovery_sec = current_time - battery.renewal.utc_seconds;
+
+    double recovery_change = UPPER_BOUND / RECOVERY_PERIOD * recovery_sec;
+    uint64_t battery_charge = recovery_change + battery.charge;
+    if (battery_charge > UPPER_BOUND) {
+        battery.charge = UPPER_BOUND;
+        battery.renewal = time_point_sec(current_time);
+    } else {
+        battery.charge = battery_charge;
+        battery.renewal = time_point_sec(current_time);
+    }
+
+    eosio_assert(battery.charge >= persent_battery, "Not enough charge");
+    battery.charge -= persent_battery;
+
+    account.modify(balance, 0, [&](auto &item){
+        item.battery = battery;
     });
 }
 
@@ -425,6 +467,8 @@ void vesting::add_balance(account_name owner, asset value, account_name ram_paye
             a.vesting = value;
             a.delegate_vesting.symbol = value.symbol;
             a.received_vesting.symbol = value.symbol;
+            a.battery.charge = UPPER_BOUND;
+            a.battery.renewal = time_point_sec(now());
         });
     } else {
         account.modify( to, 0, [&]( auto& a ) {

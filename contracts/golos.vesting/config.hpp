@@ -13,3 +13,9 @@
 
 #define FRACTION (10000)
 #define FULL_PERSENT (1000000)
+
+#define UPPER_BOUND (10000)
+#define LOWER_BOUND (0)
+
+#define TWO_DECIMAL_PLACES (100)
+#define RECOVERY_PERIOD (432000)

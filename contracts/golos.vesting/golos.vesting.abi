@@ -40,6 +40,20 @@
       ]
     },
     {
+      "name": "user_battery",
+      "base": "",
+      "fields": [
+        {
+          "name": "charge",
+          "type": "uint16"
+        },
+        {
+          "name": "renewal",
+          "type": "time_point_sec"
+        }
+      ]
+    },
+    {
       "name": "user_balance",
       "base": "",
       "fields": [
@@ -54,6 +68,10 @@
         {
           "name": "received_vesting",
           "type": "asset"
+        },
+        {
+          "name": "battery",
+          "type": "user_battery"
         }
       ]
     },
@@ -226,6 +244,24 @@
           "type": "asset"
         }
       ]
+    },
+    {
+      "name": "expend_battery",
+      "base": "",
+      "fields": [
+        {
+          "name": "user",
+          "type": "account_name"
+        },
+        {
+          "name": "persent_battery",
+          "type": "uint16"
+        },
+        {
+          "name": "type",
+          "type": "asset"
+        }
+      ]
     }
   ],
   "actions": [
@@ -272,6 +308,10 @@
     {
       "name": "createpair",
       "type": "pair_tokens"
+    },
+    {
+      "name": "expbattary",
+      "type": "expend_battery"
     }
   ],
   "tables": [

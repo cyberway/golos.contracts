@@ -16,10 +16,9 @@ class vesting : public eosio::contract {
     void delegate_vesting(account_name sender, account_name recipient, asset quantity, uint16_t percentage_deductions);
     void undelegate_vesting(account_name sender, account_name recipient, asset quantity);
 
-    void calculate_convert_vesting();
-    void calculate_delegate_vesting();
-
     void create_pair(asset token, asset vesting);
+    void expend_battery(account_name user, uint16_t persent_battery, asset type);
+
 
     inline asset get_account_vesting(account_name account, symbol_type sym )const;
 
@@ -32,7 +31,10 @@ class vesting : public eosio::contract {
     const bool bool_asset(const asset &obj) const;
 
     asset convert_token(const asset &m_token, symbol_type type);
+
     void timeout_delay_trx();
+    void calculate_convert_vesting();
+    void calculate_delegate_vesting();
 
   private:
     tables::vesting_table _table_pair;

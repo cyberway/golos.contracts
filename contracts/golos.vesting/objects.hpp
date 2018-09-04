@@ -32,6 +32,16 @@ struct token_vesting
     EOSLIB_SERIALIZE(token_vesting, (id)(vesting)(token))
 };
 
+struct user_battery
+{
+    user_battery() = default;
+
+    uint64_t charge;
+    time_point_sec renewal;
+
+    EOSLIB_SERIALIZE(user_battery, (charge)(renewal))
+};
+
 struct user_balance
 {
     user_balance() = default;
@@ -39,12 +49,13 @@ struct user_balance
     asset vesting;
     asset delegate_vesting;
     asset received_vesting;
+    user_battery battery;
 
     uint64_t primary_key() const {
         return vesting.symbol.name();
     }
 
-    EOSLIB_SERIALIZE(user_balance, (vesting)(delegate_vesting)(received_vesting))
+    EOSLIB_SERIALIZE(user_balance, (vesting)(delegate_vesting)(received_vesting)(battery))
 };
 
 struct delegate_record
