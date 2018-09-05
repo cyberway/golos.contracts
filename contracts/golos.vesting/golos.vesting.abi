@@ -310,7 +310,7 @@
       "type": "pair_tokens"
     },
     {
-      "name": "expbattary",
+      "name": "expbattery",
       "type": "expend_battery"
     }
   ],

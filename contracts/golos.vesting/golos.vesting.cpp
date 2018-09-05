@@ -30,7 +30,7 @@ void vesting::apply(uint64_t code, uint64_t action) {
         execute_action(this, &vesting::undelegate_vesting);
     else if (N(cancelvg) == action)
         execute_action(this, &vesting::cancel_convert_vesting);
-    else if (N(expbattary) == action)
+    else if (N(expbattery) == action)
         execute_action(this, &vesting::expend_battery);
 
     else if (N(issue) == action)
@@ -144,7 +144,7 @@ void vesting::cancel_convert_vesting(account_name sender, asset type) {
 
     tables::convert_table table(_self, type.symbol.name());
     auto record = table.find(sender);
-    eosio_assert(record != table.end(), "not record");
+    eosio_assert(record != table.end(), "Not found convert record sender");
 
     table.erase(record);
 }
@@ -376,7 +376,6 @@ void vesting::create_pair(asset token, asset vesting) {
 
 void vesting::expend_battery(account_name user, uint16_t persent_battery, asset type) {
     require_auth(user);
-
     eosio_assert(persent_battery <= UPPER_BOUND && persent_battery >= LOWER_BOUND, "Invalid persent battary");
 
     tables::account_table account(_self, user);
@@ -388,7 +387,7 @@ void vesting::expend_battery(account_name user, uint16_t persent_battery, asset 
     const auto current_time = now();
     auto recovery_sec = current_time - battery.renewal.utc_seconds;
 
-    double recovery_change = UPPER_BOUND / RECOVERY_PERIOD * recovery_sec;
+    double recovery_change = (UPPER_BOUND * recovery_sec) / RECOVERY_PERIOD ;
     uint64_t battery_charge = recovery_change + battery.charge;
     if (battery_charge > UPPER_BOUND) {
         battery.charge = UPPER_BOUND;

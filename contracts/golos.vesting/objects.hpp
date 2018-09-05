@@ -36,7 +36,7 @@ struct user_battery
 {
     user_battery() = default;
 
-    uint64_t charge;
+    uint16_t charge;
     time_point_sec renewal;
 
     EOSLIB_SERIALIZE(user_battery, (charge)(renewal))
