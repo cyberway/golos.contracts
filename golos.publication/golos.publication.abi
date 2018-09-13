@@ -1,0 +1,237 @@
+{
+  "version": "eosio::abi/1.0",
+  "types": [{
+    "new_type_name": "account_name",
+    "type": "name"
+  }],
+  "structs": [
+  {
+    "name": "beneficiaries",
+    "base": "",
+    "fields": [
+      {
+        "name": "account",
+        "type": "account_name"
+      },
+      {
+        "name": "deductprcnt",
+        "type": "uint64"
+      }
+    ]
+  },
+  {
+    "name": "tags",
+    "base": "",
+    "fields": [
+      {
+        "name": "tag",
+        "type": "string"
+      },
+    ]
+  },
+  {
+    "name": "content",
+    "base": "",
+    "fields": [
+      {
+        "name": "id",
+        "type": "uint64"
+      },
+      {
+        "name": "headerpost",
+        "type": "string"
+      },
+      {
+        "name": "bodypost",
+        "type": "string"
+      },
+      {
+        "name": "languagepost",
+        "type": "string"
+      },
+      {
+        "name": "tags",
+        "type": "tags[]"
+      },
+      {
+        "name": "jsonmetadata",
+        "type": "string"
+      }
+    ]
+  },
+  {
+    "name": "post",
+    "base": "",
+    "fields": [
+      {
+        "name": "id",
+        "type": "uint64"
+      },
+      {
+        "name": "date",
+        "type": "uint64"
+      },
+      {
+        "name": "account",
+        "type": "account_name"
+      },
+      {
+        "name": "permlink",
+        "type": "string"
+      },
+      {
+        "name": "parentid",
+        "type": "string"
+      },
+      {
+        "name": "parentprmlnk",
+        "type": "string"
+      },
+      {
+        "name": "curatorprcnt",
+        "type": "uint64"
+      },
+      {
+        "name": "payouttype",
+        "type": "string"
+      },
+      {
+        "name": "beneficiaries",
+        "type": "beneficiaries[]"
+      },
+      {
+        "name": "paytype",
+        "type": "string"
+      }
+    ]
+  },
+  {
+    "name": "createpost",
+    "base": "",
+    "fields": [
+      {
+        "name": "account",
+        "type": "account_name"
+      },
+      {
+        "name": "permlink",
+        "type": "string"
+      },
+      {
+        "name": "parentid",
+        "type": "string"
+      },
+      {
+        "name": "parentprmlnk",
+        "type": "string"
+      },
+      {
+        "name": "curatorprcnt",
+        "type": "uint64"
+      },
+      {
+        "name": "payouttype",
+        "type": "string"
+      },
+      {
+        "name": "beneficiaries",
+        "type": "beneficiaries[]"
+      },
+      {
+        "name": "paytype",
+        "type": "string"
+      },
+      {
+        "name": "headerpost",
+        "type": "string"
+      },
+      {
+        "name": "bodypost",
+        "type": "string"
+      },
+      {
+        "name": "languagepost",
+        "type": "string"
+      },
+      {
+        "name": "tags",
+        "type": "tags[]"
+      },
+      {
+        "name": "jsonmetadata",
+        "type": "string"
+      }
+    ]
+  },
+  {
+    "name": "deletepost",
+    "base": "",
+    "fields": [
+      {
+        "name": "account",
+        "type": "account_name"
+      },
+      {
+        "name": "permlink",
+        "type": "string"
+      }
+    ]
+  }
+  ],
+  "actions": [
+  {
+    "name": "createpost",
+    "type": "createpost"
+  },
+  {
+    "name": "updatepost",
+    "type": "createpost"
+  },
+  {
+    "name": "deletepost",
+    "type": "deletepost"
+  },
+  {
+    "name": "upvote",
+    "type": "upvote"
+  },
+  {
+    "name": "downvote",
+    "type": "downvote"
+  }
+  ],
+  "tables": [
+  {
+    "name": "posttable",
+    "type": "post",
+    "index_type": "i64",
+    "key_names" : [
+      "id"
+    ],
+    "key_types" : [
+      "uint64"
+    ]
+  },
+  {
+    "name": "contenttable",
+    "type": "content",
+    "index_type": "i64",
+    "key_names" : [
+      "headerpost"
+    ],
+    "key_types" : [
+      "string"
+    ]
+  },
+  {
+    "name": "votestable",
+    "type": "post",
+    "index_type": "i64",
+    "key_names" : [""],
+    "key_types" : [""]
+  }
+  ],
+  "ricardian_clauses": [],
+  "error_messages": [],
+  "abi_extensions": []
+}
