@@ -10,7 +10,6 @@
 #if ! defined(SG14_FIXED_POINT_SINGLE_HEADER)
 #define SG14_FIXED_POINT_SINGLE_HEADER
 
-#include <cmath>
 #include <utility>
 #include <istream>
 #include <climits>
@@ -80,6 +79,10 @@ namespace sg14 {
         struct set_digits_signed<MinNumDigits, enable_for_range_t<MinNumDigits, std::int32_t, std::int64_t>> {
             using type = std::int64_t;
         };
+        template<_digits_type MinNumDigits>
+        struct set_digits_signed<MinNumDigits, enable_for_range_t<MinNumDigits, std::int64_t, int128_t>> {
+            using type = int128_t;
+        };
         template<_digits_type MinNumDigits, class Enable = void>
         struct set_digits_unsigned;
         template<_digits_type MinNumDigits>
@@ -98,6 +101,11 @@ namespace sg14 {
         struct set_digits_unsigned<MinNumDigits, enable_for_range_t<MinNumDigits, std::uint32_t, std::uint64_t>> {
             using type = std::uint64_t;
         };
+        template<_digits_type MinNumDigits>
+        struct set_digits_unsigned<MinNumDigits, enable_for_range_t<MinNumDigits, std::uint64_t, uint128_t>> {
+            using type = uint128_t;
+        };
+
         template<class Integer, _digits_type MinNumDigits>
         using set_digits_integer = typename std::conditional<
                 std::numeric_limits<Integer>::is_signed,
@@ -519,13 +527,15 @@ namespace sg14 {
         template<class... TT>
         constexpr std::intmax_t combine(int base, std::intmax_t val, int p0, TT... pp)
         {
+            FIXED_POINT_ASSERT(p0 >= 0, "sg14::_const_integer_impl::combine: p0 < 0");
             return combine(base, val * base + p0, pp...);
         }
         constexpr int parse_dec(char C)
         {
+            
             return (C>='0' && C<='9')
                    ? C-'0'
-                   : throw std::out_of_range("only decimal digits are allowed");
+                   : -1;
         }
         constexpr int parse_hex(char C) {
             return (C >= '0' && C <= '9')
@@ -534,7 +544,7 @@ namespace sg14 {
                      ? C - 'a'
                      : (C >= 'A' && C <= 'F')
                        ? C - 'A'
-                       : throw std::out_of_range("only decimal digits are allowed")
+                       : -1
                     ;
         }
         template<char... Digits>
@@ -1049,7 +1059,7 @@ namespace sg14 {
     struct scale<elastic_integer<Digits, Narrowest>> {
         using _value_type = elastic_integer<Digits, Narrowest>;
         constexpr _value_type operator()(const _value_type& i, int base, int exp) const {
-            using _rep = typename _value_type::rep;
+            //using _rep = typename _value_type::rep;
             return _value_type{ _impl::scale(i.data(), base, exp) };
         }
     };
@@ -2151,10 +2161,9 @@ namespace sg14 {
     constexpr fixed_point <Rep, Exponent>
     sqrt(const fixed_point <Rep, Exponent>& x)
     {
+        FIXED_POINT_ASSERT((x >= fixed_point<Rep, Exponent>(0)), "sg14::sqrt: x < 0");//TODO: делает неконстэкспром всё это
         using widened_type = fixed_point<set_digits_t<Rep, digits<Rep>::value*2>, Exponent*2>;
         return
-                (x<fixed_point<Rep, Exponent>(0))
-                ? throw std::invalid_argument("cannot represent square root of negative value") :
                 fixed_point<Rep, Exponent>::from_data(
                         static_cast<Rep>(_impl::fp::extras::sqrt_solve1(widened_type{x}.data())));
     }
@@ -2171,30 +2180,6 @@ namespace sg14 {
                 }
             }
         }
-    }
-    template<class Rep, int Exponent>
-    constexpr fixed_point <Rep, Exponent>
-    sin(const fixed_point <Rep, Exponent>& x) noexcept
-    {
-        return _impl::fp::extras::crib<Rep, Exponent, std::sin>(x);
-    }
-    template<class Rep, int Exponent>
-    constexpr fixed_point <Rep, Exponent>
-    cos(const fixed_point <Rep, Exponent>& x) noexcept
-    {
-        return _impl::fp::extras::crib<Rep, Exponent, std::cos>(x);
-    }
-    template<class Rep, int Exponent>
-    constexpr fixed_point <Rep, Exponent>
-    exp(const fixed_point <Rep, Exponent>& x) noexcept
-    {
-        return _impl::fp::extras::crib<Rep, Exponent, std::exp>(x);
-    }
-    template<class Rep, int Exponent>
-    constexpr fixed_point <Rep, Exponent>
-    pow(const fixed_point <Rep, Exponent>& x) noexcept
-    {
-        return _impl::fp::extras::crib<Rep, Exponent, std::pow>(x);
     }
     template<class Rep, int Exponent>
     ::std::ostream& operator<<(::std::ostream& out, const fixed_point <Rep, Exponent>& fp)
@@ -2293,7 +2278,8 @@ namespace sg14 {
         template<class Result>
         constexpr Result return_if(bool condition, const Result& value, const char* )
         {
-            return condition ? value : throw std::overflow_error("");
+            FIXED_POINT_ASSERT(condition, "sg14::combine: p0 < 0");
+            return value;
         }
         template<class T>
         struct positive_digits : public std::integral_constant<int, std::numeric_limits<T>::digits> {

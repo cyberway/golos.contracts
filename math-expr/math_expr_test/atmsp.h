@@ -12,503 +12,478 @@
  **                                                                         **
  ** Verson: 1.0.4                                                           **
  ** *********************************************************************** **/
-
-#ifndef _ATMSP_H_INCLUDED_
-#define _ATMSP_H_INCLUDED_
-
-/** Includes **/
-#include <string>     // C++ strings
-#include <csetjmp>    // longjump()
-#include <cstdlib>    // strtod()
-#include <cmath>      // Math. functions
-
+#pragma once
+#include <string>
+#include <array>
+#include <string_view>
+#include "fixed_point_math.h"
 
 /** *********************************************************************** **
  ** Determine maximum sizes for stack and var/val/num/con arrays.           **
  ** Note that sizes may have chache-effects e.g. Play here for tuning       **
  ** *********************************************************************** **/
-#define ATMSP_SIZE 64                 // Stack, values-array and bytecode-operators
-#define ATMSP_MAXNUM ATMSP_SIZE/4     // Numeric-array. Holds all numbers
-#define ATMSP_MAXVAR ATMSP_SIZE/8     // Variables-array. Holds all variables
-#define ATMSP_MAXCON ATMSP_SIZE/16    // Constants-array. Holds all constants
+namespace atmsp
+{
+	
+struct memory_info
+{
+	size_t operations;
+	size_t values;
+	size_t nums;
+	size_t vars;
+	size_t cons;
+};    
 
+constexpr memory_info SIZE { 64, 64, 16, 8, 4 };
 
-/** *********************************************************************** **
- ** Templatized stack, minimalistic version without STL overhead. Spare all **
- ** error checks as these are done in the parser anyhow                     **
- ** *********************************************************************** **/
-template <typename T>
-class ATMSP_STACK {
-
-	T stack[ATMSP_SIZE];    // Stack grows from left (position 0) to right
-	long sp;                // Stack-pointer (-1 for empty stack)
-
-public:
-
-	/// Constructor and clear
-	ATMSP_STACK() : sp(-1) {}
-	void clear() { sp = -1; }
-
-	/// Usual push/pop operations
-	void push(T const &elem) { stack[++sp] = elem; }
-	T pop() { return stack[sp--]; }
-
-	/// Get/set stack top without push-operation
-	T top() { return stack[sp]; }
-	void setTop(T const &elem) { stack[sp] = elem; }
-};
-
-
-/** *********************************************************************** **
- ** Templatized list, minimalistic version without STL overhead             **
- ** *********************************************************************** **/
-template <typename T, size_t maxSize>
-class ATMSP_LIST {
-
-	size_t num;         // Current number of list objects
-	T list[maxSize];    // Storage
-
-public:
-
-	/// Constructor, clear, size and array-operator
-	ATMSP_LIST() : num(0) {}
-	void clear() { num = 0; }
-	size_t size() { return num; }
-	T &operator [] (const size_t index) { return list[index]; }
-
-	/// Add new list entry
-	bool push(T const &elem) {
-		if ( num < maxSize ) { list[num++] = elem; return true; }
-		return false;
-	}
-
-	/// Search entry and set list index
-	bool find(T const &elem, size_t &index) {
-		for (size_t i=0; i<num; i++)
-			if ( list[i] == elem ) { index = i; return true; }
-		return false;
-	}
-};
-
-
-/** *********************************************************************** **
+ /** *********************************************************************** **
  ** Bytecode struct. Executes the bytecode produced by the parser. Once     **
  ** the bytecode contains a valid set of instructions, it acts completely   **
  ** independent from the parser itself.                                     **
  ** *********************************************************************** **/
 template <typename T>
-struct ATMSB {
+struct machine {
+	void ppush()const  {	_stk.push( *val[_val_idx++] ); }
 
-	/// Push num, var and con values onto the stack
-	void ppush()  { stk.push(*val[valInd++]); }
+	void padd()const   { T t(_stk.pop()); _stk.set_top(t + _stk.top()); }
+	void psub()const   { T t(_stk.pop()); _stk.set_top(_stk.top() - t); }
+	void pmul()const   { T t(_stk.pop()); _stk.set_top(t * _stk.top()); }
+	void pdiv()const   { T t(_stk.pop()); eosio_assert((t != static_cast<T>(0)), "atmsp::machine: division by zero"); _stk.set_top(_stk.top() / t); }
+	void pchs()const   { _stk.set_top(-_stk.top()); }
 
-	/// Most basic operators working for nearly any type. So int's, bignums, SSE2, ..
-	void padd()   { T t(stk.pop()); stk.setTop(t+stk.top()); }
-	void psub()   { T t(stk.pop()); stk.setTop(stk.top()-t); }
-	void pmul()   { T t(stk.pop()); stk.setTop(t*stk.top()); }
-	void pdiv()   { T t(stk.pop()); t!=(T)0 ? stk.setTop(stk.top()/t) : stk.setTop(T((fltErr=1)-1)); }
-	void pchs()   { stk.setTop(-stk.top()); }
+	void pabs()const   { _stk.set_top(abs(_stk.top())); }
+	void psqrt()const  { T t(_stk.top()); eosio_assert((t >= static_cast<T>(0)), "atmsp::machine: square root of a negative number"); _stk.set_top(sqrt(t)); }
 
-	#if !defined(COMPLEX) && !defined(MPFR)
-	void pabs()   { stk.setTop(std::abs(stk.top())); }
-	#else
-	void pabs()   { stk.setTop(abs(stk.top())); }
-	#endif
+	void ppow()const   { eosio_assert(false, (std::string("atmsp::machine: unsupported operator ppow for ") + std::to_string(static_cast<double>(_stk.pop()))).c_str()); }
+	void ppow2()const  { _stk.set_top(_stk.top()*_stk.top()); }
+	void ppow3()const  { _stk.set_top(_stk.top()*_stk.top() * _stk.top()); }
+	void ppow4()const  { _stk.set_top((_stk.top() * _stk.top()) * (_stk.top() * _stk.top())); }
 
-	#if !defined(COMPLEX)
-	void psqrt()  { T t(stk.top()); t>=(T)0 ? stk.setTop(sqrt(t)) : stk.setTop(T((fltErr=1)-1)); }
-	#else
-	void psqrt()  { stk.setTop(sqrt(stk.top())); }
-	#endif
+	void psin()const   { eosio_assert(false, "atmsp::machine: unsupported operator psin"); }
+	void pcos()const   { eosio_assert(false, "atmsp::machine: unsupported operator pcos"); }
+	void ptan()const   { eosio_assert(false, "atmsp::machine: unsupported operator ptan"); }
 
-	void ppow()   { T t(stk.pop()); stk.setTop(pow(stk.top(), t)); }
-	void ppow2()  { stk.setTop(stk.top()*stk.top()); }
-	void ppow3()  { stk.setTop(stk.top()*stk.top()*stk.top()); }
-	void ppow4()  { stk.setTop((stk.top()*stk.top()) * (stk.top()*stk.top())); }
+	void psinh()const  { eosio_assert(false, "atmsp::machine: unsupported operator psinh"); }
+	void ptanh()const  { eosio_assert(false, "atmsp::machine: unsupported operator ptanh"); }
+	void pcosh()const  { eosio_assert(false, "atmsp::machine: unsupported operator pcosh"); }
 
-	/// Basic operators even working for compilers like MSVC
-	void psin()   { stk.setTop(sin(stk.top())); }
-	void pcos()   { stk.setTop(cos(stk.top())); }
-	void ptan()   { stk.setTop(tan(stk.top())); }
+	void pexp()const   { eosio_assert(false, "atmsp::machine: unsupported operator pexp"); }
+	void plog()const   { eosio_assert(false, "atmsp::machine: unsupported operator plog"); }
+	void plog10()const { _stk.set_top( log10( _stk.top() ) ); }
+	void plog2()const  { _stk.set_top( log2( _stk.top() ) ); }
 
-	void psinh()  { stk.setTop(sinh(stk.top())); }
-	void ptanh()  { stk.setTop(tanh(stk.top())); }
-	void pcosh()  { stk.setTop(cosh(stk.top())); }
+	void pasin()const  { eosio_assert(false, "atmsp::machine: unsupported operator pasin"); }
+	void pacos()const  { eosio_assert(false, "atmsp::machine: unsupported operator pacos"); }
+	void patan()const  { eosio_assert(false, "atmsp::machine: unsupported operator patan"); }
+	void patan2()const { eosio_assert(false, "atmsp::machine: unsupported operator patan2"); }
 
-	void pexp()   { stk.setTop(exp(stk.top())); }
-	void plog()   { stk.setTop(log(stk.top())); }
-	void plog10() { stk.setTop(log10(stk.top())); }
-	void plog2()  { stk.setTop(log10(stk.top())/log10((T)2)); }
+	void pmax()const   { T t(_stk.pop()); if (t > _stk.top()) _stk.set_top(t); }
+	void pmin()const   { T t(_stk.pop()); if (t < _stk.top()) _stk.set_top(t); }
+	void psig()const   { 
+		_stk.top() > 0 ? 
+				_stk.set_top(static_cast<T>(1)) : 
+				_stk.top() < static_cast<T>(0) ? 
+						_stk.set_top(static_cast<T>(-1)) :
+						 _stk.set_top(static_cast<T>(0)); 
+	}
 
-	/// More basic operators, but not for complex
-	#if !defined(COMPLEX)
-	void pasin()  { T t(stk.top()); t>=(T)-1 && t<=(T)1 ? stk.setTop(asin(stk.top())) : stk.setTop(T((fltErr=1)-1)); }
-	void pacos()  { T t(stk.top()); t>=(T)-1 && t<=(T)1 ? stk.setTop(acos(stk.top())) : stk.setTop(T((fltErr=1)-1)); }
-	void patan()  { stk.setTop(atan(stk.top())); }
-	void patan2() { T t(stk.pop()); stk.setTop(atan2(stk.top(), t)); }
+	void pfloor()const { eosio_assert(false, "atmsp::machine: nsupported operator pfloor"); }
+	void pround()const { eosio_assert(false, "atmsp::machine: unsupported operator pround"); }
 
-	void pmax()   { T t(stk.pop()); if (t>stk.top()) stk.setTop(t); }
-	void pmin()   { T t(stk.pop()); if (t<stk.top()) stk.setTop(t); }
-	void psig()   { stk.top()>(T)0 ? stk.setTop((T)1) : stk.top()<(T)0 ? stk.setTop((T)-1) : stk.setTop((T)0); }
+	using basic_operator = void (machine<T>::*)()const;
 
-	void pfloor() { stk.setTop(floor(stk.top())); }
-	void pround() { stk.setTop(floor(stk.top()+(T)0.5)); }
-	#endif
+	static size_t constexpr OPERATORS_NUM = 31;
+	static constexpr std::array<basic_operator, OPERATORS_NUM> OPERATORS = {{
+			&machine<T>::ppush,  &machine<T>::padd,   &machine<T>::psub,  &machine<T>::pmul,
+			&machine<T>::pdiv,   &machine<T>::pchs,   &machine<T>::pabs,  &machine<T>::psqrt,
+			&machine<T>::ppow,   &machine<T>::ppow2,  &machine<T>::ppow3, &machine<T>::ppow4,
+			&machine<T>::psin,   &machine<T>::pcos,   &machine<T>::ptan,  &machine<T>::psinh,
+			&machine<T>::ptanh,  &machine<T>::pcosh,  &machine<T>::pexp,  &machine<T>::plog,
+			&machine<T>::plog10, &machine<T>::plog2,  &machine<T>::pasin, &machine<T>::pacos, 
+			&machine<T>::patan,  &machine<T>::patan2, &machine<T>::pmax,  &machine<T>::pmin,  
+			&machine<T>::psig,   &machine<T>::pfloor, &machine<T>::pround
+	}};
+	
+private:
 
-	/// Indices, stack and pointers to functions for operating on bytecode
-	size_t opCnt, valInd;
-	ATMSP_STACK<T> stk;
-	void (ATMSB<T>::*fun[ATMSP_SIZE])();
+	template <size_t maxSize>   
+	class flat_stack {
+				
+		std::array<T, maxSize> _data;
+		size_t _sp; 
+			   
+	public:    
+		flat_stack() : _sp(0) {}
+		void clear() { _sp = 0; }
 
+		void push( T const &elem ) {
+			eosio_assert(_sp < (maxSize - 1), "atmsp::machine: stack overflow");
+			_data[(++_sp) - 1] = elem; 
+		}
+		
+		T pop() {
+			eosio_assert(_sp > 0, "atmsp::machine::Stack::pop(): empty stack");
+			return _data[(_sp--) - 1]; 
+		}
+
+		T top()const {
+			eosio_assert(_sp > 0, "atmsp::machine::Stack::top(): empty stack");
+			return _data[_sp - 1]; 
+		}
+		
+		void set_top(T const &elem) {
+			eosio_assert(_sp > 0, "atmsp::machine::Stack::set_top(): empty stack");
+			_data[_sp - 1] = elem; 
+		}
+	};
+	
+	mutable flat_stack<SIZE.operations> _stk;
+	mutable size_t _val_idx;
+	
+public:  
+
+	std::array<basic_operator, SIZE.operations> fun;
+	memory_info used_mem;
 	/// All num, var and con values are consecutively mapped into the val-array.
 	/// So in run() the bytecode operators work on the val-array only
-	T *val[ATMSP_SIZE];
-	T num[ATMSP_MAXNUM];
-	T var[ATMSP_MAXVAR];
-	T con[ATMSP_MAXCON];
-
-	/// Catch NaN/inf-errors for x/0 et al. 0==success, 1 else
-	size_t fltErr;
-
+	std::array<T*, SIZE.values> val;        
+	std::array<T, SIZE.nums> num;
+	std::array<T, SIZE.vars> var;
+	std::array<T, SIZE.cons> con;
+	   
 	/// Bytecode execution
-	T run() {
-		stk.clear(); valInd = fltErr = 0;
-		for (size_t i=0; i<opCnt; i++) (*this.*fun[i])();
-		return stk.top();
+	T run()const {
+		_stk.clear(); 
+		_val_idx = 0;
+		for (size_t i = 0; i < used_mem.operations; i++) 
+			(*this.*fun[i])();
+		return _stk.top();
 	}
 };
 
+template <typename T>
+constexpr std::array<typename machine<T>::basic_operator, machine<T>::OPERATORS_NUM> machine<T>::OPERATORS;
 
 /** *********************************************************************** **
- ** Parser class. Parses a string and generates the bytecode. For certain   **
+ ** parser class. Parses a string and generates the bytecode. For certain   **
  ** kind of strings ("x^2", ...) the bytecode is optimzed for speed.        **
  ** *********************************************************************** **/
 template <typename T>
-class ATMSP {
-
+class parser {
 	/// Search-helper for constant list
-	struct CONTYPE {
+	struct const_t {
 		std::string name;
 		T val;
+		const_t(const std::string &n = std::string(), T v = static_cast<T>(0)) : name(n), val(v) {}
 
-		CONTYPE() : val((T)0) {}
-		CONTYPE(const std::string &n) : name(n), val((T)0) {}
-		CONTYPE(const std::string &n, T v) : name(n), val(v) {}
-
-		bool operator == (const CONTYPE &ct) { return name == ct.name; }
+		bool operator == (const const_t &ct)const { return name == ct.name; }
 	};
 
-	/// Recursive bytecode generation
-	char *cp;                         // Character-pointer for parsing
-	void expression(ATMSB<T> &bc);    // Handle expression as 1.st recursion level
-	void term(ATMSB<T> &bc);          // Handle terms as 2.nd recursion level
-	void factor(ATMSB<T> &bc);        // Handle factors as last recursion level
+	/// Recursive bytecode generation	
+	void expression(machine<T> &bc)const;    // Handle expression as 1.st recursion level
+	void term(machine<T> &bc)const;          // Handle terms as 2.nd recursion level
+	void factor(machine<T> &bc)const;        // Handle factors as last recursion level
 
 	/// Little helper functions
-	bool isVar(const char *cp);       // Variable detection
-	std::string skipAlphaNum();       // Variable/constant extraction
+	static bool is_var(const char* cp);  // Variable detection
+	std::string skip_alpha_num()const;   // Variable/constant extraction
+ 
+	template <typename V, size_t maxSize>
+	struct flat_list {
+		size_t _count;
+		std::array<V, maxSize> _data;
+		
+		const V &operator [] (const size_t idx)const {
+			eosio_assert(idx < _count, "atmsp::parser:list wrong index"); 
+			return _data[idx]; 
+		}
+		
+		V &operator [] (const size_t idx) {
+			eosio_assert(idx < _count, "atmsp::parser:list wrong index"); 
+			return _data[idx]; 
+		}
+		
+		void clear() { _count = 0; }
+		
+		size_t size()const { return _count; }
+			 
+		void push(V const &elem) {
+			eosio_assert(_count < maxSize, "atmsp::parser: list overflow");
+			_data[_count++] = elem;
+		}
 
-	/// Error handling and inits
-	enum { noErr, funErr, varErr, conErr, parErr, memErr, nanErr };
-	jmp_buf errJmp;                   // Buffer address for leaving recursions on error
-	void init();                      // Init function, constant and error message lists
-
-	/// Basic counters and indices
-	size_t opCnt, varCnt, valInd, numInd, varInd, conInd, funInd;
-
-	/// Lists. Note: 6/21 hardcoded here for not to waste any memory
-	ATMSP_LIST<std::string, 6> errLst;               // Our 6 error messages
-	ATMSP_LIST<std::string, 21> funLst;              // Our 21 recognized functions abs..tanh
-	ATMSP_LIST<std::string, ATMSP_MAXVAR> varLst;    // Extracted variables from varString "x,y,.."
-	ATMSP_LIST<CONTYPE, ATMSP_MAXCON> conLst;        // Our constants. $e and $pi are default
+		bool find(V const &elem, size_t &idx)const {
+			for (size_t i=0; i < _count; i++)
+				if ( _data[i] == elem ) { idx = i; return true; }
+			return false;
+		}
+	};
+ 
+	static size_t constexpr STD_FUNCS_NUM = 21;
+	static constexpr flat_list<std::string_view, STD_FUNCS_NUM> FUNC_LIST { STD_FUNCS_NUM, {{
+			std::string_view("abs", 3),   std::string_view("cos", 3),   std::string_view("cosh", 4),
+			std::string_view("exp", 3),   std::string_view("log", 3),   std::string_view("log10", 5),
+			std::string_view("log2", 4),  std::string_view("sin", 3),   std::string_view("sinh", 4),
+			std::string_view("sqrt", 4),  std::string_view("tan", 3),   std::string_view("tanh", 4),            
+			std::string_view("asin", 4),  std::string_view("acos", 4),  std::string_view("atan", 4),
+			std::string_view("atan2", 5), std::string_view("max", 3),   std::string_view("min", 3),
+			std::string_view("sig", 3),   std::string_view("floor", 5), std::string_view("round", 5)}
+	}};
+	
+	mutable const char* _cp;                                        // Character-pointer for parsing            
+	mutable flat_list<std::string, SIZE.vars> _var_list {0, {}};    // Extracted variables from varString "x,y,.."
+	
+	flat_list<const_t, SIZE.cons> _con_list {0, {}};
 
 public:
 
-	/// Constructor. Creates our lists funLst, conLst and errLst
-	ATMSP() { init(); }
-
-	/// Add constant to the parser. $pi and $e are yet default. $i for complex only
-	/// Returns noErr==0 on success, error code else
-	size_t addConstant(const std::string &name, T value) {
-		return name[0]!='$' ? conErr : (conLst.push(CONTYPE(name, value)) ? noErr : memErr);
+	void add_constant(const std::string& name, T value) {
+		eosio_assert(name[0] == '$', "atmsp::parser: wrong constant name");
+		_con_list.push(const_t(name, value));
 	}
 
-	/// Parse and simultaneously generate bytecode
-	/// Returns noErr==0 on success, error code else
-	size_t parse(ATMSB<T> &bc, const std::string &exp, const std::string &vars);
-
-	/// Message error-string for a specific error number
-	const std::string errMessage(size_t errNum) { return errLst[errNum-1]; }
+	void operator()(machine<T>& bc, const std::string& exp, const std::string& vars)const;
 };
 
-
-/** *********************************************************************** **
- ** Init/error handling and little helper functions                         **
- ** *********************************************************************** **/
 template <typename T>
-void ATMSP<T>::init() {
+constexpr  parser<T>::flat_list<std::string_view, parser<T>::STD_FUNCS_NUM> parser<T>::FUNC_LIST;
 
-	// Default functions all/complex
-	funLst.push("abs");  funLst.push("cos");  funLst.push("cosh");
-	funLst.push("exp");  funLst.push("log");  funLst.push("log10");
-	funLst.push("log2"); funLst.push("sin");  funLst.push("sinh");
-	funLst.push("sqrt"); funLst.push("tan");  funLst.push("tanh");
-
-	// Default functions all/cmath
-	#if !defined(COMPLEX)
-	funLst.push("asin");  funLst.push("acos");  funLst.push("atan");
-	funLst.push("atan2"); funLst.push("max");   funLst.push("min");
-	funLst.push("sig");   funLst.push("floor"); funLst.push("round");
-	#endif
-
-	// Default constants
-	#if !defined(MPFR)
-	conLst.push(CONTYPE("$e",  T(2.718281828459045235360287471353L)));
-	conLst.push(CONTYPE("$pi", T(3.141592653589793238462643383279L)));
-	#else
-	conLst.push(CONTYPE("$e",  exp(T(1.0))));
-	conLst.push(CONTYPE("$pi", T(4.0) * (T(4.0)*atan(T(1.0)/T(5.0)) - atan(T(1.0)/T(239.0)))));
-	#endif
-	#if defined(COMPLEX)
-	conLst.push(CONTYPE("$i", T(0.0, 1.0)));
-	#endif
-
-	// Error messages. NaN/inf needed for expressions like "1/0"
-	errLst.push("Function/expression error");
-	errLst.push("Variable/expression error");
-	errLst.push("Constant error");
-	errLst.push("Parenthesis error");
-	errLst.push("Out of memory error");
-	errLst.push("NaN/inf float error");
-}
-
-
-// Variable detection. Check if string-part after cp signs a var or function
 template <typename T>
-bool ATMSP<T>::isVar(const char *cp) {
-	char *tmp = (char *)cp;
-	while ( isalnum(*tmp) && *tmp++ );
+bool parser<T>::is_var(const char *c) {
+	auto tmp = c;
+	while (isalnum(*tmp) && *tmp++);
 	return (*tmp == '(' ? false : true);
 }
 
-
-// Variable/constant extraction. Return alphanumeric-string and advance cp
 template <typename T>
-std::string ATMSP<T>::skipAlphaNum() {
-	char *start = cp;
-	std::string alphaString(cp++);
-	while ( isalnum(*cp) && *cp++ );
-	return alphaString.substr(0, cp-start);
+std::string parser<T>::skip_alpha_num()const {
+	auto start = _cp;
+	std::string alphaString(_cp++);
+	while (isalnum(*_cp) && *_cp++);
+	return alphaString.substr(0, static_cast<size_t>(_cp - start));
 }
 
-
-/** *********************************************************************** **
- ** Core parser stuff                                                       **
- ** *********************************************************************** **/
 template <typename T>
-size_t ATMSP<T>::parse(ATMSB<T> &bc, const std::string &exps, const std::string &vars) {
-
-	// First always force recursion break on errors
-	size_t eLevel = noErr;
-	if ( (eLevel=setjmp(errJmp)) != noErr ) return eLevel;
-
+void parser<T>::operator()(machine<T> &bc, const std::string& exps, const std::string& vars)const {
 	// Prepare clean expression and variable strings
 	std::string::size_type pos, lastPos;
 	std::string es(exps), vs(vars);
-	pos = 0; while ( (pos=es.find(' '), pos) != std::string::npos ) es.erase(pos, 1);
-	pos = 0; while ( (pos=vs.find(' '), pos) != std::string::npos ) vs.erase(pos, 1);
-	if ( es.empty() ) longjmp(errJmp, funErr);
-	cp = (char *) es.c_str();
+	es.erase(std::remove(es.begin(), es.end(), ' '), es.end());
+	vs.erase(std::remove(vs.begin(), vs.end(), ' '), vs.end());
+	if (es.empty()) 
+		eosio_assert(false, "atmsp::parser: string is empty");
+	_cp = es.c_str();
 
-	// Split comma separated variables into varLst
+	// Split comma separated variables into _var_list
 	// One instance can be parsed repeatedly. So clear() is vital here
-	varLst.clear();
+	_var_list.clear();
 	pos = vs.find_first_of(',', lastPos = vs.find_first_not_of(',', 0));
-	while ( std::string::npos != pos || std::string::npos != lastPos ) {
-		if ( !varLst.push(vs.substr(lastPos, pos-lastPos)) ) longjmp(errJmp, memErr);
+	while (std::string::npos != pos || std::string::npos != lastPos) {
+		_var_list.push(vs.substr(lastPos, pos-lastPos));
 		pos = vs.find_first_of(',', lastPos = vs.find_first_not_of(',', pos));
 	}
 
-	// Static parenthesis check. "Abuse" free opCnt/varCnt as open/close-counters
-	opCnt = varCnt = 0;
-	for (size_t i=0; i<es.size(); i++)
-		if ( es[i] == '(' )
-			opCnt++;
-		else if ( es[i] == ')' ) {
-			varCnt++;
-			if ( varCnt > opCnt ) longjmp(errJmp, parErr);
+	size_t opn = 0;
+	size_t cls = 0;
+	for (size_t i = 0; i < es.size(); i++)
+		if (es[i] == '(')
+			opn++;
+		else if (es[i] == ')') {
+			cls++;
+			eosio_assert(cls <= opn, "atmsp::parser: cls > opn");
 		}
-	if ( opCnt != varCnt ) longjmp(errJmp, parErr);
-
-	// Reset all our counters and indices
-	// opCnt  = Operator count. For bytecode and memory checks
-	// varCnt = Variable count. For check if we have a constant expression
-	// valInd = All num, var and con values are mapped into the bytecode-val-array
-	// numInd = Numerical numbers array index
-	opCnt = varCnt = valInd = numInd = 0;    
+		
+	eosio_assert(opn == cls, "atmsp::parser: cls != opn");
+	
+	bc.used_mem = {
+		.operations = 0,
+		.values = 0,
+		.nums = 0,
+		.vars = 0,
+		.cons = _con_list.size()        
+	};   
 
 	// Run it once for parsing and generating the bytecode
 	expression(bc);
-	bc.opCnt = opCnt;
-
+	
 	// No vars in expression? Evaluate at compile time then
-	if ( !varCnt ) {
+	if (!bc.used_mem.vars) {
 		bc.num[0] = bc.run();
-		if ( bc.fltErr ) longjmp(errJmp, nanErr);
 		bc.val[0] = &bc.num[0];
-		bc.fun[0] = &ATMSB<T>::ppush;
-		bc.opCnt = 1;
+		bc.fun[0] = &machine<T>::ppush;
+		
+		bc.used_mem = {
+			.operations = 1,
+			.values = 1,
+			.nums = 1,
+			.vars = 0,
+			.cons = 0       
+		};
 	}
-
-	return noErr;
 }
 
-
 template <typename T>
-void ATMSP<T>::expression(ATMSB<T> &bc) {
-
+void parser<T>::expression(machine<T> &bc)const {
 	// Enter next recursion level
 	term(bc);
 
-	while ( *cp=='+' || *cp=='-' )
-		if ( *cp++ == '+' ) {
+	while ( *_cp == '+' || *_cp == '-' )
+		if ( *_cp++ == '+' ) {
 			term(bc);
-			bc.fun[opCnt++] = &ATMSB<T>::padd;
+			bc.fun[bc.used_mem.operations++] = &machine<T>::padd;
 		}
 		else {
 			term(bc);
-			bc.fun[opCnt++] = &ATMSB<T>::psub;
+			bc.fun[bc.used_mem.operations++] = &machine<T>::psub;
 		}
 }
 
-
 template <typename T>
-void ATMSP<T>::term(ATMSB<T> &bc) {
-
+void parser<T>::term(machine<T> &bc)const {
 	// Enter next recursion level
 	factor(bc);
 
-	while ( *cp=='*' || *cp=='/' )
-		if ( *cp++ == '*' ) {
+	while (*_cp == '*' || *_cp == '/')
+		if (*_cp++ == '*') {
 			factor(bc);
-			bc.fun[opCnt++] = &ATMSB<T>::pmul;
+			bc.fun[bc.used_mem.operations++] = &machine<T>::pmul;
 		}
 		else {
 			factor(bc);
-			bc.fun[opCnt++] = &ATMSB<T>::pdiv;
+			bc.fun[bc.used_mem.operations++] = &machine<T>::pdiv;
 		}
 }
 
 
 template <typename T>
-void ATMSP<T>::factor(ATMSB<T> &bc) {
-
+void parser<T>::factor(machine<T> &bc)const {
 	/// Check available memory
-	if ( numInd>=ATMSP_MAXNUM || valInd>=ATMSP_SIZE || opCnt>=ATMSP_SIZE ) longjmp(errJmp, memErr);
+	if (bc.used_mem.nums >= SIZE.nums || bc.used_mem.values >= SIZE.values || bc.used_mem.operations >= SIZE.operations)
+		eosio_assert(false, "atmsp::parser: bc.used_mem.nums >= SIZE.nums || bc.used_mem.values >= SIZE.values || bc.used_mem.operations >= SIZE.operations");
 
 	/// Handle open parenthesis and unary operators first
-	if ( *cp == '(' ) {
-		++cp; expression(bc);
-		if ( *cp++ != ')' ) longjmp(errJmp, parErr);
+	if (*_cp == '(') {
+		++_cp; 
+		expression(bc);
+		if (*_cp++ != ')')
+			eosio_assert(false, "atmsp::parser: unclosed parenthesis");
 	}
-	else if ( *cp == '+' ) {
-		++cp; factor(bc);
+	else if (*_cp == '+') {
+		++_cp; 
+		factor(bc);
 	}
-	else if ( *cp == '-' ) {
-		++cp; factor(bc);
-		bc.fun[opCnt++] = &ATMSB<T>::pchs;
+	else if (*_cp == '-') {
+		++_cp; 
+		factor(bc);
+		bc.fun[bc.used_mem.operations++] = &machine<T>::pchs;
 	}
 
 	/// Extract numbers starting with digit or dot
-	else if ( isdigit(*cp) || *cp=='.' ) {
-		char *end;
-		bc.num[numInd] = (T)strtod(cp, &end);
-		bc.val[valInd++] = &bc.num[numInd++];
-		bc.fun[opCnt++] = &ATMSB<T>::ppush;
-		cp = end;
+	else if (isdigit(*_cp) || *_cp == '.') {
+		int64_t a = 0;
+		int64_t b = 1;
+		bool p = false;
+		while(isdigit(*_cp) || ((*_cp == '.') && !p)) {
+			if(*_cp == '.')
+				p = true;
+			else {
+				int64_t d = (*_cp - '0');
+				if(p)
+					b *= 10;
+				a = a * 10 + d;
+			}
+			_cp++;      
+		}
+		bc.num[bc.used_mem.nums] = (T(a) / T(b));
+		bc.val[bc.used_mem.values++] = &bc.num[bc.used_mem.nums++];
+		bc.fun[bc.used_mem.operations++] = &machine<T>::ppush;
 	}
 
 	/// Extract constants starting with $
-	else if ( *cp == '$' ) {
-		if ( !conLst.find(skipAlphaNum(), conInd) ) longjmp(errJmp, conErr);
-		bc.con[conInd] = conLst[conInd].val;
-		bc.val[valInd++] = &bc.con[conInd];
-		bc.fun[opCnt++] = &ATMSB<T>::ppush;
+	else if (*_cp == '$') {
+		size_t idx;
+		if (!_con_list.find(skip_alpha_num(), idx))
+		   eosio_assert(false, "atmsp::parser: unknown const");
+		bc.con[idx] = _con_list[idx].val;
+		bc.val[bc.used_mem.values++] = &bc.con[idx];
+		bc.fun[bc.used_mem.operations++] = &machine<T>::ppush;
 	}
 
 	/// Extract variables
-	else if ( isVar(cp) ) {
-		if ( varLst.find(skipAlphaNum(), varInd) ) varCnt++; else longjmp(errJmp, varErr);
-		bc.val[valInd++] = &bc.var[varInd];
-		bc.fun[opCnt++] = &ATMSB<T>::ppush;
+	else if (is_var(_cp)) {
+		size_t idx;
+		if (_var_list.find(skip_alpha_num(), idx)) 
+			bc.used_mem.vars = std::max(bc.used_mem.vars, idx + 1); //sic
+		else 
+			eosio_assert(false, "atmsp::parser: unknown var");
+		bc.val[bc.used_mem.values++] = &bc.var[idx];
+		bc.fun[bc.used_mem.operations++] = &machine<T>::ppush;
 	}
 
 	/// Extract functions
 	else {
-
+		size_t idx;
 		// Search function and advance cp behind open parenthesis
-		if ( funLst.find(skipAlphaNum(), funInd) ) ++cp; else longjmp(errJmp, funErr);
+		if (FUNC_LIST.find(skip_alpha_num(), idx)) 
+			++_cp;
+		else 
+			eosio_assert(false, "atmsp::parser: unknown func");
 
 		// Set operator function and advance cp
-		switch ( funInd ) {
-			case  0: expression(bc); bc.fun[opCnt++] = &ATMSB<T>::pabs;    break;
-			case  1: expression(bc); bc.fun[opCnt++] = &ATMSB<T>::pcos;    break;
-			case  2: expression(bc); bc.fun[opCnt++] = &ATMSB<T>::pcosh;   break;
-			case  3: expression(bc); bc.fun[opCnt++] = &ATMSB<T>::pexp;    break;
-			case  4: expression(bc); bc.fun[opCnt++] = &ATMSB<T>::plog;    break;
-			case  5: expression(bc); bc.fun[opCnt++] = &ATMSB<T>::plog10;  break;
-			case  6: expression(bc); bc.fun[opCnt++] = &ATMSB<T>::plog2;   break;
-			case  7: expression(bc); bc.fun[opCnt++] = &ATMSB<T>::psin;    break;
-			case  8: expression(bc); bc.fun[opCnt++] = &ATMSB<T>::psinh;   break;
-			case  9: expression(bc); bc.fun[opCnt++] = &ATMSB<T>::psqrt;   break;
-			case 10: expression(bc); bc.fun[opCnt++] = &ATMSB<T>::ptan;    break;
-			case 11: expression(bc); bc.fun[opCnt++] = &ATMSB<T>::ptanh;   break;
-			#if !defined(COMPLEX)
-			case 12: expression(bc); bc.fun[opCnt++] = &ATMSB<T>::pasin;   break;
-			case 13: expression(bc); bc.fun[opCnt++] = &ATMSB<T>::pacos;   break;
-			case 14: expression(bc); bc.fun[opCnt++] = &ATMSB<T>::patan;   break;
-			case 15: expression(bc); bc.fun[opCnt++] = &ATMSB<T>::patan2;  break;
-			case 16: expression(bc); ++cp; expression(bc); bc.fun[opCnt++] = &ATMSB<T>::pmax; break;
-			case 17: expression(bc); ++cp; expression(bc); bc.fun[opCnt++] = &ATMSB<T>::pmin; break;
-			case 18: expression(bc); bc.fun[opCnt++] = &ATMSB<T>::psig;    break;
-			case 19: expression(bc); bc.fun[opCnt++] = &ATMSB<T>::pfloor;  break;
-			case 20: expression(bc); bc.fun[opCnt++] = &ATMSB<T>::pround;  break;
-			#endif
+		switch (idx) {
+			case  0: expression(bc); bc.fun[bc.used_mem.operations++] = &machine<T>::pabs;    break;
+			case  1: expression(bc); bc.fun[bc.used_mem.operations++] = &machine<T>::pcos;    break;
+			case  2: expression(bc); bc.fun[bc.used_mem.operations++] = &machine<T>::pcosh;   break;
+			case  3: expression(bc); bc.fun[bc.used_mem.operations++] = &machine<T>::pexp;    break;
+			case  4: expression(bc); bc.fun[bc.used_mem.operations++] = &machine<T>::plog;    break;
+			case  5: expression(bc); bc.fun[bc.used_mem.operations++] = &machine<T>::plog10;  break;
+			case  6: expression(bc); bc.fun[bc.used_mem.operations++] = &machine<T>::plog2;   break;
+			case  7: expression(bc); bc.fun[bc.used_mem.operations++] = &machine<T>::psin;    break;
+			case  8: expression(bc); bc.fun[bc.used_mem.operations++] = &machine<T>::psinh;   break;
+			case  9: expression(bc); bc.fun[bc.used_mem.operations++] = &machine<T>::psqrt;   break;
+			case 10: expression(bc); bc.fun[bc.used_mem.operations++] = &machine<T>::ptan;    break;
+			case 11: expression(bc); bc.fun[bc.used_mem.operations++] = &machine<T>::ptanh;   break;
+			case 12: expression(bc); bc.fun[bc.used_mem.operations++] = &machine<T>::pasin;   break;
+			case 13: expression(bc); bc.fun[bc.used_mem.operations++] = &machine<T>::pacos;   break;
+			case 14: expression(bc); bc.fun[bc.used_mem.operations++] = &machine<T>::patan;   break;
+			case 15: expression(bc); bc.fun[bc.used_mem.operations++] = &machine<T>::patan2;  break;
+			case 16: expression(bc); ++_cp; expression(bc); bc.fun[bc.used_mem.operations++] = &machine<T>::pmax; break;
+			case 17: expression(bc); ++_cp; expression(bc); bc.fun[bc.used_mem.operations++] = &machine<T>::pmin; break;
+			case 18: expression(bc); bc.fun[bc.used_mem.operations++] = &machine<T>::psig;    break;
+			case 19: expression(bc); bc.fun[bc.used_mem.operations++] = &machine<T>::pfloor;  break;
+			case 20: expression(bc); bc.fun[bc.used_mem.operations++] = &machine<T>::pround;  break;
 		}
-		++cp;
+		++_cp;
 	}
 
 	/// At last handle univalent operators like ^ or % (not implemented here)
-	if ( *cp == '^' ) {
-
+	if (*_cp == '^') {
 		// Exponent a positive number? Try to optimize later
-		bool optPow = isdigit( *++cp ) ? true : false;
-		if ( *(cp+1) == '^' ) optPow = false;
+		bool opt = isdigit( *++_cp ) ? true : false;
+		if (*(_cp + 1) == '^') opt = false;
 		factor(bc);
-
-		// Speed up bytecode for 2^2, x^3 ...
-		if ( optPow ) {
-			if ( *bc.val[valInd-1] == (T)2.0 ) {
-				--valInd;
-				bc.fun[opCnt-1] = &ATMSB<T>::ppow2;
+ 		// Speed up bytecode for 2^2, x^3 ...
+		if (opt) {
+			if ( *bc.val[bc.used_mem.values-1] == (T)2.0 ) {
+				--bc.used_mem.values;
+				bc.fun[bc.used_mem.operations-1] = &machine<T>::ppow2;
 			}
-			else if ( *bc.val[valInd-1] == (T)3.0 ) {
-				--valInd;
-				bc.fun[opCnt-1] = &ATMSB<T>::ppow3;
+			else if ( *bc.val[bc.used_mem.values-1] == (T)3.0 ) {                
+				--bc.used_mem.values;
+				bc.fun[bc.used_mem.operations-1] = &machine<T>::ppow3;
 			}
-			else if ( *bc.val[valInd-1] == (T)4.0 ) {
-				--valInd;
-				bc.fun[opCnt-1] = &ATMSB<T>::ppow4;
+			else if ( *bc.val[bc.used_mem.values-1] == (T)4.0 ) {
+				--bc.used_mem.values;
+				bc.fun[bc.used_mem.operations-1] = &machine<T>::ppow4;
 			}
 			// Exponent is a positive number, but not 2-4. Proceed with standard pow()
 			else
-				bc.fun[opCnt++] = &ATMSB<T>::ppow;
+				bc.fun[bc.used_mem.operations++] = &machine<T>::ppow;
 		}
 		// Exponent is a not a number or negative. Proceed with standard pow()
 		else
-			bc.fun[opCnt++] = &ATMSB<T>::ppow;
+			bc.fun[bc.used_mem.operations++] = &machine<T>::ppow;
 	}
-
 }
 
-#endif    // _ATMSP_H_INCLUDED_
+}
