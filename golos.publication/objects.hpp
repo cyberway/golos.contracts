@@ -1,23 +1,46 @@
 #pragma once
-#include "config.hpp"
 
 #include <eosiolib/eosio.hpp>
+#include <eosiolib/asset.hpp>
 
 using namespace eosio;
 
 namespace structures {
+
+struct st_hash {
+    st_hash() = default;
+
+    uint64_t hash;
+
+    EOSLIB_SERIALIZE(st_hash, (hash))
+};
+
+struct rshares {
+    rshares() = default;
+
+    uint64_t net_rshares;
+    uint64_t abs_rshares;
+    uint64_t vote_rshares;
+    uint64_t children_abs_rshares;
+
+    EOSLIB_SERIALIZE(rshares, (net_rshares)(abs_rshares)(vote_rshares)(children_abs_rshares))
+};
 
 struct beneficiary {
     beneficiary() = default;
 
     account_name account;
     uint64_t deductprcnt;
+
+    EOSLIB_SERIALIZE(beneficiary, (account)(deductprcnt))
 };
 
 struct tag {
     tag() = default;
 
     std::string tag_name;
+
+    EOSLIB_SERIALIZE(tag, (tag_name))
 };
 
 struct content {
@@ -43,12 +66,15 @@ struct createpost {
 
     account_name account;
     std::string permlink;
-    std::string parentid;
+    account_name parentacc;
     std::string parentprmlnk;
     uint64_t curatorprcnt;
     std::string payouttype;
     std::vector<structures::beneficiary> beneficiaries;
     std::string paytype;
+
+    EOSLIB_SERIALIZE(createpost, (account)(permlink)(parentacc)(parentprmlnk)(curatorprcnt)
+                     (payouttype)(beneficiaries)(paytype))
 };
 
 struct post : createpost {
@@ -56,27 +82,64 @@ struct post : createpost {
 
     uint64_t id;
     uint64_t date;
-//    std::string withoutpayout;
-//    uint64_t tokenshare;
-
 
     uint64_t primary_key() const {
         return id;
     }
 
-    account_name account_key() const {
+    uint64_t account_key() const {
         return account;
     }
 
-    EOSLIB_SERIALIZE(post, (id)(date)(account)(permlink)(parentid)(parentprmlnk)(curatorprcnt)(payouttype)
+    EOSLIB_SERIALIZE(post, (id)(date)(account)(permlink)(parentacc)(parentprmlnk)(curatorprcnt)(payouttype)
                      (beneficiaries)(paytype))
+};
+
+struct voteinfo {
+    voteinfo() = default;
+
+    uint64_t post_id;
+    account_name voter;
+    uint64_t percent;
+    asset weight;
+    uint64_t time;
+    std::vector<structures::rshares> rshares;
+    uint64_t count;
+
+    uint64_t primary_key() const {
+        return post_id;
+    }
+
+    EOSLIB_SERIALIZE(voteinfo, (post_id)(voter)(percent)(weight)(time)(rshares)(count))
+};
+
+struct votersinfo {
+    votersinfo() = default;
+
+    uint64_t id;
+    uint64_t post_id;
+    account_name voter;
+
+    uint64_t primary_key() const {
+        return id;
+    }
+
+    EOSLIB_SERIALIZE(votersinfo, (id)(post_id)(voter))
 };
 
 }
 
 namespace tables {
-    using id_index = indexed_by<N(posttable), const_mem_fun<structures::post, uint64_t, &structures::post::primary_key>>;
-    using account_index = indexed_by<N(posttable), const_mem_fun<structures::post, account_name, &structures::post::account_key>>;
+    using id_index = indexed_by<N(id), const_mem_fun<structures::post, uint64_t, &structures::post::primary_key>>;
+    using account_index = indexed_by<N(account), const_mem_fun<structures::post, uint64_t, &structures::post::account_key>>;
     using post_table = eosio::multi_index<N(posttable), structures::post, id_index, account_index>;
-    using content_table = eosio::multi_index<N(contenttable), structures::content>;
+
+    using content_id_index = indexed_by<N(id), const_mem_fun<structures::content, uint64_t, &structures::content::primary_key>>;
+    using content_table = eosio::multi_index<N(contenttable), structures::content, content_id_index>;
+
+    using vote_index = indexed_by<N(post_id), const_mem_fun<structures::voteinfo, uint64_t, &structures::voteinfo::primary_key>>;
+    using vote_table = eosio::multi_index<N(votetable), structures::voteinfo, vote_index>;
+
+    using voters_index = indexed_by<N(id), const_mem_fun<structures::votersinfo, uint64_t, &structures::votersinfo::primary_key>>;
+    using voters_table = eosio::multi_index<N(voterstable), structures::votersinfo>;
 }

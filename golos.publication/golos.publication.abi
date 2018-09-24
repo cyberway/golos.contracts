@@ -6,6 +6,16 @@
   }],
   "structs": [
   {
+    "name": "hash",
+    "base": "",
+    "fields": [
+      {
+        "name": "hash",
+        "type": "uint64"
+      }
+    ]
+  },
+  {
     "name": "beneficiaries",
     "base": "",
     "fields": [
@@ -26,7 +36,29 @@
       {
         "name": "tag",
         "type": "string"
+      }
+    ]
+  },
+  {
+    "name": "rshares",
+    "base": "",
+    "fields": [
+      {
+        "name": "net_rshares",
+        "type": "uint64"
       },
+      {
+        "name": "abs_rshares",
+        "type": "uint64"
+      },
+      {
+        "name": "vote_rshares",
+        "type": "uint64"
+      },
+      {
+        "name": "children_abs_rshares",
+        "type": "uint64"
+      }
     ]
   },
   {
@@ -80,8 +112,8 @@
         "type": "string"
       },
       {
-        "name": "parentid",
-        "type": "string"
+        "name": "parentacc",
+        "type": "account_name"
       },
       {
         "name": "parentprmlnk",
@@ -118,8 +150,8 @@
         "type": "string"
       },
       {
-        "name": "parentid",
-        "type": "string"
+        "name": "parentacc",
+        "type": "account_name"
       },
       {
         "name": "parentprmlnk",
@@ -176,6 +208,98 @@
         "type": "string"
       }
     ]
+  },
+  {
+    "name": "vote",
+    "base": "",
+    "fields": [
+      {
+        "name": "voter",
+        "type": "account_name"
+      },
+      {
+        "name": "author",
+        "type": "account_name"
+      },
+      {
+        "name": "permlink",
+        "type": "string"
+      },
+      {
+        "name": "weight",
+        "type": "asset"
+      }
+    ]
+  },
+  {
+    "name": "voteinfo",
+    "base": "",
+    "fields": [
+      {
+        "name": "post_id",
+        "type": "uint64"
+      },
+      {
+        "name": "voter",
+        "type": "account_name"
+      },
+      {
+        "name": "percent",
+        "type": "uint64"
+      },
+      {
+        "name": "weight",
+        "type": "asset"
+      },
+      {
+        "name": "time",
+        "type": "uint64"
+      },
+      {
+        "name": "rshares",
+        "type": "rshares[]"
+      },
+      {
+        "name": "count",
+        "type": "uint64"
+      }
+    ]
+  },
+  {
+    "name": "votersinfo",
+    "base": "",
+    "fields": [
+      {
+        "name": "id",
+        "type": "uint64"
+      },
+      {
+        "name": "post_id",
+        "type": "uint64"
+      },
+      {
+        "name": "voter",
+        "type": "account_name"
+      }
+    ]
+  },
+  {
+    "name": "accountinfo",
+    "base": "",
+    "fields": [
+      {
+        "name": "id",
+        "type": "uint64"
+      },
+      {
+        "name": "post_bandwidth",
+        "type": "uint64"
+      },
+      {
+        "name": "voter",
+        "type": "account_name"
+      }
+    ]
   }
   ],
   "actions": [
@@ -193,11 +317,15 @@
   },
   {
     "name": "upvote",
-    "type": "upvote"
+    "type": "vote"
   },
   {
     "name": "downvote",
-    "type": "downvote"
+    "type": "vote"
+  },
+  {
+    "name": "closepost",
+    "type": "hash"
   }
   ],
   "tables": [
@@ -217,18 +345,44 @@
     "type": "content",
     "index_type": "i64",
     "key_names" : [
-      "headerpost"
+      "id"
     ],
     "key_types" : [
-      "string"
+      "uint64"
     ]
   },
   {
-    "name": "votestable",
-    "type": "post",
+    "name": "votetable",
+    "type": "voteinfo",
     "index_type": "i64",
-    "key_names" : [""],
-    "key_types" : [""]
+    "key_names" : [
+      "post_id"
+    ],
+    "key_types" : [
+      "uint64"
+    ]
+  },
+  {
+    "name": "voterstable",
+    "type": "votersinfo",
+    "index_type": "i64",
+    "key_names" : [
+      "id"
+    ],
+    "key_types" : [
+      "uint64"
+    ]
+  },
+  {
+    "name": "accounttable",
+    "type": "accountinfo",
+    "index_type": "i64",
+    "key_names" : [
+      "id"
+    ],
+    "key_types" : [
+      "uint64"
+    ]
   }
   ],
   "ricardian_clauses": [],
