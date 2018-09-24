@@ -5,8 +5,9 @@
 namespace eosio {
 
 class vesting : public eosio::contract {
+
   public:
-    vesting(account_name self);
+    vesting(account_name self) : contract(self)  {}
     void apply(uint64_t code, uint64_t action);
 
     void buy_vesting(account_name from, account_name  to, asset quantity, string);
@@ -35,14 +36,9 @@ class vesting : public eosio::contract {
     void timeout_delay_trx();
     void calculate_convert_vesting();
     void calculate_delegate_vesting();
-
-  private:
-    tables::vesting_table _table_pair;
-    tables::return_delegate_table _table_delegate_vesting;
 };
 
-asset vesting::get_account_vesting(account_name account, symbol_type sym) const
-{
+asset vesting::get_account_vesting(account_name account, symbol_type sym)const {
     tables::account_table balances(_self, account);
     auto balance = balances.find(sym.name());
     if (balance != balances.end())
