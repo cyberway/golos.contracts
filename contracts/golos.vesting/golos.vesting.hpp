@@ -18,15 +18,13 @@ class vesting : public eosio::contract {
     void undelegate_vesting(account_name sender, account_name recipient, asset quantity);
 
     void create_pair(asset token, asset vesting);
-    void expend_battery(account_name user, uint16_t persent_battery, asset type);
 
+    void open(account_name owner, symbol_type symbol, account_name ram_payer );
+    void close( account_name owner, symbol_type symbol );
 
     inline asset get_account_vesting(account_name account, symbol_type sym )const;
 
   private:
-    void transfer(account_name from, account_name to, asset quantity, bool is_autorization = true);
-    void issue(const structures::issue_vesting &m_issue, bool is_autorization = true, bool is_buy = false);
-
     void sub_balance(account_name owner, asset value);
     void add_balance(account_name owner, asset value, account_name ram_payer);
     const bool bool_asset(const asset &obj) const;

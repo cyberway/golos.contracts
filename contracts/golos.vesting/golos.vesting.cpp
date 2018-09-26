@@ -12,7 +12,7 @@ extern "C" {
 
 void vesting::apply(uint64_t code, uint64_t action) {
     if (N(transfer) == action && N(eosio.token) == code)
-        execute_action( this, &vesting::buy_vesting );
+        execute_action(this, &vesting::buy_vesting);
 
     else if (N(accruevg) == action)
         execute_action(this, &vesting::accrue_vesting);
@@ -24,12 +24,12 @@ void vesting::apply(uint64_t code, uint64_t action) {
         execute_action(this, &vesting::undelegate_vesting);
     else if (N(cancelvg) == action)
         execute_action(this, &vesting::cancel_convert_vesting);
-    else if (N(expbattery) == action)
-        execute_action(this, &vesting::expend_battery);
 
-    else if (N(issue) == action)
-//        issue(unpack_action_data<structures::issue_vesting>());
-        execute_action(this, &vesting::issue);
+    else if (N(open) == action)
+        execute_action(this, &vesting::open);
+    else if (N(close) == action)
+        execute_action(this, &vesting::close);
+
     else if (N(createpair) == action)
         execute_action(this, &vesting::create_pair);
     else if (N(timeoutrdel) == action)
@@ -48,14 +48,26 @@ void vesting::buy_vesting(account_name  from,
         require_auth(from);
     else return;
 
+    eosio_assert(from != to, "cannot transfer to self");
+    eosio_assert(is_account(to), "to account does not exist");
+    eosio_assert(quantity.is_valid(), "invalid quantity");
+    eosio_assert(quantity.amount > 0, "must transfer positive quantity");
+
     auto sym_name = quantity.symbol.name();
     tables::vesting_table table_pair(_self, _self);
     auto index = table_pair.get_index<N(token)>();
     auto pair = index.find(sym_name);
     eosio_assert(pair != index.end(), "Token not found");
 
-    issue({_self, convert_token(quantity, pair->vesting.symbol)}, false, true);
-    transfer(to, from, quantity, false);
+    index.modify(pair, 0, [&](auto &item) {
+        item.vesting += convert_token(quantity, pair->vesting.symbol);
+        item.token += quantity;
+    });
+
+    auto payer = has_auth( to ) ? to : from;
+
+    require_recipient(from);
+    add_balance(from, convert_token(quantity, pair->vesting.symbol), payer);
 }
 
 void vesting::accrue_vesting(account_name sender, account_name user, asset quantity) {
@@ -75,10 +87,7 @@ void vesting::accrue_vesting(account_name sender, account_name user, asset quant
     // TODO deductions
     tables::account_table account(_self, user);
     auto balance = account.find(sym_name);
-
     if (balance == account.end()) {
-        print("Not balance");
-
         add_balance(user, quantity, sender);
         return;
     }
@@ -118,18 +127,18 @@ void vesting::convert_vesting(account_name sender, account_name recipient, asset
     if (record != table.end()) {
         table.modify(record, sender, [&]( auto &item ) {
             item.recipient = recipient;
-            item.number_of_payments = OUTPUT_WEEK_COUNT;
-            item.payout_time = time_point_sec(now() + OUTPUT_PAYOUT_PERIOD);
-            item.payout_part = quantity/OUTPUT_WEEK_COUNT;
+            item.number_of_payments = NUMBER_OF_CONVERSIONS;
+            item.payout_time = time_point_sec(now() + TOTAL_TERM_OF_CONCLUSION);
+            item.payout_part = quantity/NUMBER_OF_CONVERSIONS;
             item.balance_amount = quantity;
         });
     } else {
         table.emplace(sender, [&]( auto &item ) {
             item.sender = sender;
             item.recipient = recipient;
-            item.number_of_payments = OUTPUT_WEEK_COUNT;
-            item.payout_time = time_point_sec(now() + OUTPUT_PAYOUT_PERIOD);
-            item.payout_part = quantity/OUTPUT_WEEK_COUNT;
+            item.number_of_payments = NUMBER_OF_CONVERSIONS;
+            item.payout_time = time_point_sec(now() + TOTAL_TERM_OF_CONCLUSION);
+            item.payout_part = quantity/NUMBER_OF_CONVERSIONS;
             item.balance_amount = quantity;
         });
     }
@@ -173,7 +182,6 @@ void vesting::delegate_vesting(account_name sender, account_name recipient, asse
 
             flag_update = true;
         }
-
         ++it_index;
     }
 
@@ -185,25 +193,16 @@ void vesting::delegate_vesting(account_name sender, account_name recipient, asse
             item.quantity = quantity;
             item.deductions.symbol = quantity.symbol;
             item.percentage_deductions = percentage_deductions;
-            item.return_date = time_point_sec(now() + OUTPUT_PAYOUT_PERIOD);
+            item.return_date = time_point_sec(now()/* + TIME_LIMIT_FOR_RETURN_DELEGATE_VESTING*/);
         });
     }
 
     tables::account_table account_recipient(_self, recipient);
     auto balance_recipient = account_recipient.find(quantity.symbol.name());
-    if (balance_recipient != account_recipient.end()) {
-        account_recipient.modify(balance_recipient, sender, [&](auto &item){
-            item.received_vesting += quantity;
-        });
-    } else {
-        account_recipient.emplace(sender, [&](auto &item){
-            item.vesting.symbol = quantity.symbol;
-            item.delegate_vesting.symbol = quantity.symbol;
-            item.received_vesting = quantity;
-            item.battery.charge = UPPER_BOUND;
-            item.battery.renewal = time_point_sec(now());
-        });
-    }
+    eosio_assert(balance_recipient != account_recipient.end(), "Not found balance token vesting");
+    account_recipient.modify(balance_recipient, sender, [&](auto &item){
+        item.received_vesting += quantity;
+    });
 }
 
 void vesting::undelegate_vesting(account_name sender, account_name recipient, asset quantity) {
@@ -239,7 +238,7 @@ void vesting::undelegate_vesting(account_name sender, account_name recipient, as
                 item.id = table_delegate_vesting.available_primary_key();
                 item.recipient = sender;
                 item.amount = quantity + part_deductions;
-                item.date = time_point_sec(now() + OUTPUT_PAYOUT_PERIOD);
+                item.date = time_point_sec(now() + TIME_LIMIT_FOR_RETURN_DELEGATE_VESTING);
             });
 
             tables::account_table account_recipient(_self, recipient);
@@ -274,53 +273,52 @@ void vesting::calculate_convert_vesting() {
         tables::convert_table table(_self, obj_pair.vesting.symbol.name());
         auto index = table.get_index<N(payout_time)>();
         for (auto obj = index.cbegin(); obj != index.cend(); ) {
-            if (obj->payout_time <= time_point_sec(now())) {
-                if(obj->number_of_payments > 0) {
-                    index.modify(obj, 0, [&](auto &item) {
-                        item.payout_time = time_point_sec(now() + OUTPUT_PAYOUT_PERIOD);
-                        --item.number_of_payments;
 
-                        print(uint64_t(item.number_of_payments));
-
-                        tables::account_table account(_self, obj->sender);
-                        auto balance = account.find(obj->payout_part.symbol.name());
-
-                        auto lambda_action_sender = [&](asset quantity){
-                            account.modify(balance, 0, [&](auto &item){
-                                item.vesting -= quantity;
-                            });
-
-                            auto sym_name = quantity.symbol.name();
-                            auto index = table_pair.get_index<N(vesting)>();
-                            auto pair = index.find(sym_name);
-                            eosio_assert(pair != index.end(), "Vesting not found");
-
-                            index.modify(pair, 0, [&](auto &item) {
-                                item.vesting -= quantity;
-                                item.token -= convert_token(quantity, pair->token.symbol);
-                            });
-
-                            INLINE_ACTION_SENDER(eosio::token, transfer)( N(eosio.token), {_self, N(active)},
-                            { _self, obj->recipient, convert_token(quantity, pair->token.symbol), "Translation into tokens" } );
-                        };
-
-                        if (balance->vesting < obj->payout_part) {
-                            item.number_of_payments = NOT_TOKENS_WEEK_PERIOD;
-                        } else if (obj->number_of_payments == NOT_TOKENS_WEEK_PERIOD) {
-                            lambda_action_sender(obj->balance_amount - (obj->payout_part * (OUTPUT_WEEK_COUNT - WEEK_PERIOD)));
-                        } else {
-                            lambda_action_sender(obj->payout_part);
-                        }
-                    });
-                }
-
-                if (obj->number_of_payments) {
-                    ++obj;
-                } else {
-                    obj = index.erase(obj);
-                }
-            } else {
+            if (obj->payout_time > time_point_sec(now()))
                 break;
+
+            if(obj->number_of_payments > 0) {
+                index.modify(obj, 0, [&](auto &item) {
+                    item.payout_time = time_point_sec(now() + TOTAL_TERM_OF_CONCLUSION);
+                    --item.number_of_payments;
+
+                    tables::account_table account(_self, obj->sender);
+                    auto balance = account.find(obj->payout_part.symbol.name());
+                    eosio_assert(balance != account.end(), "Not found vesting balance");
+
+                    auto lambda_action_sender = [&](asset quantity){
+                        account.modify(balance, 0, [&](auto &item){
+                            item.vesting -= quantity;
+                        });
+
+                        auto sym_name = quantity.symbol.name();
+                        auto index = table_pair.get_index<N(vesting)>();
+                        auto pair = index.find(sym_name);
+                        eosio_assert(pair != index.end(), "Vesting not found");
+
+                        index.modify(pair, 0, [&](auto &item) {
+                            item.vesting -= quantity;
+                            item.token -= convert_token(quantity, pair->token.symbol);
+                        });
+
+                        INLINE_ACTION_SENDER(eosio::token, transfer)( N(eosio.token), {_self, N(active)},
+                        { _self, obj->recipient, convert_token(quantity, pair->token.symbol), "Translation into tokens" } );
+                    };
+
+                    if (balance->vesting < obj->payout_part) {
+                        item.number_of_payments = NOT_TOKENS_WEEK_PERIOD;
+                    } else if (obj->number_of_payments == NOT_TOKENS_WEEK_PERIOD) {
+                        lambda_action_sender(obj->balance_amount - (obj->payout_part * (NUMBER_OF_CONVERSIONS - LAST_TOKENS_WEEK_PERIOD)));
+                    } else {
+                        lambda_action_sender(obj->payout_part);
+                    }
+                });
+            }
+
+            if (obj->number_of_payments) {
+                ++obj;
+            } else {
+                obj = index.erase(obj);
             }
         }
     }
@@ -331,27 +329,17 @@ void vesting::calculate_delegate_vesting() {
     tables::return_delegate_table table_delegate_vesting(_self, _self);
     auto index = table_delegate_vesting.get_index<N(date)>();
     for (auto obj = index.cbegin(); obj != index.cend(); ) {
-        if (obj->date <= time_point_sec(now())) {
-            tables::account_table account(_self, obj->recipient);
-            auto balance = account.find(obj->amount.symbol.name());
-            if (balance != account.end()) {
-                account.modify(balance, 0, [&](auto &item){
-                    item.vesting += obj->amount;
-                });
-            } else {
-                account.emplace(_self, [&](auto &item){
-                    item.vesting = obj->amount;
-                    item.delegate_vesting.symbol = obj->amount.symbol;
-                    item.received_vesting.symbol = obj->amount.symbol;
-                    item.battery.charge = UPPER_BOUND;
-                    item.battery.renewal = time_point_sec(now());
-                });
-            }
-
-            obj = index.erase(obj);
-        } else {
+        if (obj->date > time_point_sec(now()))
             break;
-        }
+
+        tables::account_table account(_self, obj->recipient);
+        auto balance = account.find(obj->amount.symbol.name());
+        eosio_assert(balance != account.end(), "Not found balance token vesting");
+        account.modify(balance, 0, [&](auto &item){
+            item.vesting += obj->amount;
+        });
+
+        obj = index.erase(obj);
     }
 }
 
@@ -374,79 +362,27 @@ void vesting::create_pair(asset token, asset vesting) {
     });
 }
 
-void vesting::expend_battery(account_name user, uint16_t persent_battery, asset type) {
-    require_auth(user);
-    eosio_assert(persent_battery <= UPPER_BOUND && persent_battery >= LOWER_BOUND, "Invalid persent battary");
-
-    tables::account_table account(_self, user);
-    auto balance = account.find(type.symbol.name());
-    eosio_assert(balance != account.end(), "Not found balance this account");
-
-    auto battery = balance->battery;
-
-    const auto current_time = now();
-    auto recovery_sec = current_time - battery.renewal.utc_seconds;
-
-    double recovery_change = (UPPER_BOUND * recovery_sec) / RECOVERY_PERIOD ;
-    uint64_t battery_charge = recovery_change + battery.charge;
-    if (battery_charge > UPPER_BOUND) {
-        battery.charge = UPPER_BOUND;
-        battery.renewal = time_point_sec(current_time);
-    } else {
-        battery.charge = battery_charge;
-        battery.renewal = time_point_sec(current_time);
-    }
-
-    eosio_assert(battery.charge >= persent_battery, "Not enough charge");
-    battery.charge -= persent_battery;
-
-    account.modify(balance, 0, [&](auto &item){
-        item.battery = battery;
-    });
+void vesting::open(account_name owner, symbol_type symbol, account_name ram_payer) {
+    require_auth( ram_payer );
+    tables::account_table accounts( _self, owner );
+    auto it = accounts.find( symbol.name() );
+    eosio_assert( it == accounts.end(), "Токен существует" );
+       accounts.emplace( ram_payer, [&]( auto& a ){
+           a.vesting.symbol = symbol;
+           a.delegate_vesting.symbol = symbol;
+           a.received_vesting.symbol = symbol;
+       });
 }
 
-void vesting::issue(const structures::issue_vesting &m_issue, bool is_autorization, bool is_buy) {
-    if (is_autorization)
-        require_auth(_self);
-
-    auto sym = m_issue.quantity.symbol;
-    eosio_assert( sym.is_valid(), "invalid symbol name" );
-
-    auto sym_name = sym.name();
-    tables::vesting_table table_pair(_self, _self);
-    auto index = table_pair.get_index<N(vesting)>();
-    auto pair = index.find(sym_name);
-    eosio_assert(pair != index.end(), "Vesting not found");
-
-    index.modify(pair, _self, [&](auto &item) {
-        item.vesting += m_issue.quantity;
-        if (is_buy)
-            item.token = convert_token(m_issue.quantity, pair->token.symbol);
-    });
-
-    add_balance(m_issue.to, m_issue.quantity, _self);
-}
-
-void vesting::transfer(account_name from, account_name to, asset quantity, bool is_autorization) {
-    eosio_assert(from != to, "cannot transfer to self");
-    if (is_autorization)
-        require_auth(from);
-    eosio_assert(is_account(to), "to account does not exist");
-
-    require_recipient(from);
-    require_recipient(to);
-
-    eosio_assert(quantity.is_valid(), "invalid quantity");
-    eosio_assert(quantity.amount > 0, "must transfer positive quantity");
-
-    auto sym_name = quantity.symbol.name();
-    tables::vesting_table table_pair(_self, _self);
-    auto index = table_pair.get_index<N(token)>();
-    auto pair = index.find(sym_name);
-    eosio_assert(pair != index.end(), "Token not found");
-
-    sub_balance(from, convert_token(quantity, pair->vesting.symbol));
-    add_balance(to, convert_token(quantity, pair->vesting.symbol), from);
+void vesting::close(account_name owner, symbol_type symbol) {
+    require_auth( owner );
+    tables::account_table account( _self, owner );
+    auto it = account.find( symbol.name() );
+    eosio_assert( it != account.end(), "Balance row already deleted or never existed. Action won't have any effect." );
+    eosio_assert( it->vesting.amount == 0, "Cannot close because the balance vesting is not zero." );
+    eosio_assert( it->delegate_vesting.amount == 0, "Cannot close because the balance delegate vesting is not zero." );
+    eosio_assert( it->received_vesting.amount == 0, "Cannot close because the balance received vesting not zero." );
+    account.erase( it );
 }
 
 void vesting::sub_balance(account_name owner, asset value) {
@@ -463,19 +399,15 @@ void vesting::sub_balance(account_name owner, asset value) {
 void vesting::add_balance(account_name owner, asset value, account_name ram_payer) {
     tables::account_table account(_self, owner);
     auto to = account.find(value.symbol.name());
-    if( to == account.end() ) {
-        account.emplace( ram_payer, [&]( auto& a ){
-            a.vesting = value;
-            a.delegate_vesting.symbol = value.symbol;
-            a.received_vesting.symbol = value.symbol;
-            a.battery.charge = UPPER_BOUND;
-            a.battery.renewal = time_point_sec(now());
-        });
-    } else {
+    eosio_assert(to != account.end(), "Not found balance token vesting");
+
+//    if( to == account.end() ) {
+//        open(owner, value.symbol, ram_payer);
+//    } else {
         account.modify( to, 0, [&]( auto& a ) {
             a.vesting += value;
         });
-    }
+//    }
 }
 
 const bool vesting::bool_asset(const asset &obj) const {

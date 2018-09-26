@@ -40,20 +40,6 @@
       ]
     },
     {
-      "name": "user_battery",
-      "base": "",
-      "fields": [
-        {
-          "name": "charge",
-          "type": "uint16"
-        },
-        {
-          "name": "renewal",
-          "type": "time_point_sec"
-        }
-      ]
-    },
-    {
       "name": "user_balance",
       "base": "",
       "fields": [
@@ -68,10 +54,6 @@
         {
           "name": "received_vesting",
           "type": "asset"
-        },
-        {
-          "name": "battery",
-          "type": "user_battery"
         }
       ]
     },
@@ -232,36 +214,21 @@
       ]
     },
     {
-      "name": "issue",
-      "base": "",
-      "fields": [
-        {
-          "name": "to",
-          "type": "account_name"
-        },
-        {
-          "name": "quantity",
-          "type": "asset"
-        }
-      ]
+       "name": "open",
+       "base": "",
+       "fields": [
+          {"name":"owner", "type":"account_name"},
+          {"name":"symbol", "type":"symbol"},
+          {"name":"ram_payer", "type":"account_name"}
+       ]
     },
     {
-      "name": "expend_battery",
-      "base": "",
-      "fields": [
-        {
-          "name": "user",
-          "type": "account_name"
-        },
-        {
-          "name": "persent_battery",
-          "type": "uint16"
-        },
-        {
-          "name": "type",
-          "type": "asset"
-        }
-      ]
+       "name": "close",
+       "base": "",
+       "fields": [
+          {"name":"owner", "type":"account_name"},
+          {"name":"symbol", "type":"symbol"}
+       ]
     }
   ],
   "actions": [
@@ -302,16 +269,16 @@
       "type": "hash"
     },
     {
-      "name": "issue",
-      "type": "issue"
-    },
-    {
       "name": "createpair",
       "type": "pair_tokens"
     },
     {
-      "name": "expbattery",
-      "type": "expend_battery"
+      "name": "open",
+      "type": "open"
+    },
+    {
+      "name": "close",
+      "type": "close"
     }
   ],
   "tables": [
