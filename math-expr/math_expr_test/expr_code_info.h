@@ -120,7 +120,7 @@ struct bytecode {
 	}
 	
 #ifndef EOSLIB_DISABLED
-	EOSLIB_SERIALIZE(bytecode, (operators)(values)(vars_size)(nums)(consts))
+	EOSLIB_SERIALIZE(bytecode, (vars_size)(operators)(values)(nums)(consts))
 #endif
 };
 
