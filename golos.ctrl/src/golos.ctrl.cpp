@@ -56,13 +56,6 @@ void control::detachacc(account_name user) {
     // todo: remove auths
 }
 
-bool control::is_attached(account_name user) {
-    bw_user_tbl tbl(_self, _owner);
-    auto itr = tbl.find(user);
-    bool exists = itr != tbl.end();
-    return exists && itr->attached;
-}
-
 
 void control::regwitness(account_name witness, eosio::public_key key, string url) {
     eosio_assert(url.length() < MAX_URL_SIZE, "url too long");

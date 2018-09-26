@@ -109,7 +109,7 @@ public:
 
     [[eosio::action]] void attachacc(account_name user);
     [[eosio::action]] void detachacc(account_name user);
-    bool is_attached(account_name user);
+    inline bool is_attached(account_name user) const;
 
     [[eosio::action]] void regwitness(account_name witness, eosio::public_key key, std::string url);
     [[eosio::action]] void unregwitness(account_name witness);
@@ -159,5 +159,13 @@ private:
     bool has_witness_majority();
     bool has_witness_minority();
 };
+
+bool control::is_attached(account_name user) const {
+    bw_user_tbl tbl(_self, _owner);
+    auto itr = tbl.find(user);
+    bool exists = itr != tbl.end();
+    return exists && itr->attached;
+}
+
 
 }
