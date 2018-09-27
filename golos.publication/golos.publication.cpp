@@ -13,10 +13,6 @@ extern "C" {
 
 publication::publication(account_name self)
     : contract(self)
-    , _post_table(_self, _self)
-    , _content_table(_self, _self)
-    , _vote_table(_self, _self)
-    , _voters_table(_self, _self)
 {}
 
 
@@ -46,12 +42,21 @@ void publication::create_post(account_name account, std::string permlink,
 
     require_auth(account);
 
-    for (auto posttable_obj = _post_table.begin(); posttable_obj != _post_table.end(); ++posttable_obj)
-        eosio_assert(posttable_obj->account != account && posttable_obj->permlink != permlink,
-                     "This post already exists.");
+    tables::post_table post_table(_self, account);
+    tables::content_table content_table(_self, account);
 
-    _post_table.emplace(account, [&]( auto &item ) {
-        item.id = _post_table.available_primary_key();
+    auto posttable_index = post_table.get_index<N(account)>();
+    auto posttable_obj = posttable_index.find(account);
+
+    while (posttable_obj != posttable_index.end() && posttable_obj->account == account) {
+        eosio_assert(posttable_obj->permlink != permlink, "This post already exists.");
+        ++posttable_obj;
+    }
+
+    auto post_id = post_table.available_primary_key();
+
+    post_table.emplace(account, [&]( auto &item ) {
+        item.id = post_id;
         item.date = now();
         item.account = account;
         item.permlink = permlink;
@@ -63,8 +68,8 @@ void publication::create_post(account_name account, std::string permlink,
         item.paytype = paytype;
     });
 
-    _content_table.emplace(account, [&]( auto &item ) {
-        item.id = _content_table.available_primary_key();
+    content_table.emplace(account, [&]( auto &item ) {
+        item.id = post_id;
         item.headerpost = headerpost;
         item.bodypost = bodypost;
         item.languagepost = languagepost;
@@ -74,193 +79,172 @@ void publication::create_post(account_name account, std::string permlink,
 }
 
 void publication::update_post(account_name account, std::string permlink,
-                              account_name parentacc, std::string parentprmlnk,
-                              uint64_t curatorprcnt, std::string payouttype,
-                              std::vector<structures::beneficiary> beneficiaries,
-                              std::string paytype, std::string headerpost,
-                              std::string bodypost, std::string languagepost,
-                              std::vector<structures::tag> tags,
+                              std::string headerpost, std::string bodypost,
+                              std::string languagepost, std::vector<structures::tag> tags,
                               std::string jsonmetadata) {
     require_auth(account);
 
-    for (auto posttable_obj = _post_table.begin(); posttable_obj != _post_table.end(); ++posttable_obj) {
-        if (posttable_obj->account == account && posttable_obj->permlink == permlink) {
-            eosio_assert(posttable_obj->parentacc == parentacc, "Parent account was changed.");
-            eosio_assert(posttable_obj->parentprmlnk == parentprmlnk, "Parent permlink was changed.");
-            eosio_assert(posttable_obj->curatorprcnt == curatorprcnt, "Curator percent was changed.");
-            eosio_assert(posttable_obj->payouttype == payouttype, "Payout type was changed.");
-            for (auto table_beneficiary : posttable_obj->beneficiaries)
-                for (auto param_beneficiary : beneficiaries)
-                    eosio_assert(table_beneficiary.account == param_beneficiary.account, "Beneficiaries was changed.");
-            eosio_assert(posttable_obj->paytype == paytype, "Pay type was changed.");
+    tables::content_table content_table(_self, account);
+    structures::post posttable_obj;
 
-            auto contenttable_index = _content_table.get_index<N(id)>();
-            auto contenttable_obj = contenttable_index.find(posttable_obj->id);
+    if (get_post(account, permlink, posttable_obj)) {
+        auto contenttable_index = content_table.get_index<N(id)>();
+        auto contenttable_obj = contenttable_index.find(posttable_obj.id);
 
-            contenttable_index.modify(contenttable_obj, account, [&]( auto &item ) {
-                item.headerpost = headerpost;
-                item.bodypost = bodypost;
-                item.languagepost = languagepost;
-                item.tags = tags;
-                item.jsonmetadata = jsonmetadata;
-            });
-            break;
-        } else {
-            eosio_assert(false, "Post doesn't exist.");
-        }
+        contenttable_index.modify(contenttable_obj, account, [&]( auto &item ) {
+            item.headerpost = headerpost;
+            item.bodypost = bodypost;
+            item.languagepost = languagepost;
+            item.tags = tags;
+            item.jsonmetadata = jsonmetadata;
+        });
     }
 }
 
 void publication::delete_post(account_name account, std::string permlink) {
     require_auth(account);
 
-    for (auto posttable_obj = _post_table.begin(); posttable_obj != _post_table.end(); ++posttable_obj) {
-        eosio_assert(posttable_obj != _post_table.end(), "Post doesn't exist.");
-        if (posttable_obj->account == account && posttable_obj->permlink == permlink) {            
-            if (posttable_obj->parentacc != std::stoi("")) { // check
-                for (auto obj = _post_table.begin(); obj != _post_table.end(); ++obj) {              
-                    if (obj->parentacc != account && obj->parentprmlnk != permlink) {                       
-                        _post_table.erase(posttable_obj);
-                        auto contenttable_index = _content_table.get_index<N(id)>();
-                        auto contenttable_obj = contenttable_index.find(posttable_obj->id);
-                        contenttable_index.erase(contenttable_obj);
-                        auto votetable_index = _vote_table.get_index<N(post_id)>();
-                        auto votetable_obj = votetable_index.find(posttable_obj->id);
-                        votetable_index.erase(votetable_obj);
-                        for (auto voterstable_obj = _voters_table.begin(); voterstable_obj != _voters_table.end(); )
-                            if (posttable_obj->id == voterstable_obj->post_id) {
-                                voterstable_obj = _voters_table.erase(voterstable_obj);
-                            } else {
-                                ++voterstable_obj;
-                            }
-                        break;
-                    } else {
-                        eosio_assert(false, "You can't delete comment with child comments.");
-                    }
-                }
-                break;
-            } else {
-                eosio_assert(false, "You can't delete post, it can be only changed.");
+    tables::post_table post_table(_self, account);
+    tables::content_table content_table(_self, account);
+    tables::vote_table vote_table(_self, account);
+    tables::voters_table voters_table(_self, account);
+
+    structures::post posttable_obj;
+
+    if (get_post(account, permlink, posttable_obj)) {
+        if (posttable_obj.parentacc) {
+            auto parentacc_index = post_table.get_index<N(parentacc)>();
+            auto parentacc_obj = parentacc_index.find(account);
+            while (parentacc_obj != parentacc_index.end() && parentacc_obj->parentacc == account) {
+                eosio_assert(posttable_obj.parentprmlnk != parentacc_obj->parentprmlnk,
+                             "You can't delete comment with child comments.");
+                ++parentacc_obj;
             }
+            auto posttable_index = post_table.get_index<N(id)>();
+            auto post = posttable_index.find(posttable_obj.id);
+            posttable_index.erase(post);
+            auto contenttable_index = content_table.get_index<N(id)>();
+            auto contenttable_obj = contenttable_index.find(posttable_obj.id);
+            contenttable_index.erase(contenttable_obj);
+            auto votetable_index = vote_table.get_index<N(post_id)>();
+            auto votetable_obj = votetable_index.find(posttable_obj.id);
+            votetable_index.erase(votetable_obj);
+            auto voterstable_index = voters_table.get_index<N(post_id)>();
+            auto voterstable_obj = voterstable_index.find(posttable_obj.id);
+            while (voterstable_obj != voterstable_index.end())
+                voterstable_obj = voterstable_index.erase(voterstable_obj);
+        } else {
+            eosio_assert(false, "You can't delete post, it can be only changed.");
         }
     }
 }
 
 void publication::upvote(account_name voter, account_name author, std::string permlink, asset weight) {
-    eosio::print("\nupvote begin");
-
     require_auth(voter);
+
+    tables::vote_table vote_table(_self, author);
+    tables::voters_table voters_table(_self, author);
 
     std::vector<structures::rshares> rshares;
 
-    structures::rshares rshares_obj;
-
-    rshares_obj.net_rshares = 0;
-    rshares_obj.abs_rshares = 0;
-    rshares_obj.vote_rshares = 0;
-    rshares_obj.children_abs_rshares = 0;
+    structures::rshares rshares_obj{0, 0, 0, 0};
 
     rshares.push_back(rshares_obj);
 
-    for (auto posttable_obj = _post_table.begin(); posttable_obj != _post_table.end(); ++posttable_obj) {
-        eosio_assert(posttable_obj != _post_table.end(), "Post doesn't exist.");
-        if (posttable_obj->account == author && posttable_obj->permlink == permlink) {
-            auto votetable_index = _vote_table.get_index<N(post_id)>();
-            auto votetable_obj = votetable_index.find(posttable_obj->id);
-            if (votetable_obj != votetable_index.end()) {
-                for (auto voterstable_obj = _voters_table.begin(); voterstable_obj != _voters_table.end(); ++voterstable_obj) {
-                    if (posttable_obj->id == voterstable_obj->post_id && voter == voterstable_obj->voter) {
-                        eosio_assert(false, "You have already voted for this post.");
-                    } else {
-                        _voters_table.emplace(voter, [&]( auto &item ) {
-                            item.id = _voters_table.available_primary_key();
-                            item.post_id = posttable_obj->id;
-                            item.voter = voter;
-                        });
+    structures::post posttable_obj;
 
-                        votetable_index.modify(votetable_obj, voter, [&]( auto &item ) {
-                           item.post_id = posttable_obj->id;
-                           item.voter = voter;
-                           item.percent = FIXED_CURATOR_PERCENT;
-                           item.weight = weight;
-                           item.time = now();
-                           item.rshares = rshares;
-                           item.count++;
-                        });
-                        break;
-                    }
-                }
-            } else {
-                _voters_table.emplace(voter, [&]( auto &item ) {
-                    item.id = _voters_table.available_primary_key();
-                    item.post_id = posttable_obj->id;
-                    item.voter = voter;
-                });
-
-                _vote_table.emplace(voter, [&]( auto &item ) {
-                   item.post_id = posttable_obj->id;
-                   item.voter = voter;
-                   item.percent = FIXED_CURATOR_PERCENT;
-                   item.weight = weight;
-                   item.time = now();
-                   item.rshares = rshares;
-                   item.count++;
-                });
+    if (get_post(author, permlink, posttable_obj)) {
+        auto votetable_index = vote_table.get_index<N(post_id)>();
+        auto votetable_obj = votetable_index.find(posttable_obj.id);
+        if (votetable_obj != votetable_index.end()) {
+            auto voterstable_index = voters_table.get_index<N(post_id)>();
+            auto voterstable_obj = voterstable_index.find(posttable_obj.id);
+            while (voterstable_obj != voterstable_index.end() &&
+                   posttable_obj.id == voterstable_obj->post_id) {
+                eosio_assert(voter != voterstable_obj->voter,
+                             "You have already voted for this post.");
+                ++voterstable_obj;
             }
-        }
-    }
 
-    eosio::print("\nupvote end");
-}
+            voters_table.emplace(author, [&]( auto &item ) {
+                item.id = voters_table.available_primary_key();
+                item.post_id = posttable_obj.id;
+                item.voter = voter;
+            });
 
-void publication::downvote(account_name voter, account_name author, std::string permlink, asset weight) {
-    eosio::print("\ndownvote begin");
-
-    require_auth(voter);
-
-    std::vector<structures::rshares> rshares;
-
-    structures::rshares rshares_obj;
-
-    rshares_obj.net_rshares = 0;
-    rshares_obj.abs_rshares = 0;
-    rshares_obj.vote_rshares = 0;
-    rshares_obj.children_abs_rshares = 0;
-
-    rshares.push_back(rshares_obj);
-
-    for (auto posttable_obj = _post_table.begin(); posttable_obj != _post_table.end(); ++posttable_obj) {
-        if (posttable_obj->account == author && posttable_obj->permlink == permlink) {
-            for (auto voterstable_obj = _voters_table.begin(); voterstable_obj != _voters_table.end(); ++voterstable_obj) {
-                if (posttable_obj->id == voterstable_obj->post_id && voter == voterstable_obj->voter) {
-                    _voters_table.erase(voterstable_obj);
-                    break;
-                }
-                eosio_assert(voterstable_obj != _voters_table.end(),
-                             "You can't do down vote because previously you haven't voted for this post.");
-            }
-            auto votetable_index = _vote_table.get_index<N(post_id)>();
-            auto votetable_obj = votetable_index.find(posttable_obj->id);
-
-            votetable_index.modify(votetable_obj, voter, [&]( auto &item ) {
+            votetable_index.modify(votetable_obj, author, [&]( auto &item ) {
+               item.post_id = posttable_obj.id;
                item.voter = voter;
                item.percent = FIXED_CURATOR_PERCENT;
                item.weight = weight;
                item.time = now();
                item.rshares = rshares;
-               item.count--;
+               ++item.count;
             });
-            break;
-        }
-        eosio_assert(posttable_obj != _post_table.end(), "This post doesn't exist.");
-    }
+        } else {
+            voters_table.emplace(author, [&]( auto &item ) {
+                item.id = voters_table.available_primary_key();
+                item.post_id = posttable_obj.id;
+                item.voter = voter;
+            });
 
-    eosio::print("\ndownvote end");
+            vote_table.emplace(author, [&]( auto &item ) {
+               item.post_id = posttable_obj.id;
+               item.voter = voter;
+               item.percent = FIXED_CURATOR_PERCENT;
+               item.weight = weight;
+               item.time = now();
+               item.rshares = rshares;
+               ++item.count;
+            });
+        }
+    }
+}
+
+void publication::downvote(account_name voter, account_name author, std::string permlink, asset weight) {
+    require_auth(voter);
+
+    tables::vote_table vote_table(_self, author);
+    tables::voters_table voters_table(_self, author);
+
+    std::vector<structures::rshares> rshares;
+
+    structures::rshares rshares_obj{0, 0, 0, 0};
+
+    rshares.push_back(rshares_obj);
+
+    structures::post posttable_obj;
+
+    if (get_post(author, permlink, posttable_obj)) {
+        auto voterstable_index = voters_table.get_index<N(post_id)>();
+        auto voterstable_obj = voterstable_index.find(posttable_obj.id);
+        while (voterstable_obj != voterstable_index.end() && posttable_obj.id == voterstable_obj->post_id) {
+            if (voter == voterstable_obj->voter) {
+                voterstable_index.erase(voterstable_obj);
+                break;
+            } else {
+                ++voterstable_obj;
+            }
+        }
+
+        eosio_assert(voterstable_obj != voterstable_index.end(),
+                     "You can't do down vote because previously you haven't voted for this post.");
+
+        auto votetable_index = vote_table.get_index<N(post_id)>();
+        auto votetable_obj = votetable_index.find(posttable_obj.id);
+
+        votetable_index.modify(votetable_obj, author, [&]( auto &item ) {
+           item.voter = voter;
+           item.percent = FIXED_CURATOR_PERCENT;
+           item.weight = weight;
+           item.time = now();
+           item.rshares = rshares;
+           --item.count;
+        });
+    }
 }
 
 void publication::close_post() {
-    eosio::print("\nclose post");
-
     close_post_timer();
 }
 
@@ -271,7 +255,22 @@ void publication::close_post_timer() {
     trx.actions.emplace_back(action{permission_level(_self, N(active)), _self, N(closepost), structures::st_hash{now()}});
     trx.delay_sec = CLOSE_POST_TIMER;
     trx.send(_self, _self);
-
-    eosio::print("\nclose_post_timer");
 }
 
+bool publication::get_post(account_name account, std::string permlink, structures::post &post) {
+    tables::post_table post_table(_self, account);
+
+    auto posttable_index = post_table.get_index<N(account)>();
+    auto posttable_obj = posttable_index.find(account);
+
+    while (posttable_obj != posttable_index.end() && posttable_obj->account == account) {
+        if (posttable_obj->permlink == permlink) {
+            post = *posttable_obj;
+            return true;
+        } else {
+            ++posttable_obj;
+        }
+    }
+    eosio_assert(posttable_obj != posttable_index.end(), "Post doesn't exist.");
+    return false;
+}

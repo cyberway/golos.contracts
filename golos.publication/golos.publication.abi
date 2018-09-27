@@ -196,6 +196,40 @@
     ]
   },
   {
+    "name": "updatepost",
+    "base": "",
+    "fields": [
+      {
+        "name": "account",
+        "type": "account_name"
+      },
+      {
+        "name": "permlink",
+        "type": "string"
+      },
+      {
+        "name": "headerpost",
+        "type": "string"
+      },
+      {
+        "name": "bodypost",
+        "type": "string"
+      },
+      {
+        "name": "languagepost",
+        "type": "string"
+      },
+      {
+        "name": "tags",
+        "type": "tags[]"
+      },
+      {
+        "name": "jsonmetadata",
+        "type": "string"
+      }
+    ]
+  },
+  {
     "name": "deletepost",
     "base": "",
     "fields": [
@@ -309,7 +343,7 @@
   },
   {
     "name": "updatepost",
-    "type": "createpost"
+    "type": "updatepost"
   },
   {
     "name": "deletepost",

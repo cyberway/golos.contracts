@@ -91,6 +91,10 @@ struct post : createpost {
         return account;
     }
 
+    uint64_t parentacc_key() const {
+        return parentacc;
+    }
+
     EOSLIB_SERIALIZE(post, (id)(date)(account)(permlink)(parentacc)(parentprmlnk)(curatorprcnt)(payouttype)
                      (beneficiaries)(paytype))
 };
@@ -124,6 +128,10 @@ struct votersinfo {
         return id;
     }
 
+    uint64_t postid_key() const {
+        return post_id;
+    }
+
     EOSLIB_SERIALIZE(votersinfo, (id)(post_id)(voter))
 };
 
@@ -132,7 +140,8 @@ struct votersinfo {
 namespace tables {
     using id_index = indexed_by<N(id), const_mem_fun<structures::post, uint64_t, &structures::post::primary_key>>;
     using account_index = indexed_by<N(account), const_mem_fun<structures::post, uint64_t, &structures::post::account_key>>;
-    using post_table = eosio::multi_index<N(posttable), structures::post, id_index, account_index>;
+    using parentacc_index = indexed_by<N(parentacc), const_mem_fun<structures::post, uint64_t, &structures::post::parentacc_key>>;
+    using post_table = eosio::multi_index<N(posttable), structures::post, id_index, account_index, parentacc_index>;
 
     using content_id_index = indexed_by<N(id), const_mem_fun<structures::content, uint64_t, &structures::content::primary_key>>;
     using content_table = eosio::multi_index<N(contenttable), structures::content, content_id_index>;
@@ -141,5 +150,6 @@ namespace tables {
     using vote_table = eosio::multi_index<N(votetable), structures::voteinfo, vote_index>;
 
     using voters_index = indexed_by<N(id), const_mem_fun<structures::votersinfo, uint64_t, &structures::votersinfo::primary_key>>;
-    using voters_table = eosio::multi_index<N(voterstable), structures::votersinfo>;
+    using post_id_index = indexed_by<N(post_id), const_mem_fun<structures::votersinfo, uint64_t, &structures::votersinfo::postid_key>>;
+    using voters_table = eosio::multi_index<N(voterstable), structures::votersinfo, voters_index, post_id_index>;
 }
