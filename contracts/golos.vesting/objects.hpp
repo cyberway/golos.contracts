@@ -52,6 +52,7 @@ struct delegate_record
     delegate_record() = default;
 
     uint64_t id;
+    uint128_t unique_key;
     account_name sender;
     account_name recipient;
     asset quantity;
@@ -63,6 +64,10 @@ struct delegate_record
         return id;
     }
 
+    auto secondary_key() const {
+        return unique_key;
+    }
+
     auto sender_key() const {
         return sender;
     }
@@ -71,7 +76,7 @@ struct delegate_record
         return recipient;
     }
 
-    EOSLIB_SERIALIZE(delegate_record, (id)(sender)(recipient)(quantity)
+    EOSLIB_SERIALIZE(delegate_record, (id)(unique_key)(sender)(recipient)(quantity)
                      (deductions)(percentage_deductions)(return_date))
 };
 
@@ -133,7 +138,8 @@ namespace tables {
 
     using index_sender = indexed_by<N(sender), const_mem_fun<structures::delegate_record, uint64_t, &structures::delegate_record::sender_key>>;
     using index_recipient = indexed_by<N(recipient), const_mem_fun<structures::delegate_record, uint64_t, &structures::delegate_record::recipient_key>>;
-    using delegate_table = eosio::multi_index<N(delegate), structures::delegate_record, index_sender, index_recipient>;
+    using index_unique_key = indexed_by<N(unique_key), const_mem_fun<structures::delegate_record, uint128_t, &structures::delegate_record::secondary_key>>;
+    using delegate_table = eosio::multi_index<N(delegate), structures::delegate_record, index_sender, index_recipient, index_unique_key>;
 
     using index_date = indexed_by<N(date), const_mem_fun<structures::return_delegate, uint64_t, &structures::return_delegate::date_key>>;
     using return_delegate_table = eosio::multi_index<N(rdelegate), structures::return_delegate, index_date>;

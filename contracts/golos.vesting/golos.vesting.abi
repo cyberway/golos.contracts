@@ -66,6 +66,10 @@
           "type": "uint64"
         },
         {
+          "name": "unique_key",
+          "type": "uint128"
+        },
+        {
           "name": "sender",
           "type": "account_name"
         },

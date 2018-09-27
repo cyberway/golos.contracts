@@ -1,6 +1,5 @@
 #pragma once
 #include "objects.hpp"
-#include "eosio.token/eosio.token.hpp"
 
 namespace eosio {
 
@@ -10,7 +9,7 @@ class vesting : public eosio::contract {
     vesting(account_name self) : contract(self)  {}
     void apply(uint64_t code, uint64_t action);
 
-    void buy_vesting(account_name from, account_name  to, asset quantity, string);
+    void buy_vesting(account_name from, account_name  to, asset quantity, std::string);
     void accrue_vesting(account_name sender, account_name user, asset quantity);
     void convert_vesting(account_name sender, account_name recipient, asset quantity);
     void cancel_convert_vesting(account_name sender, asset type);
