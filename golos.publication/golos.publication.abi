@@ -1,0 +1,486 @@
+{
+  "version": "eosio::abi/1.0",
+  "types": [{
+    "new_type_name": "account_name",
+    "type": "name"
+  }],
+  "structs": [
+  {
+    "name": "battery",
+    "base": "",
+    "fields": [
+      {
+        "name": "charge",
+        "type": "uint16"
+      },
+      {
+        "name": "renewal",
+        "type": "time_point_sec"
+      }
+    ]
+  },
+  {
+    "name": "account_battery",
+    "base": "",
+    "fields": [
+      {
+        "name": "posting_battery",
+        "type": "battery"
+      },
+      {
+        "name": "battery_of_votes",
+        "type": "battery"
+      },
+      {
+        "name": "limit_battery_posting",
+        "type": "battery"
+      },
+      {
+        "name": "limit_battery_comment",
+        "type": "battery"
+      },
+      {
+        "name": "limit_battery_of_votes",
+        "type": "battery"
+      },
+    ]
+  },
+  {
+    "name": "hash",
+    "base": "",
+    "fields": [
+      {
+        "name": "hash",
+        "type": "uint64"
+      }
+    ]
+  },
+  {
+    "name": "beneficiaries",
+    "base": "",
+    "fields": [
+      {
+        "name": "account",
+        "type": "account_name"
+      },
+      {
+        "name": "deductprcnt",
+        "type": "uint64"
+      }
+    ]
+  },
+  {
+    "name": "tags",
+    "base": "",
+    "fields": [
+      {
+        "name": "tag",
+        "type": "string"
+      }
+    ]
+  },
+  {
+    "name": "rshares",
+    "base": "",
+    "fields": [
+      {
+        "name": "net_rshares",
+        "type": "uint64"
+      },
+      {
+        "name": "abs_rshares",
+        "type": "uint64"
+      },
+      {
+        "name": "vote_rshares",
+        "type": "uint64"
+      },
+      {
+        "name": "children_abs_rshares",
+        "type": "uint64"
+      }
+    ]
+  },
+  {
+    "name": "content",
+    "base": "",
+    "fields": [
+      {
+        "name": "id",
+        "type": "uint64"
+      },
+      {
+        "name": "headerpost",
+        "type": "string"
+      },
+      {
+        "name": "bodypost",
+        "type": "string"
+      },
+      {
+        "name": "languagepost",
+        "type": "string"
+      },
+      {
+        "name": "tags",
+        "type": "tags[]"
+      },
+      {
+        "name": "jsonmetadata",
+        "type": "string"
+      }
+    ]
+  },
+  {
+    "name": "post",
+    "base": "",
+    "fields": [
+      {
+        "name": "id",
+        "type": "uint64"
+      },
+      {
+        "name": "date",
+        "type": "uint64"
+      },
+      {
+        "name": "account",
+        "type": "account_name"
+      },
+      {
+        "name": "permlink",
+        "type": "string"
+      },
+      {
+        "name": "parentacc",
+        "type": "account_name"
+      },
+      {
+        "name": "parentprmlnk",
+        "type": "string"
+      },
+      {
+        "name": "curatorprcnt",
+        "type": "uint64"
+      },
+      {
+        "name": "payouttype",
+        "type": "string"
+      },
+      {
+        "name": "beneficiaries",
+        "type": "beneficiaries[]"
+      },
+      {
+        "name": "paytype",
+        "type": "string"
+      }
+    ]
+  },
+  {
+    "name": "createpost",
+    "base": "",
+    "fields": [
+      {
+        "name": "account",
+        "type": "account_name"
+      },
+      {
+        "name": "permlink",
+        "type": "string"
+      },
+      {
+        "name": "parentacc",
+        "type": "account_name"
+      },
+      {
+        "name": "parentprmlnk",
+        "type": "string"
+      },
+      {
+        "name": "curatorprcnt",
+        "type": "uint64"
+      },
+      {
+        "name": "payouttype",
+        "type": "string"
+      },
+      {
+        "name": "beneficiaries",
+        "type": "beneficiaries[]"
+      },
+      {
+        "name": "paytype",
+        "type": "string"
+      },
+      {
+        "name": "headerpost",
+        "type": "string"
+      },
+      {
+        "name": "bodypost",
+        "type": "string"
+      },
+      {
+        "name": "languagepost",
+        "type": "string"
+      },
+      {
+        "name": "tags",
+        "type": "tags[]"
+      },
+      {
+        "name": "jsonmetadata",
+        "type": "string"
+      }
+    ]
+  },
+  {
+    "name": "updatepost",
+    "base": "",
+    "fields": [
+      {
+        "name": "account",
+        "type": "account_name"
+      },
+      {
+        "name": "permlink",
+        "type": "string"
+      },
+      {
+        "name": "headerpost",
+        "type": "string"
+      },
+      {
+        "name": "bodypost",
+        "type": "string"
+      },
+      {
+        "name": "languagepost",
+        "type": "string"
+      },
+      {
+        "name": "tags",
+        "type": "tags[]"
+      },
+      {
+        "name": "jsonmetadata",
+        "type": "string"
+      }
+    ]
+  },
+  {
+    "name": "deletepost",
+    "base": "",
+    "fields": [
+      {
+        "name": "account",
+        "type": "account_name"
+      },
+      {
+        "name": "permlink",
+        "type": "string"
+      }
+    ]
+  },
+  {
+    "name": "vote",
+    "base": "",
+    "fields": [
+      {
+        "name": "voter",
+        "type": "account_name"
+      },
+      {
+        "name": "author",
+        "type": "account_name"
+      },
+      {
+        "name": "permlink",
+        "type": "string"
+      },
+      {
+        "name": "weight",
+        "type": "asset"
+      }
+    ]
+  },
+  {
+    "name": "voteinfo",
+    "base": "",
+    "fields": [
+      {
+        "name": "post_id",
+        "type": "uint64"
+      },
+      {
+        "name": "voter",
+        "type": "account_name"
+      },
+      {
+        "name": "percent",
+        "type": "uint64"
+      },
+      {
+        "name": "weight",
+        "type": "asset"
+      },
+      {
+        "name": "time",
+        "type": "uint64"
+      },
+      {
+        "name": "rshares",
+        "type": "rshares[]"
+      },
+      {
+        "name": "count",
+        "type": "uint64"
+      }
+    ]
+  },
+  {
+    "name": "votersinfo",
+    "base": "",
+    "fields": [
+      {
+        "name": "id",
+        "type": "uint64"
+      },
+      {
+        "name": "post_id",
+        "type": "uint64"
+      },
+      {
+        "name": "voter",
+        "type": "account_name"
+      }
+    ]
+  },
+  {
+    "name": "accountinfo",
+    "base": "",
+    "fields": [
+      {
+        "name": "id",
+        "type": "uint64"
+      },
+      {
+        "name": "post_bandwidth",
+        "type": "uint64"
+      },
+      {
+        "name": "voter",
+        "type": "account_name"
+      }
+    ]
+  },
+  {
+    "name": "createacc",
+    "base": "",
+    "fields": [
+      {
+        "name": "name",
+        "type": "account_name"
+      }
+    ]
+  }
+  ],
+  "actions": [
+  {
+    "name": "createpost",
+    "type": "createpost"
+  },
+  {
+    "name": "updatepost",
+    "type": "updatepost"
+  },
+  {
+    "name": "deletepost",
+    "type": "deletepost"
+  },
+  {
+    "name": "upvote",
+    "type": "vote"
+  },
+  {
+    "name": "downvote",
+    "type": "vote"
+  },
+  {
+    "name": "closepost",
+    "type": "hash"
+  },
+  {
+    "name": "createacc",
+    "type": "createacc"
+  }
+  ],
+  "tables": [
+  {
+    "name": "posttable",
+    "type": "post",
+    "index_type": "i64",
+    "key_names" : [
+      "id"
+    ],
+    "key_types" : [
+      "uint64"
+    ]
+  },
+  {
+    "name": "contenttable",
+    "type": "content",
+    "index_type": "i64",
+    "key_names" : [
+      "id"
+    ],
+    "key_types" : [
+      "uint64"
+    ]
+  },
+  {
+    "name": "votetable",
+    "type": "voteinfo",
+    "index_type": "i64",
+    "key_names" : [
+      "post_id"
+    ],
+    "key_types" : [
+      "uint64"
+    ]
+  },
+  {
+    "name": "voterstable",
+    "type": "votersinfo",
+    "index_type": "i64",
+    "key_names" : [
+      "id"
+    ],
+    "key_types" : [
+      "uint64"
+    ]
+  },
+  {
+    "name": "accounttable",
+    "type": "accountinfo",
+    "index_type": "i64",
+    "key_names" : [
+      "id"
+    ],
+    "key_types" : [
+      "uint64"
+    ]
+  },
+  {
+    "name": "batterytable",
+    "type": "account_battery",
+    "index_type": "i64",
+    "key_names" : [],
+    "key_types" : []
+  }
+  ],
+  "ricardian_clauses": [],
+  "error_messages": [],
+  "abi_extensions": []
+}
