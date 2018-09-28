@@ -1,11 +1,32 @@
 #pragma once
 
+#include <eosiolib/time.hpp>
 #include <eosiolib/eosio.hpp>
 #include <eosiolib/asset.hpp>
+#include <eosiolib/singleton.hpp>
 
 using namespace eosio;
 
 namespace structures {
+
+struct battery {
+    uint16_t charge;
+    time_point_sec renewal;
+
+    EOSLIB_SERIALIZE(battery, (charge)(renewal))
+};
+
+struct account_battery {
+    battery posting_battery;
+    battery battery_of_votes;
+
+    battery limit_battery_posting;
+    battery limit_battery_comment;
+    battery limit_battery_of_votes;
+
+    EOSLIB_SERIALIZE(account_battery, (posting_battery)(battery_of_votes)(limit_battery_posting)
+                     (limit_battery_comment)(limit_battery_of_votes))
+};
 
 struct st_hash {
     st_hash() = default;
@@ -152,4 +173,6 @@ namespace tables {
     using voters_index = indexed_by<N(id), const_mem_fun<structures::votersinfo, uint64_t, &structures::votersinfo::primary_key>>;
     using post_id_index = indexed_by<N(post_id), const_mem_fun<structures::votersinfo, uint64_t, &structures::votersinfo::postid_key>>;
     using voters_table = eosio::multi_index<N(voterstable), structures::votersinfo, voters_index, post_id_index>;
+
+    using accounts_battery_table = eosio::singleton<N(batterytable), structures::account_battery>;
 }

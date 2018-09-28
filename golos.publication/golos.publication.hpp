@@ -1,8 +1,6 @@
 #pragma once
 #include "objects.hpp"
 
-#include "eosio.token/eosio.token.hpp"
-
 namespace eosio {
 
 class publication : public eosio::contract {
@@ -29,6 +27,15 @@ class publication : public eosio::contract {
     void close_post();
     void close_post_timer();
     bool get_post(account_name account, std::string permlink, structures::post &post);
+
+  private: // check battery limits
+    void create_battery_user(account_name name);
+
+    void limit_posts(scope_name scope);
+    void limit_comments(scope_name scope);
+    void limit_of_votes(scope_name scope);
+    void posting_battery(scope_name scope);
+    void vesting_battery(scope_name scope, uint16_t persent_battery);
 };
 
 }

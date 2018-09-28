@@ -9,19 +9,19 @@
 #define PERCENT_DECREASE_REWARD 10
 
 // frequency of operations for post
-#define POST_OPERATION_INTERVAL
-#define POST_AMOUNT_OPERATIONS
+#define POST_OPERATION_INTERVAL 10 //sec
+#define POST_AMOUNT_OPERATIONS 2500 // 25% cost one post
 #define POST_EXCESS_COST
 #define POST_COST_INCREASE // cost increase for one second recovery
 
 // frequency of operations for comment
-#define COMMENT_OPERATION_INTERVAL
+#define COMMENT_OPERATION_INTERVAL 20 //sec
 #define COMMENT_AMOUNT_OPERATIONS
 #define COMMENT_EXCESS_COST
 #define COMMENT_COST_INCREASE // cost increase for one second recovery
 
 // frequency of operations for vote
-#define VOTE_OPERATION_INTERVAL
+#define VOTE_OPERATION_INTERVAL 3 //sec
 #define VOTE_AMOUNT_OPERATIONS
 #define VOTE_EXCESS_COST
 #define VOTE_COST_INCREASE // cost increase for one second recovery
@@ -42,3 +42,11 @@
 // closing post params
 #define CLOSE_POST_TIMER 3
 #define QUNTITY_OF_CHANGES // quantity of changes before post closing
+
+#define UPPER_BOUND (10000) // 100.00%
+#define LOWER_BOUND (0) // 0.00%
+
+#define TWO_DECIMAL_PLACES (100)
+#define RECOVERY_PERIOD_POSTING (86400)
+#define RECOVERY_PERIOD_VESTING (432000)
+

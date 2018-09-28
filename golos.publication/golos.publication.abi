@@ -6,6 +6,46 @@
   }],
   "structs": [
   {
+    "name": "battery",
+    "base": "",
+    "fields": [
+      {
+        "name": "charge",
+        "type": "uint16"
+      },
+      {
+        "name": "renewal",
+        "type": "time_point_sec"
+      }
+    ]
+  },
+  {
+    "name": "account_battery",
+    "base": "",
+    "fields": [
+      {
+        "name": "posting_battery",
+        "type": "battery"
+      },
+      {
+        "name": "battery_of_votes",
+        "type": "battery"
+      },
+      {
+        "name": "limit_battery_posting",
+        "type": "battery"
+      },
+      {
+        "name": "limit_battery_comment",
+        "type": "battery"
+      },
+      {
+        "name": "limit_battery_of_votes",
+        "type": "battery"
+      },
+    ]
+  },
+  {
     "name": "hash",
     "base": "",
     "fields": [
@@ -334,6 +374,16 @@
         "type": "account_name"
       }
     ]
+  },
+  {
+    "name": "createacc",
+    "base": "",
+    "fields": [
+      {
+        "name": "name",
+        "type": "account_name"
+      }
+    ]
   }
   ],
   "actions": [
@@ -360,6 +410,10 @@
   {
     "name": "closepost",
     "type": "hash"
+  },
+  {
+    "name": "createacc",
+    "type": "createacc"
   }
   ],
   "tables": [
@@ -417,6 +471,13 @@
     "key_types" : [
       "uint64"
     ]
+  },
+  {
+    "name": "batterytable",
+    "type": "account_battery",
+    "index_type": "i64",
+    "key_names" : [],
+    "key_types" : []
   }
   ],
   "ricardian_clauses": [],
