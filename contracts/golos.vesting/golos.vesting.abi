@@ -1,0 +1,348 @@
+{
+  "version": "eosio::abi/1.0",
+  "types": [
+    {
+      "new_type_name": "account_name",
+      "type": "name"
+    }
+  ],
+  "structs": [
+    {
+      "name": "token_vesting",
+      "base": "",
+      "fields": [
+        {
+          "name": "id",
+          "type": "uint64"
+        },
+        {
+          "name": "vesting",
+          "type": "asset"
+        },
+        {
+          "name": "tokens",
+          "type": "asset"
+        }
+      ]
+    },
+    {
+      "name": "pair_tokens",
+      "base": "",
+      "fields": [
+        {
+          "name": "token",
+          "type": "asset"
+        },
+        {
+          "name": "vesting",
+          "type": "asset"
+        }
+      ]
+    },
+    {
+      "name": "user_balance",
+      "base": "",
+      "fields": [
+        {
+          "name": "vesting",
+          "type": "asset"
+        },
+        {
+          "name": "delegate_vesting",
+          "type": "asset"
+        },
+        {
+          "name": "received_vesting",
+          "type": "asset"
+        }
+      ]
+    },
+    {
+      "name": "delegate_record",
+      "base": "",
+      "fields": [
+        {
+          "name": "id",
+          "type": "uint64"
+        },
+        {
+          "name": "unique_key",
+          "type": "uint128"
+        },
+        {
+          "name": "sender",
+          "type": "account_name"
+        },
+        {
+          "name": "recipient",
+          "type": "account_name"
+        },
+        {
+          "name": "quantity",
+          "type": "asset"
+        },
+        {
+          "name": "deductions",
+          "type": "asset"
+        },
+        {
+          "name": "percentage_deductions",
+          "type": "uint16"
+        },
+        {
+          "name": "return_date",
+          "type": "time_point_sec"
+        }
+      ]
+    },
+    {
+      "name": "convert_of_tokens",
+      "base": "",
+      "fields": [
+        {
+          "name": "sender",
+          "type": "account_name"
+        },
+        {
+          "name": "recipient",
+          "type": "account_name"
+        },
+        {
+          "name": "number_of_payments",
+          "type": "uint8"
+        },
+        {
+          "name": "payout_time",
+          "type": "time_point_sec"
+        },
+        {
+          "name": "payout_part",
+          "type": "asset"
+        },
+        {
+          "name": "balance_amount",
+          "type": "asset"
+        }
+      ]
+    },
+    {
+      "name": "cancel_convert_of_tokens",
+      "base": "",
+      "fields": [
+        {
+          "name": "sender",
+          "type": "account_name"
+        },
+        {
+          "name": "type",
+          "type": "asset"
+        }
+      ]
+    },
+    {
+      "name": "return_delegate",
+      "base": "",
+      "fields": [
+        {
+          "name": "id",
+          "type": "uint64"
+        },
+        {
+          "name": "recipient",
+          "type": "account_name"
+        },
+        {
+          "name": "amount",
+          "type": "asset"
+        },
+        {
+          "name": "date",
+          "type": "time_point_sec"
+        }
+      ]
+    },
+    {
+      "name": "transfer_vesting",
+      "base": "",
+      "fields": [
+        {
+          "name": "sender",
+          "type": "account_name"
+        },
+        {
+          "name": "recipient",
+          "type": "account_name"
+        },
+        {
+          "name": "quantity",
+          "type": "asset"
+        }
+      ]
+    },
+    {
+      "name": "accrue_vesting",
+      "base": "",
+      "fields": [
+        {
+          "name": "sender",
+          "type": "account_name"
+        },
+        {
+          "name": "user",
+          "type": "account_name"
+        },
+        {
+          "name": "quantity",
+          "type": "asset"
+        }
+      ]
+    },
+    {
+      "name": "delegate_vesting",
+      "base": "transfer_vesting",
+      "fields": [
+        {
+          "name": "percentage_deductions",
+          "type": "uint16"
+        }
+      ]
+    },
+    {
+      "name": "hash",
+      "base": "",
+      "fields": [
+        {
+          "name": "hash",
+          "type": "uint64"
+        }
+      ]
+    },
+    {
+       "name": "open",
+       "base": "",
+       "fields": [
+          {"name":"owner", "type":"account_name"},
+          {"name":"symbol", "type":"symbol"},
+          {"name":"ram_payer", "type":"account_name"}
+       ]
+    },
+    {
+       "name": "close",
+       "base": "",
+       "fields": [
+          {"name":"owner", "type":"account_name"},
+          {"name":"symbol", "type":"symbol"}
+       ]
+    }
+  ],
+  "actions": [
+    {
+      "name": "buyvg",
+      "type": "transfer_vesting"
+    },
+    {
+      "name": "accruevg",
+      "type": "accrue_vesting"
+    },
+    {
+      "name": "convertvg",
+      "type": "transfer_vesting"
+    },
+    {
+      "name": "cancelvg",
+      "type": "cancel_convert_of_tokens"
+    },
+    {
+      "name": "delegatevg",
+      "type": "delegate_vesting"
+    },
+    {
+      "name": "undelegatevg",
+      "type": "transfer_vesting"
+    },
+    {
+      "name": "timeoutrdel",
+      "type": "hash"
+    },
+    {
+      "name": "timeoutconv",
+      "type": "hash"
+    },
+    {
+      "name": "timeout",
+      "type": "hash"
+    },
+    {
+      "name": "createpair",
+      "type": "pair_tokens"
+    },
+    {
+      "name": "open",
+      "type": "open"
+    },
+    {
+      "name": "close",
+      "type": "close"
+    }
+  ],
+  "tables": [
+    {
+      "name": "vesting",
+      "type": "token_vesting",
+      "index_type": "i64",
+      "key_names": [
+        "currency"
+      ],
+      "key_types": [
+        "uint64"
+      ]
+    },
+    {
+      "name": "balances",
+      "type": "user_balance",
+      "index_type": "i64",
+      "key_names": [
+        "currency"
+      ],
+      "key_types": [
+        "uint64"
+      ]
+    },
+    {
+      "name": "delegate",
+      "type": "delegate_record",
+      "index_type": "i64",
+      "key_names": [
+        "id"
+      ],
+      "key_types": [
+        "uint64"
+      ]
+    },
+    {
+      "name": "rdelegate",
+      "type": "return_delegate",
+      "index_type": "i64",
+      "key_names": [
+        "id"
+      ],
+      "key_types": [
+        "uint64"
+      ]
+    },
+    {
+      "name": "converttable",
+      "type": "convert_of_tokens",
+      "index_type": "i64",
+      "key_names": [
+        "sender"
+      ],
+      "key_types": [
+        "account_name"
+      ]
+    }
+  ],
+  "ricardian_clauses": [],
+  "error_messages": [],
+  "abi_extensions": []
+}
