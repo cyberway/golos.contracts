@@ -98,8 +98,6 @@ struct [[eosio::table]] bw_user {   // ?needed or simple names vector will be en
 };
 using bw_user_tbl = eosio::multi_index<N(bwuser), bw_user>;
 
-}
-
 
 class control: public contract {
 public:
