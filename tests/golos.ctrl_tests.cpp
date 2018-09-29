@@ -108,19 +108,21 @@ public:
         );
     }
 
-    // action_result set_props(account_name signer, symbol_type token, properties props) {
     action_result set_props(account_name signer, symbol_type token, mvo props) {
+        // TODO: supermajority signer
         return push_action(signer, N(updateprops), mvo()("domain", token)
             ("props",   props)
         );
     }
 
     action_result attach_acc(symbol_type token, account_name user) {
-        return push_action(user, N(attachacc), mvo()("domain", token)
+        // TODO: minority signer
+        return push_action(_top, N(attachacc), mvo()("domain", token)
             ("user",    user)
         );
     }
     action_result detach_acc(symbol_type token, account_name user) {
+        // TODO: minority signer
         return push_action(_top, N(detachacc), mvo()("domain", token)
             ("user",    user)
         );
@@ -229,7 +231,7 @@ public:
         return asset(val*1e6, _token); // 6 is precision. todo: derive from symbol and less hardcode
     }
     const symbol_type _token = symbol(6,"TST");
-    const account_name _top = N(blog);
+    const account_name _top = BLOG;
     const uint64_t _w[5] = {N(witn1), N(witn2), N(witn3), N(witn4), N(witn5)};
 
     abi_serializer abi_ser;
@@ -241,28 +243,31 @@ public:
 BOOST_AUTO_TEST_SUITE(golos_ctrl_tests)
 
 BOOST_FIXTURE_TEST_CASE(create_community, golos_ctrl_tester) try {
+    BOOST_TEST_MESSAGE("Test create_community");
     auto key = "EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV";
     auto key2 = "EOS5jnmSKrzdBHE9n8hw58y7yxFWBC8SNiG7m8S1crJH3KvAnf9o6";
+
+    BOOST_TEST_MESSAGE("--- Check that actions disabled before community created");
     BOOST_CHECK_EQUAL(true, get_props().is_null());
     BOOST_CHECK_EQUAL(wasm_assert_msg("symbol not found"), reg_witness(_token, _w[0], key, "http://ya.ru"));
     BOOST_CHECK_EQUAL(wasm_assert_msg("symbol not found"), unreg_witness(_token, _w[0]));
+    BOOST_CHECK_EQUAL(wasm_assert_msg("symbol not found"), vote_witness(_token, N(alice), _w[0]));
+    BOOST_CHECK_EQUAL(wasm_assert_msg("symbol not found"), unvote_witness(_token, N(alice), _w[0]));
+    BOOST_CHECK_EQUAL(wasm_assert_msg("symbol not found"), attach_acc(_token, N(carol)));
+    BOOST_CHECK_EQUAL(wasm_assert_msg("symbol not found"), detach_acc(_token, N(carol)));
 
-    auto p = mvo()("max_witnesses",2)("max_witness_votes",4);
+    auto p = mvo()("max_witnesses",2)("max_witness_votes",4)
+        ("witness_supermajority",0)("witness_majority",0)("witness_minority",0);
+    BOOST_CHECK_EQUAL(wasm_assert_msg("symbol not found"), set_props(_top, _token, p));
+
+    BOOST_TEST_MESSAGE("--- Create community");
     BOOST_CHECK_EQUAL(success(), create(_token, _top, p));
-    //produce_blocks(1);
     const auto t = get_props();
     BOOST_CHECK_EQUAL(t["owner"], fc::variant(_top));
     REQUIRE_MATCHING_OBJECT(p, t["props"]); // this macro doesn't support nested objects
+    produce_blocks(1);
 
-
-    BOOST_CHECK_EQUAL(N(witn1), _w[0]);
-    BOOST_CHECK_EQUAL(N(witn2), _w[1]);
-    BOOST_CHECK_EQUAL(N(witn3), _w[2]);
-    BOOST_CHECK_EQUAL(N(witn4), _w[3]);
-    BOOST_CHECK_EQUAL(N(witn5), _w[4]);
-
-//    BOOST_CHECK_EQUAL(wasm_assert_msg("witness not found"), unreg_witness(_token, _w[0]));
-
+    BOOST_TEST_MESSAGE("--- Reg witnesses");
     BOOST_CHECK_EQUAL(success(), reg_witness(_token, _w[0], key, "https://ya.ru"));
     auto z = mvo()("name","witn1")("key",key)("url","https://ya.ru")("active",true)("total_weight",0);
     REQUIRE_MATCHING_OBJECT(get_witness(0), z);
@@ -281,7 +286,7 @@ BOOST_FIXTURE_TEST_CASE(create_community, golos_ctrl_tester) try {
     BOOST_TEST_MESSAGE("--- Create some vesting for voters");
     produce_block();
     BOOST_CHECK_EQUAL(success(), create_pair(asset::from_string("0.0000 GLS"), dasset(0)));
-    BOOST_CHECK_EQUAL(success(), accrue_vesting(N(golos.vest), N(blog),  dasset(1000)));
+    BOOST_CHECK_EQUAL(success(), accrue_vesting(N(golos.vest), BLOG,  dasset(1000)));
     BOOST_CHECK_EQUAL(success(), accrue_vesting(N(golos.vest), N(alice), dasset(800)));
     BOOST_CHECK_EQUAL(success(), accrue_vesting(N(golos.vest), N(bob),   dasset(700)));
     BOOST_CHECK_EQUAL(success(), accrue_vesting(N(golos.vest), N(carol), dasset(600)));
@@ -297,16 +302,15 @@ BOOST_FIXTURE_TEST_CASE(create_community, golos_ctrl_tester) try {
     produce_block();
     check_vesting_balance(get_account_vesting(N(alice), _token), dasset(800));
 
-    //TODO: add eosio.code auth check to `create` action + remove owner
     BOOST_TEST_MESSAGE("--- Add eosio.code auth to Blog");
-    BOOST_TEST_MESSAGE("P: " + fc::json::to_string(get_account_permissions(BLOG)));
+    BOOST_TEST_MESSAGE("Perms: " + fc::json::to_string(get_account_permissions(BLOG)));
     auto code_auth = authority(1, {}, {
         {.permission = {ME, config::eosio_code_name}, .weight = 1}
     });
-    BOOST_TEST_MESSAGE("---");
+    set_authority(BLOG, config::owner_name, code_auth, 0);
     set_authority(BLOG, config::active_name, code_auth, "owner",
         {permission_level{BLOG, config::active_name}}, {get_private_key("blog", "active")});
-    BOOST_TEST_MESSAGE("P: " + fc::json::to_string(get_account_permissions(BLOG)));
+    BOOST_TEST_MESSAGE("Perms: " + fc::json::to_string(get_account_permissions(BLOG)));
     produce_block();
 
     BOOST_TEST_MESSAGE("--- Cast some votes");
