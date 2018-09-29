@@ -1,4 +1,4 @@
-#include "golos.ctrl/golos.ctrl.hpp"
+#include <golos.ctrl/golos.ctrl.hpp>
 #include <golos.vesting/golos.vesting.hpp>
 #include <eosio.system/native.hpp>
 #include <eosiolib/transaction.hpp>
@@ -36,7 +36,7 @@ void control::create(account_name owner, properties new_props) {
 void control::updateprops(properties new_props) {
     // eosio_assert(has_witness_majority(), "not enough witness signatures to change properties");
     eosio_assert(props() != new_props, "same properties are already set");
-    required_auth(_owner);
+    require_auth(_owner);
     upsert_tbl<props_tbl>(_token, _owner, _owner, [&](bool) {
         return [&](auto& p) {
             p.props = new_props;

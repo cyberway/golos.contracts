@@ -3,8 +3,8 @@ add_executable(golos.ctrl.wasm ${CMAKE_CURRENT_SOURCE_DIR}/src/golos.ctrl.cpp)
 target_include_directories(golos.ctrl.wasm
    PUBLIC
    ${CMAKE_CURRENT_SOURCE_DIR}/include
-   ${CMAKE_CURRENT_SOURCE_DIR}/../golos.vesting/include
-   ${CMAKE_CURRENT_SOURCE_DIR}/../eosio.system/include
+   ${CMAKE_CURRENT_SOURCE_DIR}/../contracts/golos.vesting/include
+   ${CMAKE_CURRENT_SOURCE_DIR}/../eosio.contracts/eosio.system/include
    ${CMAKE_CURRENT_SOURCE_DIR}/..)
 
 set_target_properties(golos.ctrl.wasm

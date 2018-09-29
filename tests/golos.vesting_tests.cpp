@@ -1,16 +1,11 @@
 #include <boost/test/unit_test.hpp>
 #include <eosio/testing/tester.hpp>
 #include <eosio/chain/abi_serializer.hpp>
-
-#include <golos.vesting/golos.vesting.wast.hpp>
-#include <golos.vesting/golos.vesting.abi.hpp>
-
-#include <eosio.token/eosio.token.wast.hpp>
-#include <eosio.token/eosio.token.abi.hpp>
-
 #include <Runtime/Runtime.h>
 
 #include <fc/variant_object.hpp>
+
+#include "contracts.hpp"
 
 using namespace eosio::testing;
 using namespace eosio;
@@ -30,11 +25,11 @@ public:
         create_accounts( { N(sania), N(pasha), N(golos.vest), N(eosio.token) } );
         produce_blocks( 2 );
 
-        set_code( N(eosio.token), eosio_token_wast );
-        set_abi ( N(eosio.token), eosio_token_abi );
+        set_code(N(eosio.token), contracts::token_wasm());
+        set_abi (N(eosio.token), contracts::token_abi().data());
 
-        set_code( N(golos.vest), golos_vesting_wast );
-        set_abi ( N(golos.vest), golos_vesting_abi );
+        set_code(N(golos.vest), contracts::vesting_wasm());
+        set_abi (N(golos.vest), contracts::vesting_abi().data());
 
         produce_blocks();
 
