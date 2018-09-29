@@ -31,7 +31,7 @@ endif()
 
 include_directories(AFTER ${BOOST_ROOT}/include)
 add_subdirectory(golos.ctrl)
-add_subdirectory(contracts/golos.vesting)
+add_subdirectory(golos.vesting)
 
 if (APPLE)
    set(OPENSSL_ROOT "/usr/local/opt/openssl")

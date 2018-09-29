@@ -1,5 +1,5 @@
 #pragma once
-// #include "config.hpp"
+#include "config.hpp"
 
 #include <eosiolib/time.hpp>
 #include <eosiolib/eosio.hpp>
@@ -32,16 +32,6 @@ struct token_vesting
     EOSLIB_SERIALIZE(token_vesting, (id)(vesting)(token))
 };
 
-struct user_battery
-{
-    user_battery() = default;
-
-    uint16_t charge;
-    time_point_sec renewal;
-
-    EOSLIB_SERIALIZE(user_battery, (charge)(renewal))
-};
-
 struct user_balance
 {
     user_balance() = default;
@@ -49,13 +39,12 @@ struct user_balance
     asset vesting;
     asset delegate_vesting;
     asset received_vesting;
-    user_battery battery;
 
     uint64_t primary_key() const {
         return vesting.symbol.name();
     }
 
-    EOSLIB_SERIALIZE(user_balance, (vesting)(delegate_vesting)(received_vesting)(battery))
+    EOSLIB_SERIALIZE(user_balance, (vesting)(delegate_vesting)(received_vesting))
 };
 
 struct delegate_record
@@ -63,6 +52,7 @@ struct delegate_record
     delegate_record() = default;
 
     uint64_t id;
+    uint128_t unique_key;
     account_name sender;
     account_name recipient;
     asset quantity;
@@ -74,6 +64,10 @@ struct delegate_record
         return id;
     }
 
+    auto secondary_key() const {
+        return unique_key;
+    }
+
     auto sender_key() const {
         return sender;
     }
@@ -82,7 +76,7 @@ struct delegate_record
         return recipient;
     }
 
-    EOSLIB_SERIALIZE(delegate_record, (id)(sender)(recipient)(quantity)
+    EOSLIB_SERIALIZE(delegate_record, (id)(unique_key)(sender)(recipient)(quantity)
                      (deductions)(percentage_deductions)(return_date))
 };
 
@@ -133,15 +127,6 @@ struct shash {
 
     EOSLIB_SERIALIZE( shash, (hash) )
 };
-
-struct issue_vesting {
-    issue_vesting() = default;
-
-    account_name to;
-    asset quantity;
-    EOSLIB_SERIALIZE( issue_vesting, (to)(quantity) )
-};
-
 }
 
 namespace tables {
@@ -153,7 +138,8 @@ namespace tables {
 
     using index_sender = indexed_by<N(sender), const_mem_fun<structures::delegate_record, uint64_t, &structures::delegate_record::sender_key>>;
     using index_recipient = indexed_by<N(recipient), const_mem_fun<structures::delegate_record, uint64_t, &structures::delegate_record::recipient_key>>;
-    using delegate_table = eosio::multi_index<N(delegate), structures::delegate_record, index_sender, index_recipient>;
+    using index_unique_key = indexed_by<N(unique_key), const_mem_fun<structures::delegate_record, uint128_t, &structures::delegate_record::secondary_key>>;
+    using delegate_table = eosio::multi_index<N(delegate), structures::delegate_record, index_sender, index_recipient, index_unique_key>;
 
     using index_date = indexed_by<N(date), const_mem_fun<structures::return_delegate, uint64_t, &structures::return_delegate::date_key>>;
     using return_delegate_table = eosio::multi_index<N(rdelegate), structures::return_delegate, index_date>;
@@ -161,3 +147,4 @@ namespace tables {
     using index_payout_time = indexed_by<N(payout_time), const_mem_fun<structures::convert_of_tokens, uint64_t, &structures::convert_of_tokens::payout_time_key>>;
     using convert_table = eosio::multi_index<N(converttable), structures::convert_of_tokens, index_payout_time>;
 }
+

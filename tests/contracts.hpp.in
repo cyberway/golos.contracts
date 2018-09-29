@@ -9,8 +9,8 @@ namespace eosio { namespace testing {
 struct contracts {
     static std::vector<uint8_t> ctrl_wasm() { return read_wasm(GOLOS_CONTRACTS "golos.ctrl/golos.ctrl.wasm"); }
     static std::vector<char>    ctrl_abi()  { return read_abi (GOLOS_CONTRACTS "golos.ctrl/golos.ctrl.abi"); }
-    static std::vector<uint8_t> vesting_wasm() { return read_wasm(GOLOS_CONTRACTS "contracts/golos.vesting/golos.vesting.wasm"); }
-    static std::vector<char>    vesting_abi()  { return read_abi (GOLOS_CONTRACTS "contracts/golos.vesting/golos.vesting.abi"); }
+    static std::vector<uint8_t> vesting_wasm() { return read_wasm(GOLOS_CONTRACTS "golos.vesting/golos.vesting.wasm"); }
+    static std::vector<char>    vesting_abi()  { return read_abi (GOLOS_CONTRACTS "golos.vesting/golos.vesting.abi"); }
 
     static std::vector<uint8_t> system_wasm() { return read_wasm(EOSIO_CONTRACTS "eosio.system/eosio.system.wasm"); }
     static std::string          system_wast() { return read_wast(EOSIO_CONTRACTS "eosio.system/eosio.system.wast"); }
@@ -27,14 +27,6 @@ struct contracts {
     static std::vector<uint8_t> bios_wasm()   { return read_wasm(EOSIO_CONTRACTS "eosio.bios/eosio.bios.wasm"); }
     static std::string          bios_wast()   { return read_wast(EOSIO_CONTRACTS "eosio.bios/eosio.bios.wast"); }
     static std::vector<char>    bios_abi()    { return read_abi (EOSIO_CONTRACTS "eosio.bios/eosio.bios.abi"); }
-
-//   struct util {
-//      static std::vector<uint8_t> test_api_wasm() { return read_wasm("${CMAKE_SOURCE_DIR}/test_contracts/test_api.wasm"); }
-//      static std::vector<uint8_t> exchange_wasm() { return read_wasm("${CMAKE_SOURCE_DIR}/test_contracts/exchange.wasm"); }
-//      static std::vector<uint8_t> system_wasm_old() { return read_wasm("${CMAKE_SOURCE_DIR}/test_contracts/eosio.system.old/eosio.system.wasm"); }
-//      static std::vector<char>    system_abi_old() { return read_abi("${CMAKE_SOURCE_DIR}/test_contracts/eosio.system.old/eosio.system.abi"); }
-//      static std::vector<uint8_t> msig_wasm_old() { return read_wasm("${CMAKE_SOURCE_DIR}/test_contracts/eosio.msig.old/eosio.msig.wasm"); }
-//      static std::vector<char>    msig_abi_old() { return read_abi("${CMAKE_SOURCE_DIR}/test_contracts/eosio.msig.old/eosio.msig.abi"); }
-//   };
 };
+
 }} // eosio::testing
