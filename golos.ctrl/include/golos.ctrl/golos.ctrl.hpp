@@ -157,6 +157,7 @@ private:
     }
 
     void apply_vote_weight(account_name voter, account_name witness, bool add);
+    void update_auths();
 
     bool has_witness_auth(uint8_t require);
     bool has_witness_active_auth();

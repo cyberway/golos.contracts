@@ -34,8 +34,9 @@ void control::create(account_name owner, properties new_props) {
 }
 
 void control::updateprops(properties new_props) {
-        eosio_assert(has_witness_majority(), "not enough witness signatures to change properties");
+    // eosio_assert(has_witness_majority(), "not enough witness signatures to change properties");
     eosio_assert(props() != new_props, "same properties are already set");
+    required_auth(_owner);
     upsert_tbl<props_tbl>(_token, _owner, _owner, [&](bool) {
         return [&](auto& p) {
             p.props = new_props;
@@ -152,17 +153,60 @@ void control::updatetop(account_name from, account_name to, asset amount) {
 ////////////////////////////////////////////////////////////////////////////////
 
 void control::apply_vote_weight(account_name voter, account_name witness, bool add) {
-    witness_tbl wtbl(_self, _owner);
+    witness_tbl wtbl(_self, _token);
     auto w = wtbl.find(witness);
     if (w != wtbl.end()) {
-        golos::vesting vc(N(golos::vesting));
-        const auto power = vc.get_account_vesting(N(voter), _token).amount;    //get_balance accepts symbol_name
-        wtbl.modify(w, _owner, [&](auto& wi) {
-            wi.total_weight = wi.total_weight + (add ? power : -power);
-        });
+        golos::vesting vc(VESTING_C);
+        const auto power = vc.get_account_vesting(voter, _token).amount;    //get_balance accepts symbol_name
+        if (power > 0) {
+            wtbl.modify(w, witness, [&](auto& wi) {
+                wi.total_weight = wi.total_weight + (add ? power : -power);
+            });
+            update_auths();
+        } else {
+            print("apply_vote_weight: voter with 0 power has no effect\n");
+        }
     } else {
+        print("apply_vote_weight: witness not found\n");
         // just skip unregistered witnesses (incl. non existing accs) for now
     }
+}
+
+void control::update_auths() {
+    // TODO: majority/minority
+    // TODO: change only if top changed
+    auto top = top_witness_info();
+    if (top.size() < props().max_witnesses) {
+        print("Not enough witnesses to change auth");
+        return;
+    }
+    std::set<account_name> accounts;
+    for (const auto& i : top) {
+        accounts.insert(i.name);
+    }
+    eosiosystem::authority auth;
+    auth.threshold = 3;
+    for (const auto& i : accounts) {
+        auth.accounts.push_back({{i,N(active)},1});
+    }
+    if (auth.accounts.size() < auth.threshold)
+        auth.threshold = auth.accounts.size();
+    // add eosio.code
+    weight_type code_weight = auth.threshold;   // TODO: check overflow
+    auth.accounts.push_back({{_self, N(eosio.code)}, code_weight});
+    //permissions must be sorted
+    std::sort(auth.accounts.begin(), auth.accounts.end(),
+        [](const eosiosystem::permission_level_weight& a, const eosiosystem::permission_level_weight& b) {
+            return std::tie(a.permission.actor, a.permission.permission) < std::tie(b.permission.actor, b.permission.permission);
+        }
+    );
+
+    const auto& act = action(
+        permission_level{_owner, N(active)},
+        N(eosio), N(updateauth),
+        std::make_tuple(_owner, N(active), N(owner), auth)
+    );
+    act.send();
 }
 
 vector<witness_info> control::top_witness_info() {
@@ -187,35 +231,16 @@ vector<account_name> control::top_witnesses() {
     return top;
 }
 
-bool control::has_witness_auth(uint8_t require) {
-    // alternatively we can try to use `has_auth`, but it provides no info about permission_level and used key
-    auto signatures = vector<eosio::public_key>();    // todo: read_signatures
-    const auto& top = top_witness_info();         //todo: return witness_info
-    int got = 0;
-    for (const auto& w: top) {
-        for (const auto& s: signatures) {
-            const auto& key = s;
-            if (key == w.key) {
-                got++;
-                break;
-            }
-        }
-        if (got >= require)
-            return true;
-    }
-    return false;
-}
 
-bool control::has_witness_active_auth() {
-    return has_witness_auth(props().max_witnesses * 2 / 3 + 1);
-}
-bool control::has_witness_majority() {
-    return has_witness_auth(props().max_witnesses * 1 / 2 + 1);
-}
-bool control::has_witness_minority() {
-    return has_witness_auth(props().max_witnesses * 1 / 3 + 1);
-}
-
+// bool control::has_witness_active_auth() {
+//     return has_witness_auth(props().max_witnesses * 2 / 3 + 1);
+// }
+// bool control::has_witness_majority() {
+//     return has_witness_auth(props().max_witnesses * 1 / 2 + 1);
+// }
+// bool control::has_witness_minority() {
+//     return has_witness_auth(props().max_witnesses * 1 / 3 + 1);
+// }
 
 
 } // namespace golos
