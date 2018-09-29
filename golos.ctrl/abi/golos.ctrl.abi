@@ -1,0 +1,213 @@
+{
+    "____comment": "This file was generated with eosio-abigen. DO NOT EDIT Sun Sep 23 11:20:59 2018",
+    "version": "eosio::abi/1.0",
+    "types": [{
+        "new_type_name": "account_name",
+        "type": "name"
+    }],
+    "structs": [
+        {
+            "name": "create",
+            "base": "",
+            "fields": [
+                {"type": "symbol",       "name": "domain"}
+                {"type": "account_name", "name": "owner"}
+                {"type": "properties", "name": "props"}
+            ]
+        },
+        {
+            "name": "attachacc",
+            "base": "",
+            "fields": [
+                {"type": "symbol",       "name": "domain"}
+                {"type": "account_name", "name": "user"}
+            ]
+        },
+        {
+            "name": "bw_user",
+            "base": "",
+            "fields": [
+                {"type": "account_name", "name": "name"},
+                {"type": "bool", "name": "attached"}
+            ]
+        },
+        {
+            "name": "ctrl_props",
+            "base": "",
+            "fields": [
+                {"type": "account_name", "name": "owner"},
+                {"type": "properties", "name": "props"}
+            ]
+        },
+        {
+            "name": "detachacc",
+            "base": "",
+            "fields": [
+                {"type": "symbol", "name": "domain"}
+                {"type": "account_name", "name": "user"}
+            ]
+        },
+        {
+            "name": "properties",
+            "base": "",
+            "fields": [
+                {"type": "uint16", "name": "max_witnesses"},
+                {"type": "uint16", "name": "max_witness_votes"}
+            ]
+        },
+        {
+            "name": "regwitness",
+            "base": "",
+            "fields": [
+                {"type": "symbol", "name": "domain"}
+                {"type": "account_name", "name": "witness"},
+                {"type": "public_key", "name": "key"},
+                {"type": "string", "name": "url"}
+            ]
+        },
+        {
+            "name": "unregwitness",
+            "base": "",
+            "fields": [
+                {"type": "symbol", "name": "domain"}
+                {"type": "account_name", "name": "witness"}
+            ]
+        },
+        {
+            "name": "unvotewitn",
+            "base": "",
+            "fields": [
+                {"type": "symbol", "name": "domain"}
+                {"type": "account_name", "name": "voter"},
+                {"type": "account_name", "name": "witness"}
+            ]
+        },
+        {
+            "name": "updateprops",
+            "base": "",
+            "fields": [
+                {"type": "symbol", "name": "domain"}
+                {"type": "properties", "name": "props"}
+            ]
+        },
+        {
+            "name": "updatetop",
+            "base": "",
+            "fields": [
+                {"type": "symbol", "name": "domain"}
+                {"type": "account_name", "name": "from"},
+                {"type": "account_name", "name": "to"},
+                {"type": "asset", "name": "amount"}
+            ]
+        },
+        {
+            "name": "votewitness",
+            "base": "",
+            "fields": [
+                {"type": "symbol", "name": "domain"}
+                {"type": "account_name", "name": "voter"},
+                {"type": "account_name", "name": "witness"},
+                {"type": "uint16", "name": "weight"}
+            ]
+        },
+        {
+            "name": "witness_info",
+            "base": "",
+            "fields": [
+                {"type": "account_name", "name": "name"},
+                {"type": "public_key", "name": "key"},
+                {"type": "string", "name": "url"},
+                {"type": "bool", "name": "active"},
+                {"type": "uint64", "name": "total_weight"}
+            ]
+        },
+        {
+            "name": "witness_voter_s",
+            "base": "",
+            "fields": [
+                {"type": "account_name", "name": "community"},
+                {"type": "account_name[]", "name": "witnesses"}
+            ]
+        }
+    ],
+    "types": [],
+    "actions": [
+        {
+            "name": "create",
+            "type": "create",
+            "ricardian_contract": ""
+        },
+        {
+            "name": "attachacc",
+            "type": "attachacc",
+            "ricardian_contract": ""
+        },
+        {
+            "name": "detachacc",
+            "type": "detachacc",
+            "ricardian_contract": ""
+        },
+        {
+            "name": "regwitness",
+            "type": "regwitness",
+            "ricardian_contract": ""
+        },
+        {
+            "name": "unregwitness",
+            "type": "unregwitness",
+            "ricardian_contract": ""
+        },
+        {
+            "name": "unvotewitn",
+            "type": "unvotewitn",
+            "ricardian_contract": ""
+        },
+        {
+            "name": "updateprops",
+            "type": "updateprops",
+            "ricardian_contract": ""
+        },
+        {
+            "name": "updatetop",
+            "type": "updatetop",
+            "ricardian_contract": ""
+        },
+        {
+            "name": "votewitness",
+            "type": "votewitness",
+            "ricardian_contract": ""
+        }
+    ],
+    "tables": [
+        {
+            "name": "bwuser",
+            "type": "bw_user",
+            "index_type": "i64",
+            "key_names": [],
+            "key_types": []
+        },
+        {
+            "name": "props",
+            "type": "ctrl_props",
+            "index_type": "i64",
+            "key_names": [],
+            "key_types": []
+        },
+        {
+            "name": "witness",
+            "type": "witness_info",
+            "index_type": "i64",
+            "key_names": ["byweight"],
+            "key_types": ["uint64"]
+        },
+        {
+            "name": "witnessvote",
+            "type": "witness_voter_s",
+            "index_type": "i64",
+            "key_names": [],
+            "key_types": []
+        }
+    ],
+    "ricardian_clauses": [],
+    "abi_extensions": []
+}
