@@ -1,4 +1,5 @@
 #include "golos.ctrl/golos.ctrl.hpp"
+#include "golos.ctrl/config.hpp"
 #include <golos.vesting/golos.vesting.hpp>
 #include <eosio.system/native.hpp>
 #include <eosiolib/transaction.hpp>
@@ -13,14 +14,26 @@ using std::vector;
 using std::string;
 
 #define MAX_URL_SIZE 256
-#define VESTING_C N(golos.vest)
 
 
+/// properties
 bool properties::validate() const {
+    eosio_assert(max_witnesses > 0, "max_witnesses cannot be 0");
+    eosio_assert(max_witness_votes > 0, "max_witness_votes cannot be 0");
     return true;
 }
 
+uint16_t calc_threshold(uint16_t val, uint16_t top, uint16_t num, uint16_t denom) {
+    return 0 == val ? uint32_t(top) * num / denom + 1: val;
+}
 
+uint16_t properties::active_threshold() const   { return calc_threshold(witness_supermajority, max_witnesses, 2, 3); };
+uint16_t properties::majority_threshold() const { return calc_threshold(witness_majority, max_witnesses, 1, 2); };
+uint16_t properties::minority_threshold() const { return calc_threshold(witness_minority, max_witnesses, 1, 3); };
+
+
+////////////////////////////////////////////////////////////////
+/// control
 void control::create(account_name owner, properties new_props) {
     eosio_assert(!_has_props, "this token already created");
     eosio_assert(new_props.validate(), "invalid properties");
@@ -34,9 +47,8 @@ void control::create(account_name owner, properties new_props) {
 }
 
 void control::updateprops(properties new_props) {
-    // eosio_assert(has_witness_majority(), "not enough witness signatures to change properties");
     eosio_assert(props() != new_props, "same properties are already set");
-    required_auth(_owner);
+    require_auth({_owner, config::active_name});
     upsert_tbl<props_tbl>(_token, _owner, _owner, [&](bool) {
         return [&](auto& p) {
             p.props = new_props;
@@ -45,7 +57,7 @@ void control::updateprops(properties new_props) {
 }
 
 void control::attachacc(account_name user) {
-    require_auth(_owner);
+    require_auth({_owner, config::minority_name});
     //check rights, additional auths, maybe login restrictions (if creating new acc)
     upsert_tbl<bw_user_tbl>(_owner, user, user, [&](bool exists) {
         return [&,exists](bw_user& u) {
@@ -58,7 +70,7 @@ void control::attachacc(account_name user) {
 }
 
 void control::detachacc(account_name user) {
-    require_auth(_owner);
+    require_auth({_owner, config::minority_name});
     bool exist = upsert_tbl<bw_user_tbl>(user, [&](bool) {
         return [&](bw_user& u) {
             eosio_assert(u.attached, "user already detached");
@@ -73,16 +85,13 @@ void control::detachacc(account_name user) {
 void control::regwitness(account_name witness, eosio::public_key key, string url) {
     eosio_assert(url.length() < MAX_URL_SIZE, "url too long");
     eosio_assert(key != eosio::public_key(), "public key should not be the default value");
-    // TODO: check if key unique?
+    // TODO: check if key unique? Actually, key became unused now, can be removed
     require_auth(witness);
 
     upsert_tbl<witness_tbl>(_token, witness, witness, [&](bool exists) {
         return [&,exists](witness_info& w) {
-            if (exists) {
-                eosio_assert(w.key != key || w.url != url, "already updated in the same way");
-            } else {
-                w.name = witness;
-            }
+            eosio_assert(!exists || w.key != key || w.url != url, "already updated in the same way");
+            w.name = witness;
             w.key = key;
             w.url = url;
             w.active = true;
@@ -156,7 +165,7 @@ void control::apply_vote_weight(account_name voter, account_name witness, bool a
     witness_tbl wtbl(_self, _token);
     auto w = wtbl.find(witness);
     if (w != wtbl.end()) {
-        golos::vesting vc(VESTING_C);
+        golos::vesting vc(config::vesting_name);
         const auto power = vc.get_account_vesting(voter, _token).amount;    //get_balance accepts symbol_name
         if (power > 0) {
             wtbl.modify(w, witness, [&](auto& wi) {
@@ -173,40 +182,45 @@ void control::apply_vote_weight(account_name voter, account_name witness, bool a
 }
 
 void control::update_auths() {
-    // TODO: majority/minority
     // TODO: change only if top changed
-    auto top = top_witness_info();
-    if (top.size() < props().max_witnesses) {
+    auto top = top_witnesses();
+    if (top.size() < props().max_witnesses) {           // TODO: ?restrict only just after creation and allow later
         print("Not enough witnesses to change auth");
         return;
     }
-    std::set<account_name> accounts;
-    for (const auto& i : top) {
-        accounts.insert(i.name);
-    }
     eosiosystem::authority auth;
-    auth.threshold = 3;
-    for (const auto& i : accounts) {
-        auth.accounts.push_back({{i,N(active)},1});
+    for (const auto& i : top) {
+        auth.accounts.push_back({{i,config::active_name},1});
     }
-    if (auth.accounts.size() < auth.threshold)
-        auth.threshold = auth.accounts.size();
-    // add eosio.code
-    weight_type code_weight = auth.threshold;   // TODO: check overflow
-    auth.accounts.push_back({{_self, N(eosio.code)}, code_weight});
-    //permissions must be sorted
-    std::sort(auth.accounts.begin(), auth.accounts.end(),
-        [](const eosiosystem::permission_level_weight& a, const eosiosystem::permission_level_weight& b) {
-            return std::tie(a.permission.actor, a.permission.permission) < std::tie(b.permission.actor, b.permission.permission);
-        }
-    );
 
-    const auto& act = action(
-        permission_level{_owner, N(active)},
-        N(eosio), N(updateauth),
-        std::make_tuple(_owner, N(active), N(owner), auth)
-    );
-    act.send();
+    std::vector<std::pair<uint64_t,uint16_t>> auths = {
+        {config::minority_name, props().minority_threshold()},
+        {config::majority_name, props().majority_threshold()},
+        {config::active_name, props().active_threshold()}         // active must be the last because it adds eosio.code
+    };
+
+    for (const auto& a: auths) {
+        auto perm = a.first;
+        auto thrs = a.second;
+        bool is_active = config::active_name == perm;
+        if (is_active) {
+            // add eosio.code
+            auth.accounts.push_back({{_self, config::code_name}, thrs});
+        }
+        //permissions must be sorted
+        std::sort(auth.accounts.begin(), auth.accounts.end(),
+            [](const eosiosystem::permission_level_weight& l, const eosiosystem::permission_level_weight& r) {
+                return std::tie(l.permission.actor, l.permission.permission) < std::tie(r.permission.actor, r.permission.permission);
+            }
+        );
+        auth.threshold = thrs;
+        const auto& act = action(
+            permission_level{_owner, config::active_name},
+            config::internal_name, N(updateauth),
+            std::make_tuple(_owner, perm, is_active ? config::owner_name : config::active_name, auth)
+        );
+        act.send();
+    }
 }
 
 vector<witness_info> control::top_witness_info() {
@@ -216,7 +230,7 @@ vector<witness_info> control::top_witness_info() {
     witness_tbl witness(_self, _token);
     auto idx = witness.get_index<N(byweight)>();
     for (auto itr = idx.begin(); itr != idx.end() && top.size() < l; ++itr) {
-        if (itr->active)
+        if (itr->active && itr->total_weight > 0)
             top.emplace_back(*itr);
     }
     return top;
@@ -230,17 +244,6 @@ vector<account_name> control::top_witnesses() {
     });
     return top;
 }
-
-
-// bool control::has_witness_active_auth() {
-//     return has_witness_auth(props().max_witnesses * 2 / 3 + 1);
-// }
-// bool control::has_witness_majority() {
-//     return has_witness_auth(props().max_witnesses * 1 / 2 + 1);
-// }
-// bool control::has_witness_minority() {
-//     return has_witness_auth(props().max_witnesses * 1 / 3 + 1);
-// }
 
 
 } // namespace golos

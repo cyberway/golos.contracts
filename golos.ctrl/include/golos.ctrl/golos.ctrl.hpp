@@ -12,10 +12,16 @@ using namespace eosio;
 
 
 struct [[eosio::table]] properties {
-    uint16_t max_witnesses = 21;        // MAX_WITNESSES
-    uint16_t max_witness_votes = 30;    // MAX_ACCOUNT_WITNESS_VOTES
+    uint16_t max_witnesses = 21;            // MAX_WITNESSES
+    uint16_t witness_supermajority = 0;     // 0 = auto
+    uint16_t witness_majority = 0;          // 0 = auto
+    uint16_t witness_minority = 0;          // 0 = auto
+    uint16_t max_witness_votes = 30;        // MAX_ACCOUNT_WITNESS_VOTES
 
     bool validate() const;
+    uint16_t active_threshold() const;
+    uint16_t majority_threshold() const;
+    uint16_t minority_threshold() const;
 
     friend bool operator==(const properties& a, const properties& b) {
         return memcmp(&a, &b, sizeof(properties)) == 0;
@@ -26,7 +32,6 @@ struct [[eosio::table]] properties {
 };
 
 struct [[eosio::table]] ctrl_props {
-    // symbol_type symbol;  // it's now in scope
     account_name owner;     // TODO: it should be singleton
     properties props;
 
@@ -37,7 +42,6 @@ struct [[eosio::table]] ctrl_props {
 using props_tbl = eosio::multi_index<N(props), ctrl_props>;
 
 struct [[eosio::table]] witness_info {
-
     account_name name;
     eosio::public_key key;
     std::string url;        // not sure it's should be in db (but can be useful to get witness info)
@@ -158,11 +162,6 @@ private:
 
     void apply_vote_weight(account_name voter, account_name witness, bool add);
     void update_auths();
-
-    bool has_witness_auth(uint8_t require);
-    bool has_witness_active_auth();
-    bool has_witness_majority();
-    bool has_witness_minority();
 };
 
 bool control::is_attached(account_name user) const {
@@ -173,4 +172,4 @@ bool control::is_attached(account_name user) const {
 }
 
 
-}
+} // golos

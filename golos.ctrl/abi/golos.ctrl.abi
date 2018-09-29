@@ -52,6 +52,9 @@
             "base": "",
             "fields": [
                 {"type": "uint16", "name": "max_witnesses"},
+                {"type": "uint16", "name": "witness_supermajority"},
+                {"type": "uint16", "name": "witness_majority"},
+                {"type": "uint16", "name": "witness_minority"},
                 {"type": "uint16", "name": "max_witness_votes"}
             ]
         },
