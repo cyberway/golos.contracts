@@ -13,7 +13,7 @@ using namespace eosio;
 
 // todo: make configurable app_domain type
 template<typename T, typename Q, typename... Args>
-bool execute_action(void (Q::*func)(Args...)) {
+bool execute_action(uint64_t action, void (Q::*func)(Args...)) {
 // bool execute_action(T* obj, void (Q::*func)(Args...)) {
     size_t size = action_data_size();
     //using malloc/free here potentially is not exception-safe, although WASM doesn't support exceptions
@@ -31,7 +31,7 @@ bool execute_action(void (Q::*func)(Args...)) {
         free(buffer);
     }
 
-    T obj(current_receiver(), tuple_head(args));
+    T obj(current_receiver(), tuple_head(args), action);    // pass action to constructor
 
     auto f2 = [&](auto... a) {
         (obj.*func)(a...);
@@ -42,9 +42,10 @@ bool execute_action(void (Q::*func)(Args...)) {
     return true;
 }
 
+// `action` var is visible from here. TODO: find better way
 #define APP_DOMAIN_API_CALL(r, TYPENAME, elem)              \
     case ::eosio::string_to_name(BOOST_PP_STRINGIZE(elem)): \
-        ::golos::execute_action<TYPENAME>(&TYPENAME::elem); \
+        ::golos::execute_action<TYPENAME>(action, &TYPENAME::elem); \
         break;
 
 #define APP_DOMAIN_API(TYPENAME, MEMBERS) \

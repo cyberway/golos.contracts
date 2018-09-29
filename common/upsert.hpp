@@ -11,10 +11,12 @@ bool upsert_tbl(uint64_t code, uint64_t scope, account_name payer, uint64_t key,
     T tbl{code, scope};
     auto itr = tbl.find(key);
     bool exists = itr != tbl.end();
-    if (exists) {
-        tbl.modify(itr, payer, get_update_fn(exists));
-    } else if (allow_insert) {
-        tbl.emplace(payer, get_update_fn(exists));
+    if (exists || allow_insert) {
+        auto update_fn = get_update_fn(exists);
+        if (exists)
+            tbl.modify(itr, payer, update_fn);
+        else
+            tbl.emplace(payer, update_fn);
     }
     return exists;
 }

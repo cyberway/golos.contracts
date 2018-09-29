@@ -15,6 +15,8 @@ struct [[eosio::table]] properties {
     uint16_t max_witnesses = 21;        // MAX_WITNESSES
     uint16_t max_witness_votes = 30;    // MAX_ACCOUNT_WITNESS_VOTES
 
+    bool validate() const;
+
     friend bool operator==(const properties& a, const properties& b) {
         return memcmp(&a, &b, sizeof(properties)) == 0;
     }
@@ -24,11 +26,12 @@ struct [[eosio::table]] properties {
 };
 
 struct [[eosio::table]] ctrl_props {
-    symbol_type symbol;
+    // symbol_type symbol;  // it's now in scope
+    account_name owner;     // TODO: it should be singleton
     properties props;
 
     uint64_t primary_key() const {
-        return symbol;
+        return owner;
     }
 };
 using props_tbl = eosio::multi_index<N(props), ctrl_props>;
@@ -91,21 +94,21 @@ struct [[eosio::table]] bw_user {   // ?needed or simple names vector will be en
 };
 using bw_user_tbl = eosio::multi_index<N(bwuser), bw_user>;
 
-
-inline account_name token2name(symbol_type token) {
-    return (account_name)token;   // actualy symbol_type is not base32, but simple u8 precision + 7 bytes, but it's enough for now
 }
+
 
 class control: public contract {
 public:
-    control(account_name self, symbol_type token)
+    control(account_name self, symbol_type token, uint64_t action)
         : contract(self)
         , _token(token)
+        , _props_tbl(_self, token)
     {
-        _owner = token2name(token);
+        props(action == N(create));
     };
 
-    [[eosio::action]] void updateprops(properties p);
+    [[eosio::action]] void create(account_name owner, properties props);
+    [[eosio::action]] void updateprops(properties props);
 
     [[eosio::action]] void attachacc(account_name user);
     [[eosio::action]] void detachacc(account_name user);
@@ -122,21 +125,22 @@ public:
     vector<witness_info> top_witness_info();  //internal
 
 private:
-    symbol_type _token;         // TODO: looks like it's simpler to have community owner as key
+    symbol_type _token;
     account_name _owner;
 
-    bool _has_props = false;
-    properties _props;          // lazy loaded
+    props_tbl _props_tbl;       // TODO: singleton
+    bool _has_props = false;    // maybe reuse _owner ?
+    properties _props;          // cache
 
 private:
-    // default props set only to create new community; TODO: is default really needed?
     const properties& props(bool allow_default = false) {
         if (!_has_props) {
-            props_tbl tbl(_self, _owner);       // TODO: check eosio::singleton
-            auto i = tbl.begin();
-            bool exist = i != tbl.end() && i->symbol == _token;
-            eosio_assert(exist || allow_default, "no preperties exist");
+            auto i = _props_tbl.begin();
+            bool exist = i != _props_tbl.end();
+            eosio_assert(exist || allow_default, "symbol not found");
             _props = exist ? i->props : properties();
+            if (exist)
+                _owner = i->owner;
             _has_props = exist;
         }
         return _props;

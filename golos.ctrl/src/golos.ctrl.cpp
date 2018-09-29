@@ -1,5 +1,6 @@
 #include "golos.ctrl/golos.ctrl.hpp"
 #include <golos.vesting/golos.vesting.hpp>
+#include <eosio.system/native.hpp>
 #include <eosiolib/transaction.hpp>
 
 #define DOMAIN_TYPE symbol_type
@@ -12,20 +13,31 @@ using std::vector;
 using std::string;
 
 #define MAX_URL_SIZE 256
+#define VESTING_C N(golos.vest)
 
+
+bool properties::validate() const {
+    return true;
+}
+
+
+void control::create(account_name owner, properties new_props) {
+    eosio_assert(!_has_props, "this token already created");
+    eosio_assert(new_props.validate(), "invalid properties");
+    require_auth(owner);
+    // TODO: ensure that owner owns token
+    // TODO: maybe check if eosio.code set properly
+    _props_tbl.emplace(owner, [&](auto& r) {
+        r.owner = owner;
+        r.props = new_props;
+    });
+}
 
 void control::updateprops(properties new_props) {
-    auto current = props(true);
-    bool create = !_has_props;
-    if (create) {
-        require_auth(_owner);
-    } else {
         eosio_assert(has_witness_majority(), "not enough witness signatures to change properties");
-    }
-    eosio_assert(create || current != new_props, "same properties are already set");
-    upsert_tbl<props_tbl>(_owner, _owner, _token, [&](bool) {
+    eosio_assert(props() != new_props, "same properties are already set");
+    upsert_tbl<props_tbl>(_token, _owner, _owner, [&](bool) {
         return [&](auto& p) {
-            p.symbol = _token;
             p.props = new_props;
         };
     });
@@ -34,8 +46,8 @@ void control::updateprops(properties new_props) {
 void control::attachacc(account_name user) {
     require_auth(_owner);
     //check rights, additional auths, maybe login restrictions (if creating new acc)
-    upsert_tbl<bw_user_tbl>(user, [&](bool exists) {
-        return [&](bw_user& u) {
+    upsert_tbl<bw_user_tbl>(_owner, user, user, [&](bool exists) {
+        return [&,exists](bw_user& u) {
             eosio_assert(!exists || u.attached, "already attached");   //TODO: maybe it's better to check this earlier (not inside modify())
             u.name = user;
             u.attached = true;
@@ -60,10 +72,11 @@ void control::detachacc(account_name user) {
 void control::regwitness(account_name witness, eosio::public_key key, string url) {
     eosio_assert(url.length() < MAX_URL_SIZE, "url too long");
     eosio_assert(key != eosio::public_key(), "public key should not be the default value");
+    // TODO: check if key unique?
     require_auth(witness);
 
-    upsert_tbl<witness_tbl>(_owner, witness, witness, [&](bool exists) {
-        return [&](witness_info& w) {
+    upsert_tbl<witness_tbl>(_token, witness, witness, [&](bool exists) {
+        return [&,exists](witness_info& w) {
             if (exists) {
                 eosio_assert(w.key != key || w.url != url, "already updated in the same way");
             } else {
@@ -76,12 +89,13 @@ void control::regwitness(account_name witness, eosio::public_key key, string url
     });
 }
 
-
+// TODO: special action to free memory?
 void control::unregwitness(account_name witness) {
     require_auth(witness);
     // TODO: simplify upsert to allow passing just inner lambda
-    bool exists = upsert_tbl<witness_tbl>(_owner, witness, witness, [&](bool) {
+    bool exists = upsert_tbl<witness_tbl>(_token, witness, witness, [&](bool) {
         return [&](witness_info& w) {
+            eosio_assert(w.active, "witness already unregistered");
             w.active = false;
         };
     }, false);
@@ -118,8 +132,8 @@ void control::unvotewitn(account_name voter, account_name witness) {
     witness_vote_tbl tbl(_self, voter);
     auto itr = tbl.find(_owner);
     bool exists = itr != tbl.end();
-
     eosio_assert(exists, "there are no votes");
+
     auto w = itr->witnesses;
     auto el = std::find(w.begin(), w.end(), witness);
     eosio_assert(el != w.end(), "there is no vote for this witness");
@@ -155,7 +169,7 @@ vector<witness_info> control::top_witness_info() {
     vector<witness_info> top;
     const auto l = props().max_witnesses;
     top.reserve(l);
-    witness_tbl witness(_self, _owner);
+    witness_tbl witness(_self, _token);
     auto idx = witness.get_index<N(byweight)>();
     for (auto itr = idx.begin(); itr != idx.end() && top.size() < l; ++itr) {
         if (itr->active)
@@ -172,16 +186,6 @@ vector<account_name> control::top_witnesses() {
     });
     return top;
 }
-
-// void read_signatures() {
-//     constexpr size_t max_stack_buffer_size = 512;
-//     size_t size = transaction_size();
-//     char* buffer = (char*)(max_stack_buffer_size < size ? malloc(size) : alloca(size));
-//     read_transaction(buffer, size);
-//     // signatures are cut before pack (signed_transaction -> transaction), so it's unusable
-//     // transaction tx = fc::raw::unpack<transaction>(trx_data, trx_size);     // can be costly
-//     //flat_set<public_key_type> kyes = tx.get_signature_keys()
-// }
 
 bool control::has_witness_auth(uint8_t require) {
     // alternatively we can try to use `has_auth`, but it provides no info about permission_level and used key
@@ -217,7 +221,7 @@ bool control::has_witness_minority() {
 } // namespace golos
 
 APP_DOMAIN_ABI(golos::control,
-    (updateprops)
+    (create)(updateprops)
     (attachacc)(detachacc)
     (regwitness)(unregwitness)
     (votewitness)(unvotewitn)(updatetop))

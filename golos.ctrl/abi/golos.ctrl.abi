@@ -7,6 +7,15 @@
     }],
     "structs": [
         {
+            "name": "create",
+            "base": "",
+            "fields": [
+                {"type": "symbol",       "name": "domain"}
+                {"type": "account_name", "name": "owner"}
+                {"type": "properties", "name": "props"}
+            ]
+        },
+        {
             "name": "attachacc",
             "base": "",
             "fields": [
@@ -26,7 +35,7 @@
             "name": "ctrl_props",
             "base": "",
             "fields": [
-                {"type": "symbol",     "name": "symbol"},
+                {"type": "account_name", "name": "owner"},
                 {"type": "properties", "name": "props"}
             ]
         },
@@ -78,7 +87,7 @@
             "base": "",
             "fields": [
                 {"type": "symbol", "name": "domain"}
-                {"type": "properties", "name": "p"}
+                {"type": "properties", "name": "props"}
             ]
         },
         {
@@ -123,6 +132,11 @@
     ],
     "types": [],
     "actions": [
+        {
+            "name": "create",
+            "type": "create",
+            "ricardian_contract": ""
+        },
         {
             "name": "attachacc",
             "type": "attachacc",
@@ -183,8 +197,8 @@
             "name": "witness",
             "type": "witness_info",
             "index_type": "i64",
-            "key_names": [],
-            "key_types": []
+            "key_names": ["byweight"],
+            "key_types": ["uint64"]
         },
         {
             "name": "witnessvote",
