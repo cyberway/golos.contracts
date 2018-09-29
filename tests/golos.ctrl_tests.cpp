@@ -20,9 +20,9 @@ using symbol_type = symbol;
 
 // TODO: maybe use native db struct
 struct permission {
-    name              perm_name;
-    name              parent;
-    authority         required_auth;
+    name        perm_name;
+    name        parent;
+    authority   required_auth;
 };
 FC_REFLECT(permission, (perm_name)(parent)(required_auth))
 
