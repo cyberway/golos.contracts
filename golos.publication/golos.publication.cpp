@@ -281,7 +281,7 @@ bool publication::get_post(account_name account, std::string permlink, structure
             ++posttable_obj;
         }
     }
-    eosio_assert(posttable_obj != posttable_index.end(), "Post doesn't exist.");
+    eosio_assert(false, "Post doesn't exist.");
     return false;
 }
 
