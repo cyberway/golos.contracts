@@ -157,7 +157,19 @@ private:
         return (--pool);
     }
     
+    static fixp_t get_delta(fixp_t old_val, fixp_t new_val, const bytecode& bc) {
 
+        atmsp::machine<fixp_t> mchn;
+        bc.to_machine(mchn);
+        
+        mchn.var[0] = old_val; 
+        fixp_t old_fn = mchn.run();        
+        mchn.var[0] = new_val;
+        fixp_t new_fn = mchn.run();
+        
+        return (new_fn - old_fn);
+   }
+    
 public:
     using contract::contract;
            
@@ -238,19 +250,6 @@ public:
         pools.modify(*pool, _self, [&](auto &item){ item.state.msgs++; });        
         msgs.emplace(_self, [&](auto &item) { item = {.id = id, .created = cur_time}; });
     }
-   
-    static fixp_t get_delta(fixp_t old_val, fixp_t new_val, const bytecode& bc) {
-
-        atmsp::machine<fixp_t> mchn;
-        bc.to_machine(mchn);
-        
-        mchn.var[0] = old_val; 
-        fixp_t old_fn = mchn.run();        
-        mchn.var[0] = new_val;
-        fixp_t new_fn = mchn.run();
-        
-        return (new_fn - old_fn);
-   }
       
     /// @abi action
     void addvote(account_name author, uint64_t msgid, account_name voter, int64_t weight) {
