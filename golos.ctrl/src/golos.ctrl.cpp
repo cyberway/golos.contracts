@@ -185,7 +185,7 @@ void control::update_auths() {
     // TODO: change only if top changed
     auto top = top_witnesses();
     if (top.size() < props().max_witnesses) {           // TODO: ?restrict only just after creation and allow later
-        print("Not enough witnesses to change auth");
+        print("Not enough witnesses to change auth\n");
         return;
     }
     eosiosystem::authority auth;
