@@ -173,10 +173,9 @@ void vesting::delegate_vesting(account_name sender, account_name recipient, asse
         item.delegate_vesting += quantity;
     });
 
-    const auto unique_key = (uint128_t)sender + (((uint128_t)recipient)<<64);
     tables::delegate_table table(_self, quantity.symbol.name());
-    auto index_table = table.get_index<N(unique_key)>();
-    auto delegate_record = index_table.find(unique_key);
+    auto index_table = table.get_index<N(unique)>();
+    auto delegate_record = index_table.find(structures::delegate_record::unique_key(sender, recipient));
     if (delegate_record != index_table.end()) {
         index_table.modify(delegate_record, 0, [&](auto &item){
             item.quantity += quantity;
@@ -185,7 +184,6 @@ void vesting::delegate_vesting(account_name sender, account_name recipient, asse
     } else {
         table.emplace(sender, [&](structures::delegate_record &item){
             item.id = table.available_primary_key();
-            item.unique_key = unique_key;
             item.sender = sender;
             item.recipient = recipient;
             item.quantity = quantity;
@@ -206,10 +204,9 @@ void vesting::delegate_vesting(account_name sender, account_name recipient, asse
 void vesting::undelegate_vesting(account_name sender, account_name recipient, asset quantity) {
     require_auth(sender);
 
-    const auto unique_key = (uint128_t)sender + (((uint128_t)recipient)<<64);
     tables::delegate_table table(_self, quantity.symbol.name());
-    auto index_table = table.get_index<N(unique_key)>();
-    auto delegate_record = index_table.find(unique_key);
+    auto index_table = table.get_index<N(unique)>();
+    auto delegate_record = index_table.find(structures::delegate_record::unique_key(sender, recipient));
     eosio_assert(delegate_record != index_table.end(), "Not enough delegated vesting");
 
     eosio_assert(delegate_record->return_date <= time_point_sec(now()), "Tokens are frozen until the end of the period");
