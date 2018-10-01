@@ -123,7 +123,7 @@ struct post : createpost {
 struct voteinfo {
     voteinfo() = default;
 
-    uint64_t postid;
+    uint64_t post_id;
     account_name voter;
     uint64_t percent;
     asset weight;
@@ -132,17 +132,17 @@ struct voteinfo {
     uint64_t count;
 
     uint64_t primary_key() const {
-        return postid;
+        return post_id;
     }
 
-    EOSLIB_SERIALIZE(voteinfo, (postid)(voter)(percent)(weight)(time)(rshares)(count))
+    EOSLIB_SERIALIZE(voteinfo, (post_id)(voter)(percent)(weight)(time)(rshares)(count))
 };
 
 struct votersinfo {
     votersinfo() = default;
 
     uint64_t id;
-    uint64_t postid;
+    uint64_t post_id;
     account_name voter;
 
     uint64_t primary_key() const {
@@ -150,10 +150,10 @@ struct votersinfo {
     }
 
     uint64_t postid_key() const {
-        return postid;
+        return post_id;
     }
 
-    EOSLIB_SERIALIZE(votersinfo, (id)(postid)(voter))
+    EOSLIB_SERIALIZE(votersinfo, (id)(post_id)(voter))
 };
 
 }
@@ -171,8 +171,8 @@ namespace tables {
     using vote_table = eosio::multi_index<N(votetable), structures::voteinfo, vote_index>;
 
     using voters_index = indexed_by<N(id), const_mem_fun<structures::votersinfo, uint64_t, &structures::votersinfo::primary_key>>;
-    using postid_index = indexed_by<N(postid), const_mem_fun<structures::votersinfo, uint64_t, &structures::votersinfo::postid_key>>;
-    using voters_table = eosio::multi_index<N(voterstable), structures::votersinfo, voters_index, postid_index>;
+    using post_id_index = indexed_by<N(postid), const_mem_fun<structures::votersinfo, uint64_t, &structures::votersinfo::postid_key>>;
+    using voters_table = eosio::multi_index<N(voterstable), structures::votersinfo, voters_index, post_id_index>;
 
     using accounts_battery_table = eosio::singleton<N(batterytable), structures::account_battery>;
 }

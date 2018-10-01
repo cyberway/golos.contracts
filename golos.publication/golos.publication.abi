@@ -310,7 +310,7 @@
     "base": "",
     "fields": [
       {
-        "name": "postid",
+        "name": "post_id",
         "type": "uint64"
       },
       {
@@ -348,7 +348,7 @@
         "type": "uint64"
       },
       {
-        "name": "postid",
+        "name": "post_id",
         "type": "uint64"
       },
       {
@@ -444,7 +444,7 @@
     "type": "voteinfo",
     "index_type": "i64",
     "key_names" : [
-      "postid"
+      "post_id"
     ],
     "key_types" : [
       "uint64"
