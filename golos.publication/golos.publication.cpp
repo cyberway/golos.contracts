@@ -62,10 +62,10 @@ void publication::create_post(account_name account, std::string permlink,
         ++posttable_obj;
     }
 
-    auto post_id = post_table.available_primary_key();
+    auto postid = post_table.available_primary_key();
 
     post_table.emplace(account, [&]( auto &item ) {
-        item.id = post_id;
+        item.id = postid;
         item.date = now();
         item.account = account;
         item.permlink = permlink;
@@ -78,7 +78,7 @@ void publication::create_post(account_name account, std::string permlink,
     });
 
     content_table.emplace(account, [&]( auto &item ) {
-        item.id = post_id;
+        item.id = postid;
         item.headerpost = headerpost;
         item.bodypost = bodypost;
         item.languagepost = languagepost;
@@ -135,10 +135,10 @@ void publication::delete_post(account_name account, std::string permlink) {
             auto contenttable_index = content_table.get_index<N(id)>();
             auto contenttable_obj = contenttable_index.find(posttable_obj.id);
             contenttable_index.erase(contenttable_obj);
-            auto votetable_index = vote_table.get_index<N(post_id)>();
+            auto votetable_index = vote_table.get_index<N(postid)>();
             auto votetable_obj = votetable_index.find(posttable_obj.id);
             votetable_index.erase(votetable_obj);
-            auto voterstable_index = voters_table.get_index<N(post_id)>();
+            auto voterstable_index = voters_table.get_index<N(postid)>();
             auto voterstable_obj = voterstable_index.find(posttable_obj.id);
             while (voterstable_obj != voterstable_index.end())
                 voterstable_obj = voterstable_index.erase(voterstable_obj);
@@ -164,13 +164,13 @@ void publication::upvote(account_name voter, account_name author, std::string pe
     structures::post posttable_obj;
 
     if (get_post(author, permlink, posttable_obj)) {
-        auto votetable_index = vote_table.get_index<N(post_id)>();
+        auto votetable_index = vote_table.get_index<N(postid)>();
         auto votetable_obj = votetable_index.find(posttable_obj.id);
         if (votetable_obj != votetable_index.end()) {
-            auto voterstable_index = voters_table.get_index<N(post_id)>();
+            auto voterstable_index = voters_table.get_index<N(postid)>();
             auto voterstable_obj = voterstable_index.find(posttable_obj.id);
             while (voterstable_obj != voterstable_index.end() &&
-                   posttable_obj.id == voterstable_obj->post_id) {
+                   posttable_obj.id == voterstable_obj->postid) {
                 eosio_assert(voter != voterstable_obj->voter,
                              "You have already voted for this post.");
                 ++voterstable_obj;
@@ -178,12 +178,12 @@ void publication::upvote(account_name voter, account_name author, std::string pe
 
             voters_table.emplace(author, [&]( auto &item ) {
                 item.id = voters_table.available_primary_key();
-                item.post_id = posttable_obj.id;
+                item.postid = posttable_obj.id;
                 item.voter = voter;
             });
 
             votetable_index.modify(votetable_obj, author, [&]( auto &item ) {
-               item.post_id = posttable_obj.id;
+               item.postid = posttable_obj.id;
                item.voter = voter;
                item.percent = FIXED_CURATOR_PERCENT;
                item.weight = weight;
@@ -194,12 +194,12 @@ void publication::upvote(account_name voter, account_name author, std::string pe
         } else {
             voters_table.emplace(author, [&]( auto &item ) {
                 item.id = voters_table.available_primary_key();
-                item.post_id = posttable_obj.id;
+                item.postid = posttable_obj.id;
                 item.voter = voter;
             });
 
             vote_table.emplace(author, [&]( auto &item ) {
-               item.post_id = posttable_obj.id;
+               item.postid = posttable_obj.id;
                item.voter = voter;
                item.percent = FIXED_CURATOR_PERCENT;
                item.weight = weight;
@@ -226,9 +226,9 @@ void publication::downvote(account_name voter, account_name author, std::string 
     structures::post posttable_obj;
 
     if (get_post(author, permlink, posttable_obj)) {
-        auto voterstable_index = voters_table.get_index<N(post_id)>();
+        auto voterstable_index = voters_table.get_index<N(postid)>();
         auto voterstable_obj = voterstable_index.find(posttable_obj.id);
-        while (voterstable_obj != voterstable_index.end() && posttable_obj.id == voterstable_obj->post_id) {
+        while (voterstable_obj != voterstable_index.end() && posttable_obj.id == voterstable_obj->postid) {
             if (voter == voterstable_obj->voter) {
                 voterstable_index.erase(voterstable_obj);
                 break;
@@ -240,7 +240,7 @@ void publication::downvote(account_name voter, account_name author, std::string 
         eosio_assert(voterstable_obj != voterstable_index.end(),
                      "You can't do down vote because previously you haven't voted for this post.");
 
-        auto votetable_index = vote_table.get_index<N(post_id)>();
+        auto votetable_index = vote_table.get_index<N(postid)>();
         auto votetable_obj = votetable_index.find(posttable_obj.id);
 
         votetable_index.modify(votetable_obj, author, [&]( auto &item ) {
