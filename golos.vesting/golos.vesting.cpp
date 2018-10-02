@@ -66,7 +66,7 @@ void vesting::buy_vesting(account_name  from,
         item.token += quantity;
     });
 
-    if (N(golos.emiss) == from)
+    if (ACCOUNT_EMISSION == from)
         return;
 
     auto payer = has_auth( to ) ? to : from;

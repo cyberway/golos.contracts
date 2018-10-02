@@ -23,3 +23,7 @@
 #define MAX_PERSENT_DELEGATION (0)
 #define TIME_LIMIT_FOR_RETURN_DELEGATE_VESTING 15
 //#define TIME_LIMIT_FOR_RETURN_DELEGATE_VESTING (604800)
+
+//------------------------------------------
+
+#define ACCOUNT_EMISSION N(golos.emiss)
