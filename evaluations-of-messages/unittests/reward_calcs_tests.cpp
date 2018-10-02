@@ -1,6 +1,6 @@
 #define UNIT_TEST_ENV
 #include "math_expr_test/types.h"
-#include "reward_calcs/exttypes.h"
+
  
 #include <boost/test/unit_test.hpp>
 #include <eosio/testing/tester.hpp>
@@ -11,9 +11,10 @@
 #include <Runtime/Runtime.h>  
 
 #include <fc/variant_object.hpp>
+#include "reward_calcs/exttypes.h"
 #include <math.h>
 #include <map>
-
+  
 struct balance_data {
     double tokenamount = 0.0; 
     double vestamount = 0.0;
@@ -311,8 +312,10 @@ public:
         string action_type_name = abi_ser.get_action_type(name);
         action act;
         act.account = _contract_acc;
-        act.name    = name;
-        act.data    = abi_ser.variant_to_binary( action_type_name, data, abi_serializer_max_time );
+        act.name    = name;          
+       
+        act.data    = abi_ser.variant_to_binary( action_type_name, data, abi_serializer_max_time );        
+             
         auto ret = base_tester::push_action( std::move(act), uint64_t(signer));
         return ret;
     }   
@@ -335,20 +338,26 @@ public:
                 ("amount", amount)
                 ("mode", static_cast<enum_t>(mode))); 
     }
-     
-    action_result setrules(
-        const std::string& mainfunc, const std::string& curationfunc, const std::string& timepenalty,
+         
+    action_result setrules(     
+        const funcparams& mainfunc, const funcparams& curationfunc, const funcparams& timepenalty,
         int64_t curatorsprop,
         std::function<double(double)>&&  mainfunc_,
         std::function<double(double)>&& curationfunc_,
         std::function<double(double)>&& timepenalty_
-        ) {
-        
+        ) {     
         auto ret = push_action(_contract_acc, N(setrules), mvo()
-                ("mainfunc", mainfunc)
-                ("curationfunc", curationfunc)
-                ("timepenalty", timepenalty)
+                ("mainstr", mainfunc.str)
+                ("mainmaxarg", mainfunc.maxarg)
+                
+                ("crtnstr", curationfunc.str)
+                ("crtnmaxarg", curationfunc.maxarg)
+                
+                ("pnltstr", timepenalty.str)
+                ("pnltmaxarg", timepenalty.maxarg)
+            
                 ("curatorsprop", curatorsprop));
+                
         if(ret == success()) {   
             double unclaimed_funds = 0.0;
             for(auto& p : _state.pools)
@@ -456,7 +465,7 @@ public:
                     return ret;
                 }
             }
-        }             
+        }              
         if(ret == success()) 
                 BOOST_REQUIRE_MESSAGE(false, "payrewards: ret == success(), but message not found in state");
         return ret;    
@@ -549,7 +558,7 @@ public:
         }
     }
 };
- 
+
 BOOST_AUTO_TEST_SUITE(reward_calcs_tests)
 
 BOOST_FIXTURE_TEST_CASE(basic_tests, reward_calcs_tester) try {
@@ -561,20 +570,39 @@ BOOST_FIXTURE_TEST_CASE(basic_tests, reward_calcs_tester) try {
     for(auto& u : _users)
         BOOST_REQUIRE_EQUAL(success(), payto(u, 50000, payment_t::VESTING));
     check();
-      
-    BOOST_REQUIRE_EQUAL(success(), setrules("x", "sqrt(x)", "0", 2500, 
-        [](double x){ return x; }, [](double x){ return sqrt(x); }, [](double x){ return 0.0; }));    
+    
+    auto bignum = static_cast<base_t>(1.e13); 
+    
+    BOOST_REQUIRE_EQUAL("assertion failure with message: forum::check monotonic failed for time penalty func",
+        setrules({"x", bignum}, {"log2(x + 1.0)", bignum}, {"x", bignum}, 2500, 
+        [](double x){ return x; }, [](double x){ return log2(x + 1.0); }, [](double x){ return x; }));
+    
+    BOOST_REQUIRE_EQUAL("assertion failure with message: forum::positive_save_cast: arg > max possible value",
+        setrules({"x", std::numeric_limits<base_t>::max()}, {"sqrt(x)", bignum}, {"0", bignum}, 2500, 
+        [](double x){ return x; }, [](double x){ return sqrt(x); }, [](double x){ return 0.0; })); 
+        
+    BOOST_REQUIRE_EQUAL("assertion failure with message: forum::check positive failed for time penalty func", 
+        setrules({"x", bignum}, {"sqrt(x)", bignum}, {"10.0-x", 15}, 2500, 
+        [](double x){ return x; }, [](double x){ return sqrt(x); }, [](double x){ return 10.0 - x; }));        
+    
+    BOOST_REQUIRE_EQUAL(success(), setrules({"x", bignum}, {"sqrt(x)", bignum}, {"10.0-x", 10}, 2500, 
+        [](double x){ return x; }, [](double x){ return sqrt(x); }, [](double x){ return 10.0 - x; }));    
     check("set first rule");
     
     BOOST_REQUIRE_EQUAL(success(), issue(50000));    
     check("issue 50");
     
-    std::vector<message_key> msg_keys;
+    std::vector<message_key> msg_keys;  
     msg_keys.emplace_back(message_key{ .author = _users[0], .id = static_cast<uint64_t>(cur_time().to_seconds()) });     
     BOOST_REQUIRE_EQUAL(success(), addmessage(msg_keys.back()));   
     check("new_msg");
+    
+    BOOST_REQUIRE_EQUAL("assertion failure with message: forum::check monotonic failed for reward func",
+        setrules({"x * x", bignum}, {"log2(x + 1.0)", bignum}, {"0", bignum}, 2500, 
+        [](double x){ return x * x; }, [](double x){ return log2(x + 1.0); }, [](double x){ return 0.0; }));
+  
      
-    BOOST_REQUIRE_EQUAL(success(), setrules("x * x", "log2(x + 1.0)", "0", 2500, 
+    BOOST_REQUIRE_EQUAL(success(), setrules({"x * x", static_cast<base_t>(sqrt(bignum))}, {"log2(x + 1.0)", bignum}, {"0", bignum}, 2500, 
         [](double x){ return x * x; }, [](double x){ return log2(x + 1.0); }, [](double x){ return 0.0; }));
     check("set second rule");            
     

@@ -8,7 +8,8 @@
    
 #include "../math_expr_test/expr_code_info.h"
 using namespace exprinfo;   
-    
+
+constexpr size_t CHECK_MONOTONIC_STEPS = 10;
 constexpr int ONE_HUNDRED_PERCENT = 10000;
 constexpr fixp_t MIN_VESTING_FOR_VOTE = fixp_t(3000);
 
@@ -57,14 +58,21 @@ struct vote {
     uint64_t by_message() const { return msgid; }
     EOSLIB_SERIALIZE(vote, (id)(msgid)(voter)(weight))
 };
+  
+struct funcinfo {
+    bytecode code;
+    base_t maxarg;
+    EOSLIB_SERIALIZE(funcinfo, (code)(maxarg)) 
+};
 
 struct rewardrules {
-    bytecode mainfunc;
-    bytecode curationfunc;
-    bytecode timepenalty;    
+    funcinfo mainfunc;
+    funcinfo curationfunc;
+    funcinfo timepenalty;
     base_t curatorsprop;
+    
     EOSLIB_SERIALIZE(rewardrules, (mainfunc)(curationfunc)(timepenalty)(curatorsprop)) 
-    };
+};
  
 using counter_t = uint64_t;
   
@@ -133,6 +141,7 @@ private:
             if((weights_sum > fixp_t(0)) && (max_rewards > 0)) {
                 
                 //TODO: implement wide base types for such calculations (https://github.com/GolosChain/golos-smart/issues/71)
+                //elastic_fixed_point?
                 auto claim = static_cast<int64_t>(static_cast<fixp_t>(max_rewards) * static_cast<fixp_t>(FP(v->weight) / weights_sum));
                 eosio_assert(claim <= unclaimed_rewards, 
                 ("LOGIC ERROR! forum::pay_curators: claim(" + 
@@ -157,29 +166,79 @@ private:
         return (--pool);
     }
     
-    static fixp_t get_delta(fixp_t old_val, fixp_t new_val, const bytecode& bc) {
+    static fixp_t get_delta(fixp_t old_val, fixp_t new_val, const funcinfo& func) {
 
         atmsp::machine<fixp_t> mchn;
-        bc.to_machine(mchn);
+        func.code.to_machine(mchn);
         
-        mchn.var[0] = old_val; 
+        mchn.var[0] = std::min(old_val, FP(func.maxarg)); 
         fixp_t old_fn = mchn.run();        
-        mchn.var[0] = new_val;
+        mchn.var[0] = std::min(new_val, FP(func.maxarg));
         fixp_t new_fn = mchn.run();
         
         return (new_fn - old_fn);
-   }
+    }
+    
+    static fixp_t calc_1d(atmsp::machine<fixp_t>& machine, fixp_t arg) {
+        machine.var[0] = arg;
+        return machine.run();
+    }
+   
+    static fixp_t positive_save_cast(base_t arg) {
+        eosio_assert(arg > 0, "forum::positive_save_cast: arg <= 0");
+        if (fixp_t::exponent < 0) //replace with [if constexpr] in the future
+            eosio_assert(arg <= static_cast<base_t>(std::numeric_limits<fixp_t>::max()), "forum::positive_save_cast: arg > max possible value");
+        return static_cast<fixp_t>(arg);
+    }
+   
+    static void check_positive_monotonic(atmsp::machine<fixp_t>& machine, fixp_t max_arg, const std::string& name, bool inc) {
+        fixp_t prev_res = calc_1d(machine, max_arg);
+        if(!inc)
+            eosio_assert(prev_res >= static_cast<fixp_t>(0), ("forum::check positive failed for " + name).c_str());
+        fixp_t cur_arg = max_arg;
+        for(size_t i = 0; i < CHECK_MONOTONIC_STEPS; i++) {
+            cur_arg /= static_cast<fixp_t>(2);           
+            fixp_t cur_res = calc_1d(machine, cur_arg);
+            
+            eosio_assert(inc ? (cur_res <= prev_res) : (cur_res >= prev_res), ("forum::check monotonic failed for " + name).c_str());
+            prev_res = cur_res;
+        }
+        fixp_t res_zero = calc_1d(machine, static_cast<fixp_t>(0));
+        if(inc)
+            eosio_assert(res_zero >= static_cast<fixp_t>(0), ("forum::check positive failed for " + name).c_str());
+        eosio_assert(inc ? (res_zero <= prev_res) : (res_zero >= prev_res), ("forum::check monotonic [0] failed for " + name).c_str());
+    }
+    
+    static funcinfo load_func(const funcparams& params, const std::string& name, const atmsp::parser<fixp_t>& pa, atmsp::machine<fixp_t>& bc, bool inc) {
+        funcinfo ret;
+        ret.maxarg = positive_save_cast(params.maxarg).data();
+        pa(bc, params.str, "x");
+        check_positive_monotonic(bc, FP(ret.maxarg), name, inc);
+        ret.code.from_machine(bc);
+        return ret;
+    }
     
 public:
     using contract::contract;
            
      /// @abi action
-    void setrules(const std::string& mainfunc, const std::string& curationfunc, const std::string& timepenalty, int64_t curatorsprop)
+    void setrules(
+        const std::string& mainstr, base_t mainmaxarg, 
+        const std::string& crtnstr, base_t crtnmaxarg, 
+        const std::string& pnltstr, base_t pnltmaxarg,
+        int64_t curatorsprop)
         //TODO: machine's constants
-    {   
-        require_auth(_self);
+    {
+        funcparams mainfunc {mainstr, mainmaxarg};
+        funcparams curationfunc {crtnstr, crtnmaxarg};   
+        funcparams timepenalty {pnltstr, pnltmaxarg};
+        require_auth(_self);        
         reward_pools pools(_self, _self); 
         uint64_t created = current_time();
+        
+        eosio::print((mainfunc.str + "\n").c_str());
+        eosio::print((curationfunc.str + "\n").c_str());
+        eosio::print((timepenalty.str + "\n").c_str());
         
         auto old_pool = pools.begin();
         int64_t unclaimed_funds = 0;
@@ -192,19 +251,14 @@ public:
                 ++old_pool;       
 
         eosio_assert(pools.find(created) == pools.end(), "rules with this key already exist");
-        std::string vars_str("x");
+        
         rewardrules newrules;
         atmsp::parser<fixp_t> pa;
         atmsp::machine<fixp_t> bc;
         
-        pa(bc, mainfunc, vars_str);        
-        newrules.mainfunc.from_machine(bc);
-        
-        pa(bc, curationfunc, vars_str);        
-        newrules.curationfunc.from_machine(bc);
-        
-        pa(bc, timepenalty, vars_str);        
-        newrules.timepenalty.from_machine(bc);   
+        newrules.mainfunc     = load_func(mainfunc, "reward func", pa, bc, true);
+        newrules.curationfunc = load_func(curationfunc, "curation func", pa, bc, true);
+        newrules.timepenalty  = load_func(timepenalty, "time penalty func", pa, bc, false);        
         
         newrules.curatorsprop = (static_cast<fixp_t>(static_cast<fixp_t>(curatorsprop) / static_cast<fixp_t>(ONE_HUNDRED_PERCENT))).data();
               
@@ -320,8 +374,8 @@ public:
         eosio_assert(pool->state.msgs != 0, "LOGIC ERROR! forum::payrewards: pool.msgs is equal to zero");
         
         atmsp::machine<fixp_t> reward_func;
-        pool->rules.mainfunc.to_machine(reward_func);
-        reward_func.var[0] = FP(msg->state.netshares);
+        pool->rules.mainfunc.code.to_machine(reward_func);
+        reward_func.var[0] = std::min(FP(msg->state.netshares), FP(pool->rules.mainfunc.maxarg));
         fixp_t sharesfn = reward_func.run();
         
         auto state = pool->state;
