@@ -407,6 +407,9 @@ const bool vesting::bool_asset(const asset &obj) const {
 const asset vesting::convert_to_token(const asset &m_token, const structures::token_vesting &pair) const {
     uint64_t amount;
     symbol_type symbol = pair.token.symbol;
+
+    eosio_assert(m_token.symbol == pair.vesting.symbol, "The token type does not match.");
+
     if (!pair.vesting.amount || pair.token.amount)
         amount = m_token.amount;
     else {
@@ -421,6 +424,9 @@ const asset vesting::convert_to_token(const asset &m_token, const structures::to
 const asset vesting::convert_to_vesting(const asset &m_token, const structures::token_vesting &pair) const {
     uint64_t amount;
     symbol_type symbol = pair.vesting.symbol;
+
+    eosio_assert(m_token.symbol == pair.token.symbol, "The token type does not match.");
+
     if (!pair.vesting.amount || pair.token.amount)
         amount = m_token.amount;
     else {
