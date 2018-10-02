@@ -162,7 +162,7 @@ void vesting::delegate_vesting(account_name sender, account_name recipient, asse
     eosio_assert(sender != recipient, "You can not delegate to yourself");
 
     eosio_assert(MIN_AMOUNT_DELEGATION_VESTING <= quantity.amount, "Insufficient funds for delegation");
-    eosio_assert(MAX_PERSENT_DELEGATION < percentage_deductions, "Exceeded the percentage of delegated vesting");
+    eosio_assert(percentage_deductions <= MAX_PERSENT_DELEGATION, "Exceeded the percentage of delegated vesting");
 
     tables::account_table account_sender(_self, sender);
     auto balance_sender = account_sender.find(quantity.symbol.name());
