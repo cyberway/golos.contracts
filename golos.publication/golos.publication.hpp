@@ -26,6 +26,7 @@ class publication : public eosio::contract {
     void downvote(account_name voter, account_name author, std::string permlink, asset weight);
     void close_post();
     void close_post_timer();
+    checksum256 get_permlink_hash(std::string permlink);
     bool get_post(account_name account, std::string permlink, structures::post &post);
 
   private: // check battery limits
