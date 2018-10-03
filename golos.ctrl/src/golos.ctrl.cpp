@@ -13,7 +13,7 @@ using namespace eosio;
 using std::vector;
 using std::string;
 
-#define MAX_URL_SIZE 256
+#define MAX_WITNESS_URL_SIZE 256
 
 
 /// properties
@@ -23,11 +23,11 @@ bool properties::validate() const {
     return true;
 }
 
-uint16_t calc_threshold(uint16_t val, uint16_t top, uint16_t num, uint16_t denom) {
-    return 0 == val ? uint32_t(top) * num / denom + 1: val;
+constexpr uint16_t calc_threshold(uint16_t val, uint16_t top, uint16_t num, uint16_t denom) {
+    return 0 == val ? uint32_t(top) * num / denom + 1 : val;
 }
 
-uint16_t properties::active_threshold() const   { return calc_threshold(witness_supermajority, max_witnesses, 2, 3); };
+uint16_t properties::active_threshold()   const { return calc_threshold(witness_supermajority, max_witnesses, 2, 3); };
 uint16_t properties::majority_threshold() const { return calc_threshold(witness_majority, max_witnesses, 1, 2); };
 uint16_t properties::minority_threshold() const { return calc_threshold(witness_minority, max_witnesses, 1, 3); };
 
@@ -47,6 +47,7 @@ void control::create(account_name owner, properties new_props) {
 }
 
 void control::updateprops(properties new_props) {
+    eosio_assert(new_props.validate(), "invalid properties");
     eosio_assert(props() != new_props, "same properties are already set");
     require_auth({_owner, config::active_name});
     upsert_tbl<props_tbl>(_token, _owner, _owner, [&](bool) {
@@ -58,7 +59,6 @@ void control::updateprops(properties new_props) {
 
 void control::attachacc(account_name user) {
     require_auth({_owner, config::minority_name});
-    //check rights, additional auths, maybe login restrictions (if creating new acc)
     upsert_tbl<bw_user_tbl>(_owner, user, user, [&](bool exists) {
         return [&,exists](bw_user& u) {
             eosio_assert(!exists || u.attached, "already attached");   //TODO: maybe it's better to check this earlier (not inside modify())
@@ -66,7 +66,6 @@ void control::attachacc(account_name user) {
             u.attached = true;
         };
     });
-    // todo: create account and add auths
 }
 
 void control::detachacc(account_name user) {
@@ -78,12 +77,10 @@ void control::detachacc(account_name user) {
         };
     }, false);
     eosio_assert(exist, "user not found");
-    // todo: remove auths
 }
 
-
 void control::regwitness(account_name witness, eosio::public_key key, string url) {
-    eosio_assert(url.length() < MAX_URL_SIZE, "url too long");
+    eosio_assert(url.length() <= MAX_WITNESS_URL_SIZE, "url too long");
     eosio_assert(key != eosio::public_key(), "public key should not be the default value");
     // TODO: check if key unique? Actually, key became unused now, can be removed
     require_auth(witness);
@@ -182,7 +179,7 @@ void control::apply_vote_weight(account_name voter, account_name witness, bool a
 }
 
 void control::update_auths() {
-    // TODO: change only if top changed
+    // TODO: change only if top changed #35
     auto top = top_witnesses();
     if (top.size() < props().max_witnesses) {           // TODO: ?restrict only just after creation and allow later
         print("Not enough witnesses to change auth\n");
@@ -204,8 +201,7 @@ void control::update_auths() {
         auto thrs = a.second;
         bool is_active = config::active_name == perm;
         if (is_active) {
-            // add eosio.code
-            auth.accounts.push_back({{_self, config::code_name}, thrs});
+            auth.accounts.push_back({{_self, config::code_name}, thrs});    // add eosio.code
         }
         //permissions must be sorted
         std::sort(auth.accounts.begin(), auth.accounts.end(),

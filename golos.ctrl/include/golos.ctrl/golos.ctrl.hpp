@@ -131,7 +131,7 @@ private:
     account_name _owner;
 
     props_tbl _props_tbl;       // TODO: singleton
-    bool _has_props = false;    // maybe reuse _owner ?
+    bool _has_props = false;
     properties _props;          // cache
 
 private:
