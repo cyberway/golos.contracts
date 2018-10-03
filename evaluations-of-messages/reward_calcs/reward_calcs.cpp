@@ -184,10 +184,10 @@ private:
         return machine.run();
     }
    
-    static fixp_t positive_save_cast(base_t arg) {
-        eosio_assert(arg > 0, "forum::positive_save_cast: arg <= 0");
+    static fixp_t positive_safe_cast(base_t arg) {
+        eosio_assert(arg > 0, "forum::positive_safe_cast: arg <= 0");
         if (fixp_t::exponent < 0) //replace with [if constexpr] in the future
-            eosio_assert(arg <= static_cast<base_t>(std::numeric_limits<fixp_t>::max()), "forum::positive_save_cast: arg > max possible value");
+            eosio_assert(arg <= static_cast<base_t>(std::numeric_limits<fixp_t>::max()), "forum::positive_safe_cast: arg > max possible value");
         return static_cast<fixp_t>(arg);
     }
    
@@ -211,7 +211,7 @@ private:
     
     static funcinfo load_func(const funcparams& params, const std::string& name, const atmsp::parser<fixp_t>& pa, atmsp::machine<fixp_t>& bc, bool inc) {
         funcinfo ret;
-        ret.maxarg = positive_save_cast(params.maxarg).data();
+        ret.maxarg = positive_safe_cast(params.maxarg).data();
         pa(bc, params.str, "x");
         check_positive_monotonic(bc, FP(ret.maxarg), name, inc);
         ret.code.from_machine(bc);
@@ -222,23 +222,11 @@ public:
     using contract::contract;
            
      /// @abi action
-    void setrules(
-        const std::string& mainstr, base_t mainmaxarg, 
-        const std::string& crtnstr, base_t crtnmaxarg, 
-        const std::string& pnltstr, base_t pnltmaxarg,
-        int64_t curatorsprop)
+    void setrules(const funcparams& mainfunc, const funcparams& curationfunc, const funcparams& timepenalty, int64_t curatorsprop) {
         //TODO: machine's constants
-    {
-        funcparams mainfunc {mainstr, mainmaxarg};
-        funcparams curationfunc {crtnstr, crtnmaxarg};   
-        funcparams timepenalty {pnltstr, pnltmaxarg};
         require_auth(_self);        
         reward_pools pools(_self, _self); 
         uint64_t created = current_time();
-        
-        eosio::print((mainfunc.str + "\n").c_str());
-        eosio::print((curationfunc.str + "\n").c_str());
-        eosio::print((timepenalty.str + "\n").c_str());
         
         auto old_pool = pools.begin();
         int64_t unclaimed_funds = 0;
@@ -265,7 +253,7 @@ public:
         pools.emplace(_self, [&](auto &item) { item = {.created = created, .rules = newrules, .state = {.msgs = 0, .funds = unclaimed_funds} }; });
 }
     
-    /// @abi action
+    /// @abi action 
     void issue(int64_t amount) {        
         require_auth(_self); //TODO: issuer smart contract account        
         

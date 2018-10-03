@@ -345,17 +345,11 @@ public:
         std::function<double(double)>&&  mainfunc_,
         std::function<double(double)>&& curationfunc_,
         std::function<double(double)>&& timepenalty_
-        ) {     
-        auto ret = push_action(_contract_acc, N(setrules), mvo()
-                ("mainstr", mainfunc.str)
-                ("mainmaxarg", mainfunc.maxarg)
-                
-                ("crtnstr", curationfunc.str)
-                ("crtnmaxarg", curationfunc.maxarg)
-                
-                ("pnltstr", timepenalty.str)
-                ("pnltmaxarg", timepenalty.maxarg)
-            
+        ) { 
+        auto ret = push_action(_contract_acc, N(setrules), mvo()                
+                ("mainfunc", mvo()("str", mainfunc.str)("maxarg", mainfunc.maxarg))
+                ("curationfunc", mvo()("str", curationfunc.str)("maxarg", curationfunc.maxarg))
+                ("timepenalty", mvo()("str", timepenalty.str)("maxarg", timepenalty.maxarg))
                 ("curatorsprop", curatorsprop));
                 
         if(ret == success()) {   
@@ -577,10 +571,10 @@ BOOST_FIXTURE_TEST_CASE(basic_tests, reward_calcs_tester) try {
         setrules({"x", bignum}, {"log2(x + 1.0)", bignum}, {"x", bignum}, 2500, 
         [](double x){ return x; }, [](double x){ return log2(x + 1.0); }, [](double x){ return x; }));
     
-    BOOST_REQUIRE_EQUAL("assertion failure with message: forum::positive_save_cast: arg > max possible value",
+    BOOST_REQUIRE_EQUAL("assertion failure with message: forum::positive_safe_cast: arg > max possible value",
         setrules({"x", std::numeric_limits<base_t>::max()}, {"sqrt(x)", bignum}, {"0", bignum}, 2500, 
         [](double x){ return x; }, [](double x){ return sqrt(x); }, [](double x){ return 0.0; })); 
-        
+          
     BOOST_REQUIRE_EQUAL("assertion failure with message: forum::check positive failed for time penalty func", 
         setrules({"x", bignum}, {"sqrt(x)", bignum}, {"10.0-x", 15}, 2500, 
         [](double x){ return x; }, [](double x){ return sqrt(x); }, [](double x){ return 10.0 - x; }));        
