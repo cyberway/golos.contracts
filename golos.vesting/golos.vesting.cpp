@@ -61,6 +61,13 @@ void vesting::buy_vesting(account_name  from,
     auto pair = index.find(sym_name);
     eosio_assert(pair != index.end(), "Token not found");
 
+    if (ACCOUNT_EMISSION == from) {
+        index.modify(pair, 0, [&](auto &item) {
+            item.token += quantity;
+        });
+        return;
+    }
+
     const auto &tokens = convert_to_vesting(quantity, *pair);
     index.modify(pair, 0, [&](auto &item) {
         item.vesting += tokens;
