@@ -31,11 +31,11 @@ class publication : public eosio::contract {
   private: // check battery limits
     void create_battery_user(account_name name);
 
-    void limit_posts(scope_name scope);
-    void limit_comments(scope_name scope);
-    void limit_of_votes(scope_name scope);
-    void posting_battery(scope_name scope);
-    void vesting_battery(scope_name scope, uint16_t persent_battery);
+    template<typename T>
+    void limit_battery_account(scope_name scope, uint64_t interval, T structures::account_battery::* element);
+
+    template<typename T>
+    void recovery_battery(scope_name scope, T structures::account_battery::* element, uint16_t persent_battery = 0);
 };
 
 }
