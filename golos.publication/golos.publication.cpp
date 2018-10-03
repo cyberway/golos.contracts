@@ -135,10 +135,10 @@ void publication::delete_post(account_name account, std::string permlink) {
             auto contenttable_index = content_table.get_index<N(id)>();
             auto contenttable_obj = contenttable_index.find(posttable_obj.id);
             contenttable_index.erase(contenttable_obj);
-            auto votetable_index = vote_table.get_index<N(post_id)>();
+            auto votetable_index = vote_table.get_index<N(postid)>();
             auto votetable_obj = votetable_index.find(posttable_obj.id);
             votetable_index.erase(votetable_obj);
-            auto voterstable_index = voters_table.get_index<N(post_id)>();
+            auto voterstable_index = voters_table.get_index<N(postid)>();
             auto voterstable_obj = voterstable_index.find(posttable_obj.id);
             while (voterstable_obj != voterstable_index.end())
                 voterstable_obj = voterstable_index.erase(voterstable_obj);
@@ -164,10 +164,10 @@ void publication::upvote(account_name voter, account_name author, std::string pe
     structures::post posttable_obj;
 
     if (get_post(author, permlink, posttable_obj)) {
-        auto votetable_index = vote_table.get_index<N(post_id)>();
+        auto votetable_index = vote_table.get_index<N(postid)>();
         auto votetable_obj = votetable_index.find(posttable_obj.id);
         if (votetable_obj != votetable_index.end()) {
-            auto voterstable_index = voters_table.get_index<N(post_id)>();
+            auto voterstable_index = voters_table.get_index<N(postid)>();
             auto voterstable_obj = voterstable_index.find(posttable_obj.id);
             while (voterstable_obj != voterstable_index.end() &&
                    posttable_obj.id == voterstable_obj->post_id) {
@@ -226,7 +226,7 @@ void publication::downvote(account_name voter, account_name author, std::string 
     structures::post posttable_obj;
 
     if (get_post(author, permlink, posttable_obj)) {
-        auto voterstable_index = voters_table.get_index<N(post_id)>();
+        auto voterstable_index = voters_table.get_index<N(postid)>();
         auto voterstable_obj = voterstable_index.find(posttable_obj.id);
         while (voterstable_obj != voterstable_index.end() && posttable_obj.id == voterstable_obj->post_id) {
             if (voter == voterstable_obj->voter) {
@@ -240,7 +240,7 @@ void publication::downvote(account_name voter, account_name author, std::string 
         eosio_assert(voterstable_obj != voterstable_index.end(),
                      "You can't do down vote because previously you haven't voted for this post.");
 
-        auto votetable_index = vote_table.get_index<N(post_id)>();
+        auto votetable_index = vote_table.get_index<N(postid)>();
         auto votetable_obj = votetable_index.find(posttable_obj.id);
 
         votetable_index.modify(votetable_obj, author, [&]( auto &item ) {
@@ -281,7 +281,7 @@ bool publication::get_post(account_name account, std::string permlink, structure
             ++posttable_obj;
         }
     }
-    eosio_assert(posttable_obj != posttable_index.end(), "Post doesn't exist.");
+    eosio_assert(false, "Post doesn't exist.");
     return false;
 }
 

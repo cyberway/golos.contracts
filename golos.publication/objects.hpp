@@ -167,11 +167,11 @@ namespace tables {
     using content_id_index = indexed_by<N(id), const_mem_fun<structures::content, uint64_t, &structures::content::primary_key>>;
     using content_table = eosio::multi_index<N(contenttable), structures::content, content_id_index>;
 
-    using vote_index = indexed_by<N(post_id), const_mem_fun<structures::voteinfo, uint64_t, &structures::voteinfo::primary_key>>;
+    using vote_index = indexed_by<N(postid), const_mem_fun<structures::voteinfo, uint64_t, &structures::voteinfo::primary_key>>;
     using vote_table = eosio::multi_index<N(votetable), structures::voteinfo, vote_index>;
 
     using voters_index = indexed_by<N(id), const_mem_fun<structures::votersinfo, uint64_t, &structures::votersinfo::primary_key>>;
-    using post_id_index = indexed_by<N(post_id), const_mem_fun<structures::votersinfo, uint64_t, &structures::votersinfo::postid_key>>;
+    using post_id_index = indexed_by<N(postid), const_mem_fun<structures::votersinfo, uint64_t, &structures::votersinfo::postid_key>>;
     using voters_table = eosio::multi_index<N(voterstable), structures::votersinfo, voters_index, post_id_index>;
 
     using accounts_battery_table = eosio::singleton<N(batterytable), structures::account_battery>;

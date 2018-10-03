@@ -4,7 +4,7 @@
 namespace eosio { namespace testing {
 
 #define GOLOS_CONTRACTS "${CMAKE_BINARY_DIR}/../"
-#define EOSIO_CONTRACTS "${CMAKE_BINARY_DIR}/../../eosio.contracts/build/"
+#define EOSIO_CONTRACTS "${CMAKE_BINARY_DIR}/../../golos.contracts/build/"
 
 struct contracts {
     static std::vector<uint8_t> ctrl_wasm() { return read_wasm(GOLOS_CONTRACTS "golos.ctrl/golos.ctrl.wasm"); }

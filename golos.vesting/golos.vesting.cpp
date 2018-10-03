@@ -68,15 +68,16 @@ void vesting::buy_vesting(account_name  from,
         return;
     }
 
+    const auto &tokens = convert_to_vesting(quantity, *pair);
     index.modify(pair, 0, [&](auto &item) {
-        item.vesting += convert_token(quantity, pair->vesting.symbol);
+        item.vesting += tokens;
         item.token += quantity;
     });
 
     auto payer = has_auth( to ) ? to : from;
 
     require_recipient(from);
-    add_balance(from, convert_token(quantity, pair->vesting.symbol), payer);
+    add_balance(from, tokens, payer);
 }
 
 void vesting::accrue_vesting(account_name sender, account_name user, asset quantity) {
@@ -290,13 +291,14 @@ void vesting::calculate_convert_vesting() {
                         auto pair = index.find(sym_name);
                         eosio_assert(pair != index.end(), "Vesting not found");
 
+                        const auto &tokens = convert_to_token(quantity, *pair);
                         index.modify(pair, 0, [&](auto &item) {
                             item.vesting -= quantity;
-                            item.token -= convert_token(quantity, pair->token.symbol);
+                            item.token -= tokens;
                         });
 
                         INLINE_ACTION_SENDER(eosio::token, transfer)( N(eosio.token), {_self, N(active)},
-                        { _self, obj->recipient, convert_token(quantity, pair->token.symbol), "Translation into tokens" } );
+                        { _self, obj->recipient, tokens, "Translation into tokens" } );
                     };
 
                     if (balance->vesting < obj->payout_part) {
@@ -409,10 +411,37 @@ const bool vesting::bool_asset(const asset &obj) const {
     return obj.amount;
 }
 
-asset vesting::convert_token(const asset &m_token, symbol_type type) {
-    asset type_token = m_token;
-    type_token.symbol = type;
-    return type_token;
+const asset vesting::convert_to_token(const asset &m_token, const structures::token_vesting &pair) const {
+    uint64_t amount;
+    symbol_type symbol = pair.token.symbol;
+
+    eosio_assert(m_token.symbol == pair.vesting.symbol, "The token type does not match.");
+
+    if (!pair.vesting.amount || pair.token.amount)
+        amount = m_token.amount;
+    else {
+        eosio_assert(pair.token.amount, "No tokens converted to vesting");
+        amount = (m_token.amount * pair.token.amount) / pair.vesting.amount; // TODO m_token type vesting
+    }
+
+    symbol = pair.token.symbol;
+    return asset(amount, symbol);
+}
+
+const asset vesting::convert_to_vesting(const asset &m_token, const structures::token_vesting &pair) const {
+    uint64_t amount;
+    symbol_type symbol = pair.vesting.symbol;
+
+    eosio_assert(m_token.symbol == pair.token.symbol, "The token type does not match.");
+
+    if (!pair.vesting.amount || pair.token.amount)
+        amount = m_token.amount;
+    else {
+        eosio_assert(pair.vesting.amount, "No vesting converted to tokens");
+        amount = (m_token.amount * pair.vesting.amount) / pair.token.amount; // TODO m_token type token
+    }
+
+    return asset(amount, symbol);
 }
 
 void vesting::timeout_delay_trx() {

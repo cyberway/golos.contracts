@@ -163,6 +163,13 @@ public:
     action_result create_pair(asset token, asset vesting) {
         return push_action(N(golos.vest), N(golos.vest), N(createpair), mvo()("token", token)("vesting", vesting));
     }
+    action_result open_vesting(account_name owner, symbol_type symbol, account_name payer) {
+        return push_action(N(golos.vest), payer, N(open), mvo()
+            ("owner", owner)
+            ("symbol", symbol)
+            ("ram_payer", payer)
+        );
+    }
     action_result accrue_vesting(account_name sender, account_name user, asset quantity) {
         return push_action(N(golos.vest), sender, N(accruevg), mvo()
             ("sender", sender)
@@ -286,21 +293,20 @@ BOOST_FIXTURE_TEST_CASE(create_community, golos_ctrl_tester) try {
     BOOST_TEST_MESSAGE("--- Create some vesting for voters");
     produce_block();
     BOOST_CHECK_EQUAL(success(), create_pair(asset::from_string("0.0000 GLS"), dasset(0)));
-    BOOST_CHECK_EQUAL(success(), accrue_vesting(N(golos.vest), BLOG,  dasset(1000)));
-    BOOST_CHECK_EQUAL(success(), accrue_vesting(N(golos.vest), N(alice), dasset(800)));
-    BOOST_CHECK_EQUAL(success(), accrue_vesting(N(golos.vest), N(bob),   dasset(700)));
-    BOOST_CHECK_EQUAL(success(), accrue_vesting(N(golos.vest), N(carol), dasset(600)));
-    BOOST_CHECK_EQUAL(success(), accrue_vesting(N(golos.vest), _w[0], dasset(100)));
-    BOOST_CHECK_EQUAL(success(), accrue_vesting(N(golos.vest), _w[1], dasset(200)));
-    BOOST_CHECK_EQUAL(success(), accrue_vesting(N(golos.vest), _w[2], dasset(300)));
-    BOOST_CHECK_EQUAL(success(), accrue_vesting(N(golos.vest), _w[3], dasset(400)));
-    BOOST_CHECK_EQUAL(success(), accrue_vesting(N(golos.vest), _w[4], dasset(500)));
+    vector<std::pair<uint64_t,double>> amounts = {
+        {BLOG, 1000}, {N(alice), 800}, {N(bob), 700}, {N(carol), 600},
+        {_w[0], 100}, {_w[1], 200}, {_w[2], 300}, {_w[3], 400}, {_w[4], 500}
+    };
+    std::for_each(amounts.begin(), amounts.end(), [&](auto& p) {
+        BOOST_CHECK_EQUAL(success(), open_vesting(p.first, _token, p.first));
+        BOOST_CHECK_EQUAL(success(), accrue_vesting(N(golos.vest), p.first, dasset(p.second)));
+    });
 
     BOOST_TEST_MESSAGE("--- Check vesting balance: " + _token.name());
     BOOST_CHECK_EQUAL(dasset(123), asset::from_string("123.000000 TST"));
     check_vesting_balance(get_account_vesting(N(alice), _token), dasset(800));
     produce_block();
-    check_vesting_balance(get_account_vesting(N(alice), _token), dasset(800));
+    check_vesting_balance(get_account_vesting(N(carol), _token), dasset(600));
 
     BOOST_TEST_MESSAGE("--- Add eosio.code auth to Blog");
     BOOST_TEST_MESSAGE("Perms: " + fc::json::to_string(get_account_permissions(BLOG)));
