@@ -5,14 +5,6 @@
 #define FRACTION (10000)
 #define FULL_PERSENT (1000000)
 
-#define UPPER_BOUND (10000)
-#define LOWER_BOUND (0)
-
-#define TWO_DECIMAL_PLACES (100)
-#define RECOVERY_PERIOD (432000)
-
-//------------------------------------------
-
 #define NUMBER_OF_CONVERSIONS (13)
 #define TOTAL_TERM_OF_CONCLUSION 15
 //#define TOTAL_TERM_OF_CONCLUSION (604800)
