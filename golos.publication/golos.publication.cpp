@@ -54,7 +54,8 @@ void publication::create_post(account_name account, std::string permlink,
     tables::post_table post_table(_self, account);
     tables::content_table content_table(_self, account);
 
-    checksum256 permlink_hash = get_permlink_hash(permlink);
+    checksum256 permlink_hash;
+    sha256(permlink.c_str(), sizeof(permlink), &permlink_hash);
 
     auto posttable_index = post_table.get_index<N(permlink)>();
     auto posttable_obj = posttable_index.find(structures::post::get_hash_key(permlink_hash));
@@ -266,17 +267,11 @@ void publication::close_post_timer() {
     trx.send(_self, _self);
 }
 
-checksum256 get_permlink_hash(std::string permlink) {
-    checksum256 hash;
-    sha256(permlink.c_str(), sizeof(permlink), &hash);
-    return hash;
-}
-
 bool publication::get_post(account_name account, std::string permlink, structures::post &post) {
     tables::post_table post_table(_self, account);
 
-    checksum256 permlink_hash = get_permlink_hash(permlink);
-
+    checksum256 permlink_hash;
+    sha256(permlink.c_str(), sizeof(permlink), &permlink_hash);
     auto posttable_index = post_table.get_index<N(permlink)>();
     auto posttable_obj = posttable_index.find(structures::post::get_hash_key(permlink_hash));
 
