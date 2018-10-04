@@ -131,7 +131,7 @@ private:
     account_name _owner;
 
     props_tbl _props_tbl;       // TODO: singleton
-    bool _has_props = false;    // maybe reuse _owner ?
+    bool _has_props = false;
     properties _props;          // cache
 
 private:
@@ -149,13 +149,13 @@ private:
     }
 
     template<typename T, typename F>
-    bool upsert_tbl(uint64_t scope, account_name who, uint64_t key, F&& get_update_fn, bool allow_insert = true) {
-        return golos::upsert_tbl<T>(_self, scope, who, key, std::forward<F&&>(get_update_fn), allow_insert);
+    bool upsert_tbl(uint64_t scope, account_name payer, uint64_t key, F&& get_update_fn, bool allow_insert = true) {
+        return golos::upsert_tbl<T>(_self, scope, payer, key, std::forward<F&&>(get_update_fn), allow_insert);
     }
     // common case where used ram of _owner account
     template<typename T, typename F>
     bool upsert_tbl(uint64_t key, F&& get_update_fn, bool allow_insert = true) {
-        return upsert_tbl<T>(_owner, _owner, key, std::forward<F&&>(get_update_fn), allow_insert);
+        return upsert_tbl<T>(_token, _owner, key, std::forward<F&&>(get_update_fn), allow_insert);
     }
 
     void apply_vote_weight(account_name voter, account_name witness, bool add);
