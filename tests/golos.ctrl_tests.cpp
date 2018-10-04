@@ -311,8 +311,8 @@ BOOST_FIXTURE_TEST_CASE(create_community_test, golos_ctrl_tester) try {
     BOOST_CHECK_EQUAL(err_no_symbol, unvote_witness(_token, _alice, _w[0]));
     BOOST_CHECK_EQUAL(err_no_symbol, set_props({BLOG}, _token, _test_props));
     // attach/detach require permissions which do not exist at this moment
-    BOOST_CHECK_EQUAL(success(), attach_acc({BLOG}, _token, _carol));
-    BOOST_CHECK_EQUAL(success(), detach_acc({BLOG}, _token, _carol));
+    BOOST_CHECK_NE(success(), attach_acc({BLOG}, _token, _carol));
+    BOOST_CHECK_NE(success(), detach_acc({BLOG}, _token, _carol));
     // add fake one to test
     auto minority = authority(1, {}, {
         {.permission = {_alice, config::active_name}, .weight = 1}
