@@ -50,6 +50,9 @@ public:
 
     action_result push_action(const abi_serializer* abi, account_name code, action_name name,
         const variant_object& data, account_name signer);
+    action_result push_action_msig_tx(const abi_serializer* abi, account_name code, action_name name,
+        const variant_object& data, std::vector<permission_level> perms, std::vector<account_name>signers);
+    action_result push_tx(signed_transaction&& tx);
 
     // table helpers
     const table_id_object* find_table(name code, name scope, name tbl) const;

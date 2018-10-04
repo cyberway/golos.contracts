@@ -50,7 +50,8 @@ void control::updateprops(properties new_props) {
     eosio_assert(new_props.validate(), "invalid properties");
     eosio_assert(props() != new_props, "same properties are already set");
     require_auth({_owner, config::active_name});
-    upsert_tbl<props_tbl>(_token, _owner, _owner, [&](bool) {
+    // TODO: auto-change auths on params change?
+    upsert_tbl<props_tbl>(_owner, [&](bool) {
         return [&](auto& p) {
             p.props = new_props;
         };
@@ -59,9 +60,9 @@ void control::updateprops(properties new_props) {
 
 void control::attachacc(account_name user) {
     require_auth({_owner, config::minority_name});
-    upsert_tbl<bw_user_tbl>(_owner, user, user, [&](bool exists) {
+    upsert_tbl<bw_user_tbl>(user, [&](bool exists) {
         return [&,exists](bw_user& u) {
-            eosio_assert(!exists || u.attached, "already attached");   //TODO: maybe it's better to check this earlier (not inside modify())
+            eosio_assert(!exists || !u.attached, "already attached");   //TODO: maybe it's better to check this earlier (not inside modify())
             u.name = user;
             u.attached = true;
         };

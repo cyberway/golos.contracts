@@ -53,6 +53,44 @@ base_tester::action_result golos_tester::push_action(
     return base_tester::push_action(std::move(act), uint64_t(signer));
 }
 
+base_tester::action_result golos_tester::push_action_msig_tx(
+    const abi_serializer* abi,
+    account_name code,
+    action_name name,
+    const variant_object& data,
+    vector<permission_level> perms,
+    vector<account_name> signers
+) {
+    action act;
+    act.account = code;
+    act.name    = name;
+    act.data    = abi->variant_to_binary(abi->get_action_type(name), data, abi_serializer_max_time);
+    for (const auto& perm : perms) {
+        act.authorization.emplace_back(perm);
+    }
+
+    signed_transaction tx;
+    tx.actions.emplace_back(std::move(act));
+    set_transaction_headers(tx);
+    for (const auto& a : signers) {
+        tx.sign(get_private_key(a, "active"), control->get_chain_id());
+    }
+    return push_tx(std::move(tx));
+}
+
+base_tester::action_result golos_tester::push_tx(signed_transaction&& tx) {
+    try {
+        push_transaction(tx);
+    } catch (const fc::exception& ex) {
+        edump((ex.to_detail_string()));
+        return error(ex.top_message()); // top_message() is assumed by many tests; otherwise they fail
+        //return error(ex.to_detail_string());
+    }
+    produce_block();
+    BOOST_REQUIRE_EQUAL(true, chain_has_transaction(tx.id()));
+    return success();
+}
+
 // table helpers
 const table_id_object* golos_tester::find_table(name code, name scope, name tbl) const {
     auto tid = control->db().find<table_id_object, by_code_scope_table>(std::make_tuple(code, scope, tbl));
