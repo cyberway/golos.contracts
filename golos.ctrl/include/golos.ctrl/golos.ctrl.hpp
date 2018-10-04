@@ -9,6 +9,7 @@
 namespace golos {
 
 using namespace eosio;
+using share_type = int64_t;
 
 
 struct [[eosio::table]] properties {
@@ -158,7 +159,9 @@ private:
         return upsert_tbl<T>(_token, _owner, key, std::forward<F&&>(get_update_fn), allow_insert);
     }
 
+    void change_voter_vests(account_name voter, share_type diff);
     void apply_vote_weight(account_name voter, account_name witness, bool add);
+    void update_witnesses_weights(vector<account_name> witnesses, share_type diff);
     void update_auths();
 };
 

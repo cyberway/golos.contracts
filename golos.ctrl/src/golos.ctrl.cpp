@@ -154,29 +154,48 @@ void control::unvotewitn(account_name voter, account_name witness) {
 
 void control::updatetop(account_name from, account_name to, asset amount) {
     // cannot be called directly
+    // it's notification, so proper sender must be checked earlier in ABI macro.
+    // asset symbol can be checked too, but in normal conditions sender must guarantee it
+    auto change = amount.amount;
+    change_voter_vests(to, change);
+    change_voter_vests(from, -change);
 }
 
 
 ////////////////////////////////////////////////////////////////////////////////
 
-void control::apply_vote_weight(account_name voter, account_name witness, bool add) {
-    witness_tbl wtbl(_self, _token);
-    auto w = wtbl.find(witness);
-    if (w != wtbl.end()) {
-        golos::vesting vc(config::vesting_name);
-        const auto power = vc.get_account_vesting(voter, _token).amount;    //get_balance accepts symbol_name
-        if (power > 0) {
-            wtbl.modify(w, witness, [&](auto& wi) {
-                wi.total_weight = wi.total_weight + (add ? power : -power);
-            });
-            update_auths();
-        } else {
-            print("apply_vote_weight: voter with 0 power has no effect\n");
-        }
-    } else {
-        print("apply_vote_weight: witness not found\n");
-        // just skip unregistered witnesses (incl. non existing accs) for now
+void control::change_voter_vests(account_name voter, share_type diff) {
+    if (!diff) return;
+    witness_vote_tbl tbl(_self, voter);
+    auto itr = tbl.find(_owner);
+    bool exists = itr != tbl.end();
+    if (exists && itr->witnesses.size()) {
+        update_witnesses_weights(itr->witnesses, diff);
     }
+}
+
+void control::apply_vote_weight(account_name voter, account_name witness, bool add) {
+    golos::vesting vc(config::vesting_name);
+    const auto power = vc.get_account_vesting(voter, _token).amount;    //get_balance accepts symbol_name
+    if (power > 0) {
+        update_witnesses_weights({witness}, add ? power : -power);
+    }
+}
+
+void control::update_witnesses_weights(vector<account_name> witnesses, share_type diff) {
+    witness_tbl wtbl(_self, _token);
+    for (const auto& witness : witnesses) {
+        auto w = wtbl.find(witness);
+        if (w != wtbl.end()) {
+            wtbl.modify(w, witness, [&](auto& wi) {
+                wi.total_weight += diff;            // TODO: additional checks of overflow? (not possible normally)
+            });
+        } else {
+            // just skip unregistered witnesses (incl. non existing accs) for now
+            print("apply_vote_weight: witness not found\n");
+        }
+    }
+    update_auths();
 }
 
 void control::update_auths() {
