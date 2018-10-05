@@ -59,18 +59,17 @@ void vesting::buy_vesting(account_name  from,
     auto vesting = table_vesting.find(quantity.symbol.name());
     eosio_assert(vesting != table_vesting.end(), "Token not found");
 
-    const auto &tokens = convert_to_vesting(quantity, *vesting);
+    const auto& converted = convert_to_vesting(quantity, *vesting);
 
     if (ACCOUNT_EMISSION != from) {
-        table_vesting.modify(vesting, 0, [&](auto &item) {
-            item.vesting += tokens;
+        table_vesting.modify(vesting, 0, [&](auto& item) {
+            item.vesting += converted;
         });
     }
 
-    auto payer = has_auth( to ) ? to : from;
-
     require_recipient(from);
-    add_balance(from, tokens, payer);
+    auto payer = has_auth(to) ? to : from;
+    add_balance(from, converted, payer);
 }
 
 void vesting::accrue_vesting(account_name sender, account_name user, asset quantity) {
@@ -245,7 +244,7 @@ void vesting::create_token_vesting(symbol_type token_name) {
 
     tables::vesting_table table_vesting(_self, _self);
     auto vesting = table_vesting.find(token_name.name());
-    eosio_assert(vesting == table_vesting.end(), "Pair with such a token already exists");
+    eosio_assert(vesting == table_vesting.end(), "Vesting already exists");
 
     table_vesting.emplace(_self, [&](auto &item){
         item.vesting.symbol = token_name;
