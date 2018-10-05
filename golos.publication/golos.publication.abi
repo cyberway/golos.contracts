@@ -310,6 +310,10 @@
     "base": "",
     "fields": [
       {
+        "name": "id",
+        "type": "uint64"
+      },
+      {
         "name": "post_id",
         "type": "uint64"
       },
@@ -336,24 +340,6 @@
       {
         "name": "count",
         "type": "uint64"
-      }
-    ]
-  },
-  {
-    "name": "votersinfo",
-    "base": "",
-    "fields": [
-      {
-        "name": "id",
-        "type": "uint64"
-      },
-      {
-        "name": "post_id",
-        "type": "uint64"
-      },
-      {
-        "name": "voter",
-        "type": "account_name"
       }
     ]
   },
@@ -424,17 +410,6 @@
   {
     "name": "votetable",
     "type": "voteinfo",
-    "index_type": "i64",
-    "key_names" : [
-      "post_id"
-    ],
-    "key_types" : [
-      "uint64"
-    ]
-  },
-  {
-    "name": "voterstable",
-    "type": "votersinfo",
     "index_type": "i64",
     "key_names" : [
       "id"

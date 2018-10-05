@@ -138,6 +138,7 @@ struct post : common_post_data {
 struct voteinfo {
     voteinfo() = default;
 
+    uint64_t id;
     uint64_t post_id;
     account_name voter;
     uint64_t percent;
@@ -147,28 +148,14 @@ struct voteinfo {
     uint64_t count;
 
     uint64_t primary_key() const {
-        return post_id;
-    }
-
-    EOSLIB_SERIALIZE(voteinfo, (post_id)(voter)(percent)(weight)(time)(rshares)(count))
-};
-
-struct votersinfo {
-    votersinfo() = default;
-
-    uint64_t id;
-    uint64_t post_id;
-    account_name voter;
-
-    uint64_t primary_key() const {
         return id;
     }
 
-    uint64_t postid_key() const {
+    uint64_t secondary_key() const {
         return post_id;
     }
 
-    EOSLIB_SERIALIZE(votersinfo, (id)(post_id)(voter))
+    EOSLIB_SERIALIZE(voteinfo, (id)(post_id)(voter)(percent)(weight)(time)(rshares)(count))
 };
 
 }
@@ -182,12 +169,9 @@ namespace tables {
     using content_id_index = indexed_by<N(id), const_mem_fun<structures::content, uint64_t, &structures::content::primary_key>>;
     using content_table = eosio::multi_index<N(contenttable), structures::content, content_id_index>;
 
-    using vote_index = indexed_by<N(postid), const_mem_fun<structures::voteinfo, uint64_t, &structures::voteinfo::primary_key>>;
-    using vote_table = eosio::multi_index<N(votetable), structures::voteinfo, vote_index>;
-
-    using voters_index = indexed_by<N(id), const_mem_fun<structures::votersinfo, uint64_t, &structures::votersinfo::primary_key>>;
-    using post_id_index = indexed_by<N(postid), const_mem_fun<structures::votersinfo, uint64_t, &structures::votersinfo::postid_key>>;
-    using voters_table = eosio::multi_index<N(voterstable), structures::votersinfo, voters_index, post_id_index>;
+    using vote_id_index = indexed_by<N(id), const_mem_fun<structures::voteinfo, uint64_t, &structures::voteinfo::primary_key>>;
+    using vote_postid_index = indexed_by<N(postid), const_mem_fun<structures::voteinfo, uint64_t, &structures::voteinfo::secondary_key>>;
+    using vote_table = eosio::multi_index<N(votetable), structures::voteinfo, vote_id_index, vote_postid_index>;
 
     using accounts_battery_table = eosio::singleton<N(batterytable), structures::account_battery>;
 }

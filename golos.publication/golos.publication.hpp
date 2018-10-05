@@ -24,8 +24,11 @@ class publication : public eosio::contract {
     void delete_post(account_name account, std::string permlink);
     void upvote(account_name voter, account_name author, std::string permlink, asset weight);
     void downvote(account_name voter, account_name author, std::string permlink, asset weight);
+    void unvote(account_name voter, asset weight);
     void close_post();
     void close_post_timer();
+    void set_vote(account_name voter, account_name author, std::string permlink, asset weight,
+                               std::vector<structures::rshares> rshares);
     bool get_post(account_name account, std::string permlink, structures::post &post);
 
   private: // check battery limits
