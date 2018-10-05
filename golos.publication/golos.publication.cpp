@@ -44,10 +44,10 @@ void publication::create_post(account_name account, std::string permlink,
     require_auth(account);
 
     if (!parentacc) {
-        recovery_battery(account, &structures::account_battery::posting_battery);
-        limit_battery_account(account, uint64_t(POST_OPERATION_INTERVAL), &structures::account_battery::limit_battery_posting);
+        recovery_battery(account, &structures::account_battery::posting_battery, {UPPER_BOUND, RECOVERY_PERIOD_POSTING, POST_AMOUNT_OPERATIONS, type_recovery::persent});
+        recovery_battery(account, &structures::account_battery::limit_battery_posting, {UPPER_BOUND, POST_OPERATION_INTERVAL, UPPER_BOUND, type_recovery::linear});
     } else {
-        limit_battery_account(account, uint64_t(COMMENT_OPERATION_INTERVAL), &structures::account_battery::limit_battery_comment);
+        recovery_battery(account, &structures::account_battery::limit_battery_comment, {UPPER_BOUND, COMMENT_OPERATION_INTERVAL, UPPER_BOUND, type_recovery::linear});
     }
 
     tables::post_table post_table(_self, account);
@@ -149,7 +149,7 @@ void publication::delete_post(account_name account, std::string permlink) {
 
 void publication::upvote(account_name voter, account_name author, std::string permlink, asset weight) {
     require_auth(voter);
-    limit_battery_account(voter, uint64_t(VOTE_OPERATION_INTERVAL), &structures::account_battery::limit_battery_comment);
+    recovery_battery(voter, &structures::account_battery::limit_battery_of_votes, {UPPER_BOUND, VOTE_OPERATION_INTERVAL, UPPER_BOUND, type_recovery::linear});
 
     tables::vote_table vote_table(_self, author);
     tables::voters_table voters_table(_self, author);
@@ -289,67 +289,49 @@ void publication::create_battery_user(account_name name) {
     tables::accounts_battery_table account_battery(_self, name);
     eosio_assert(!account_battery.exists(), "This user already exists");
 
-    structures::battery st_battery{UPPER_BOUND, time_point_sec(now())};
-    account_battery.set(structures::account_battery{st_battery, st_battery, st_battery, st_battery, st_battery},
-                        name);
+    structures::battery st_battery{LOWER_BOUND, time_point_sec(now())};
+    account_battery.set(structures::account_battery{st_battery, st_battery, st_battery, st_battery, st_battery}, name);
+}
+
+int64_t publication::current_consumed(const structures::battery &battery, const structures::params_battery &params) {
+    auto sec = now() - battery.renewal.utc_seconds;
+    int64_t recovery = sec * (params.mode == type_recovery::linear ? params.M : battery.charge) / params.W;
+
+    auto consumed = battery.charge - recovery;
+    if (consumed > 0)
+        return consumed;
+
+    return 0;
+}
+
+int64_t publication::consume(structures::battery &battery, const structures::params_battery &params) {
+    auto Q = params.C + current_consumed(battery, params);
+
+    if ((Q - params.M) < 0)
+        return (Q - params.M);
+
+    battery.charge = Q;
+    battery.renewal = time_point_sec(now());
+
+    return Q;
 }
 
 template<typename T>
-void publication::limit_battery_account(scope_name scope, uint64_t interval,
-                                            T structures::account_battery::*element) {
-    tables::accounts_battery_table account_battery(_self, scope);
-    auto obj = account_battery.get();
-    auto battery = obj.*element;
-
-    eosio_assert(battery.renewal <= time_point_sec(now()), "Action not allowed by timeout");
-
-    battery.renewal = time_point_sec(now() + interval);
-    obj.*element = battery;
-
-    account_battery.set(obj, scope);
-}
-
-template<typename T>
-void publication::recovery_battery(scope_name scope, T structures::account_battery::*element, uint16_t persent_battery) {
+void publication::recovery_battery(scope_name scope, T structures::account_battery::*element, const structures::params_battery &params) {
     tables::accounts_battery_table table(_self, scope);
     eosio_assert(table.exists(), "Not found battery of this user");
 
-    const auto current_time = now();
     auto account_battery = table.get();
     auto battery = account_battery.*element;
-    auto recovery_sec = current_time - battery.renewal.utc_seconds;
 
-    double recovery_change;
-    auto lambda = [&]{
-        uint64_t battery_charge = recovery_change + battery.charge;
-        if (battery_charge > UPPER_BOUND) {
-            battery.charge = UPPER_BOUND;
-            battery.renewal = time_point_sec(current_time);
-        } else {
-            battery.charge = battery_charge;
-            battery.renewal = time_point_sec(current_time);
-        }
-    };
+//    eosio_assert(battery.renewal <= time_point_sec(now()), "Action not allowed by timeout");
 
-    if(!persent_battery) {
-        recovery_change = (UPPER_BOUND - battery.charge) * recovery_sec / RECOVERY_PERIOD_POSTING;
+    auto result = consume(battery, params);
+    eosio_assert( ((result >= 0) && (result <= UPPER_BOUND) ), "Not enough charge" );
 
-        lambda();
-
-        eosio_assert(battery.charge >= POST_AMOUNT_OPERATIONS, "Not enough battery power to create a post");
-        battery.charge -= POST_AMOUNT_OPERATIONS;
-
-    } else {
-        eosio_assert(persent_battery <= UPPER_BOUND && persent_battery >= LOWER_BOUND, "Invalid persent battary");
-        recovery_change = (UPPER_BOUND * recovery_sec) / RECOVERY_PERIOD_VESTING;
-
-        lambda();
-
-        eosio_assert(battery.charge >= persent_battery, "Not enough charge");
-        battery.charge -= persent_battery;
-    }
+//    print(uint64_t(battery.charge)); print("\n");
+//    print(uint64_t(battery.renewal.utc_seconds));
 
     account_battery.*element = battery;
     table.set(account_battery, scope);
 }
-

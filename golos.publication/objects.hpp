@@ -7,6 +7,11 @@
 
 using namespace eosio;
 
+enum class type_recovery {
+    linear,
+    persent
+};
+
 namespace structures {
 
 struct battery {
@@ -154,6 +159,13 @@ struct votersinfo {
     }
 
     EOSLIB_SERIALIZE(votersinfo, (id)(post_id)(voter))
+};
+
+struct params_battery {
+    uint64_t M;  // max_charge, points
+    uint64_t W;  // time_to_charge, seconds
+    uint64_t C;  // consume battery, points
+    type_recovery mode;
 };
 
 }
