@@ -9,27 +9,17 @@ using namespace eosio;
 
 namespace structures {
 
-struct token_vesting
+struct supply
 {
-    token_vesting() = default;
+    supply() = default;
 
-    uint64_t id;
     asset vesting;
-    asset token;
 
     uint64_t primary_key() const {
-        return id;
-    }
-
-    uint64_t vesting_key() const {
         return vesting.symbol.name();
     }
 
-    uint64_t token_key() const {
-        return token.symbol.name();
-    }
-
-    EOSLIB_SERIALIZE(token_vesting, (id)(vesting)(token))
+    EOSLIB_SERIALIZE(supply, (vesting))
 };
 
 struct user_balance
@@ -133,9 +123,7 @@ struct shash {
 }
 
 namespace tables {
-    using index_tokens  = indexed_by<N(token),  const_mem_fun<structures::token_vesting, uint64_t, &structures::token_vesting::token_key>>;
-    using index_vesting = indexed_by<N(vesting), const_mem_fun<structures::token_vesting, uint64_t, &structures::token_vesting::vesting_key>>;
-    using vesting_table = eosio::multi_index<N(vesting), structures::token_vesting, index_vesting, index_tokens>;
+    using vesting_table = eosio::multi_index<N(vesting), structures::supply>;
 
     using account_table = eosio::multi_index<N(balances), structures::user_balance>;
 
@@ -147,7 +135,7 @@ namespace tables {
     using index_date = indexed_by<N(date), const_mem_fun<structures::return_delegate, uint64_t, &structures::return_delegate::date_key>>;
     using return_delegate_table = eosio::multi_index<N(rdelegate), structures::return_delegate, index_date>;
 
-    using index_payout_time = indexed_by<N(payout_time), const_mem_fun<structures::convert_of_tokens, uint64_t, &structures::convert_of_tokens::payout_time_key>>;
+    using index_payout_time = indexed_by<N(payouttime), const_mem_fun<structures::convert_of_tokens, uint64_t, &structures::convert_of_tokens::payout_time_key>>;
     using convert_table = eosio::multi_index<N(converttable), structures::convert_of_tokens, index_payout_time>;
 }
 

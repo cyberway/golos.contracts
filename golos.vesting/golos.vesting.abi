@@ -8,34 +8,22 @@
   ],
   "structs": [
     {
-      "name": "token_vesting",
+      "name": "balance_vesting",
       "base": "",
       "fields": [
         {
-          "name": "id",
-          "type": "uint64"
-        },
-        {
           "name": "vesting",
-          "type": "asset"
-        },
-        {
-          "name": "tokens",
           "type": "asset"
         }
       ]
     },
     {
-      "name": "pair_tokens",
+      "name": "vesting_symbol",
       "base": "",
       "fields": [
         {
-          "name": "token",
-          "type": "asset"
-        },
-        {
           "name": "vesting",
-          "type": "asset"
+          "type": "symbol"
         }
       ]
     },
@@ -269,8 +257,8 @@
       "type": "hash"
     },
     {
-      "name": "createpair",
-      "type": "pair_tokens"
+      "name": "createvest",
+      "type": "vesting_symbol"
     },
     {
       "name": "open",
@@ -284,7 +272,7 @@
   "tables": [
     {
       "name": "vesting",
-      "type": "token_vesting",
+      "type": "balance_vesting",
       "index_type": "i64",
       "key_names": [
         "currency"
