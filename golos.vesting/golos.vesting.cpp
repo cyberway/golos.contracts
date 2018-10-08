@@ -30,7 +30,7 @@ void vesting::apply(uint64_t code, uint64_t action) {
     else if (N(close) == action)
         execute_action(this, &vesting::close);
 
-    else if (N(createvest) == action) 
+    else if (N(createvest) == action)
         execute_action(this, &vesting::create);
     else if (N(timeoutrdel) == action)
         calculate_delegate_vesting();
