@@ -54,13 +54,13 @@ void publication::create_post(account_name account, std::string permlink,
     tables::post_table post_table(_self, account);
     tables::content_table content_table(_self, account);
 
-    auto posttable_index = post_table.get_index<N(account)>();
-    auto posttable_obj = posttable_index.find(account);
+    checksum256 permlink_hash;
+    sha256(permlink.c_str(), sizeof(permlink), &permlink_hash);
 
-    while (posttable_obj != posttable_index.end() && posttable_obj->account == account) {
-        eosio_assert(posttable_obj->permlink != permlink, "This post already exists.");
-        ++posttable_obj;
-    }
+    auto posttable_index = post_table.get_index<N(permlink)>();
+    auto posttable_obj = posttable_index.find(structures::post::get_hash_key(permlink_hash));
+
+    eosio_assert(posttable_obj == posttable_index.end(), "This post already exists.");
 
     auto post_id = post_table.available_primary_key();
 
@@ -68,7 +68,7 @@ void publication::create_post(account_name account, std::string permlink,
         item.id = post_id;
         item.date = now();
         item.account = account;
-        item.permlink = permlink;
+        item.permlink = permlink_hash;
         item.parentacc = parentacc;
         item.parentprmlnk = parentprmlnk;
         item.curatorprcnt = curatorprcnt;
@@ -270,19 +270,15 @@ void publication::close_post_timer() {
 bool publication::get_post(account_name account, std::string permlink, structures::post &post) {
     tables::post_table post_table(_self, account);
 
-    auto posttable_index = post_table.get_index<N(account)>();
-    auto posttable_obj = posttable_index.find(account);
+    checksum256 permlink_hash;
+    sha256(permlink.c_str(), sizeof(permlink), &permlink_hash);
+    auto posttable_index = post_table.get_index<N(permlink)>();
+    auto posttable_obj = posttable_index.find(structures::post::get_hash_key(permlink_hash));
 
-    while (posttable_obj != posttable_index.end() && posttable_obj->account == account) {
-        if (posttable_obj->permlink == permlink) {
-            post = *posttable_obj;
-            return true;
-        } else {
-            ++posttable_obj;
-        }
-    }
-    eosio_assert(false, "Post doesn't exist.");
-    return false;
+    eosio_assert(posttable_obj != posttable_index.end(), "Post doesn't exist.");
+
+    post = *posttable_obj;
+    return true;
 }
 
 void publication::create_battery_user(account_name name) {

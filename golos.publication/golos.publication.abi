@@ -42,7 +42,7 @@
       {
         "name": "limit_battery_of_votes",
         "type": "battery"
-      },
+      }
     ]
   },
   {
@@ -149,7 +149,7 @@
       },
       {
         "name": "permlink",
-        "type": "string"
+        "type": "checksum256"
       },
       {
         "name": "parentacc",
@@ -358,24 +358,6 @@
     ]
   },
   {
-    "name": "accountinfo",
-    "base": "",
-    "fields": [
-      {
-        "name": "id",
-        "type": "uint64"
-      },
-      {
-        "name": "post_bandwidth",
-        "type": "uint64"
-      },
-      {
-        "name": "voter",
-        "type": "account_name"
-      }
-    ]
-  },
-  {
     "name": "createacc",
     "base": "",
     "fields": [
@@ -453,17 +435,6 @@
   {
     "name": "voterstable",
     "type": "votersinfo",
-    "index_type": "i64",
-    "key_names" : [
-      "id"
-    ],
-    "key_types" : [
-      "uint64"
-    ]
-  },
-  {
-    "name": "accounttable",
-    "type": "accountinfo",
     "index_type": "i64",
     "key_names" : [
       "id"
