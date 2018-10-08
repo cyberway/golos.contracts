@@ -44,8 +44,8 @@ void publication::create_post(account_name account, std::string permlink,
     require_auth(account);
 
     if (!parentacc) {
-        recovery_battery(account, &structures::account_battery::posting_battery, {UPPER_BOUND, RECOVERY_PERIOD_POSTING, POST_AMOUNT_OPERATIONS, type_recovery::persent});
         recovery_battery(account, &structures::account_battery::limit_battery_posting, {UPPER_BOUND, POST_OPERATION_INTERVAL, UPPER_BOUND, type_recovery::linear});
+        recovery_battery(account, &structures::account_battery::posting_battery, {UPPER_BOUND, RECOVERY_PERIOD_POSTING, POST_AMOUNT_OPERATIONS, type_recovery::persent}); // TODO battery that is overrun
     } else {
         recovery_battery(account, &structures::account_battery::limit_battery_comment, {UPPER_BOUND, COMMENT_OPERATION_INTERVAL, UPPER_BOUND, type_recovery::linear});
     }
@@ -295,7 +295,7 @@ void publication::create_battery_user(account_name name) {
 
 int64_t publication::current_consumed(const structures::battery &battery, const structures::params_battery &params) {
     auto sec = now() - battery.renewal.utc_seconds;
-    int64_t recovery = sec * (params.mode == type_recovery::linear ? params.M : battery.charge) / params.W;
+    int64_t recovery = sec * (params.mode == type_recovery::linear ? params.max_charge : battery.charge) / params.time_to_charge;
 
     auto consumed = battery.charge - recovery;
     if (consumed > 0)
@@ -305,15 +305,26 @@ int64_t publication::current_consumed(const structures::battery &battery, const 
 }
 
 int64_t publication::consume(structures::battery &battery, const structures::params_battery &params) {
-    auto Q = params.C + current_consumed(battery, params);
+    auto consumed = params.consume_battery + current_consumed(battery, params);
 
-    if ((Q - params.M) < 0)
-        return (Q - params.M);
+    eosio_assert( (consumed < UPPER_BOUND), "Battery overrun" );
 
-    battery.charge = Q;
+    battery.charge = consumed;
     battery.renewal = time_point_sec(now());
 
-    return Q;
+    return consumed;
+}
+
+int64_t publication::consume_allow_overusage(structures::battery &battery, const structures::params_battery &params) {
+    auto consumed = params.consume_battery + current_consumed(battery, params);
+
+    if ((consumed - params.max_charge) > 0)
+        return consumed - params.max_charge;
+
+    battery.charge = consumed;
+    battery.renewal = time_point_sec(now());
+
+    return consumed;
 }
 
 template<typename T>
@@ -324,13 +335,10 @@ void publication::recovery_battery(scope_name scope, T structures::account_batte
     auto account_battery = table.get();
     auto battery = account_battery.*element;
 
-//    eosio_assert(battery.renewal <= time_point_sec(now()), "Action not allowed by timeout");
-
-    auto result = consume(battery, params);
-    eosio_assert( ((result >= 0) && (result <= UPPER_BOUND) ), "Not enough charge" );
-
-//    print(uint64_t(battery.charge)); print("\n");
-//    print(uint64_t(battery.renewal.utc_seconds));
+    if (element == &structures::account_battery::limit_battery_posting)
+        consume_allow_overusage(battery, params);
+    else
+        consume(battery, params);
 
     account_battery.*element = battery;
     table.set(account_battery, scope);

@@ -162,9 +162,9 @@ struct votersinfo {
 };
 
 struct params_battery {
-    uint64_t M;  // max_charge, points
-    uint64_t W;  // time_to_charge, seconds
-    uint64_t C;  // consume battery, points
+    uint64_t max_charge;  // M, points
+    uint64_t time_to_charge; // W, seconds
+    uint64_t consume_battery;  // C, points
     type_recovery mode;
 };
 
