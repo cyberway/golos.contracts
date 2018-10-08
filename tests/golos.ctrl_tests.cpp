@@ -111,8 +111,9 @@ public:
     // }
 
     // vesting actions
-    action_result create_vesting(symbol_type vesting) {
-        return push_action(N(golos.vest), N(golos.vest), N(createvest), mvo()("vesting", vesting));
+    action_result create_vesting(account_name creator, symbol_type symbol/*, vector<account_name> issuers*/) {
+        return push_action(N(golos.vest), creator, N(createvest),
+            mvo()("creator", creator)("symbol", symbol)("issuers", vector<account_name>()));
     }
     action_result open_vesting(account_name owner, symbol_type symbol, account_name payer) {
         return push_action(N(golos.vest), payer, N(open), mvo()
@@ -305,7 +306,7 @@ public:
     void prepare_balances() {
         auto vest_contract = N(golos.vest);
         BOOST_CHECK_EQUAL(success(), create_token(_bob, dasset(100500)));
-        BOOST_CHECK_EQUAL(success(), create_vesting(_token));
+        BOOST_CHECK_EQUAL(success(), create_vesting(_bob, _token));
         BOOST_CHECK_EQUAL(success(), open_vesting(vest_contract, _token, vest_contract));
         vector<std::pair<uint64_t,double>> amounts = {
             {BLOG, 1000}, {_alice, 800}, {_bob, 700}, {_carol, 600},
