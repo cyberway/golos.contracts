@@ -150,13 +150,7 @@ void publication::upvote(account_name voter, account_name author, std::string pe
 
 //    eosio_assert(weight > 0, "The weight sign can't be negative.");
 
-    std::vector<structures::rshares> rshares;
-
-    structures::rshares rshares_obj{0, 0, 0, 0};
-
-    rshares.push_back(rshares_obj);
-
-    set_vote(voter, author, permlink, weight, rshares);
+    set_vote(voter, author, permlink, weight);
 }
 
 void publication::downvote(account_name voter, account_name author, std::string permlink, asset weight) {
@@ -164,18 +158,15 @@ void publication::downvote(account_name voter, account_name author, std::string 
 
 //    eosio_assert(weight < 0, "The weight sign can't be positive.");
 
-    std::vector<structures::rshares> rshares;
-
-    structures::rshares rshares_obj{0, 0, 0, 0};
-
-    rshares.push_back(rshares_obj);
-
-    set_vote(voter, author, permlink, weight, rshares);
+    set_vote(voter, author, permlink, weight);
 }
 
-void publication::unvote(account_name voter, asset weight) {
+void publication::unvote(account_name voter, account_name author, std::string permlink, asset weight) {
     require_auth(voter);
+
 //    eosio_assert(weight == 0, "The weight can be only zero.");
+
+    set_vote(voter, author, permlink, weight);
 }
 
 void publication::close_post() {
@@ -192,11 +183,16 @@ void publication::close_post_timer() {
 }
 
 void publication::set_vote(account_name voter, account_name author,
-                           std::string permlink, asset weight,
-                           std::vector<structures::rshares> rshares) {
+                           std::string permlink, asset weight) {
     tables::vote_table vote_table(_self, author);
 
     structures::post posttable_obj;
+
+    std::vector<structures::rshares> rshares;
+
+    structures::rshares rshares_obj{0, 0, 0, 0};
+
+    rshares.push_back(rshares_obj);
 
     if (get_post(author, permlink, posttable_obj)) {
         auto votetable_index = vote_table.get_index<N(postid)>();
@@ -207,8 +203,6 @@ void publication::set_vote(account_name voter, account_name author,
                 eosio_assert(weight != votetable_obj->weight, "Vote with the same weight has already existed.");
                 eosio_assert(votetable_obj->count != MAX_REVOTES, "You can't revote anymore.");
                 votetable_index.modify(votetable_obj, author, [&]( auto &item ) {
-                   item.post_id = posttable_obj.id;
-                   item.voter = voter;
                    item.percent = FIXED_CURATOR_PERCENT;
                    item.weight = weight;
                    item.time = now();
