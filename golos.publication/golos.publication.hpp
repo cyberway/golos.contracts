@@ -24,7 +24,7 @@ class publication : public eosio::contract {
     void delete_post(account_name account, std::string permlink);
     void upvote(account_name voter, account_name author, std::string permlink, asset weight);
     void downvote(account_name voter, account_name author, std::string permlink, asset weight);
-    void unvote(account_name voter, account_name author, std::string permlink, asset weight);
+    void unvote(account_name voter, account_name author, std::string permlink);
     void close_post();
     void close_post_timer();
     void set_vote(account_name voter, account_name author, std::string permlink, asset weight);

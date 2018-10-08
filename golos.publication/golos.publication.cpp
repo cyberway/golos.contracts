@@ -161,12 +161,12 @@ void publication::downvote(account_name voter, account_name author, std::string 
     set_vote(voter, author, permlink, weight);
 }
 
-void publication::unvote(account_name voter, account_name author, std::string permlink, asset weight) {
+void publication::unvote(account_name voter, account_name author, std::string permlink) {
     require_auth(voter);
 
 //    eosio_assert(weight == 0, "The weight can be only zero.");
 
-    set_vote(voter, author, permlink, weight);
+    set_vote(voter, author, permlink, 0);
 }
 
 void publication::close_post() {
