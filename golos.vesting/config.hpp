@@ -17,5 +17,4 @@
 //#define TIME_LIMIT_FOR_RETURN_DELEGATE_VESTING (604800)
 
 //------------------------------------------
-
-#define ACCOUNT_EMISSION N(golos.emiss)
+//TODO:? it seems like most of this stuff should be in vesting_info

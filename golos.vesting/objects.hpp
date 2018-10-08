@@ -9,17 +9,18 @@ using namespace eosio;
 
 namespace structures {
 
-struct supply
+struct vesting_info
 {
-    supply() = default;
+    vesting_info() = default;
 
-    asset vesting;
+    asset supply;
+    std::vector<account_name> issuers;
 
     uint64_t primary_key() const {
-        return vesting.symbol.name();
+        return supply.symbol.name();
     }
 
-    EOSLIB_SERIALIZE(supply, (vesting))
+    EOSLIB_SERIALIZE(vesting_info, (supply)(issuers))
 };
 
 struct user_balance
@@ -123,7 +124,7 @@ struct shash {
 }
 
 namespace tables {
-    using vesting_table = eosio::multi_index<N(vesting), structures::supply>;
+    using vesting_table = eosio::multi_index<N(vesting), structures::vesting_info>;
 
     using account_table = eosio::multi_index<N(balances), structures::user_balance>;
 
