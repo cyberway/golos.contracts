@@ -46,12 +46,16 @@
     ]
   },
   {
-    "name": "hash",
+    "name": "closepost",
     "base": "",
     "fields": [
       {
-        "name": "hash",
-        "type": "uint64"
+        "name": "account",
+        "type": "account_name"
+      },
+      {
+        "name": "permlink",
+        "type": "string"
       }
     ]
   },
@@ -157,7 +161,7 @@
       },
       {
         "name": "parentprmlnk",
-        "type": "string"
+        "type": "checksum256"
       },
       {
         "name": "curatorprcnt",
@@ -174,6 +178,14 @@
       {
         "name": "paytype",
         "type": "string"
+      },
+      {
+        "name": "childcount",
+        "type": "uint64"
+      },
+      {
+        "name": "isclosed",
+        "type": "uint8"
       }
     ]
   },
@@ -280,11 +292,29 @@
       {
         "name": "permlink",
         "type": "string"
+      },
+      {
+        "name": "parentacc",
+        "type": "account_name"
+      },
+      {
+        "name": "parentprmlnk",
+        "type": "string"
       }
     ]
   },
   {
     "name": "vote",
+    "base": "unvote",
+    "fields": [
+      {
+        "name": "weight",
+        "type": "int64"
+      }
+    ]
+  },
+  {
+    "name": "unvote",
     "base": "",
     "fields": [
       {
@@ -298,10 +328,6 @@
       {
         "name": "permlink",
         "type": "string"
-      },
-      {
-        "name": "weight",
-        "type": "asset"
       }
     ]
   },
@@ -327,7 +353,7 @@
       },
       {
         "name": "weight",
-        "type": "asset"
+        "type": "int64"
       },
       {
         "name": "time",
@@ -376,8 +402,12 @@
     "type": "vote"
   },
   {
+    "name": "unvote",
+    "type": "unvote"
+  },
+  {
     "name": "closepost",
-    "type": "hash"
+    "type": "closepost"
   },
   {
     "name": "createacc",
