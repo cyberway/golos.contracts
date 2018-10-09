@@ -41,26 +41,25 @@ void publication::create_post(account_name account, std::string permlink,
                               std::string bodypost, std::string languagepost,
                               std::vector<structures::tag> tags,
                               std::string jsonmetadata) {
-
     require_auth(account);
 
     if (!parentacc) {
-        limit_posts(account);
-        posting_battery(account);
+        recovery_battery(account, &structures::account_battery::limit_battery_posting, {UPPER_BOUND, POST_OPERATION_INTERVAL, UPPER_BOUND, type_recovery::linear});
+        recovery_battery(account, &structures::account_battery::posting_battery, {UPPER_BOUND, RECOVERY_PERIOD_POSTING, POST_AMOUNT_OPERATIONS, type_recovery::persent}); // TODO battery that is overrun
     } else {
-        limit_comments(account);
+        recovery_battery(account, &structures::account_battery::limit_battery_comment, {UPPER_BOUND, COMMENT_OPERATION_INTERVAL, UPPER_BOUND, type_recovery::linear});
     }
 
     tables::post_table post_table(_self, account);
     tables::content_table content_table(_self, account);
 
-    auto posttable_index = post_table.get_index<N(account)>();
-    auto posttable_obj = posttable_index.find(account);
+    checksum256 permlink_hash;
+    sha256(permlink.c_str(), sizeof(permlink), &permlink_hash);
 
-    while (posttable_obj != posttable_index.end() && posttable_obj->account == account) {
-        eosio_assert(posttable_obj->permlink != permlink, "This post already exists.");
-        ++posttable_obj;
-    }
+    auto posttable_index = post_table.get_index<N(permlink)>();
+    auto posttable_obj = posttable_index.find(structures::post::get_hash_key(permlink_hash));
+
+    eosio_assert(posttable_obj == posttable_index.end(), "This post already exists.");
 
     auto post_id = post_table.available_primary_key();
 
@@ -68,7 +67,7 @@ void publication::create_post(account_name account, std::string permlink,
         item.id = post_id;
         item.date = now();
         item.account = account;
-        item.permlink = permlink;
+        item.permlink = permlink_hash;
         item.parentacc = parentacc;
         item.parentprmlnk = parentprmlnk;
         item.curatorprcnt = curatorprcnt;
@@ -116,7 +115,6 @@ void publication::delete_post(account_name account, std::string permlink) {
     tables::post_table post_table(_self, account);
     tables::content_table content_table(_self, account);
     tables::vote_table vote_table(_self, account);
-    tables::voters_table voters_table(_self, account);
 
     structures::post posttable_obj;
 
@@ -137,11 +135,8 @@ void publication::delete_post(account_name account, std::string permlink) {
             contenttable_index.erase(contenttable_obj);
             auto votetable_index = vote_table.get_index<N(postid)>();
             auto votetable_obj = votetable_index.find(posttable_obj.id);
-            votetable_index.erase(votetable_obj);
-            auto voterstable_index = voters_table.get_index<N(postid)>();
-            auto voterstable_obj = voterstable_index.find(posttable_obj.id);
-            while (voterstable_obj != voterstable_index.end())
-                voterstable_obj = voterstable_index.erase(voterstable_obj);
+            while (votetable_obj != votetable_index.end())
+                votetable_obj = votetable_index.erase(votetable_obj);
         } else {
             eosio_assert(false, "You can't delete post, it can be only changed.");
         }
@@ -150,108 +145,27 @@ void publication::delete_post(account_name account, std::string permlink) {
 
 void publication::upvote(account_name voter, account_name author, std::string permlink, asset weight) {
     require_auth(voter);
-    limit_of_votes(voter);
+    recovery_battery(voter, &structures::account_battery::limit_battery_of_votes, {UPPER_BOUND, VOTE_OPERATION_INTERVAL, UPPER_BOUND, type_recovery::linear});
 
-    tables::vote_table vote_table(_self, author);
-    tables::voters_table voters_table(_self, author);
+//    eosio_assert(weight > 0, "The weight sign can't be negative.");
 
-    std::vector<structures::rshares> rshares;
-
-    structures::rshares rshares_obj{0, 0, 0, 0};
-
-    rshares.push_back(rshares_obj);
-
-    structures::post posttable_obj;
-
-    if (get_post(author, permlink, posttable_obj)) {
-        auto votetable_index = vote_table.get_index<N(postid)>();
-        auto votetable_obj = votetable_index.find(posttable_obj.id);
-        if (votetable_obj != votetable_index.end()) {
-            auto voterstable_index = voters_table.get_index<N(postid)>();
-            auto voterstable_obj = voterstable_index.find(posttable_obj.id);
-            while (voterstable_obj != voterstable_index.end() &&
-                   posttable_obj.id == voterstable_obj->post_id) {
-                eosio_assert(voter != voterstable_obj->voter,
-                             "You have already voted for this post.");
-                ++voterstable_obj;
-            }
-
-            voters_table.emplace(author, [&]( auto &item ) {
-                item.id = voters_table.available_primary_key();
-                item.post_id = posttable_obj.id;
-                item.voter = voter;
-            });
-
-            votetable_index.modify(votetable_obj, author, [&]( auto &item ) {
-               item.post_id = posttable_obj.id;
-               item.voter = voter;
-               item.percent = FIXED_CURATOR_PERCENT;
-               item.weight = weight;
-               item.time = now();
-               item.rshares = rshares;
-               ++item.count;
-            });
-        } else {
-            voters_table.emplace(author, [&]( auto &item ) {
-                item.id = voters_table.available_primary_key();
-                item.post_id = posttable_obj.id;
-                item.voter = voter;
-            });
-
-            vote_table.emplace(author, [&]( auto &item ) {
-               item.post_id = posttable_obj.id;
-               item.voter = voter;
-               item.percent = FIXED_CURATOR_PERCENT;
-               item.weight = weight;
-               item.time = now();
-               item.rshares = rshares;
-               ++item.count;
-            });
-        }
-    }
+    set_vote(voter, author, permlink, weight);
 }
 
 void publication::downvote(account_name voter, account_name author, std::string permlink, asset weight) {
     require_auth(voter);
 
-    tables::vote_table vote_table(_self, author);
-    tables::voters_table voters_table(_self, author);
+//    eosio_assert(weight < 0, "The weight sign can't be positive.");
 
-    std::vector<structures::rshares> rshares;
+    set_vote(voter, author, permlink, weight);
+}
 
-    structures::rshares rshares_obj{0, 0, 0, 0};
+void publication::unvote(account_name voter, account_name author, std::string permlink) {
+    require_auth(voter);
 
-    rshares.push_back(rshares_obj);
+//    eosio_assert(weight == 0, "The weight can be only zero.");
 
-    structures::post posttable_obj;
-
-    if (get_post(author, permlink, posttable_obj)) {
-        auto voterstable_index = voters_table.get_index<N(postid)>();
-        auto voterstable_obj = voterstable_index.find(posttable_obj.id);
-        while (voterstable_obj != voterstable_index.end() && posttable_obj.id == voterstable_obj->post_id) {
-            if (voter == voterstable_obj->voter) {
-                voterstable_index.erase(voterstable_obj);
-                break;
-            } else {
-                ++voterstable_obj;
-            }
-        }
-
-        eosio_assert(voterstable_obj != voterstable_index.end(),
-                     "You can't do down vote because previously you haven't voted for this post.");
-
-        auto votetable_index = vote_table.get_index<N(postid)>();
-        auto votetable_obj = votetable_index.find(posttable_obj.id);
-
-        votetable_index.modify(votetable_obj, author, [&]( auto &item ) {
-           item.voter = voter;
-           item.percent = FIXED_CURATOR_PERCENT;
-           item.weight = weight;
-           item.time = now();
-           item.rshares = rshares;
-           --item.count;
-        });
-    }
+    set_vote(voter, author, permlink, 0);
 }
 
 void publication::close_post() {
@@ -267,22 +181,62 @@ void publication::close_post_timer() {
     trx.send(_self, _self);
 }
 
+void publication::set_vote(account_name voter, account_name author,
+                           std::string permlink, asset weight) {
+    tables::vote_table vote_table(_self, author);
+
+    structures::post posttable_obj;
+
+    std::vector<structures::rshares> rshares;
+
+    structures::rshares rshares_obj{0, 0, 0, 0};
+
+    rshares.push_back(rshares_obj);
+
+    if (get_post(author, permlink, posttable_obj)) {
+        auto votetable_index = vote_table.get_index<N(postid)>();
+        auto votetable_obj = votetable_index.find(posttable_obj.id);
+
+        while (votetable_obj != votetable_index.end()) {
+            if (voter == votetable_obj->voter) {
+                eosio_assert(weight != votetable_obj->weight, "Vote with the same weight has already existed.");
+                eosio_assert(votetable_obj->count != MAX_REVOTES, "You can't revote anymore.");
+                votetable_index.modify(votetable_obj, author, [&]( auto &item ) {
+                   item.percent = FIXED_CURATOR_PERCENT;
+                   item.weight = weight;
+                   item.time = now();
+                   item.rshares = rshares;
+                   ++item.count;
+                });
+                return;
+            }
+            ++votetable_obj;
+        }
+        vote_table.emplace(author, [&]( auto &item ) {
+           item.id = vote_table.available_primary_key();
+           item.post_id = posttable_obj.id;
+           item.voter = voter;
+           item.percent = FIXED_CURATOR_PERCENT;
+           item.weight = weight;
+           item.time = now();
+           item.rshares = rshares;
+           ++item.count;
+        });
+    }
+}
+
 bool publication::get_post(account_name account, std::string permlink, structures::post &post) {
     tables::post_table post_table(_self, account);
 
-    auto posttable_index = post_table.get_index<N(account)>();
-    auto posttable_obj = posttable_index.find(account);
+    checksum256 permlink_hash;
+    sha256(permlink.c_str(), sizeof(permlink), &permlink_hash);
+    auto posttable_index = post_table.get_index<N(permlink)>();
+    auto posttable_obj = posttable_index.find(structures::post::get_hash_key(permlink_hash));
 
-    while (posttable_obj != posttable_index.end() && posttable_obj->account == account) {
-        if (posttable_obj->permlink == permlink) {
-            post = *posttable_obj;
-            return true;
-        } else {
-            ++posttable_obj;
-        }
-    }
-    eosio_assert(false, "Post doesn't exist.");
-    return false;
+    eosio_assert(posttable_obj != posttable_index.end(), "Post doesn't exist.");
+
+    post = *posttable_obj;
+    return true;
 }
 
 void publication::create_battery_user(account_name name) {
@@ -290,90 +244,54 @@ void publication::create_battery_user(account_name name) {
     tables::accounts_battery_table account_battery(_self, name);
     eosio_assert(!account_battery.exists(), "This user already exists");
 
-    structures::battery st_battery{UPPER_BOUND, time_point_sec(now())};
-    account_battery.set(structures::account_battery{st_battery, st_battery, st_battery, st_battery, st_battery},
-                        name);
+    structures::battery st_battery{LOWER_BOUND, time_point_sec(now())};
+    account_battery.set(structures::account_battery{st_battery, st_battery, st_battery, st_battery, st_battery}, name);
 }
 
-void publication::limit_posts(scope_name scope) {
-    tables::accounts_battery_table account_battery(_self, scope);
-    eosio_assert(account_battery.exists(), "Not found battery of this user");
+int64_t publication::current_consumed(const structures::battery &battery, const structures::params_battery &params) {
+    auto sec = now() - battery.renewal.utc_seconds;
+    int64_t recovery = sec * (params.mode == type_recovery::linear ? params.max_charge : battery.charge) / params.time_to_charge;
 
-    auto battery = account_battery.get();
-    eosio_assert(battery.limit_battery_posting.renewal <= time_point_sec(now()), "Сreating a post is prohibited");
+    auto consumed = battery.charge - recovery;
+    if (consumed > 0)
+        return consumed;
 
-    battery.limit_battery_posting.renewal = time_point_sec(now() + POST_OPERATION_INTERVAL);
-    account_battery.set(battery, scope);
+    return 0;
 }
 
-void publication::limit_comments(scope_name scope) {
-    tables::accounts_battery_table account_battery(_self, scope);
-    eosio_assert(account_battery.exists(), "Not found battery of this user");
+int64_t publication::consume(structures::battery &battery, const structures::params_battery &params) {
+    auto consumed = params.consume_battery + current_consumed(battery, params);
 
-    auto battery = account_battery.get();
-    eosio_assert(battery.limit_battery_comment.renewal <= time_point_sec(now()), "Сreating a comment is prohibited");
+    eosio_assert( (consumed < params.max_charge), "Battery overrun" );
 
-    battery.limit_battery_comment.renewal = time_point_sec(now() + COMMENT_OPERATION_INTERVAL);
-    account_battery.set(battery, scope);
+    battery.charge = consumed;
+    battery.renewal = time_point_sec(now());
+
+    return consumed;
 }
 
-void publication::limit_of_votes(scope_name scope) {
-    tables::accounts_battery_table account_battery(_self, scope);
-    eosio_assert(account_battery.exists(), "Not found battery of this user");
+int64_t publication::consume_allow_overusage(structures::battery &battery, const structures::params_battery &params) {
+    auto consumed = params.consume_battery + current_consumed(battery, params);
 
-    auto battery = account_battery.get();
-    eosio_assert(battery.limit_battery_of_votes.renewal <= time_point_sec(now()), "Сreating a vote is prohibited");
+    battery.charge = consumed;
+    battery.renewal = time_point_sec(now());
 
-    battery.limit_battery_of_votes.renewal = time_point_sec(now() + VOTE_OPERATION_INTERVAL);
-    account_battery.set(battery, scope);
+    return consumed;
 }
 
-void publication::posting_battery(scope_name scope) {
-    tables::accounts_battery_table account_battery(_self, scope);
-    eosio_assert(account_battery.exists(), "Not found battery of this user");
+template<typename T>
+void publication::recovery_battery(scope_name scope, T structures::account_battery::*element, const structures::params_battery &params) {
+    tables::accounts_battery_table table(_self, scope);
+    eosio_assert(table.exists(), "Not found battery of this user");
 
-    const auto current_time = now();
-    auto battery = account_battery.get();
-    auto recovery_sec = current_time - battery.posting_battery.renewal.utc_seconds;
+    auto account_battery = table.get();
+    auto battery = account_battery.*element;
 
-    double recovery_change = (UPPER_BOUND - battery.posting_battery.charge) * recovery_sec / RECOVERY_PERIOD_POSTING;
-    uint64_t battery_charge = recovery_change + battery.posting_battery.charge;
-    if (battery_charge > UPPER_BOUND) { // TODO recovery battery
-        battery.posting_battery.charge = UPPER_BOUND;
-        battery.posting_battery.renewal = time_point_sec(current_time);
-    } else {
-        battery.posting_battery.charge = battery_charge;
-        battery.posting_battery.renewal = time_point_sec(current_time);
-    }
+    if (element == &structures::account_battery::limit_battery_posting)
+        consume_allow_overusage(battery, params);
+    else
+        consume(battery, params);
 
-    eosio_assert(battery.posting_battery.charge >= POST_AMOUNT_OPERATIONS, "Not enough battery power to create a post");
-    battery.posting_battery.charge -= POST_AMOUNT_OPERATIONS;
-    battery.posting_battery.renewal = time_point_sec(now());
-
-    account_battery.set(battery, scope);
-}
-
-void publication::vesting_battery(scope_name scope, uint16_t persent_battery) {
-    tables::accounts_battery_table account_battery(_self, scope);
-    eosio_assert(account_battery.exists(), "Not found battery of this user");
-    eosio_assert(persent_battery <= UPPER_BOUND && persent_battery >= LOWER_BOUND, "Invalid persent battary");
-
-    const auto current_time = now();
-    auto battery = account_battery.get();
-    auto recovery_sec = current_time - battery.battery_of_votes.renewal.utc_seconds;
-
-    double recovery_change = (UPPER_BOUND * recovery_sec) / RECOVERY_PERIOD_VESTING;
-    uint64_t battery_charge = recovery_change + battery.battery_of_votes.charge;
-    if (battery_charge > UPPER_BOUND) {
-        battery.battery_of_votes.charge = UPPER_BOUND;
-        battery.battery_of_votes.renewal = time_point_sec(current_time);
-    } else {
-        battery.battery_of_votes.charge = battery_charge;
-        battery.battery_of_votes.renewal = time_point_sec(current_time);
-    }
-
-    eosio_assert(battery.battery_of_votes.charge >= persent_battery, "Not enough charge");
-    battery.battery_of_votes.charge -= persent_battery;
-
-    account_battery.set(battery, scope);
+    account_battery.*element = battery;
+    table.set(account_battery, scope);
 }

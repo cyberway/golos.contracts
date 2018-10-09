@@ -4,8 +4,14 @@
 #include <eosiolib/eosio.hpp>
 #include <eosiolib/asset.hpp>
 #include <eosiolib/singleton.hpp>
+#include <eosiolib/crypto.h>
 
 using namespace eosio;
+
+enum class type_recovery {
+    linear,
+    persent
+};
 
 namespace structures {
 
@@ -82,11 +88,10 @@ struct content {
                      (tags)(jsonmetadata))
 };
 
-struct createpost {
-    createpost() = default;
+struct common_post_data {
+    common_post_data() = default;
 
     account_name account;
-    std::string permlink;
     account_name parentacc;
     std::string parentprmlnk;
     uint64_t curatorprcnt;
@@ -94,22 +99,37 @@ struct createpost {
     std::vector<structures::beneficiary> beneficiaries;
     std::string paytype;
 
+    EOSLIB_SERIALIZE(common_post_data, (account)(parentacc)(parentprmlnk)(curatorprcnt)
+                     (payouttype)(beneficiaries)(paytype))
+};
+
+struct createpost : common_post_data {
+    createpost() = default;
+
+    std::string permlink;
+
     EOSLIB_SERIALIZE(createpost, (account)(permlink)(parentacc)(parentprmlnk)(curatorprcnt)
                      (payouttype)(beneficiaries)(paytype))
 };
 
-struct post : createpost {
+struct post : common_post_data {
     post() = default;
 
     uint64_t id;
     uint64_t date;
+    checksum256 permlink;
 
     uint64_t primary_key() const {
         return id;
     }
 
-    uint64_t account_key() const {
-        return account;
+    key256 permlink_hash_key() const {
+        return get_hash_key(permlink);
+    }
+
+    static key256 get_hash_key(const checksum256& permlink) {
+        const uint64_t *p64 = reinterpret_cast<const uint64_t *>(&permlink);
+        return key256::make_from_word_sequence<uint64_t>(p64[0], p64[1], p64[2], p64[3]);
     }
 
     uint64_t parentacc_key() const {
@@ -123,6 +143,7 @@ struct post : createpost {
 struct voteinfo {
     voteinfo() = default;
 
+    uint64_t id;
     uint64_t post_id;
     account_name voter;
     uint64_t percent;
@@ -132,47 +153,37 @@ struct voteinfo {
     uint64_t count;
 
     uint64_t primary_key() const {
-        return post_id;
-    }
-
-    EOSLIB_SERIALIZE(voteinfo, (post_id)(voter)(percent)(weight)(time)(rshares)(count))
-};
-
-struct votersinfo {
-    votersinfo() = default;
-
-    uint64_t id;
-    uint64_t post_id;
-    account_name voter;
-
-    uint64_t primary_key() const {
         return id;
     }
 
-    uint64_t postid_key() const {
+    uint64_t secondary_key() const {
         return post_id;
     }
 
-    EOSLIB_SERIALIZE(votersinfo, (id)(post_id)(voter))
+    EOSLIB_SERIALIZE(voteinfo, (id)(post_id)(voter)(percent)(weight)(time)(rshares)(count))
+};
+
+struct params_battery {
+    uint64_t max_charge;  // M, points
+    uint64_t time_to_charge; // W, seconds
+    uint64_t consume_battery;  // C, points
+    type_recovery mode;
 };
 
 }
 
 namespace tables {
     using id_index = indexed_by<N(id), const_mem_fun<structures::post, uint64_t, &structures::post::primary_key>>;
-    using account_index = indexed_by<N(account), const_mem_fun<structures::post, uint64_t, &structures::post::account_key>>;
+    using permlink_hash_index = indexed_by<N(permlink), const_mem_fun<structures::post, key256, &structures::post::permlink_hash_key>>;
     using parentacc_index = indexed_by<N(parentacc), const_mem_fun<structures::post, uint64_t, &structures::post::parentacc_key>>;
-    using post_table = eosio::multi_index<N(posttable), structures::post, id_index, account_index, parentacc_index>;
+    using post_table = eosio::multi_index<N(posttable), structures::post, id_index, permlink_hash_index, parentacc_index>;
 
     using content_id_index = indexed_by<N(id), const_mem_fun<structures::content, uint64_t, &structures::content::primary_key>>;
     using content_table = eosio::multi_index<N(contenttable), structures::content, content_id_index>;
 
-    using vote_index = indexed_by<N(postid), const_mem_fun<structures::voteinfo, uint64_t, &structures::voteinfo::primary_key>>;
-    using vote_table = eosio::multi_index<N(votetable), structures::voteinfo, vote_index>;
-
-    using voters_index = indexed_by<N(id), const_mem_fun<structures::votersinfo, uint64_t, &structures::votersinfo::primary_key>>;
-    using post_id_index = indexed_by<N(postid), const_mem_fun<structures::votersinfo, uint64_t, &structures::votersinfo::postid_key>>;
-    using voters_table = eosio::multi_index<N(voterstable), structures::votersinfo, voters_index, post_id_index>;
+    using vote_id_index = indexed_by<N(id), const_mem_fun<structures::voteinfo, uint64_t, &structures::voteinfo::primary_key>>;
+    using vote_postid_index = indexed_by<N(postid), const_mem_fun<structures::voteinfo, uint64_t, &structures::voteinfo::secondary_key>>;
+    using vote_table = eosio::multi_index<N(votetable), structures::voteinfo, vote_id_index, vote_postid_index>;
 
     using accounts_battery_table = eosio::singleton<N(batterytable), structures::account_battery>;
 }

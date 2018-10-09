@@ -111,8 +111,9 @@ public:
     // }
 
     // vesting actions
-    action_result create_pair(asset token, asset vesting) {
-        return push_action(N(golos.vest), N(golos.vest), N(createpair), mvo()("token", token)("vesting", vesting));
+    action_result create_vesting(account_name creator, symbol_type symbol/*, vector<account_name> issuers*/) {
+        return push_action(N(golos.vest), creator, N(createvest),
+            mvo()("creator", creator)("symbol", symbol)("issuers", vector<account_name>()));
     }
     action_result open_vesting(account_name owner, symbol_type symbol, account_name payer) {
         return push_action(N(golos.vest), payer, N(open), mvo()
@@ -126,6 +127,28 @@ public:
             ("sender", sender)
             ("user", user)
             ("quantity", quantity)
+        );
+    }
+    // token actions
+    action_result create_token(account_name issuer, asset maximum_supply) {
+        return push_action(N(eosio.token), N(eosio.token), N(create), mvo()
+            ("issuer", issuer)
+            ("maximum_supply", maximum_supply)
+        );
+    }
+    action_result issue(account_name issuer, account_name to, asset quantity, string memo) {
+        return push_action(N(eosio.token), issuer, N(issue), mvo()
+            ("to", to)
+            ("quantity", quantity)
+            ("memo", memo)
+        );
+    }
+    action_result transfer(account_name from, account_name to, asset quantity, string memo) {
+        return push_action(N(eosio.token), from, N(transfer), mvo()
+            ("from", from)
+            ("to", to)
+            ("quantity", quantity)
+            ("memo", memo)
         );
     }
 
@@ -281,20 +304,24 @@ public:
     }
 
     void prepare_balances() {
-        BOOST_CHECK_EQUAL(success(), create_pair(asset::from_string("0.0000 GLS"), dasset(0)));
+        auto vest_contract = N(golos.vest);
+        BOOST_CHECK_EQUAL(success(), create_token(_bob, dasset(100500)));
+        BOOST_CHECK_EQUAL(success(), create_vesting(_bob, _token));
+        BOOST_CHECK_EQUAL(success(), open_vesting(vest_contract, _token, vest_contract));
         vector<std::pair<uint64_t,double>> amounts = {
             {BLOG, 1000}, {_alice, 800}, {_bob, 700}, {_carol, 600},
             {_w[0], 100}, {_w[1], 200}, {_w[2], 300}, {_w[3], 400}, {_w[4], 500}
         };
         for (const auto& p : amounts) {
             BOOST_CHECK_EQUAL(success(), open_vesting(p.first, _token, p.first));
-            BOOST_CHECK_EQUAL(success(), accrue_vesting(N(golos.vest), p.first, dasset(p.second)));
+            BOOST_CHECK_EQUAL(success(), issue(_bob, p.first, dasset(p.second), "issue"));
+            BOOST_CHECK_EQUAL(success(), transfer(p.first, vest_contract, dasset(p.second), "buy vesting"));
         };
 
         BOOST_CHECK_EQUAL(dasset(123), asset::from_string("123.000000 TST"));
-        check_vesting_balance(get_account_vesting(_alice, _token), dasset(800));
+        check_vesting_balance(get_account_vesting(BLOG, _token), dasset(1000));
         produce_block();
-        check_vesting_balance(get_account_vesting(_carol, _token), dasset(600));
+        check_vesting_balance(get_account_vesting(_alice, _token), dasset(800));
     }
 };
 

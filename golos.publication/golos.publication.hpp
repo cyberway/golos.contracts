@@ -24,18 +24,20 @@ class publication : public eosio::contract {
     void delete_post(account_name account, std::string permlink);
     void upvote(account_name voter, account_name author, std::string permlink, asset weight);
     void downvote(account_name voter, account_name author, std::string permlink, asset weight);
+    void unvote(account_name voter, account_name author, std::string permlink);
     void close_post();
     void close_post_timer();
+    void set_vote(account_name voter, account_name author, std::string permlink, asset weight);
     bool get_post(account_name account, std::string permlink, structures::post &post);
 
   private: // check battery limits
     void create_battery_user(account_name name);
 
-    void limit_posts(scope_name scope);
-    void limit_comments(scope_name scope);
-    void limit_of_votes(scope_name scope);
-    void posting_battery(scope_name scope);
-    void vesting_battery(scope_name scope, uint16_t persent_battery);
+    int64_t current_consumed(const structures::battery &battery, const structures::params_battery &params);
+    int64_t consume(structures::battery &battery, const structures::params_battery &params);
+
+    template<typename T>
+    void recovery_battery(scope_name scope, T structures::account_battery::* element, const structures::params_battery &params);
 };
 
 }

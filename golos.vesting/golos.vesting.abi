@@ -8,34 +8,26 @@
   ],
   "structs": [
     {
-      "name": "token_vesting",
+      "name": "balance_vesting",
       "base": "",
       "fields": [
         {
-          "name": "id",
-          "type": "uint64"
-        },
-        {
-          "name": "vesting",
+          "name": "supply",
           "type": "asset"
-        },
-        {
-          "name": "tokens",
-          "type": "asset"
+        }
+ 	{
+          "name": "issuers",
+          "type": "account_name[]"
         }
       ]
     },
     {
-      "name": "pair_tokens",
+      "name": "vesting_symbol",
       "base": "",
       "fields": [
         {
-          "name": "token",
-          "type": "asset"
-        },
-        {
           "name": "vesting",
-          "type": "asset"
+          "type": "symbol"
         }
       ]
     },
@@ -176,24 +168,6 @@
       ]
     },
     {
-      "name": "accrue_vesting",
-      "base": "",
-      "fields": [
-        {
-          "name": "sender",
-          "type": "account_name"
-        },
-        {
-          "name": "user",
-          "type": "account_name"
-        },
-        {
-          "name": "quantity",
-          "type": "asset"
-        }
-      ]
-    },
-    {
       "name": "delegate_vesting",
       "base": "transfer_vesting",
       "fields": [
@@ -229,16 +203,21 @@
           {"name":"owner", "type":"account_name"},
           {"name":"symbol", "type":"symbol"}
        ]
+    },
+    {
+       "name": "createvest",
+       "base": "",
+       "fields": [
+          {"name":"creator", "type":"account_name"},
+          {"name":"symbol", "type":"symbol"},
+          {"name":"issuers", "type":"account_name[]"}
+       ]
     }
   ],
   "actions": [
     {
       "name": "buyvg",
       "type": "transfer_vesting"
-    },
-    {
-      "name": "accruevg",
-      "type": "accrue_vesting"
     },
     {
       "name": "convertvg",
@@ -269,8 +248,8 @@
       "type": "hash"
     },
     {
-      "name": "createpair",
-      "type": "pair_tokens"
+      "name": "createvest",
+      "type": "createvest"
     },
     {
       "name": "open",
@@ -284,7 +263,7 @@
   "tables": [
     {
       "name": "vesting",
-      "type": "token_vesting",
+      "type": "balance_vesting",
       "index_type": "i64",
       "key_names": [
         "currency"
