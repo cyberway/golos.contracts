@@ -116,7 +116,6 @@ void publication::delete_post(account_name account, std::string permlink) {
     tables::post_table post_table(_self, account);
     tables::content_table content_table(_self, account);
     tables::vote_table vote_table(_self, account);
-    tables::voters_table voters_table(_self, account);
 
     structures::post posttable_obj;
 
@@ -137,11 +136,8 @@ void publication::delete_post(account_name account, std::string permlink) {
             contenttable_index.erase(contenttable_obj);
             auto votetable_index = vote_table.get_index<N(postid)>();
             auto votetable_obj = votetable_index.find(posttable_obj.id);
-            votetable_index.erase(votetable_obj);
-            auto voterstable_index = voters_table.get_index<N(postid)>();
-            auto voterstable_obj = voterstable_index.find(posttable_obj.id);
-            while (voterstable_obj != voterstable_index.end())
-                voterstable_obj = voterstable_index.erase(voterstable_obj);
+            while (votetable_obj != votetable_index.end())
+                votetable_obj = votetable_index.erase(votetable_obj);
         } else {
             eosio_assert(false, "You can't delete post, it can be only changed.");
         }
@@ -152,106 +148,25 @@ void publication::upvote(account_name voter, account_name author, std::string pe
     require_auth(voter);
     limit_of_votes(voter);
 
-    tables::vote_table vote_table(_self, author);
-    tables::voters_table voters_table(_self, author);
+//    eosio_assert(weight > 0, "The weight sign can't be negative.");
 
-    std::vector<structures::rshares> rshares;
-
-    structures::rshares rshares_obj{0, 0, 0, 0};
-
-    rshares.push_back(rshares_obj);
-
-    structures::post posttable_obj;
-
-    if (get_post(author, permlink, posttable_obj)) {
-        auto votetable_index = vote_table.get_index<N(postid)>();
-        auto votetable_obj = votetable_index.find(posttable_obj.id);
-        if (votetable_obj != votetable_index.end()) {
-            auto voterstable_index = voters_table.get_index<N(postid)>();
-            auto voterstable_obj = voterstable_index.find(posttable_obj.id);
-            while (voterstable_obj != voterstable_index.end() &&
-                   posttable_obj.id == voterstable_obj->post_id) {
-                eosio_assert(voter != voterstable_obj->voter,
-                             "You have already voted for this post.");
-                ++voterstable_obj;
-            }
-
-            voters_table.emplace(author, [&]( auto &item ) {
-                item.id = voters_table.available_primary_key();
-                item.post_id = posttable_obj.id;
-                item.voter = voter;
-            });
-
-            votetable_index.modify(votetable_obj, author, [&]( auto &item ) {
-               item.post_id = posttable_obj.id;
-               item.voter = voter;
-               item.percent = FIXED_CURATOR_PERCENT;
-               item.weight = weight;
-               item.time = now();
-               item.rshares = rshares;
-               ++item.count;
-            });
-        } else {
-            voters_table.emplace(author, [&]( auto &item ) {
-                item.id = voters_table.available_primary_key();
-                item.post_id = posttable_obj.id;
-                item.voter = voter;
-            });
-
-            vote_table.emplace(author, [&]( auto &item ) {
-               item.post_id = posttable_obj.id;
-               item.voter = voter;
-               item.percent = FIXED_CURATOR_PERCENT;
-               item.weight = weight;
-               item.time = now();
-               item.rshares = rshares;
-               ++item.count;
-            });
-        }
-    }
+    set_vote(voter, author, permlink, weight);
 }
 
 void publication::downvote(account_name voter, account_name author, std::string permlink, asset weight) {
     require_auth(voter);
 
-    tables::vote_table vote_table(_self, author);
-    tables::voters_table voters_table(_self, author);
+//    eosio_assert(weight < 0, "The weight sign can't be positive.");
 
-    std::vector<structures::rshares> rshares;
+    set_vote(voter, author, permlink, weight);
+}
 
-    structures::rshares rshares_obj{0, 0, 0, 0};
+void publication::unvote(account_name voter, account_name author, std::string permlink) {
+    require_auth(voter);
 
-    rshares.push_back(rshares_obj);
+//    eosio_assert(weight == 0, "The weight can be only zero.");
 
-    structures::post posttable_obj;
-
-    if (get_post(author, permlink, posttable_obj)) {
-        auto voterstable_index = voters_table.get_index<N(postid)>();
-        auto voterstable_obj = voterstable_index.find(posttable_obj.id);
-        while (voterstable_obj != voterstable_index.end() && posttable_obj.id == voterstable_obj->post_id) {
-            if (voter == voterstable_obj->voter) {
-                voterstable_index.erase(voterstable_obj);
-                break;
-            } else {
-                ++voterstable_obj;
-            }
-        }
-
-        eosio_assert(voterstable_obj != voterstable_index.end(),
-                     "You can't do down vote because previously you haven't voted for this post.");
-
-        auto votetable_index = vote_table.get_index<N(postid)>();
-        auto votetable_obj = votetable_index.find(posttable_obj.id);
-
-        votetable_index.modify(votetable_obj, author, [&]( auto &item ) {
-           item.voter = voter;
-           item.percent = FIXED_CURATOR_PERCENT;
-           item.weight = weight;
-           item.time = now();
-           item.rshares = rshares;
-           --item.count;
-        });
-    }
+    set_vote(voter, author, permlink, 0);
 }
 
 void publication::close_post() {
@@ -265,6 +180,50 @@ void publication::close_post_timer() {
     trx.actions.emplace_back(action{permission_level(_self, N(active)), _self, N(closepost), structures::st_hash{now()}});
     trx.delay_sec = CLOSE_POST_TIMER;
     trx.send(_self, _self);
+}
+
+void publication::set_vote(account_name voter, account_name author,
+                           std::string permlink, asset weight) {
+    tables::vote_table vote_table(_self, author);
+
+    structures::post posttable_obj;
+
+    std::vector<structures::rshares> rshares;
+
+    structures::rshares rshares_obj{0, 0, 0, 0};
+
+    rshares.push_back(rshares_obj);
+
+    if (get_post(author, permlink, posttable_obj)) {
+        auto votetable_index = vote_table.get_index<N(postid)>();
+        auto votetable_obj = votetable_index.find(posttable_obj.id);
+
+        while (votetable_obj != votetable_index.end()) {
+            if (voter == votetable_obj->voter) {
+                eosio_assert(weight != votetable_obj->weight, "Vote with the same weight has already existed.");
+                eosio_assert(votetable_obj->count != MAX_REVOTES, "You can't revote anymore.");
+                votetable_index.modify(votetable_obj, author, [&]( auto &item ) {
+                   item.percent = FIXED_CURATOR_PERCENT;
+                   item.weight = weight;
+                   item.time = now();
+                   item.rshares = rshares;
+                   ++item.count;
+                });
+                return;
+            }
+            ++votetable_obj;
+        }
+        vote_table.emplace(author, [&]( auto &item ) {
+           item.id = vote_table.available_primary_key();
+           item.post_id = posttable_obj.id;
+           item.voter = voter;
+           item.percent = FIXED_CURATOR_PERCENT;
+           item.weight = weight;
+           item.time = now();
+           item.rshares = rshares;
+           ++item.count;
+        });
+    }
 }
 
 bool publication::get_post(account_name account, std::string permlink, structures::post &post) {
