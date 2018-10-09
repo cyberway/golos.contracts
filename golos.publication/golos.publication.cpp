@@ -307,7 +307,7 @@ int64_t publication::current_consumed(const structures::battery &battery, const 
 int64_t publication::consume(structures::battery &battery, const structures::params_battery &params) {
     auto consumed = params.consume_battery + current_consumed(battery, params);
 
-    eosio_assert( (consumed < UPPER_BOUND), "Battery overrun" );
+    eosio_assert( (consumed < params.max_charge), "Battery overrun" );
 
     battery.charge = consumed;
     battery.renewal = time_point_sec(now());
@@ -317,9 +317,6 @@ int64_t publication::consume(structures::battery &battery, const structures::par
 
 int64_t publication::consume_allow_overusage(structures::battery &battery, const structures::params_battery &params) {
     auto consumed = params.consume_battery + current_consumed(battery, params);
-
-    if ((consumed - params.max_charge) > 0)
-        return consumed - params.max_charge;
 
     battery.charge = consumed;
     battery.renewal = time_point_sec(now());
