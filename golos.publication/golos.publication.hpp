@@ -35,6 +35,7 @@ class publication : public eosio::contract {
 
     int64_t current_consumed(const structures::battery &battery, const structures::params_battery &params);
     int64_t consume(structures::battery &battery, const structures::params_battery &params);
+    int64_t consume_allow_overusage(structures::battery &battery, const structures::params_battery &params);
 
     template<typename T>
     void recovery_battery(scope_name scope, T structures::account_battery::* element, const structures::params_battery &params);

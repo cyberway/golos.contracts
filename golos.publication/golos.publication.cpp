@@ -165,7 +165,7 @@ void publication::unvote(account_name voter, account_name author, std::string pe
 
 //    eosio_assert(weight == 0, "The weight can be only zero.");
 
-    set_vote(voter, author, permlink, 0);
+//    set_vote(voter, author, permlink, 0);
 }
 
 void publication::close_post() {
@@ -262,7 +262,7 @@ int64_t publication::current_consumed(const structures::battery &battery, const 
 int64_t publication::consume(structures::battery &battery, const structures::params_battery &params) {
     auto consumed = params.consume_battery + current_consumed(battery, params);
 
-    eosio_assert( (consumed < params.max_charge), "Battery overrun" );
+    eosio_assert( (consumed <= params.max_charge), "Battery overrun" );
 
     battery.charge = consumed;
     battery.renewal = time_point_sec(now());
@@ -287,7 +287,7 @@ void publication::recovery_battery(scope_name scope, T structures::account_batte
     auto account_battery = table.get();
     auto battery = account_battery.*element;
 
-    if (element == &structures::account_battery::limit_battery_posting)
+    if (element == &structures::account_battery::posting_battery)
         consume_allow_overusage(battery, params);
     else
         consume(battery, params);

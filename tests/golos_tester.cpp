@@ -119,5 +119,12 @@ fc::variant golos_tester::get_tbl_struct(name code, name scope, name tbl, uint64
     return data.empty() ? fc::variant() : abi.binary_to_variant(n, data, abi_serializer_max_time);
 }
 
+fc::variant golos_tester::get_tbl_struct_singleton(name code, name scope, name tbl, const abi_serializer& abi) const {
+    vector<char> data = get_row_by_account( code, scope, tbl, tbl );
+    if (data.empty())
+        std::cout << "\nData is empty\n" << std::endl;
+    return data.empty() ? fc::variant() : abi.binary_to_variant( "account_battery", data, abi_serializer_max_time );
+}
+
 
 }} // eosio::tesing
