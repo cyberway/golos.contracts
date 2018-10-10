@@ -1,0 +1,3 @@
+[submodule "golos.contracts"]
+	path = golos.contracts
+	url = https://github.com/GolosChain/golos.contracts
