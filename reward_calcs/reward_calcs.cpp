@@ -156,22 +156,36 @@ class forum : public eosio::contract {
         return (--pool);
     }
     
-    static fixp_t get_delta(fixp_t old_val, fixp_t new_val, const funcinfo& func) {
-
-        atmsp::machine<fixp_t> mchn;
-        func.code.to_machine(mchn);
-        
-        mchn.var[0] = std::min(old_val, FP(func.maxarg)); 
-        fixp_t old_fn = mchn.run();        
-        mchn.var[0] = std::min(new_val, FP(func.maxarg));
-        fixp_t new_fn = mchn.run();
-        
-        return (new_fn - old_fn);
+    void fill_depleted_pool(reward_pools& pools, eosio::asset quantity, reward_pools::const_iterator excluded) {
+        eosio_assert(quantity.amount >= 0, "forum::fill_depleted_pool: quantity.amount < 0");
+        if(quantity.amount == 0)
+            return;
+        auto choice = pools.end();
+        auto min_ratio = std::numeric_limits<fixp_t>::max();
+        for(auto pool = pools.begin(); pool != pools.end(); ++pool)
+            if((pool->state.funds.symbol == quantity.symbol) && (pool != excluded)) {
+                auto cur_ratio = pool->state.get_ratio();
+                if(cur_ratio <= min_ratio) {
+                    min_ratio = cur_ratio;
+                    choice = pool;
+                }
+            }
+        //sic. we don't need assert here
+        if(choice != pools.end())
+            pools.modify(*choice, _self, [&](auto &item){ item.state.funds += quantity; });
     }
     
     static fixp_t calc_1d(atmsp::machine<fixp_t>& machine, fixp_t arg) {
-        machine.var[0] = arg;
+        machine.var[0] = std::max(fixp_t(0), arg);
         return machine.run();
+    }
+    
+    static fixp_t get_delta(fixp_t old_val, fixp_t new_val, const funcinfo& func) {
+        atmsp::machine<fixp_t> mchn;
+        func.code.to_machine(mchn);        
+        fixp_t old_fn = calc_1d(mchn, std::min(old_val, FP(func.maxarg)));   
+        fixp_t new_fn = calc_1d(mchn, std::min(new_val, FP(func.maxarg)));        
+        return (new_fn - old_fn);
     }
    
     static fixp_t positive_safe_cast(base_t arg) {
@@ -267,21 +281,8 @@ public:
         if(_self != to)
             return;  
 
-        reward_pools pools(_self, _self);
-        
-        auto choice = pools.end();
-        auto min_ratio = std::numeric_limits<fixp_t>::max();
-        for(auto pool = pools.begin(); pool != pools.end(); ++pool)
-            if(pool->state.funds.symbol == quantity.symbol) {
-                auto cur_ratio = pool->state.get_ratio();
-                if(cur_ratio <= min_ratio) {
-                    min_ratio = cur_ratio;
-                    choice = pool;
-                }
-            }
-        //sic. we don't need assert here
-        if(choice != pools.end())
-            pools.modify(*choice, _self, [&](auto &item){ item.state.funds += quantity; });
+        reward_pools pools(_self, _self); 
+        fill_depleted_pool(pools, quantity, pools.end()); 
     }
     
     [[eosio::action]]
@@ -292,11 +293,8 @@ public:
         auto pool = pools.rbegin();
         eosio_assert(pool != pools.rend(), "forum::addmessage: [pools] is empty");
         auto cur_time = current_time();
-        eosio_assert(cur_time >= pool->created, "forum::addmessage: cur_time < pool.created");      
-         
-        constexpr auto max_counter_val = std::numeric_limits<counter_t>::max();
-        if(pool->state.msgs == max_counter_val)
-            eosio_assert(pool != pools.rend(), "forum::addmessage: pool->msgs == max_counter_val");
+        eosio_assert(cur_time >= pool->created, "forum::addmessage: cur_time < pool.created");
+        eosio_assert(pool->state.msgs < std::numeric_limits<counter_t>::max(), "forum::addmessage: pool->msgs == max_counter_val");
        
         messages msgs(_self, author);
         
@@ -383,8 +381,7 @@ public:
         
         atmsp::machine<fixp_t> reward_func;
         pool->rules.mainfunc.code.to_machine(reward_func);
-        reward_func.var[0] = std::min(FP(msg->state.netshares), FP(pool->rules.mainfunc.maxarg));
-        fixp_t sharesfn = reward_func.run();
+        fixp_t sharesfn = calc_1d(reward_func, std::min(FP(msg->state.netshares), FP(pool->rules.mainfunc.maxarg)));
         
         auto state = pool->state;
         
@@ -443,14 +440,8 @@ public:
         state.msgs--;      
         if(state.msgs == 0) {
             if(pool != --pools.end()) {//there is a pool after, so we can delete this one        
-                eosio_assert(state.funds.amount == unclaimed_rewards, "LOGIC ERROR! forum::payrewards: state.funds != unclaimed_rewards"); 
-                
-                if(state.funds.amount > 0)
-                    for(auto same_token_pool = pools.begin(); same_token_pool != pools.end(); ++same_token_pool)
-                        if((same_token_pool != pool) && (same_token_pool->state.funds.symbol == pool->state.funds.symbol)) {
-                            pools.modify(same_token_pool, _self, [&](auto &item) { item.state.funds += state.funds; });
-                            break;
-                        }                   
+                eosio_assert(state.funds.amount == unclaimed_rewards, "LOGIC ERROR! forum::payrewards: state.funds != unclaimed_rewards");                
+                fill_depleted_pool(pools, state.funds, pool);
                 pools.erase(pool);
                 pool_erased = true;             
             }

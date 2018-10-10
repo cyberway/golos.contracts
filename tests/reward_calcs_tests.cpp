@@ -37,7 +37,7 @@ struct message_data {
      
 constexpr struct {
     balance_data balance {130.0, 130.0};
-    pool_data pool {0.001, 130, -0.01, -0.01};
+    pool_data pool {0.001, 170, -0.01, -0.01};
     message_data message {-0.01, -0.01, -0.01, -0.01};   
 } delta;  
 
@@ -220,10 +220,17 @@ struct message {
     message(message_key k, double tokenprop_) : key(k), tokenprop(tokenprop_) {};
 };
 
+class cutted_func {
+    std::function<double(double)> _f;
+public:
+    cutted_func(std::function<double(double)>&& f) : _f(std::move(f)) {};
+    double operator()(double arg)const {return _f(std::max(0.0, arg));};
+};
+
 struct rewardrules {
-    std::function<double(double)> mainfunc;
-    std::function<double(double)> curationfunc;
-    std::function<double(double)> timepenalty;
+    cutted_func mainfunc;
+    cutted_func curationfunc;
+    cutted_func timepenalty;
     double curatorsprop;
     rewardrules(
         std::function<double(double)>&&  mainfunc_,
@@ -385,21 +392,25 @@ public:
         
         return ret;
     }
+    
+    void fill_depleted_pool(int64_t amount, size_t excluded) {
+        size_t choice = 0;
+        auto min_ratio = std::numeric_limits<double>::max();
+        for(size_t i = 0; i < _state.pools.size(); i++) 
+            if(i != excluded) {
+                double cur_ratio = _state.pools[i].get_ratio();
+                if(cur_ratio <= min_ratio) {
+                    min_ratio = cur_ratio;
+                    choice = i;
+                }
+            }
+        _state.pools[choice].funds += amount; 
+    }
          
     action_result add_funds_to_forum(int64_t amount) {
   
         BOOST_REQUIRE_MESSAGE(!_state.pools.empty(), "issue: _state.pools is empty");
-        size_t choice = 0;
-        auto min_ratio = std::numeric_limits<double>::max();
-        for(size_t i = 0; i < _state.pools.size(); i++) {
-            double cur_ratio = _state.pools[i].get_ratio();
-            if(cur_ratio <= min_ratio) {
-                min_ratio = cur_ratio;
-                choice = i;
-            }
-        }
-        _state.pools[choice].funds += amount; 
-        
+        fill_depleted_pool(amount, _state.pools.size());        
         
         eosio::chain::asset quantity(amount, _token_symbol);
         return push_action( _issuer, N(transfer), mvo()
@@ -473,7 +484,7 @@ public:
         for(auto& p : _state.pools)            
             for(auto& m : p.messages)
                 if(m.key == msg_key) {
-                    m.votes.emplace_back(vote{voter, static_cast<double>(weight) / static_cast<double>(ONE_HUNDRED_PERCENT), _state.balances[voter].vestamount});
+                    m.votes.emplace_back(vote{voter, std::min(static_cast<double>(weight) / static_cast<double>(ONE_HUNDRED_PERCENT), 1.0), _state.balances[voter].vestamount});
                     return ret;
                 }
         
@@ -535,7 +546,7 @@ public:
                     if(p.messages.size() == 0) {
                         auto itr_p_next = itr_p;
                         if((++itr_p_next) != _state.pools.end()) {                
-                           itr_p_next->funds += p.funds;
+                           fill_depleted_pool(p.funds, std::distance(_state.pools.begin(), itr_p));
                            _state.pools.erase(itr_p);
                         }  
                     }               
@@ -696,7 +707,6 @@ BOOST_FIXTURE_TEST_CASE(basic_tests, reward_calcs_tester) try {
         setrules({"x^2", bignum}, {"log2(x + 1.0)", bignum}, {"0", bignum}, 2500, 
         [](double x){ return x * x; }, [](double x){ return log2(x + 1.0); }, [](double x){ return 0.0; }));
   
-     
     BOOST_REQUIRE_EQUAL(success(), setrules({"x^2", static_cast<base_t>(sqrt(bignum))}, {"log2(x + 1.0)", bignum}, {"0", bignum}, 2500, 
         [](double x){ return x * x; }, [](double x){ return log2(x + 1.0); }, [](double x){ return 0.0; }));
     check("set second rule");            
@@ -711,11 +721,22 @@ BOOST_FIXTURE_TEST_CASE(basic_tests, reward_calcs_tester) try {
     check("new_votes-5a");
     BOOST_REQUIRE_EQUAL(success(), addvote(msg_keys[0], _users[2], 7000));
     check("new_votes7a");
-    BOOST_REQUIRE_EQUAL(success(), addvote(msg_keys[0], _users[3], 8000));
-    check("new_votes8a");
+    
+    BOOST_REQUIRE_EQUAL(success(), add_funds_to_forum(8000));
+    check("add_funds_to_forum 8");
+      
+    BOOST_REQUIRE_EQUAL(success(), addvote(msg_keys[0], _users[3], 18000));
+    check("new_votes18a");
+    
+    BOOST_REQUIRE_EQUAL(success(), add_funds_to_forum(9000));
+    check("add_funds_to_forum 9");  
           
     BOOST_REQUIRE_EQUAL(success(), addvote(msg_keys[1], _users[1], 5000));
     check("new_votes5b");
+    
+    BOOST_REQUIRE_EQUAL(success(), add_funds_to_forum(7000));
+    check("add_funds_to_forum 7");  
+    
     BOOST_REQUIRE_EQUAL(success(), addvote(msg_keys[1], _users[2], 7000));
     check("new_votes7b");
     BOOST_REQUIRE_EQUAL(success(), addvote(msg_keys[1], _users[3], 8000));
