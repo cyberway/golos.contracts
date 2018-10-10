@@ -95,6 +95,7 @@ void control::regwitness(account_name witness, eosio::public_key key, string url
             w.active = true;
         };
     });
+    update_auths();
 }
 
 // TODO: special action to free memory?
@@ -108,6 +109,7 @@ void control::unregwitness(account_name witness) {
         };
     }, false);
     eosio_assert(exists, "witness not found");
+    update_auths();
 }
 
 // Note: if not weighted, it's possible to pass all witnesses in vector like in BP actions
@@ -152,31 +154,49 @@ void control::unvotewitn(account_name voter, account_name witness) {
     apply_vote_weight(voter, witness, false);
 }
 
-void control::updatetop(account_name from, account_name to, asset amount) {
-    // cannot be called directly
+void control::changevest(account_name owner, asset diff) {
+    if (!_has_props) return;        // allow silent exit if changing vests before community created
+    require_auth(config::vesting_name);
+    eosio_assert(diff.amount != 0, "diff is 0. something broken");          // in normal conditions sender must guarantee it
+    eosio_assert(diff.symbol == _token, "wrong symbol. something broken");  // in normal conditions sender must guarantee it
+    change_voter_vests(owner, diff.amount);
 }
 
 
 ////////////////////////////////////////////////////////////////////////////////
 
-void control::apply_vote_weight(account_name voter, account_name witness, bool add) {
-    witness_tbl wtbl(_self, _token);
-    auto w = wtbl.find(witness);
-    if (w != wtbl.end()) {
-        golos::vesting vc(config::vesting_name);
-        const auto power = vc.get_account_vesting(voter, _token).amount;    //get_balance accepts symbol_name
-        if (power > 0) {
-            wtbl.modify(w, witness, [&](auto& wi) {
-                wi.total_weight = wi.total_weight + (add ? power : -power);
-            });
-            update_auths();
-        } else {
-            print("apply_vote_weight: voter with 0 power has no effect\n");
-        }
-    } else {
-        print("apply_vote_weight: witness not found\n");
-        // just skip unregistered witnesses (incl. non existing accs) for now
+void control::change_voter_vests(account_name voter, share_type diff) {
+    if (!diff) return;
+    witness_vote_tbl tbl(_self, voter);
+    auto itr = tbl.find(_owner);
+    bool exists = itr != tbl.end();
+    if (exists && itr->witnesses.size()) {
+        update_witnesses_weights(itr->witnesses, diff);
     }
+}
+
+void control::apply_vote_weight(account_name voter, account_name witness, bool add) {
+    golos::vesting vc(config::vesting_name);
+    const auto power = vc.get_account_vesting(voter, _token).amount;    //get_balance accepts symbol_name
+    if (power > 0) {
+        update_witnesses_weights({witness}, add ? power : -power);
+    }
+}
+
+void control::update_witnesses_weights(vector<account_name> witnesses, share_type diff) {
+    witness_tbl wtbl(_self, _token);
+    for (const auto& witness : witnesses) {
+        auto w = wtbl.find(witness);
+        if (w != wtbl.end()) {
+            wtbl.modify(w, witness, [&](auto& wi) {
+                wi.total_weight += diff;            // TODO: additional checks of overflow? (not possible normally)
+            });
+        } else {
+            // just skip unregistered witnesses (incl. non existing accs) for now
+            print("apply_vote_weight: witness not found\n");
+        }
+    }
+    update_auths();
 }
 
 void control::update_auths() {
@@ -249,4 +269,4 @@ APP_DOMAIN_ABI(golos::control,
     (create)(updateprops)
     (attachacc)(detachacc)
     (regwitness)(unregwitness)
-    (votewitness)(unvotewitn)(updatetop))
+    (votewitness)(unvotewitn)(changevest))

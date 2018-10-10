@@ -16,12 +16,12 @@ class golos_ctrl_tester : public golos_tester {
 public:
     golos_ctrl_tester(): golos_tester(N(golos.ctrl), symbol(6,"TST").value()) {
         create_accounts({_code, BLOG, N(witn1), N(witn2), N(witn3), N(witn4), N(witn5), _alice, _bob, _carol,
-            N(golos.vest), N(eosio.token)});
+            _vesting_name, N(eosio.token)});
         produce_block();
 
         install_contract(_code, contracts::ctrl_wasm(), contracts::ctrl_abi(), abi_ser);
         install_contract(N(eosio.token), contracts::token_wasm(), contracts::token_abi(), abi_ser_token);
-        install_contract(N(golos.vest), contracts::vesting_wasm(), contracts::vesting_abi(), abi_ser_vesting);
+        install_contract(_vesting_name, contracts::vesting_wasm(), contracts::vesting_abi(), abi_ser_vesting);
 
     }
 
@@ -106,24 +106,24 @@ public:
         );
     }
 
-    // void update_top(symbol_type token) {
-    //     push_action(_code, N(updatetop), _sys, mvo()("domain", token));
-    // }
+    action_result change_vests(symbol_type token, account_name owner, asset diff) {
+        return push_action(owner, N(changevest), mvo()("domain", token)("owner", owner)("diff", diff));
+    }
 
     // vesting actions
     action_result create_vesting(account_name creator, symbol_type symbol/*, vector<account_name> issuers*/) {
-        return push_action(N(golos.vest), creator, N(createvest),
+        return push_action(_vesting_name, creator, N(createvest),
             mvo()("creator", creator)("symbol", symbol)("issuers", vector<account_name>()));
     }
     action_result open_vesting(account_name owner, symbol_type symbol, account_name payer) {
-        return push_action(N(golos.vest), payer, N(open), mvo()
+        return push_action(_vesting_name, payer, N(open), mvo()
             ("owner", owner)
             ("symbol", symbol)
             ("ram_payer", payer)
         );
     }
     action_result accrue_vesting(account_name sender, account_name user, asset quantity) {
-        return push_action(N(golos.vest), sender, N(accruevg), mvo()
+        return push_action(_vesting_name, sender, N(accruevg), mvo()
             ("sender", sender)
             ("user", user)
             ("quantity", quantity)
@@ -171,7 +171,7 @@ public:
     }
 
     fc::variant get_account_vesting(account_name acc, symbol_type sym) const {
-        return get_tbl_struct(N(golos.vest), acc, N(balances), sym.to_symbol_code(), "user_balance", abi_ser_vesting);
+        return get_tbl_struct(_vesting_name, acc, N(balances), sym.to_symbol_code(), "user_balance", abi_ser_vesting);
     }
 
 
@@ -210,6 +210,7 @@ public:
     const account_name _carol = N(carol);
     const uint64_t _w[5] = {N(witn1), N(witn2), N(witn3), N(witn4), N(witn5)};
     const size_t _n_w = sizeof(_w) / sizeof(_w[0]);
+    const account_name _vesting_name = N(golos.vest);
 
     vector<account_name> witness_vect(size_t n) const {
         vector<account_name> r;
@@ -304,10 +305,9 @@ public:
     }
 
     void prepare_balances() {
-        auto vest_contract = N(golos.vest);
         BOOST_CHECK_EQUAL(success(), create_token(_bob, dasset(100500)));
         BOOST_CHECK_EQUAL(success(), create_vesting(_bob, _token));
-        BOOST_CHECK_EQUAL(success(), open_vesting(vest_contract, _token, vest_contract));
+        BOOST_CHECK_EQUAL(success(), open_vesting(_vesting_name, _token, _vesting_name));
         vector<std::pair<uint64_t,double>> amounts = {
             {BLOG, 1000}, {_alice, 800}, {_bob, 700}, {_carol, 600},
             {_w[0], 100}, {_w[1], 200}, {_w[2], 300}, {_w[3], 400}, {_w[4], 500}
@@ -315,7 +315,7 @@ public:
         for (const auto& p : amounts) {
             BOOST_CHECK_EQUAL(success(), open_vesting(p.first, _token, p.first));
             BOOST_CHECK_EQUAL(success(), issue(_bob, p.first, dasset(p.second), "issue"));
-            BOOST_CHECK_EQUAL(success(), transfer(p.first, vest_contract, dasset(p.second), "buy vesting"));
+            BOOST_CHECK_EQUAL(success(), transfer(p.first, _vesting_name, dasset(p.second), "buy vesting"));
         };
 
         BOOST_CHECK_EQUAL(dasset(123), asset::from_string("123.000000 TST"));
@@ -511,9 +511,36 @@ BOOST_FIXTURE_TEST_CASE(update_params_test, golos_ctrl_tester) try {
     BOOST_TEST_MESSAGE("--- check that restored witness_supermajority in effect");
     BOOST_CHECK_EQUAL(success(), set_props(w, _token, mvo(p)("witness_supermajority",2)));
 
+    BOOST_TEST_MESSAGE("--- check that unregistered witness removed from miltisig");
+    BOOST_CHECK_EQUAL(success(), unreg_witness(_token, _w[0]));
+    auto top = witness_vect(3); // returns w3,w2,w1
+    BOOST_CHECK_NE(success(), set_props(top, _token, mvo(p)("witness_supermajority",0)));
+    top.erase(top.end() - 1);   // remove w1
+    BOOST_CHECK_EQUAL(success(), set_props(top, _token, mvo(p)("witness_supermajority",0)));
+
 } FC_LOG_AND_RETHROW()
 
-BOOST_FIXTURE_TEST_CASE(vesting_notify_test, golos_ctrl_tester) try {
+BOOST_FIXTURE_TEST_CASE(change_vesting_test, golos_ctrl_tester) try {
+    BOOST_TEST_MESSAGE("Change-vesting notification");
+    BOOST_TEST_MESSAGE("--- prepare");
+    prepare(step_vote_witnesses);
+
+    BOOST_TEST_MESSAGE("--- fail on direct action call");
+    BOOST_CHECK_NE(success(), change_vests(_token, BLOG, dasset(5)));
+    BOOST_CHECK_NE(success(), change_vests(_token, _bob, dasset(-5)));
+    produce_block();
+
+    BOOST_TEST_MESSAGE("--- witness weight change owhenn adding vesting");
+    auto wp = mvo()("name","witn1")("key",_test_key)("url","localhost")("active",true);
+    CHECK_EQUAL_OBJECTS(get_witness(_w[0]), wp("total_weight",(800+700+100)*1e6));
+    CHECK_MATCHING_OBJECT(get_witness(_w[1]), wp("total_weight",(800)*1e6)("name","witn2"));
+    BOOST_CHECK_EQUAL(success(), issue(_bob, _alice, dasset(100), "issue"));
+    BOOST_CHECK_EQUAL(success(), transfer(_alice, _vesting_name, dasset(100), "buy vesting"));
+    CHECK_EQUAL_OBJECTS(get_witness(_w[0]), wp("total_weight",(800+700+100+100)*1e6)("name","witn1"));
+    CHECK_MATCHING_OBJECT(get_witness(_w[1]), wp("total_weight",(800+100)*1e6)("name","witn2"));
+    produce_block();
+
+    // TODO: check decreasing vesting and paths, other than `issue`+`transfer`
 
 } FC_LOG_AND_RETHROW()
 

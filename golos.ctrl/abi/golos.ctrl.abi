@@ -94,13 +94,12 @@
             ]
         },
         {
-            "name": "updatetop",
+            "name": "changevest",
             "base": "",
             "fields": [
                 {"type": "symbol", "name": "domain"}
-                {"type": "account_name", "name": "from"},
-                {"type": "account_name", "name": "to"},
-                {"type": "asset", "name": "amount"}
+                {"type": "account_name", "name": "owner"},
+                {"type": "asset", "name": "diff"}
             ]
         },
         {
@@ -171,8 +170,8 @@
             "ricardian_contract": ""
         },
         {
-            "name": "updatetop",
-            "type": "updatetop",
+            "name": "changevest",
+            "type": "changevest",
             "ricardian_contract": ""
         },
         {

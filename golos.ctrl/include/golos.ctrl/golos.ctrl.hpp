@@ -9,6 +9,7 @@
 namespace golos {
 
 using namespace eosio;
+using share_type = int64_t;
 
 
 struct [[eosio::table]] properties {
@@ -106,7 +107,7 @@ public:
         , _token(token)
         , _props_tbl(_self, token)
     {
-        props(action == N(create));
+        props(action == N(create) || action == N(changevest));
     };
 
     [[eosio::action]] void create(account_name owner, properties props);
@@ -121,7 +122,7 @@ public:
     [[eosio::action]] void votewitness(account_name voter, account_name witness, uint16_t weight = 10000);
     [[eosio::action]] void unvotewitn(account_name voter, account_name witness);
 
-    [[eosio::action]] void updatetop(account_name from, account_name to, asset amount); // TODO: it's easier to receive final balances
+    [[eosio::action]] void changevest(account_name owner, asset diff);
 
     vector<account_name> top_witnesses();
     vector<witness_info> top_witness_info();  //internal
@@ -158,7 +159,9 @@ private:
         return upsert_tbl<T>(_token, _owner, key, std::forward<F&&>(get_update_fn), allow_insert);
     }
 
+    void change_voter_vests(account_name voter, share_type diff);
     void apply_vote_weight(account_name voter, account_name witness, bool add);
+    void update_witnesses_weights(vector<account_name> witnesses, share_type diff);
     void update_auths();
 };
 

@@ -41,6 +41,7 @@ protected:
     const name _scope;
 
 public:
+    golos_tester(): tester() {};
     golos_tester(name code, name scope): tester(), _code(code), _scope(scope) {};
 
     void install_contract(account_name acc, const std::vector<uint8_t>& wasm, const std::vector<char>& abi,

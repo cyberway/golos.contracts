@@ -8,9 +8,9 @@ class vesting : public eosio::contract {
   public:
     vesting(account_name self) : contract(self)  {}
     void apply(uint64_t code, uint64_t action);
-    
+
     void on_transfer(account_name from, account_name  to, asset quantity, std::string memo);
-    
+
     void convert_vesting(account_name sender, account_name recipient, asset quantity);
     void cancel_convert_vesting(account_name sender, asset type);
     void delegate_vesting(account_name sender, account_name recipient, asset quantity, uint16_t percentage_deductions);
@@ -25,7 +25,8 @@ class vesting : public eosio::contract {
 
   private:
     void accrue_vesting(account_name sender, account_name user, asset quantity);
-    
+
+    void notify_balance_change(account_name owner, asset diff);
     void sub_balance(account_name owner, asset value);
     void add_balance(account_name owner, asset value, account_name ram_payer);
     const bool bool_asset(const asset &obj) const;
@@ -41,7 +42,7 @@ class vesting : public eosio::contract {
 asset vesting::get_account_vesting(account_name account, symbol_type sym)const {
     tables::account_table balances(_self, account);
     auto balance = balances.find(sym.name());
-    
+
     if (balance != balances.end())
         return balance->vesting;
 
