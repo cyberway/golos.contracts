@@ -107,7 +107,7 @@ public:
         , _token(token)
         , _props_tbl(_self, token)
     {
-        props(action == N(create));
+        props(action == N(create) || action == N(changevest));
     };
 
     [[eosio::action]] void create(account_name owner, properties props);
@@ -122,7 +122,7 @@ public:
     [[eosio::action]] void votewitness(account_name voter, account_name witness, uint16_t weight = 10000);
     [[eosio::action]] void unvotewitn(account_name voter, account_name witness);
 
-    [[eosio::action]] void updatetop(account_name from, account_name to, asset amount); // TODO: it's easier to receive final balances
+    [[eosio::action]] void changevest(account_name owner, asset diff);
 
     vector<account_name> top_witnesses();
     vector<witness_info> top_witness_info();  //internal

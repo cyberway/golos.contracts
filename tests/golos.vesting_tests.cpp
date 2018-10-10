@@ -1,11 +1,8 @@
-#include <boost/test/unit_test.hpp>
-#include <eosio/testing/tester.hpp>
-#include <eosio/chain/abi_serializer.hpp>
+#include "golos_tester.hpp"
+#include "contracts.hpp"
 #include <Runtime/Runtime.h>
 
 #include <fc/variant_object.hpp>
-
-#include "contracts.hpp"
 
 using namespace eosio::testing;
 using namespace eosio;
@@ -16,32 +13,19 @@ using namespace std;
 
 using mvo = fc::mutable_variant_object;
 
-class golos_vesting_tester : public tester {
+class golos_vesting_tester : public golos_tester {
 public:
 
-    golos_vesting_tester() {
-        produce_blocks( 2 );
+    golos_vesting_tester(): golos_tester() {
+        produce_blocks(2);
 
-        create_accounts( { N(sania), N(pasha), N(golos.vest), N(eosio.token), N(golos.emiss), N(golos.issuer) } );
-        produce_blocks( 2 );
+        create_accounts( { N(sania), N(pasha), N(golos.vest), N(golos.ctrl), N(eosio.token), N(golos.emiss), N(golos.issuer) } );
+        produce_blocks(2);
 
-        set_code(N(eosio.token), contracts::token_wasm());
-        set_abi (N(eosio.token), contracts::token_abi().data());
-
-        set_code(N(golos.vest), contracts::vesting_wasm());
-        set_abi (N(golos.vest), contracts::vesting_abi().data());
-
-        produce_blocks();
-
-        const auto& account_token = control->db().get<account_object,by_name>( N(eosio.token) );
-        abi_def abi_t;
-        BOOST_REQUIRE_EQUAL(abi_serializer::to_abi(account_token.abi, abi_t), true);
-        abi_ser_t.set_abi(abi_t, abi_serializer_max_time);
-
-        const auto& account_vesting = control->db().get<account_object,by_name>( N(golos.vest) );
-        abi_def abi_v;
-        BOOST_REQUIRE_EQUAL(abi_serializer::to_abi(account_vesting.abi, abi_v), true);
-        abi_ser_v.set_abi(abi_v, abi_serializer_max_time);
+        install_contract(N(eosio.token), contracts::token_wasm(), contracts::token_abi(), abi_ser_t);
+        install_contract(N(golos.vest), contracts::vesting_wasm(), contracts::vesting_abi(), abi_ser_v);
+        abi_serializer t;
+        install_contract(N(golos.ctrl), contracts::ctrl_wasm(), contracts::ctrl_abi(), t);
     }
 
     action_result push_action( const account_name& signer, const action_name &name, const variant_object &data ) {

@@ -95,6 +95,7 @@ void control::regwitness(account_name witness, eosio::public_key key, string url
             w.active = true;
         };
     });
+    update_auths();
 }
 
 // TODO: special action to free memory?
@@ -108,6 +109,7 @@ void control::unregwitness(account_name witness) {
         };
     }, false);
     eosio_assert(exists, "witness not found");
+    update_auths();
 }
 
 // Note: if not weighted, it's possible to pass all witnesses in vector like in BP actions
@@ -152,13 +154,12 @@ void control::unvotewitn(account_name voter, account_name witness) {
     apply_vote_weight(voter, witness, false);
 }
 
-void control::updatetop(account_name from, account_name to, asset amount) {
-    // cannot be called directly
-    // it's notification, so proper sender must be checked earlier in ABI macro.
-    // asset symbol can be checked too, but in normal conditions sender must guarantee it
-    auto change = amount.amount;
-    change_voter_vests(to, change);
-    change_voter_vests(from, -change);
+void control::changevest(account_name owner, asset diff) {
+    if (!_has_props) return;        // allow silent exit if changing vests before community created
+    require_auth(config::vesting_name);
+    eosio_assert(diff.amount != 0, "diff is 0. something broken");          // in normal conditions sender must guarantee it
+    eosio_assert(diff.symbol == _token, "wrong symbol. something broken");  // in normal conditions sender must guarantee it
+    change_voter_vests(owner, diff.amount);
 }
 
 
@@ -268,4 +269,4 @@ APP_DOMAIN_ABI(golos::control,
     (create)(updateprops)
     (attachacc)(detachacc)
     (regwitness)(unregwitness)
-    (votewitness)(unvotewitn)(updatetop))
+    (votewitness)(unvotewitn)(changevest))

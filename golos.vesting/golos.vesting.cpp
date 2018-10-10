@@ -44,31 +44,31 @@ void vesting::on_transfer(account_name from, account_name  to, asset quantity, s
     if(_self != from) // TODO account golos.vesting can not buy vesting
         require_auth(from);
     else return;
-    
+
     eosio_assert(from != to, "cannot transfer to self");
     eosio_assert(is_account(to), "to account does not exist");
     eosio_assert(quantity.is_valid(), "invalid quantity");
     eosio_assert(quantity.amount > 0, "must transfer positive quantity");
-    
+
     tables::vesting_table table_vesting(_self, _self);
     auto vesting = table_vesting.find(quantity.symbol.name());
     eosio_assert(vesting != table_vesting.end(), "Token not found");
-    
+
     bool from_issuer = std::find(vesting->issuers.begin(), vesting->issuers.end(), from) != vesting->issuers.end();
-    
+
     asset converted(0, quantity.symbol);
 
     if(!from_issuer || !memo.empty())
     {
-        converted = convert_to_vesting(quantity, *vesting);   
-        table_vesting.modify(vesting, 0, [&](auto& item) { item.supply += converted; });    
+        converted = convert_to_vesting(quantity, *vesting);
+        table_vesting.modify(vesting, 0, [&](auto& item) { item.supply += converted; });
         require_recipient(from);
         auto payer = has_auth(to) ? to : from;
         add_balance(from, converted, payer);
     }
-    
+
     if(from_issuer && !memo.empty())
-        accrue_vesting(from, string_to_name(memo.c_str()), converted); 
+        accrue_vesting(from, string_to_name(memo.c_str()), converted);
 }
 
 void vesting::accrue_vesting(account_name sender, account_name user, asset quantity) {
@@ -100,7 +100,7 @@ void vesting::accrue_vesting(account_name sender, account_name user, asset quant
         summary_delegate += delegates_award;
         ++it_index_user;
     }
-    
+
     sub_balance(sender, quantity);
     add_balance(user, quantity - summary_delegate, sender);
 }
@@ -311,14 +311,14 @@ void vesting::calculate_delegate_vesting() {
     require_auth(_self);
     tables::return_delegate_table table_delegate_vesting(_self, _self);
     auto index = table_delegate_vesting.get_index<N(date)>();
-    for (auto obj = index.cbegin(); obj != index.cend(); ) {
+    for (auto obj = index.cbegin(); obj != index.cend();) {
         if (obj->date > time_point_sec(now()))
             break;
 
         tables::account_table account(_self, obj->recipient);
         auto balance = account.find(obj->amount.symbol.name());
         eosio_assert(balance != account.end(), "Not found balance token vesting");
-        account.modify(balance, 0, [&](auto &item){
+        account.modify(balance, 0, [&](auto& item){
             item.vesting += obj->amount;
         });
 
@@ -349,26 +349,36 @@ void vesting::close(account_name owner, symbol_type symbol) {
     account.erase( it );
 }
 
+
+void vesting::notify_balance_change(account_name owner, asset diff) {
+    action(
+        permission_level{_self, N(active)},
+        CTRL_CONTRACT,
+        N(changevest),
+        std::make_tuple(diff.symbol, owner, diff)   // TODO: asset is enough, but ctrl uses symbol (1st arg) to detect app
+    ).send();
+}
+
 void vesting::sub_balance(account_name owner, asset value) {
     tables::account_table account(_self, owner);
-
     const auto& from = account.get(value.symbol.name(), "no balance object found");
-
     eosio_assert(from.vesting >= value, "overdrawn balance");
 
-    account.modify(from, 0, [&]( auto& a) {
+    account.modify(from, 0, [&](auto& a) {
         a.vesting -= value;
-    });  
+    });
+    notify_balance_change(owner, -value);
 }
 
 void vesting::add_balance(account_name owner, asset value, account_name ram_payer) {
     tables::account_table account(_self, owner);
     auto to = account.find(value.symbol.name());
     eosio_assert(to != account.end(), "Not found balance token vesting");
-    
-    account.modify( to, 0, [&]( auto& a ) {
+
+    account.modify(to, 0, [&](auto& a) {
         a.vesting += value;
     });
+    notify_balance_change(owner, value);
 }
 
 const bool vesting::bool_asset(const asset &obj) const {

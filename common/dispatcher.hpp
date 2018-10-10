@@ -62,8 +62,8 @@ bool execute_action(uint64_t action, void (Q::*func)(Args...)) {
             if (code == self || action == N(onerror)) {                                                                          \
                 switch (action) {                                                                                                \
                     APP_DOMAIN_API(TYPENAME, MEMBERS)                                                                            \
-                    default:                                                                                                     \
-                        eosio_assert(false, "invalid action");                                                                   \
+                    /*default:                                                                                                     \
+                        eosio_assert(false, "invalid action");*/                                                                   \
                     break;                                                                                                       \
                 }                                                                                                                \
                 /* does not allow destructor of thiscontract to run: eosio_exit(0); */                                           \

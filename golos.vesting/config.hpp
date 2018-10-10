@@ -18,3 +18,5 @@
 
 //------------------------------------------
 //TODO:? it seems like most of this stuff should be in vesting_info
+
+#define CTRL_CONTRACT N(golos.ctrl)
