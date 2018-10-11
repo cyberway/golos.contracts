@@ -1,4 +1,5 @@
 #define UNIT_TEST_ENV
+#include "golos_tester.hpp"
 #include <boost/test/unit_test.hpp>
 #include <eosio/testing/tester.hpp>
 #include <eosio/chain/abi_serializer.hpp>
@@ -7,14 +8,15 @@
 #include <Runtime/Runtime.h> 
 #include <fc/variant_object.hpp>
 #include "contracts.hpp"
-
 #include "../reward_calcs/types.h"
 #include "../reward_calcs/config.h"
-
+using namespace fixed_point_utils;
 #define PRECESION 0
 #define TOKEN_NAME "GOLOS"
 constexpr int64_t MAXTOKENPROB = 5000;
+constexpr auto MAX_ARG = static_cast<double>(std::numeric_limits<fixp_t>::max()); 
 using namespace golos::config;
+
  
 struct balance_data {
     double tokenamount = 0.0; 
@@ -36,8 +38,8 @@ struct message_data {
 };   
      
 constexpr struct {
-    balance_data balance {130.0, 130.0};
-    pool_data pool {0.001, 170, -0.01, -0.01};
+    balance_data balance {3.0, 3.0};
+    pool_data pool {0.001, 10, -0.01, -0.01};
     message_data message {-0.01, -0.01, -0.01, -0.01};   
 } delta;  
 
@@ -164,7 +166,7 @@ std::ostream& operator<< (std::ostream& os, const statemap& rhs) {
     return os; 
 }   
 
-class extended_tester : public tester {  
+class extended_tester : public golos_tester {  
     fc::microseconds _cur_time;
     void update_cur_time() { _cur_time = control->head_block_time().time_since_epoch();};
     
@@ -222,9 +224,10 @@ struct message {
 
 class cutted_func {
     std::function<double(double)> _f;
+    double _maxarg;
 public:
-    cutted_func(std::function<double(double)>&& f) : _f(std::move(f)) {};
-    double operator()(double arg)const {return _f(std::max(0.0, arg));};
+    cutted_func(std::function<double(double)>&& f, double maxarg) : _f(std::move(f)), _maxarg(maxarg) {};
+    double operator()(double arg)const {return _f(std::min(std::max(0.0, arg), _maxarg));};
 };
 
 struct rewardrules {
@@ -233,9 +236,9 @@ struct rewardrules {
     cutted_func timepenalty;
     double curatorsprop;
     rewardrules(
-        std::function<double(double)>&&  mainfunc_,
-        std::function<double(double)>&& curationfunc_,
-        std::function<double(double)>&& timepenalty_,    
+        cutted_func&&  mainfunc_,
+        cutted_func&& curationfunc_,
+        cutted_func&& timepenalty_,  
         double curatorsprop_) :   
              
        
@@ -305,31 +308,19 @@ protected:
     statemap _res;
     state _state;
     
-public: 
-    reward_calcs_tester() : _token_symbol(PRECESION, TOKEN_NAME),
-        _forum_name(N(reward.calcs)), _issuer(N(issuer.acc)),
-        _users{ N(alice),  N(alice1),  N(alice2), N(alice3), N(alice4), N(alice5),
-                N(bob), N(bob1), N(bob2), N(bob3), N(bob4), N(bob5),
-                N(why), N(has), N(my), N(imagination), N(become), N(poor) } {
-        step(2); 
-        create_accounts({_forum_name});
-        create_accounts({_issuer});
-        create_accounts({vesting_name}); 
-        create_accounts({N(eosio.token)});
-        create_accounts(_users); 
-        step(2);  
+    void init(int64_t issuer_funds, int64_t user_vesting_funds) {
+        BOOST_TEST_MESSAGE("init: issuer_funds = " << static_cast<double>(issuer_funds) << ", user_vesting_funds = " << static_cast<double>(user_vesting_funds));
         
-        setup_code(_forum_name, contracts::reward_calcs_wasm(), contracts::reward_calcs_abi());
-        setup_code(N(eosio.token), contracts::token_wasm(), contracts::token_abi());
-        setup_code(vesting_name, contracts::vesting_wasm(), contracts::vesting_abi());
-         
         BOOST_REQUIRE_EQUAL(success(), push_action( N(eosio.token), N(create), 
-            mvo()( "issuer", _issuer)( "maximum_supply", eosio::chain::asset(2000000000000, _token_symbol)), N(eosio.token)));
+            mvo()
+                ( "issuer", _issuer)
+                ( "maximum_supply", eosio::chain::asset(issuer_funds + (_users.size() * user_vesting_funds), _token_symbol)), 
+            N(eosio.token)));
             
         step();     
             
         BOOST_REQUIRE_EQUAL(success(), push_action(_issuer, N(issue), 
-            mvo()( "to", _issuer)( "quantity", eosio::chain::asset(500000000000, _token_symbol))
+            mvo()( "to", _issuer)( "quantity", eosio::chain::asset(issuer_funds, _token_symbol))
             ( "memo", "HERE COULD BE YOUR ADVERTISEMENT"), N(eosio.token)));
        
        step();   
@@ -361,12 +352,35 @@ public:
             ( "ram_payer", u), 
             vesting_name));
             step(); 
-            add_funds_to(u, 500000);
-            step();   
-            buy_vesting_for(u, 500000);
+            BOOST_REQUIRE_EQUAL(success(), add_funds_to(u, user_vesting_funds));
+            step();
+            BOOST_REQUIRE_EQUAL(success(), buy_vesting_for(u, user_vesting_funds));
             step();   
         }
-        check();      
+        check();   
+    }
+    
+public: 
+    reward_calcs_tester() : _token_symbol(PRECESION, TOKEN_NAME),
+        _forum_name(N(reward.calcs)), _issuer(N(issuer.acc)),
+        _users{ N(alice),  N(alice1),  N(alice2), N(alice3), N(alice4), N(alice5),
+                N(bob), N(bob1), N(bob2), N(bob3), N(bob4), N(bob5),
+                N(why), N(has), N(my), N(imagination), N(become), N(poor) } {
+        step(2); 
+        create_accounts({_forum_name});
+        create_accounts({_issuer});
+        create_accounts({vesting_name}); 
+        create_accounts({N(eosio.token)});
+        create_accounts({N(golos.ctrl)});
+        create_accounts(_users); 
+        step(2);  
+        
+        setup_code(_forum_name, contracts::reward_calcs_wasm(), contracts::reward_calcs_abi());
+        setup_code(N(eosio.token), contracts::token_wasm(), contracts::token_abi());
+        setup_code(vesting_name, contracts::vesting_wasm(), contracts::vesting_abi());
+        
+        abi_serializer t;
+        install_contract(N(golos.ctrl), contracts::ctrl_wasm(), contracts::ctrl_abi(), t);
     }
     
     action_result add_funds_to(account_name user, int64_t amount) {
@@ -462,7 +476,11 @@ public:
             auto rows = get_all_rows(_forum_name, _forum_name, N(rewardpools), false);
             auto created = _serializers[_forum_name].binary_to_variant("rewardpool", *rows.rbegin(), abi_serializer_max_time)["created"].as<uint64_t>();        
             _state.pools.emplace_back(rewardpool(created, 
-            rewardrules(std::move(mainfunc_), std::move(curationfunc_), std::move(timepenalty_), static_cast<double>(curatorsprop) / static_cast<double>(ONE_HUNDRED_PERCENT))));
+            rewardrules(
+            {std::move(mainfunc_), static_cast<double>(mainfunc.maxarg)}, 
+            {std::move(curationfunc_), static_cast<double>(curationfunc.maxarg)}, 
+            {std::move(timepenalty_), static_cast<double>(timepenalty.maxarg)}, 
+            static_cast<double>(curatorsprop) / static_cast<double>(ONE_HUNDRED_PERCENT))));
             _state.pools.back().funds += unclaimed_funds;
         }
         return ret;
@@ -601,9 +619,12 @@ public:
                     netshares += currshares;                    
                     if(v.weight > 0.0)
                         voteshares += currshares;                    
-                }                
+                }
+                absshares  = std::min(MAX_ARG, absshares);
+                netshares  = std::min(MAX_ARG, netshares);
+                voteshares = std::min(MAX_ARG, voteshares);          
                 s.set_message(m.key, {absshares, netshares, voteshares, p.rules.curationfunc(voteshares)});           
-                pool_rshares_sum += netshares;               
+                pool_rshares_sum = std::min(MAX_ARG, netshares + pool_rshares_sum);//+= netshares;               
                 pool_rsharesfn_sum += p.rules.mainfunc(netshares);
             }
             s.set_pool(p.id, {static_cast<double>(p.messages.size()), p.funds, pool_rshares_sum, pool_rsharesfn_sum});
@@ -672,7 +693,8 @@ public:
 BOOST_AUTO_TEST_SUITE(reward_calcs_tests)
 
 BOOST_FIXTURE_TEST_CASE(basic_tests, reward_calcs_tester) try {
-    BOOST_TEST_MESSAGE( "reward_calcs_tester: basic_tests" );
+    BOOST_TEST_MESSAGE("reward_calcs_tester: basic_tests");
+    init(500000000000, 500000);
     _req.clear();
     _res.clear();
     step();
@@ -683,7 +705,7 @@ BOOST_FIXTURE_TEST_CASE(basic_tests, reward_calcs_tester) try {
         setrules({"x", bignum}, {"log2(x + 1.0)", bignum}, {"x", bignum}, 2500, 
         [](double x){ return x; }, [](double x){ return log2(x + 1.0); }, [](double x){ return x; }));
     
-    BOOST_REQUIRE_EQUAL("assertion failure with message: forum::positive_safe_cast: arg > max possible value",
+    BOOST_REQUIRE_EQUAL("assertion failure with message: fp_cast: overflow",
         setrules({"x", std::numeric_limits<base_t>::max()}, {"sqrt(x)", bignum}, {"0", bignum}, 2500, 
         [](double x){ return x; }, [](double x){ return sqrt(x); }, [](double x){ return 0.0; })); 
           
@@ -758,6 +780,48 @@ BOOST_FIXTURE_TEST_CASE(basic_tests, reward_calcs_tester) try {
     fill_from_state(_req);
     BOOST_TEST_MESSAGE( "_req: \n" << _req );
     
+} FC_LOG_AND_RETHROW()
+
+
+template <typename T>
+void print_type_info(T expr, const std::string& name) {    
+BOOST_TEST_MESSAGE(name << ": val = " << static_cast<double>(expr)
+    << "; max val = " << static_cast<double>(std::numeric_limits<T>::max())
+    << "; int_digits = " << (T::integer_digits) 
+    << "; fract_digits = " << (T::fractional_digits) 
+    << "\n");    
+}
+
+BOOST_FIXTURE_TEST_CASE(overflow_test, reward_calcs_tester) try {    
+    BOOST_TEST_MESSAGE("reward_calcs_tester: fixed_point_overflow_test");
+    
+    auto max_fixp_val = static_cast<base_t>(std::numeric_limits<fixp_t>::max());
+    auto max_base_val = static_cast<base_t>(std::numeric_limits<base_t>::max());    
+    
+    init(max_fixp_val * 50, max_fixp_val / 5);
+    BOOST_REQUIRE_EQUAL(success(), setrules({"x", max_fixp_val / 2}, {"sqrt(x)", max_fixp_val / 2}, {"10.0-x", 10}, 2500, 
+        [](double x){ return x; }, [](double x){ return sqrt(x); }, [](double x){ return 10.0 - x; }));
+        
+    BOOST_REQUIRE_EQUAL(success(), add_funds_to_forum(50000));
+    check("add_funds_to_forum 50");
+    
+    std::vector<message_key> msg_keys;  
+    msg_keys.emplace_back(message_key{ .author = _users[0], .id = static_cast<uint64_t>(cur_time().to_seconds()) });     
+    BOOST_REQUIRE_EQUAL(success(), addmessage(msg_keys.back(), 5000));
+    check("new_msg");    
+    for(auto& user : _users) {
+        BOOST_REQUIRE_EQUAL(success(), addvote(msg_keys[0], user, 10000));
+        check("new_vote");
+    }
+    
+    BOOST_REQUIRE_EQUAL(success(), payrewards(msg_keys[0]));
+    check("payrewards");
+    
+    fill_from_tables(_res);
+    BOOST_TEST_MESSAGE( "_res: \n" << _res );
+    fill_from_state(_req);
+    BOOST_TEST_MESSAGE( "_req: \n" << _req );
+
 } FC_LOG_AND_RETHROW()
 
  

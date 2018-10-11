@@ -4,6 +4,7 @@
 #include <algorithm>
 #include "atmsp.h"
 
+using namespace fixed_point_utils;
 namespace atmsp { namespace storable {   
 using index_t = uint64_t;
 struct [[eosio::table]] value { 
