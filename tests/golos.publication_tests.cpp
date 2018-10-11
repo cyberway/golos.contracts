@@ -74,7 +74,7 @@ public:
                               std::string bodypost, std::string languagepost,
                               std::vector<structures::tags> tags,
                               std::string jsonmetadata) {
-        return push_action(N(golos.pub), N(createpost), mvo()
+        return push_action(account, N(createpost), mvo()
                            ("account", account)
                            ("permlink", permlink)
                            ("parentacc", parentacc)
@@ -122,7 +122,7 @@ public:
     }
 
     action_result upvote(account_name voter, account_name author, std::string permlink, asset weight) {
-        return push_action(N(golos.pub), N(upvote), mvo()
+        return push_action(voter, N(upvote), mvo()
                            ("voter", voter)
                            ("author", author)
                            ("permlink", permlink)
@@ -140,7 +140,7 @@ public:
     }
 
     action_result create_battery(account_name account) {
-        return push_action(N(golos.pub), N(createacc), mvo()
+        return push_action(account, N(createacc), mvo()
                            ("name", account)
                           );
     }
@@ -168,7 +168,6 @@ public:
 
     abi_serializer abi_ser;
 };
-
 
 BOOST_AUTO_TEST_SUITE(golos_publication_tests)
 
@@ -205,7 +204,7 @@ BOOST_FIXTURE_TEST_CASE(create_post, golos_publication_tester) try {
                    );
 } FC_LOG_AND_RETHROW()
 
-BOOST_FIXTURE_TEST_CASE(battery_limit_post, golos_publication_tester) try {
+BOOST_FIXTURE_TEST_CASE(test_create_post_and_battery_limit_post, golos_publication_tester) try {
     BOOST_REQUIRE_EQUAL(success(), create_battery(N(golos.pub)));
     produce_blocks(1);
 
@@ -316,13 +315,125 @@ BOOST_FIXTURE_TEST_CASE(battery_limit_post, golos_publication_tester) try {
                             "jsonmetadata"));
 } FC_LOG_AND_RETHROW()
 
-BOOST_FIXTURE_TEST_CASE(battery_limit_comment, golos_publication_tester) try {
+BOOST_FIXTURE_TEST_CASE(test_create_comment_and_battery_limit_comment, golos_publication_tester) try {
+    BOOST_REQUIRE_EQUAL(success(), create_battery(N(golos.pub)));
+    produce_blocks(1);
 
+    auto account_battery = get_battery(N(golos.pub));
+    require_equal_battery(account_battery, mvo()
+                          ("posting_battery", mvo()("charge", 0))
+                          ("battery_of_votes", mvo()("charge", 0))
+                          ("limit_battery_posting", mvo()("charge", 0))
+                          ("limit_battery_comment", mvo()("charge", 0))
+                          ("limit_battery_of_votes", mvo()("charge", 0))
+                          );
+
+    BOOST_REQUIRE_EQUAL(success(), golos_publication_tester::create_post(
+                            N(golos.pub),
+                            "permlink0",
+                            N(golos.pub),
+                            "permlink",
+                            333,
+                            "payouttype",
+                            {{N(beneficiary), 777}},
+                            "paytype",
+                            "headerpost",
+                            "bodypost",
+                            "languagepost",
+                            {{"tag"}},
+                            "jsonmetadata"));
+
+    account_battery = get_battery(N(golos.pub));
+    require_equal_battery(account_battery, mvo()
+                          ("posting_battery", mvo()("charge", 0))
+                          ("battery_of_votes", mvo()("charge", 0))
+                          ("limit_battery_posting", mvo()("charge", 0))
+                          ("limit_battery_comment", mvo()("charge", 10000))
+                          ("limit_battery_of_votes", mvo()("charge", 0))
+                          );
+    produce_blocks(10);
+
+    BOOST_REQUIRE_EQUAL(error("assertion failure with message: Battery overrun"), golos_publication_tester::create_post(
+                            N(golos.pub),
+                            "permlink1",
+                            N(golos.pub),
+                            "permlink0",
+                            333,
+                            "payouttype",
+                            {{N(beneficiary), 777}},
+                            "paytype",
+                            "headerpost",
+                            "bodypost",
+                            "languagepost",
+                            {{"tag"}},
+                            "jsonmetadata"));
+    produce_blocks(30);
+
+    BOOST_REQUIRE_EQUAL(success(), golos_publication_tester::create_post(
+                            N(golos.pub),
+                            "permlink2",
+                            N(golos.pub),
+                            "permlink0",
+                            333,
+                            "payouttype",
+                            {{N(beneficiary), 777}},
+                            "paytype",
+                            "headerpost",
+                            "bodypost",
+                            "languagepost",
+                            {{"tag"}},
+                            "jsonmetadata"));
 } FC_LOG_AND_RETHROW()
 
-BOOST_FIXTURE_TEST_CASE(battery_limit_vote, golos_publication_tester) try {
+BOOST_FIXTURE_TEST_CASE(test_upvote_and_battery_limit_vote, golos_publication_tester) try {
+    BOOST_REQUIRE_EQUAL(success(), create_battery(N(brucelee)));
+    BOOST_REQUIRE_EQUAL(success(), create_battery(N(chucknorris)));
+    produce_blocks(1);
 
+    auto account_battery_brucelee = get_battery(N(brucelee));
+    require_equal_battery(account_battery_brucelee, mvo()
+                          ("posting_battery", mvo()("charge", 0))
+                          ("battery_of_votes", mvo()("charge", 0))
+                          ("limit_battery_posting", mvo()("charge", 0))
+                          ("limit_battery_comment", mvo()("charge", 0))
+                          ("limit_battery_of_votes", mvo()("charge", 0))
+                          );
+
+    auto account_battery_chucknorris = get_battery(N(chucknorris));
+    require_equal_battery(account_battery_chucknorris, mvo()
+                          ("posting_battery", mvo()("charge", 0))
+                          ("battery_of_votes", mvo()("charge", 0))
+                          ("limit_battery_posting", mvo()("charge", 0))
+                          ("limit_battery_comment", mvo()("charge", 0))
+                          ("limit_battery_of_votes", mvo()("charge", 0))
+                          );
+
+    BOOST_REQUIRE_EQUAL(success(), golos_publication_tester::create_post(
+                            N(brucelee),
+                            "permlink0",
+                            N(),
+                            "",
+                            333,
+                            "payouttype",
+                            {{N(beneficiary), 777}},
+                            "paytype",
+                            "headerpost",
+                            "bodypost",
+                            "languagepost",
+                            {{"tag"}},
+                            "jsonmetadata"));
+
+    account_battery_brucelee = get_battery(N(brucelee));
+    require_equal_battery(account_battery_brucelee, mvo()
+                          ("posting_battery", mvo()("charge", 2500))
+                          ("battery_of_votes", mvo()("charge", 0))
+                          ("limit_battery_posting", mvo()("charge", 10000))
+                          ("limit_battery_comment", mvo()("charge", 0))
+                          ("limit_battery_of_votes", mvo()("charge", 0))
+                          );
+
+    BOOST_REQUIRE_EQUAL(success(), golos_publication_tester::upvote(N(chucknorris), N(brucelee), "permlink0", asset::from_string("500.0000 GOLOS")));
+    BOOST_REQUIRE_EQUAL(error("assertion failure with message: Battery overrun"), golos_publication_tester::upvote(N(chucknorris), N(brucelee), "permlink0", asset::from_string("500.0000 GOLOS")));
 } FC_LOG_AND_RETHROW()
-
 
 BOOST_AUTO_TEST_SUITE_END()

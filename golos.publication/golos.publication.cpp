@@ -165,7 +165,7 @@ void publication::unvote(account_name voter, account_name author, std::string pe
 
 //    eosio_assert(weight == 0, "The weight can be only zero.");
 
-//    set_vote(voter, author, permlink, 0);
+    set_vote(voter, author, permlink, asset(0, S(4, GOLOS)));
 }
 
 void publication::close_post() {
@@ -201,7 +201,7 @@ void publication::set_vote(account_name voter, account_name author,
             if (voter == votetable_obj->voter) {
                 eosio_assert(weight != votetable_obj->weight, "Vote with the same weight has already existed.");
                 eosio_assert(votetable_obj->count != MAX_REVOTES, "You can't revote anymore.");
-                votetable_index.modify(votetable_obj, author, [&]( auto &item ) {
+                votetable_index.modify(votetable_obj, voter, [&]( auto &item ) {
                    item.percent = FIXED_CURATOR_PERCENT;
                    item.weight = weight;
                    item.time = now();
@@ -212,7 +212,7 @@ void publication::set_vote(account_name voter, account_name author,
             }
             ++votetable_obj;
         }
-        vote_table.emplace(author, [&]( auto &item ) {
+        vote_table.emplace(voter, [&]( auto &item ) {
            item.id = vote_table.available_primary_key();
            item.post_id = posttable_obj.id;
            item.voter = voter;
