@@ -184,7 +184,7 @@
         "type": "uint64"
       },
       {
-        "name": "isclosed",
+        "name": "status",
         "type": "uint8"
       }
     ]
@@ -309,7 +309,7 @@
     "fields": [
       {
         "name": "weight",
-        "type": "int64"
+        "type": "int16"
       }
     ]
   },
@@ -353,7 +353,7 @@
       },
       {
         "name": "weight",
-        "type": "int64"
+        "type": "int16"
       },
       {
         "name": "time",

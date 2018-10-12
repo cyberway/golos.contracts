@@ -120,7 +120,7 @@ struct post : common_post_data {
     checksum256 permlink;
     checksum256 parentprmlnk;
     uint64_t childcount;
-    uint8_t isclosed;
+    uint8_t status;
 
     uint64_t primary_key() const {
         return id;
@@ -130,17 +130,13 @@ struct post : common_post_data {
         return get_hash_key(permlink);
     }
 
-    key256 parentprmlnk_hash_key() const {
-        return get_hash_key(parentprmlnk);
-    }
-
     static key256 get_hash_key(const checksum256& permlink) {
         const uint64_t *p64 = reinterpret_cast<const uint64_t *>(&permlink);
         return key256::make_from_word_sequence<uint64_t>(p64[0], p64[1], p64[2], p64[3]);
     }
 
     EOSLIB_SERIALIZE(post, (id)(date)(account)(permlink)(parentacc)(parentprmlnk)(curatorprcnt)(payouttype)
-                     (beneficiaries)(paytype)(childcount)(isclosed))
+                     (beneficiaries)(paytype)(childcount)(status))
 };
 
 struct voteinfo {
@@ -150,7 +146,7 @@ struct voteinfo {
     uint64_t post_id;
     account_name voter;
     uint64_t percent;
-    int64_t weight;
+    int16_t weight;
     uint64_t time;
     std::vector<structures::rshares> rshares;
     uint64_t count;
@@ -178,8 +174,7 @@ struct params_battery {
 namespace tables {
     using id_index = indexed_by<N(id), const_mem_fun<structures::post, uint64_t, &structures::post::primary_key>>;
     using permlink_hash_index = indexed_by<N(permlink), const_mem_fun<structures::post, key256, &structures::post::permlink_hash_key>>;
-    using parentprmlnk_hash_index = indexed_by<N(parentprmlnk), const_mem_fun<structures::post, key256, &structures::post::parentprmlnk_hash_key>>;
-    using post_table = eosio::multi_index<N(posttable), structures::post, id_index, permlink_hash_index, parentprmlnk_hash_index>;
+    using post_table = eosio::multi_index<N(posttable), structures::post, id_index, permlink_hash_index>;
 
     using content_id_index = indexed_by<N(id), const_mem_fun<structures::content, uint64_t, &structures::content::primary_key>>;
     using content_table = eosio::multi_index<N(contenttable), structures::content, content_id_index>;

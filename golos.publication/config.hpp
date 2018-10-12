@@ -55,3 +55,5 @@
 #define MAX_REVOTES 5
 
 #define UNVOTE_WEIGHT 0
+
+#define NULL_LAMBDA [](auto&, auto&) {}
