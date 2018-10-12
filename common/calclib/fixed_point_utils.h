@@ -32,8 +32,9 @@ constexpr int int_digits() { return T::integer_digits; }
 
 template <typename U, typename T>
 U fp_cast(T&& arg, bool restr = true) {
-    static_assert((U(-1) < U(0)) == (T(-1) < T(0)), "fp_cast: T::is_signed != U::is_signed"); //is_signed doesn't work for fixed_point
-    using comp_t = typename std::conditional<(_impl::int_digits<U>() > _impl::int_digits<typename std::remove_cv<typename std::remove_reference<T>::type>::type>()), U, T>::type;
+    using decay_t = typename std::remove_cv<typename std::remove_reference<T>::type>::type;
+    static_assert((U(-1) < U(0)) == (decay_t(-1) < decay_t(0)), "fp_cast: T::is_signed != U::is_signed"); //is_signed doesn't work for fixed_point
+    using comp_t = typename std::conditional<(_impl::int_digits<U>() > _impl::int_digits<decay_t>()), U, decay_t>::type;
     
     comp_t arg_comp(arg);        
     if(arg_comp < comp_t(-std::numeric_limits<U>::max())) {
