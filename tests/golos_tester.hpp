@@ -60,7 +60,7 @@ public:
     // Note: uses `lower_bound`, so caller must check id of returned value
     std::vector<char> get_tbl_row(name code, name scope, name tbl, uint64_t id) const;
     fc::variant get_tbl_struct(name code, name scope, name tbl, uint64_t id, const std::string& n, const abi_serializer& abi) const;
-    fc::variant get_tbl_struct_singleton(name code, name scope, name tbl, const abi_serializer &abi) const;
+    fc::variant get_tbl_struct_singleton(name code, name scope, name tbl, const string &n, const abi_serializer &abi) const;
 
     // simplified versions
     const table_id_object* find_table(name tbl) const {

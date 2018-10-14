@@ -11,6 +11,7 @@
 #include <golos.publication/golos.publication.wast.hpp>
 #include <golos.publication/golos.publication.abi.hpp>
 
+#define UNLOCKED_FOR_CREATE_POST 21
 
 using namespace eosio;
 using namespace eosio::chain;
@@ -49,7 +50,7 @@ public:
 
         const auto& accnt = control->db().get<account_object, by_name>(N(golos.pub));
         abi_def abi;
-        BOOST_REQUIRE_EQUAL(abi_serializer::to_abi(accnt.abi, abi), true);
+        BOOST_CHECK_EQUAL(abi_serializer::to_abi(accnt.abi, abi), true);
         abi_ser.set_abi(abi, abi_serializer_max_time);
     }
 
@@ -96,7 +97,7 @@ public:
     }
 
     fc::variant get_battery( account_name acc) {
-        return get_tbl_struct_singleton(N(golos.pub), acc, N(batterytable), abi_ser);
+        return get_tbl_struct_singleton(N(golos.pub), acc, N(batterytable), "account_battery", abi_ser);
     }
 
     action_result update_post(account_name account, std::string permlink,
@@ -146,24 +147,24 @@ public:
     }
 
     void require_equal(const fc::variant &obj1, const fc::variant &obj2) {
-        BOOST_REQUIRE_EQUAL(true, obj1.is_object() && obj2.is_object());
-        BOOST_REQUIRE_EQUAL(obj1.get_object()["id"].as<uint64_t>(), obj2.get_object()["id"].as<uint64_t>());
-        BOOST_REQUIRE_EQUAL(obj1.get_object()["account"].as<account_name>(), obj2.get_object()["account"].as<account_name>());
-//        BOOST_REQUIRE_EQUAL(obj1.get_object()["permlink"].as<checksum_type>(), obj2.get_object()["permlink"].as<checksum_type>());
-        BOOST_REQUIRE_EQUAL(obj1.get_object()["parentacc"].as<account_name>(), obj2.get_object()["parentacc"].as<account_name>());
-        BOOST_REQUIRE_EQUAL(obj1.get_object()["parentprmlnk"].as<std::string>(), obj2.get_object()["parentprmlnk"].as<std::string>());
-        BOOST_REQUIRE_EQUAL(obj1.get_object()["curatorprcnt"].as<uint64_t>(), obj2.get_object()["curatorprcnt"].as<uint64_t>());
-        BOOST_REQUIRE_EQUAL(obj1.get_object()["payouttype"].as<std::string>(), obj2.get_object()["payouttype"].as<std::string>());
-        BOOST_REQUIRE_EQUAL(obj1.get_object()["paytype"].as<std::string>(), obj2.get_object()["paytype"].as<std::string>());
+        BOOST_CHECK_EQUAL(true, obj1.is_object() && obj2.is_object());
+        BOOST_CHECK_EQUAL(obj1.get_object()["id"].as<uint64_t>(), obj2.get_object()["id"].as<uint64_t>());
+        BOOST_CHECK_EQUAL(obj1.get_object()["account"].as<account_name>(), obj2.get_object()["account"].as<account_name>());
+//        BOOST_CHECK_EQUAL(obj1.get_object()["permlink"].as<checksum_type>(), obj2.get_object()["permlink"].as<checksum_type>());
+        BOOST_CHECK_EQUAL(obj1.get_object()["parentacc"].as<account_name>(), obj2.get_object()["parentacc"].as<account_name>());
+        BOOST_CHECK_EQUAL(obj1.get_object()["parentprmlnk"].as<std::string>(), obj2.get_object()["parentprmlnk"].as<std::string>());
+        BOOST_CHECK_EQUAL(obj1.get_object()["curatorprcnt"].as<uint64_t>(), obj2.get_object()["curatorprcnt"].as<uint64_t>());
+        BOOST_CHECK_EQUAL(obj1.get_object()["payouttype"].as<std::string>(), obj2.get_object()["payouttype"].as<std::string>());
+        BOOST_CHECK_EQUAL(obj1.get_object()["paytype"].as<std::string>(), obj2.get_object()["paytype"].as<std::string>());
     }
 
     void require_equal_battery(const fc::variant &obj1, const fc::variant &obj2) {
-        BOOST_REQUIRE_EQUAL(true, obj1.is_object() && obj2.is_object());
-        BOOST_REQUIRE_EQUAL(obj1.get_object()["posting_battery"].get_object()["charge"].as<uint16_t>(),        obj2.get_object()["posting_battery"].get_object()["charge"].as<uint16_t>());
-        BOOST_REQUIRE_EQUAL(obj1.get_object()["battery_of_votes"].get_object()["charge"].as<uint16_t>(),       obj2.get_object()["battery_of_votes"].get_object()["charge"].as<uint16_t>());
-        BOOST_REQUIRE_EQUAL(obj1.get_object()["limit_battery_posting"].get_object()["charge"].as<uint16_t>(),  obj2.get_object()["limit_battery_posting"].get_object()["charge"].as<uint16_t>());
-        BOOST_REQUIRE_EQUAL(obj1.get_object()["limit_battery_comment"].get_object()["charge"].as<uint16_t>(),  obj2.get_object()["limit_battery_comment"].get_object()["charge"].as<uint16_t>());
-        BOOST_REQUIRE_EQUAL(obj1.get_object()["limit_battery_of_votes"].get_object()["charge"].as<uint16_t>(), obj2.get_object()["limit_battery_of_votes"].get_object()["charge"].as<uint16_t>());
+        BOOST_CHECK_EQUAL(true, obj1.is_object() && obj2.is_object());
+        BOOST_CHECK_EQUAL(obj1.get_object()["posting_battery"].get_object()["charge"].as<uint16_t>(),        obj2.get_object()["posting_battery"].get_object()["charge"].as<uint16_t>());
+        BOOST_CHECK_EQUAL(obj1.get_object()["battery_of_votes"].get_object()["charge"].as<uint16_t>(),       obj2.get_object()["battery_of_votes"].get_object()["charge"].as<uint16_t>());
+        BOOST_CHECK_EQUAL(obj1.get_object()["limit_battery_posting"].get_object()["charge"].as<uint16_t>(),  obj2.get_object()["limit_battery_posting"].get_object()["charge"].as<uint16_t>());
+        BOOST_CHECK_EQUAL(obj1.get_object()["limit_battery_comment"].get_object()["charge"].as<uint16_t>(),  obj2.get_object()["limit_battery_comment"].get_object()["charge"].as<uint16_t>());
+        BOOST_CHECK_EQUAL(obj1.get_object()["limit_battery_of_votes"].get_object()["charge"].as<uint16_t>(), obj2.get_object()["limit_battery_of_votes"].get_object()["charge"].as<uint16_t>());
     }
 
     abi_serializer abi_ser;
@@ -172,11 +173,11 @@ public:
 BOOST_AUTO_TEST_SUITE(golos_publication_tests)
 
 BOOST_FIXTURE_TEST_CASE(create_post, golos_publication_tester) try {
-    BOOST_REQUIRE_EQUAL(success(), create_battery(N(golos.pub)));
+    BOOST_CHECK_EQUAL(success(), create_battery(N(jackiechan)));
     produce_blocks(1);
 
-    BOOST_REQUIRE_EQUAL(success(), golos_publication_tester::create_post(
-                            N(golos.pub),
+    BOOST_CHECK_EQUAL(success(), golos_publication_tester::create_post(
+                            N(jackiechan),
                             "permlink",
                             N(),
                             "",
@@ -190,11 +191,11 @@ BOOST_FIXTURE_TEST_CASE(create_post, golos_publication_tester) try {
                             {{"tag"}},
                             "jsonmetadata"));
 
-    auto stats = get_posts(N(golos.pub), 0);
+    auto stats = get_posts(N(jackiechan), 0);
     require_equal( stats, mvo()
                    ("id", 0)
                    ("date", 1577836804)
-                   ("account", "golos.pub")
+                   ("account", "jackiechan")
 //                   ("permlink", "permlink")
                    ("parentacc", "")
                    ("parentprmlnk", "")
@@ -205,10 +206,10 @@ BOOST_FIXTURE_TEST_CASE(create_post, golos_publication_tester) try {
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE(test_create_post_and_battery_limit_post, golos_publication_tester) try {
-    BOOST_REQUIRE_EQUAL(success(), create_battery(N(golos.pub)));
+    BOOST_CHECK_EQUAL(success(), create_battery(N(jackiechan)));
     produce_blocks(1);
 
-    auto account_battery = get_battery(N(golos.pub));
+    auto account_battery = get_battery(N(jackiechan));
     require_equal_battery(account_battery, mvo()
                           ("posting_battery", mvo()("charge", 0))
                           ("battery_of_votes", mvo()("charge", 0))
@@ -217,8 +218,8 @@ BOOST_FIXTURE_TEST_CASE(test_create_post_and_battery_limit_post, golos_publicati
                           ("limit_battery_of_votes", mvo()("charge", 0))
                           );
 
-    BOOST_REQUIRE_EQUAL(success(), golos_publication_tester::create_post(
-                            N(golos.pub),
+    BOOST_CHECK_EQUAL(success(), golos_publication_tester::create_post(
+                            N(jackiechan),
                             "permlink0",
                             N(),
                             "",
@@ -232,7 +233,7 @@ BOOST_FIXTURE_TEST_CASE(test_create_post_and_battery_limit_post, golos_publicati
                             {{"tag"}},
                             "jsonmetadata"));
 
-    account_battery = get_battery(N(golos.pub));
+    account_battery = get_battery(N(jackiechan));
     require_equal_battery(account_battery, mvo()
                           ("posting_battery", mvo()("charge", 2500))
                           ("battery_of_votes", mvo()("charge", 0))
@@ -242,8 +243,8 @@ BOOST_FIXTURE_TEST_CASE(test_create_post_and_battery_limit_post, golos_publicati
                           );
     produce_blocks(10);
 
-    BOOST_REQUIRE_EQUAL(error("assertion failure with message: Battery overrun"), golos_publication_tester::create_post(
-                            N(golos.pub),
+    BOOST_CHECK_EQUAL(error("assertion failure with message: Battery overrun"), golos_publication_tester::create_post(
+                            N(jackiechan),
                             "permlink1",
                             N(),
                             "",
@@ -257,7 +258,7 @@ BOOST_FIXTURE_TEST_CASE(test_create_post_and_battery_limit_post, golos_publicati
                             {{"tag"}},
                             "jsonmetadata"));
 
-    account_battery = get_battery(N(golos.pub));
+    account_battery = get_battery(N(jackiechan));
     require_equal_battery(account_battery, mvo()
                           ("posting_battery", mvo()("charge", 2500))
                           ("battery_of_votes", mvo()("charge", 0))
@@ -265,10 +266,10 @@ BOOST_FIXTURE_TEST_CASE(test_create_post_and_battery_limit_post, golos_publicati
                           ("limit_battery_comment", mvo()("charge", 0))
                           ("limit_battery_of_votes", mvo()("charge", 0))
                           );
-    produce_blocks(21);
+    produce_blocks(UNLOCKED_FOR_CREATE_POST);
 
-    BOOST_REQUIRE_EQUAL(success(), golos_publication_tester::create_post(
-                            N(golos.pub),
+    BOOST_CHECK_EQUAL(success(), golos_publication_tester::create_post(
+                            N(jackiechan),
                             "permlink2",
                             N(),
                             "",
@@ -281,10 +282,10 @@ BOOST_FIXTURE_TEST_CASE(test_create_post_and_battery_limit_post, golos_publicati
                             "languagepost",
                             {{"tag"}},
                             "jsonmetadata"));
-    produce_blocks(21);
+    produce_blocks(UNLOCKED_FOR_CREATE_POST);
 
-    BOOST_REQUIRE_EQUAL(success(), golos_publication_tester::create_post(
-                            N(golos.pub),
+    BOOST_CHECK_EQUAL(success(), golos_publication_tester::create_post(
+                            N(jackiechan),
                             "permlink3",
                             N(),
                             "",
@@ -297,10 +298,10 @@ BOOST_FIXTURE_TEST_CASE(test_create_post_and_battery_limit_post, golos_publicati
                             "languagepost",
                             {{"tag"}},
                             "jsonmetadata"));
-    produce_blocks(21);
+    produce_blocks(UNLOCKED_FOR_CREATE_POST);
 
-    BOOST_REQUIRE_EQUAL(success(), golos_publication_tester::create_post( // TODO no check in smart-contract
-                            N(golos.pub),
+    BOOST_CHECK_EQUAL(success(), golos_publication_tester::create_post(
+                            N(jackiechan),
                             "permlink4",
                             N(),
                             "",
@@ -313,13 +314,48 @@ BOOST_FIXTURE_TEST_CASE(test_create_post_and_battery_limit_post, golos_publicati
                             "languagepost",
                             {{"tag"}},
                             "jsonmetadata"));
+
+    account_battery = get_battery(N(jackiechan));
+    require_equal_battery(account_battery, mvo()
+                          ("posting_battery", mvo()("charge", 10000))
+                          ("battery_of_votes", mvo()("charge", 0))
+                          ("limit_battery_posting", mvo()("charge", 10000))
+                          ("limit_battery_comment", mvo()("charge", 0))
+                          ("limit_battery_of_votes", mvo()("charge", 0))
+                          );
+
+    produce_blocks(UNLOCKED_FOR_CREATE_POST);
+
+    BOOST_CHECK_EQUAL(success(), golos_publication_tester::create_post( // TODO no check in smart-contract
+                            N(jackiechan),
+                            "permlink5",
+                            N(),
+                            "",
+                            333,
+                            "payouttype",
+                            {{N(beneficiary), 777}},
+                            "paytype",
+                            "headerpost",
+                            "bodypost",
+                            "languagepost",
+                            {{"tag"}},
+                            "jsonmetadata"));
+
+    account_battery = get_battery(N(jackiechan));
+    require_equal_battery(account_battery, mvo()
+                          ("posting_battery", mvo()("charge", 12499))
+                          ("battery_of_votes", mvo()("charge", 0))
+                          ("limit_battery_posting", mvo()("charge", 10000))
+                          ("limit_battery_comment", mvo()("charge", 0))
+                          ("limit_battery_of_votes", mvo()("charge", 0))
+                          );
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE(test_create_comment_and_battery_limit_comment, golos_publication_tester) try {
-    BOOST_REQUIRE_EQUAL(success(), create_battery(N(golos.pub)));
+    BOOST_CHECK_EQUAL(success(), create_battery(N(jackiechan)));
     produce_blocks(1);
 
-    auto account_battery = get_battery(N(golos.pub));
+    auto account_battery = get_battery(N(jackiechan));
     require_equal_battery(account_battery, mvo()
                           ("posting_battery", mvo()("charge", 0))
                           ("battery_of_votes", mvo()("charge", 0))
@@ -328,10 +364,10 @@ BOOST_FIXTURE_TEST_CASE(test_create_comment_and_battery_limit_comment, golos_pub
                           ("limit_battery_of_votes", mvo()("charge", 0))
                           );
 
-    BOOST_REQUIRE_EQUAL(success(), golos_publication_tester::create_post(
-                            N(golos.pub),
+    BOOST_CHECK_EQUAL(success(), golos_publication_tester::create_post(
+                            N(jackiechan),
                             "permlink0",
-                            N(golos.pub),
+                            N(jackiechan),
                             "permlink",
                             333,
                             "payouttype",
@@ -343,7 +379,7 @@ BOOST_FIXTURE_TEST_CASE(test_create_comment_and_battery_limit_comment, golos_pub
                             {{"tag"}},
                             "jsonmetadata"));
 
-    account_battery = get_battery(N(golos.pub));
+    account_battery = get_battery(N(jackiechan));
     require_equal_battery(account_battery, mvo()
                           ("posting_battery", mvo()("charge", 0))
                           ("battery_of_votes", mvo()("charge", 0))
@@ -353,10 +389,10 @@ BOOST_FIXTURE_TEST_CASE(test_create_comment_and_battery_limit_comment, golos_pub
                           );
     produce_blocks(10);
 
-    BOOST_REQUIRE_EQUAL(error("assertion failure with message: Battery overrun"), golos_publication_tester::create_post(
-                            N(golos.pub),
+    BOOST_CHECK_EQUAL(error("assertion failure with message: Battery overrun"), golos_publication_tester::create_post(
+                            N(jackiechan),
                             "permlink1",
-                            N(golos.pub),
+                            N(jackiechan),
                             "permlink0",
                             333,
                             "payouttype",
@@ -369,10 +405,10 @@ BOOST_FIXTURE_TEST_CASE(test_create_comment_and_battery_limit_comment, golos_pub
                             "jsonmetadata"));
     produce_blocks(30);
 
-    BOOST_REQUIRE_EQUAL(success(), golos_publication_tester::create_post(
-                            N(golos.pub),
+    BOOST_CHECK_EQUAL(success(), golos_publication_tester::create_post(
+                            N(jackiechan),
                             "permlink2",
-                            N(golos.pub),
+                            N(jackiechan),
                             "permlink0",
                             333,
                             "payouttype",
@@ -386,8 +422,8 @@ BOOST_FIXTURE_TEST_CASE(test_create_comment_and_battery_limit_comment, golos_pub
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE(test_upvote_and_battery_limit_vote, golos_publication_tester) try {
-    BOOST_REQUIRE_EQUAL(success(), create_battery(N(brucelee)));
-    BOOST_REQUIRE_EQUAL(success(), create_battery(N(chucknorris)));
+    BOOST_CHECK_EQUAL(success(), create_battery(N(brucelee)));
+    BOOST_CHECK_EQUAL(success(), create_battery(N(chucknorris)));
     produce_blocks(1);
 
     auto account_battery_brucelee = get_battery(N(brucelee));
@@ -408,7 +444,7 @@ BOOST_FIXTURE_TEST_CASE(test_upvote_and_battery_limit_vote, golos_publication_te
                           ("limit_battery_of_votes", mvo()("charge", 0))
                           );
 
-    BOOST_REQUIRE_EQUAL(success(), golos_publication_tester::create_post(
+    BOOST_CHECK_EQUAL(success(), golos_publication_tester::create_post(
                             N(brucelee),
                             "permlink0",
                             N(),
@@ -432,8 +468,8 @@ BOOST_FIXTURE_TEST_CASE(test_upvote_and_battery_limit_vote, golos_publication_te
                           ("limit_battery_of_votes", mvo()("charge", 0))
                           );
 
-    BOOST_REQUIRE_EQUAL(success(), golos_publication_tester::upvote(N(chucknorris), N(brucelee), "permlink0", asset::from_string("500.0000 GOLOS")));
-    BOOST_REQUIRE_EQUAL(error("assertion failure with message: Battery overrun"), golos_publication_tester::upvote(N(chucknorris), N(brucelee), "permlink0", asset::from_string("500.0000 GOLOS")));
+    BOOST_CHECK_EQUAL(success(), golos_publication_tester::upvote(N(chucknorris), N(brucelee), "permlink0", asset::from_string("500.0000 GOLOS")));
+    BOOST_CHECK_EQUAL(error("assertion failure with message: Battery overrun"), golos_publication_tester::upvote(N(chucknorris), N(brucelee), "permlink0", asset::from_string("500.0000 GOLOS")));
 } FC_LOG_AND_RETHROW()
 
 BOOST_AUTO_TEST_SUITE_END()
