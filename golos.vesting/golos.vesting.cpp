@@ -155,12 +155,12 @@ void vesting::delegate_vesting(account_name sender, account_name recipient, asse
     tables::account_table account_sender(_self, sender);
     auto balance_sender = account_sender.find(quantity.symbol.name());
     eosio_assert(balance_sender != account_sender.end(), "Not found token");
-    eosio_assert(balance_sender->vesting >= quantity, "Not enough vesting");
 
     account_sender.modify(balance_sender, sender, [&](auto &item){
-        item.vesting -= quantity;
         item.delegate_vesting += quantity;
     });
+
+    sub_balance(sender, quantity);
 
     tables::delegate_table table(_self, quantity.symbol.name());
     auto index_table = table.get_index<N(unique)>();
@@ -271,10 +271,8 @@ void vesting::calculate_convert_vesting() {
                     auto balance = account.find(obj->payout_part.symbol.name());
                     eosio_assert(balance != account.end(), "Not found vesting balance");
 
-                    auto lambda_action_sender = [&](asset quantity){
-                        account.modify(balance, 0, [&](auto &item){
-                            item.vesting -= quantity;
-                        });
+                    auto lambda_action_sender = [&](asset quantity) {
+                        sub_balance(obj->sender, quantity);
 
                         auto vest = table_vesting.find(quantity.symbol.name());
                         eosio_assert(vest != table_vesting.end(), "Vesting not found");
@@ -315,13 +313,7 @@ void vesting::calculate_delegate_vesting() {
         if (obj->date > time_point_sec(now()))
             break;
 
-        tables::account_table account(_self, obj->recipient);
-        auto balance = account.find(obj->amount.symbol.name());
-        eosio_assert(balance != account.end(), "Not found balance token vesting");
-        account.modify(balance, 0, [&](auto& item){
-            item.vesting += obj->amount;
-        });
-
+        add_balance(obj->recipient, obj->amount, _self);
         obj = index.erase(obj);
     }
 }
@@ -349,7 +341,6 @@ void vesting::close(account_name owner, symbol_type symbol) {
     account.erase( it );
 }
 
-
 void vesting::notify_balance_change(account_name owner, asset diff) {
     action(
         permission_level{_self, N(active)},
@@ -373,11 +364,18 @@ void vesting::sub_balance(account_name owner, asset value) {
 void vesting::add_balance(account_name owner, asset value, account_name ram_payer) {
     tables::account_table account(_self, owner);
     auto to = account.find(value.symbol.name());
-    eosio_assert(to != account.end(), "Not found balance token vesting");
-
-    account.modify(to, 0, [&](auto& a) {
-        a.vesting += value;
-    });
+//    eosio_assert(to != account.end(), "Not found balance token vesting");
+    if(to == account.end()) {
+        account.emplace(ram_payer, [&](auto& a) {
+            a.vesting = value;
+            a.delegate_vesting.symbol = value.symbol;
+            a.received_vesting.symbol = value.symbol;
+        });
+    } else {
+        account.modify(to, 0, [&](auto& a) {
+            a.vesting += value;
+        });
+    }
     notify_balance_change(owner, value);
 }
 
