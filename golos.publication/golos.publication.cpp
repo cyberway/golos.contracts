@@ -324,7 +324,7 @@ void publication::recovery_battery(scope_name scope, T structures::account_batte
     auto account_battery = table.get();
     auto battery = account_battery.*element;
 
-    if (element == &structures::account_battery::limit_battery_posting)
+    if (element == &structures::account_battery::posting_battery)
         consume_allow_overusage(battery, params);
     else
         consume(battery, params);
