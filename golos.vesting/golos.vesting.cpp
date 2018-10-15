@@ -351,6 +351,7 @@ void vesting::notify_balance_change(account_name owner, asset diff) {
 }
 
 void vesting::sub_balance(account_name owner, asset value) {
+    eosio_assert(value.amount >= 0, "sub_balance: value.amount < 0");
     tables::account_table account(_self, owner);
     const auto& from = account.get(value.symbol.name(), "no balance object found");
     eosio_assert(from.vesting >= value, "overdrawn balance");
@@ -362,6 +363,7 @@ void vesting::sub_balance(account_name owner, asset value) {
 }
 
 void vesting::add_balance(account_name owner, asset value, account_name ram_payer) {
+    eosio_assert(value.amount >= 0, "add_balance: value.amount < 0");
     tables::account_table account(_self, owner);
     auto to = account.find(value.symbol.name());
 //    eosio_assert(to != account.end(), "Not found balance token vesting");
@@ -409,7 +411,7 @@ const asset vesting::convert_to_vesting(const asset &m_token, const structures::
     if (!vinfo.supply.amount || !this_balance.amount)
         amount = m_token.amount;
     else {
-        amount = (m_token.amount * vinfo.supply.amount) / this_balance.amount;
+        amount = static_cast<int64_t>((static_cast<uint128_t>(m_token.amount) * static_cast<uint128_t>(vinfo.supply.amount)) / static_cast<uint128_t>(this_balance.amount));
     }
 
     return asset(amount, symbol);

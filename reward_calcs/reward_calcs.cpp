@@ -14,6 +14,7 @@
 
 using namespace atmsp::storable;
 using namespace golos::config;
+using namespace fixed_point_utils;
 using counter_t = uint64_t;
 
 #define EOSIO_ABI_EX( TYPE, MEMBERS ) \
@@ -49,8 +50,8 @@ struct [[eosio::table]] messagestate {
 struct [[eosio::table]] message {
     uint64_t id;
     uint64_t created; //when
-    base_t tokenprop;
-    messagestate state; 
+    base_t tokenprop; //elaf_t
+    messagestate state;
     uint64_t primary_key() const { return id; }
 };
 
@@ -70,23 +71,24 @@ struct [[eosio::table]] funcinfo {
 
 struct [[eosio::table]] rewardrules {
     funcinfo mainfunc;
-    funcinfo curationfunc;
+    funcinfo curationfunc; 
     funcinfo timepenalty;
-    base_t curatorsprop;
-    base_t maxtokenprop;
+    base_t curatorsprop; //elaf_t
+    base_t maxtokenprop; //elaf_t
 };
   
 struct [[eosio::table]] poolstate {
     counter_t msgs;
     eosio::asset funds;    
     base_t rshares;
-    base_t rsharesfn;
+    base_t rsharesfn;    
     
-    fixp_t get_ratio() const {
+    using ratio_t = decltype(fixp_t(funds.amount) / FP(rshares));
+    ratio_t get_ratio() const {
         eosio_assert(funds.amount >= 0, "poolstate::get_ratio: funds < 0");
-        auto r = FP(rshares);
-        return (r > 0) ? static_cast<fixp_t>(fixp_t(funds.amount) / r) : std::numeric_limits<fixp_t>::max();
-    }
+        auto r = FP(rshares);     
+        return (r > 0) ? (fixp_t(funds.amount) / r) : std::numeric_limits<ratio_t>::max();
+    }    
 };   
 
  struct [[eosio::table]] rewardpool {
@@ -127,10 +129,7 @@ class forum : public eosio::contract {
         auto v = idx.lower_bound(msgid);
         while ((v != idx.end()) && (v->msgid == msgid)) {
             if((weights_sum > fixp_t(0)) && (max_rewards > 0)) {
-                
-                //TODO: implement wide base types for such calculations (https://github.com/GolosChain/golos-smart/issues/71)
-                //elastic_fixed_point?
-                auto claim = static_cast<int64_t>(static_cast<fixp_t>(max_rewards) * static_cast<fixp_t>(FP(v->weight) / weights_sum));
+                auto claim = int_cast(elai_t(max_rewards) * elaf_t(FP(v->weight) / weights_sum));
                 
                 //eosio_assert(claim <= unclaimed_rewards, ("LOGIC ERROR! forum::pay_curators: claim(" + 
                  //   std::to_string(claim) + ") > " + "unclaimed_rewards(" + std::to_string(unclaimed_rewards) + ")").c_str()); 
@@ -161,7 +160,7 @@ class forum : public eosio::contract {
         if(quantity.amount == 0)
             return;
         auto choice = pools.end();
-        auto min_ratio = std::numeric_limits<fixp_t>::max();
+        auto min_ratio = std::numeric_limits<poolstate::ratio_t>::max();
         for(auto pool = pools.begin(); pool != pools.end(); ++pool)
             if((pool->state.funds.symbol == quantity.symbol) && (pool != excluded)) {
                 auto cur_ratio = pool->state.get_ratio();
@@ -183,45 +182,42 @@ class forum : public eosio::contract {
     static fixp_t get_delta(fixp_t old_val, fixp_t new_val, const funcinfo& func) {
         atmsp::machine<fixp_t> mchn;
         func.code.to_machine(mchn);        
-        fixp_t old_fn = calc_1d(mchn, std::min(old_val, FP(func.maxarg)));   
-        fixp_t new_fn = calc_1d(mchn, std::min(new_val, FP(func.maxarg)));        
-        return (new_fn - old_fn);
-    }
-   
-    static fixp_t positive_safe_cast(base_t arg) {
-        eosio_assert(arg > 0, "forum::positive_safe_cast: arg <= 0");
-        if (fixp_t::exponent < 0) //replace with [if constexpr] in the future
-            eosio_assert(arg <= static_cast<base_t>(std::numeric_limits<fixp_t>::max()), "forum::positive_safe_cast: arg > max possible value");
-        return static_cast<fixp_t>(arg);
+        elap_t old_fn = calc_1d(mchn, std::min(old_val, FP(func.maxarg)));   
+        elap_t new_fn = calc_1d(mchn, std::min(new_val, FP(func.maxarg)));
+        return fp_cast<fixp_t>(new_fn - old_fn, false);
     }
     
-    static fixp_t get_limit_prop(base_t arg) {
-        fixp_t ret = positive_safe_cast(arg);
-        ret /= static_cast<fixp_t>(ONE_HUNDRED_PERCENT);
-        return std::min(ret, static_cast<fixp_t>(1));
+    static fixp_t add_cut(fixp_t lhs, fixp_t rhs) {
+        return fp_cast<fixp_t>(elap_t(lhs) + elap_t(rhs), false);
+    }
+    
+    static elaf_t get_limit_prop(int64_t arg) {
+        eosio_assert(arg >= 0, "forum::get_limit_prop: arg < 0");
+        return std::min(elaf_t(elai_t(arg) / elai_t(ONE_HUNDRED_PERCENT)), elaf_t(1));
     }
    
     static void check_positive_monotonic(atmsp::machine<fixp_t>& machine, fixp_t max_arg, const std::string& name, bool inc) {
         fixp_t prev_res = calc_1d(machine, max_arg);
         if(!inc)
-            eosio_assert(prev_res >= static_cast<fixp_t>(0), ("forum::check positive failed for " + name).c_str());
+            eosio_assert(prev_res >= fixp_t(0), ("forum::check positive failed for " + name).c_str());
         fixp_t cur_arg = max_arg;
         for(size_t i = 0; i < CHECK_MONOTONIC_STEPS; i++) {
-            cur_arg /= static_cast<fixp_t>(2);           
+            cur_arg /= fixp_t(2);           
             fixp_t cur_res = calc_1d(machine, cur_arg);
             
             eosio_assert(inc ? (cur_res <= prev_res) : (cur_res >= prev_res), ("forum::check monotonic failed for " + name).c_str());
             prev_res = cur_res;
         }
-        fixp_t res_zero = calc_1d(machine, static_cast<fixp_t>(0));
+        fixp_t res_zero = calc_1d(machine, fixp_t(0));
         if(inc)
-            eosio_assert(res_zero >= static_cast<fixp_t>(0), ("forum::check positive failed for " + name).c_str());
+            eosio_assert(res_zero >= fixp_t(0), ("forum::check positive failed for " + name).c_str());
         eosio_assert(inc ? (res_zero <= prev_res) : (res_zero >= prev_res), ("forum::check monotonic [0] failed for " + name).c_str());
     }
     
     static funcinfo load_func(const funcparams& params, const std::string& name, const atmsp::parser<fixp_t>& pa, atmsp::machine<fixp_t>& bc, bool inc) {
-        funcinfo ret;
-        ret.maxarg = positive_safe_cast(params.maxarg).data();
+        eosio_assert(params.maxarg > 0, "forum::load_func: params.maxarg <= 0");
+        funcinfo ret;     
+        ret.maxarg = fp_cast<fixp_t>(params.maxarg).data();
         pa(bc, params.str, "x");
         check_positive_monotonic(bc, FP(ret.maxarg), name, inc);
         ret.code.from_machine(bc);
@@ -262,18 +258,18 @@ public:
         newrules.curationfunc = load_func(curationfunc, "curation func", pa, bc, true);
         newrules.timepenalty  = load_func(timepenalty, "time penalty func", pa, bc, false);
         
-        newrules.curatorsprop = get_limit_prop(curatorsprop).data();
-        newrules.maxtokenprop = get_limit_prop(maxtokenprop).data();   
+        newrules.curatorsprop = static_cast<base_t>(get_limit_prop(curatorsprop).data());
+        newrules.maxtokenprop = static_cast<base_t>(get_limit_prop(maxtokenprop).data());   
               
         pools.emplace(_self, [&](auto &item) {
             item.created = created; 
             item.rules = newrules; 
             item.state.msgs = 0; 
             item.state.funds = unclaimed_funds;
-            item.state.rshares = (static_cast<fixp_t>(0)).data();
-            item.state.rsharesfn = (static_cast<fixp_t>(0)).data(); 
+            item.state.rshares = (fixp_t(0)).data();
+            item.state.rsharesfn = (fixp_t(0)).data(); 
         });
-}
+    }
 
     void on_transfer(account_name from, account_name to, eosio::asset quantity, std::string memo) {        
         (void)memo;        
@@ -306,7 +302,8 @@ public:
         msgs.emplace(_self, [&](auto &item) { item = {
             .id = id, 
             .created = cur_time, 
-            .tokenprop = std::min(get_limit_prop(tokenprop), FP(pool->rules.maxtokenprop)).data()}; 
+            .tokenprop = static_cast<base_t>(std::min(get_limit_prop(tokenprop), ELF(pool->rules.maxtokenprop)).data())
+            }; 
         });
     }
       
@@ -320,15 +317,14 @@ public:
         auto msg = msgs.find(msgid);    
         eosio_assert(msg != msgs.end(), "forum::addvote: can't find message");
         
-        fixp_t abs_w = get_limit_prop(abs(weight));
+        auto abs_w = get_limit_prop(abs(weight));
         
         reward_pools pools(_self, _self);
         auto pool = get_pool(pools, msg->created);
         
-        fixp_t current_power = fixp_t(1); // TODO
-        fixp_t used_power = current_power * abs_w; //TODO: max_vote_denom and so on
-        
-        fixp_t abs_rshares = fixp_t(eosio::vesting(vesting_name).get_account_vesting(voter, pool->state.funds.symbol).amount) * used_power;
+        elaf_t current_power = 1; // TODO
+        elaf_t used_power = current_power * abs_w; //TODO: max_vote_denom and so on
+        fixp_t abs_rshares = fp_cast<fixp_t>(eosio::vesting(vesting_name).get_account_vesting(voter, pool->state.funds.symbol).amount, false) * used_power;
        
         //TODO: if weight == 0 (revote case) we should pass it
         eosio_assert(abs_rshares >= MIN_VESTING_FOR_VOTE, "forum::addvote: abs_rshares < MIN_VESTING_FOR_VOTE");
@@ -336,16 +332,18 @@ public:
         fixp_t rshares = (weight < 0) ? -abs_rshares : abs_rshares;
         
         messagestate msg_new_state = {
-            .absshares = (FP(msg->state.absshares) + abs_rshares).data(),
-            .netshares = (FP(msg->state.netshares) + rshares).data(),
-            .voteshares = ((rshares > fixp_t(0)) ? FP(msg->state.voteshares) + rshares : FP(msg->state.voteshares)).data()
+            .absshares = add_cut(FP(msg->state.absshares), abs_rshares).data(),
+            .netshares = add_cut(FP(msg->state.netshares), rshares).data(),
+            .voteshares = ((rshares > fixp_t(0)) ? 
+                add_cut(FP(msg->state.voteshares), rshares) :
+                FP(msg->state.voteshares)).data()
             //.sumcuratorsw = see below
         };        
         
         auto rsharesfn_delta = get_delta(FP(msg->state.netshares), FP(msg_new_state.netshares), pool->rules.mainfunc);
                 
         pools.modify(*pool, _self, [&](auto &item) {
-             item.state.rshares = (FP(item.state.rshares) + rshares).data();
+             item.state.rshares = add_cut(FP(item.state.rshares), rshares).data();//(FP(item.state.rshares) + rshares).data();
              item.state.rsharesfn =  (FP(item.state.rsharesfn) + rsharesfn_delta).data();
         });
         
@@ -398,8 +396,7 @@ public:
             auto total_rsharesfn = FP(state.rsharesfn);
             eosio_assert(total_rsharesfn > fixp_t(0), "LOGIC ERROR! forum::payrewards: total_rshares_fn <= 0"); 
            
-            //TODO: implement wide base types (https://github.com/GolosChain/golos-smart/issues/71)
-            payout = static_cast<int64_t>(static_cast<fixp_t>(state.funds.amount) * static_cast<fixp_t>(sharesfn / total_rsharesfn));
+            payout = int_cast(elai_t(state.funds.amount) * static_cast<elaf_t>(sharesfn / total_rsharesfn));
                           
             state.funds.amount -= payout;
             
@@ -414,8 +411,7 @@ public:
             state.rshares = new_rshares.data();
             state.rsharesfn = new_rsharesfn.data();            
         }
-        
-        auto curation_payout = static_cast<int64_t>(FP(pool->rules.curatorsprop) * static_cast<fixp_t>(payout));
+        auto curation_payout = int_cast(ELF(pool->rules.curatorsprop) * elai_t(payout));
         
         //eosio_assert((curation_payout <= payout) && (curation_payout >= 0), ("forum::payrewards: wrong curation_payout = " 
         //    + std::to_string(curation_payout) + " (payout = " + std::to_string(payout) + ")").c_str());        
@@ -428,7 +424,7 @@ public:
         state.funds.amount += unclaimed_rewards;
         
         payout -= curation_payout;
-        auto token_payout = payout * FP(msg->tokenprop);
+        auto token_payout = int_cast(elai_t(payout) * ELF(msg->tokenprop));
         eosio_assert(payout >= token_payout, "forum::payrewards: wrong token_payout value");
         
         payto(author, eosio::asset(token_payout, state.funds.symbol), static_cast<enum_t>(payment_t::TOKEN));
