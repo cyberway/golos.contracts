@@ -40,8 +40,6 @@
 #define PENALTY_WINDOW 30*60
 
 // closing post params
-#define POST_CLOSED 1
-#define POST_OPEN 0
 #define CLOSE_POST_PERIOD 10 //7*24*60*60
 #define QUNTITY_OF_CHANGES // quantity of changes before post closing
 
@@ -54,6 +52,4 @@
 
 #define MAX_REVOTES 5
 
-#define UNVOTE_WEIGHT 0
-
-#define NULL_LAMBDA [](auto&, auto&) {}
+#define MAX_WEIGHT 10000

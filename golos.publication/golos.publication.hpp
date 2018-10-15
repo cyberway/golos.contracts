@@ -29,6 +29,8 @@ class publication : public eosio::contract {
     void close_post_timer(account_name account, std::string permlink);
     void set_vote(account_name voter, account_name author, std::string permlink, int16_t weight);
     template<typename Lambda>
+    bool get_post(account_name account, std::string &permlink, structures::post &post, Lambda &&lambda);
+    template<typename Lambda>
     bool get_post(account_name account, checksum256 &permlink, structures::post &post, Lambda &&lambda);
     checksum256 get_checksum256(std::string &permlink);
     void set_child_count(bool increase, account_name parentacc, checksum256 &parentprmlnk);

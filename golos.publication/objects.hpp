@@ -12,6 +12,11 @@ enum class type_recovery {
     persent
 };
 
+enum post_status {
+    open,
+    closed
+};
+
 namespace structures {
 
 struct battery {

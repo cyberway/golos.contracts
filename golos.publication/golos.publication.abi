@@ -292,14 +292,6 @@
       {
         "name": "permlink",
         "type": "string"
-      },
-      {
-        "name": "parentacc",
-        "type": "account_name"
-      },
-      {
-        "name": "parentprmlnk",
-        "type": "string"
       }
     ]
   },
