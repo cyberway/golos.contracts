@@ -40,15 +40,16 @@
 #define PENALTY_WINDOW 30*60
 
 // closing post params
-#define CLOSE_POST_TIMER 3
+#define CLOSE_POST_PERIOD 10 //7*24*60*60
 #define QUNTITY_OF_CHANGES // quantity of changes before post closing
 
 #define UPPER_BOUND (10000) // 100.00%
 #define LOWER_BOUND (0) // 0.00%
 
-#define TWO_DECIMAL_PLACES (100)
+#define TWO_DECIMAL_DIGITS (100)
 #define RECOVERY_PERIOD_POSTING (86400)
 #define RECOVERY_PERIOD_VESTING (432000)
 
 #define MAX_REVOTES 5
 
+#define MAX_WEIGHT 10000

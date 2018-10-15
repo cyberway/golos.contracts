@@ -46,12 +46,16 @@
     ]
   },
   {
-    "name": "hash",
+    "name": "closepost",
     "base": "",
     "fields": [
       {
-        "name": "hash",
-        "type": "uint64"
+        "name": "account",
+        "type": "account_name"
+      },
+      {
+        "name": "permlink",
+        "type": "string"
       }
     ]
   },
@@ -157,7 +161,7 @@
       },
       {
         "name": "parentprmlnk",
-        "type": "string"
+        "type": "checksum256"
       },
       {
         "name": "curatorprcnt",
@@ -174,6 +178,14 @@
       {
         "name": "paytype",
         "type": "string"
+      },
+      {
+        "name": "childcount",
+        "type": "uint64"
+      },
+      {
+        "name": "status",
+        "type": "uint8"
       }
     ]
   },
@@ -285,6 +297,16 @@
   },
   {
     "name": "vote",
+    "base": "unvote",
+    "fields": [
+      {
+        "name": "weight",
+        "type": "int16"
+      }
+    ]
+  },
+  {
+    "name": "unvote",
     "base": "",
     "fields": [
       {
@@ -298,10 +320,6 @@
       {
         "name": "permlink",
         "type": "string"
-      },
-      {
-        "name": "weight",
-        "type": "asset"
       }
     ]
   },
@@ -327,7 +345,7 @@
       },
       {
         "name": "weight",
-        "type": "asset"
+        "type": "int16"
       },
       {
         "name": "time",
@@ -376,8 +394,12 @@
     "type": "vote"
   },
   {
+    "name": "unvote",
+    "type": "unvote"
+  },
+  {
     "name": "closepost",
-    "type": "hash"
+    "type": "closepost"
   },
   {
     "name": "createacc",

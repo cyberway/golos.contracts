@@ -3,6 +3,8 @@
 
 #include <eosiolib/transaction.hpp>
 
+#define NULL_LAMBDA [](auto&, auto&) {}
+
 using namespace eosio;
 
 extern "C" {
@@ -26,8 +28,10 @@ void publication::apply(uint64_t code, uint64_t action) {
         execute_action(this, &publication::upvote);
     if (N(downvote) == action)
         execute_action(this, &publication::downvote);
+    if (N(unvote) == action)
+        execute_action(this, &publication::unvote);
     if (N(closepost) == action)
-        close_post();
+        execute_action(this, &publication::close_post);
 
     if (N(createacc) == action)
         execute_action(this, &publication::create_battery_user);
@@ -42,7 +46,6 @@ void publication::create_post(account_name account, std::string permlink,
                               std::vector<structures::tag> tags,
                               std::string jsonmetadata) {
     require_auth(account);
-
     if (!parentacc) {
         recovery_battery(account, &structures::account_battery::limit_battery_posting, {UPPER_BOUND, POST_OPERATION_INTERVAL, UPPER_BOUND, type_recovery::linear});
         recovery_battery(account, &structures::account_battery::posting_battery, {UPPER_BOUND, RECOVERY_PERIOD_POSTING, POST_AMOUNT_OPERATIONS, type_recovery::persent}); // TODO battery that is overrun
@@ -53,13 +56,12 @@ void publication::create_post(account_name account, std::string permlink,
     tables::post_table post_table(_self, account);
     tables::content_table content_table(_self, account);
 
-    checksum256 permlink_hash;
-    sha256(permlink.c_str(), sizeof(permlink), &permlink_hash);
+    checksum256 permlink_hash = get_checksum256(permlink);
+    checksum256 parentprmlnk_hash = get_checksum256(parentprmlnk);
 
-    auto posttable_index = post_table.get_index<N(permlink)>();
-    auto posttable_obj = posttable_index.find(structures::post::get_hash_key(permlink_hash));
-
-    eosio_assert(posttable_obj == posttable_index.end(), "This post already exists.");
+    structures::post posttable_obj;
+    if (get_post(account, permlink, posttable_obj, NULL_LAMBDA))
+        post_assert(true);
 
     auto post_id = post_table.available_primary_key();
 
@@ -69,11 +71,15 @@ void publication::create_post(account_name account, std::string permlink,
         item.account = account;
         item.permlink = permlink_hash;
         item.parentacc = parentacc;
-        item.parentprmlnk = parentprmlnk;
+        item.parentprmlnk = parentprmlnk_hash;
         item.curatorprcnt = curatorprcnt;
         item.payouttype = payouttype;
         item.beneficiaries = beneficiaries;
         item.paytype = paytype;
+        if (parentacc) {
+            set_child_count(true, parentacc, parentprmlnk_hash);
+        }
+        item.status = post_status::open;
     });
 
     content_table.emplace(account, [&]( auto &item ) {
@@ -84,6 +90,8 @@ void publication::create_post(account_name account, std::string permlink,
         item.tags = tags;
         item.jsonmetadata = jsonmetadata;
     });
+
+    close_post_timer(account, permlink);
 }
 
 void publication::update_post(account_name account, std::string permlink,
@@ -95,18 +103,18 @@ void publication::update_post(account_name account, std::string permlink,
     tables::content_table content_table(_self, account);
     structures::post posttable_obj;
 
-    if (get_post(account, permlink, posttable_obj)) {
-        auto contenttable_index = content_table.get_index<N(id)>();
-        auto contenttable_obj = contenttable_index.find(posttable_obj.id);
+    if (get_post(account, permlink, posttable_obj, NULL_LAMBDA)) {
+        auto contenttable_obj = content_table.find(posttable_obj.id);
 
-        contenttable_index.modify(contenttable_obj, account, [&]( auto &item ) {
+        content_table.modify(contenttable_obj, account, [&]( auto &item ) {
             item.headerpost = headerpost;
             item.bodypost = bodypost;
             item.languagepost = languagepost;
             item.tags = tags;
             item.jsonmetadata = jsonmetadata;
         });
-    }
+    } else
+        post_assert(false);
 }
 
 void publication::delete_post(account_name account, std::string permlink) {
@@ -118,82 +126,76 @@ void publication::delete_post(account_name account, std::string permlink) {
 
     structures::post posttable_obj;
 
-    if (get_post(account, permlink, posttable_obj)) {
-        if (posttable_obj.parentacc) {
-            auto parentacc_index = post_table.get_index<N(parentacc)>();
-            auto parentacc_obj = parentacc_index.find(account);
-            while (parentacc_obj != parentacc_index.end() && parentacc_obj->parentacc == account) {
-                eosio_assert(posttable_obj.parentprmlnk != parentacc_obj->parentprmlnk,
-                             "You can't delete comment with child comments.");
-                ++parentacc_obj;
-            }
-            auto posttable_index = post_table.get_index<N(id)>();
-            auto post = posttable_index.find(posttable_obj.id);
-            posttable_index.erase(post);
-            auto contenttable_index = content_table.get_index<N(id)>();
-            auto contenttable_obj = contenttable_index.find(posttable_obj.id);
-            contenttable_index.erase(contenttable_obj);
-            auto votetable_index = vote_table.get_index<N(postid)>();
-            auto votetable_obj = votetable_index.find(posttable_obj.id);
-            while (votetable_obj != votetable_index.end())
-                votetable_obj = votetable_index.erase(votetable_obj);
-        } else {
-            eosio_assert(false, "You can't delete post, it can be only changed.");
-        }
-    }
+    if (get_post(account, permlink, posttable_obj, NULL_LAMBDA)) {
+        eosio_assert(posttable_obj.childcount == 0,
+                     "You can't delete comment with child comments.");
+        set_child_count(false, posttable_obj.parentacc, posttable_obj.parentprmlnk);
+        post_table.erase(post_table.find(posttable_obj.id));
+        content_table.erase(content_table.find(posttable_obj.id));
+        auto votetable_index = vote_table.get_index<N(postid)>();
+        auto votetable_obj = votetable_index.find(posttable_obj.id);
+        while (votetable_obj != votetable_index.end())
+            votetable_obj = votetable_index.erase(votetable_obj);
+    } else
+        post_assert(false);
 }
 
-void publication::upvote(account_name voter, account_name author, std::string permlink, asset weight) {
+void publication::upvote(account_name voter, account_name author, std::string permlink, int16_t weight) {
     require_auth(voter);
     recovery_battery(voter, &structures::account_battery::limit_battery_of_votes, {UPPER_BOUND, VOTE_OPERATION_INTERVAL, UPPER_BOUND, type_recovery::linear});
 
-//    eosio_assert(weight > 0, "The weight sign can't be negative.");
+    eosio_assert(weight > 0, "The weight must be positive.");
+    eosio_assert(weight <= MAX_WEIGHT, "The weight can't be more than 100%.");
 
     set_vote(voter, author, permlink, weight);
 }
 
-void publication::downvote(account_name voter, account_name author, std::string permlink, asset weight) {
+void publication::downvote(account_name voter, account_name author, std::string permlink, int16_t weight) {
     require_auth(voter);
 
-//    eosio_assert(weight < 0, "The weight sign can't be positive.");
+    eosio_assert(weight > 0, "The weight sign can't be negative.");
+    eosio_assert(weight <= MAX_WEIGHT, "The weight can't be more than 100%.");
 
-    set_vote(voter, author, permlink, weight);
+    set_vote(voter, author, permlink, -weight);
 }
 
 void publication::unvote(account_name voter, account_name author, std::string permlink) {
     require_auth(voter);
-
-//    eosio_assert(weight == 0, "The weight can be only zero.");
-
-    set_vote(voter, author, permlink, asset(0, S(4, GOLOS)));
+  
+    set_vote(voter, author, permlink, 0);
 }
 
-void publication::close_post() {
-    close_post_timer();
+void publication::close_post(account_name account, std::string permlink) {
+    structures::post post_obj;
+
+    get_post(account, permlink, post_obj, [&](auto &posttable_index, auto &posttable_obj) {
+        posttable_index.modify(posttable_obj, account, [&]( auto &item) {
+            item.status = post_status::closed;
+        });
+    });
 }
 
-void publication::close_post_timer() {
-    require_auth(_self);
+void publication::close_post_timer(account_name account, std::string permlink) {
+    require_auth(account);
 
     transaction trx;
-    trx.actions.emplace_back(action{permission_level(_self, N(active)), _self, N(closepost), structures::st_hash{now()}});
-    trx.delay_sec = CLOSE_POST_TIMER;
+    trx.actions.emplace_back(action{permission_level(_self, N(active)), _self, N(closepost), structures::closepost{account, permlink}});
+    trx.delay_sec = CLOSE_POST_PERIOD;
     trx.send(_self, _self);
 }
 
+// weight is fixed point with two decimal digits,
+// if you need to operate it,
+// please divide by TWO_DECIMAL_DIGITS
 void publication::set_vote(account_name voter, account_name author,
-                           std::string permlink, asset weight) {
+                           std::string permlink, int16_t weight) {
     tables::vote_table vote_table(_self, author);
 
     structures::post posttable_obj;
 
-    std::vector<structures::rshares> rshares;
+    std::vector<structures::rshares> rshares{{0, 0, 0, 0}};
 
-    structures::rshares rshares_obj{0, 0, 0, 0};
-
-    rshares.push_back(rshares_obj);
-
-    if (get_post(author, permlink, posttable_obj)) {
+    if (get_post(author, permlink, posttable_obj, NULL_LAMBDA)) {
         auto votetable_index = vote_table.get_index<N(postid)>();
         auto votetable_obj = votetable_index.find(posttable_obj.id);
 
@@ -205,7 +207,8 @@ void publication::set_vote(account_name voter, account_name author,
                    item.percent = FIXED_CURATOR_PERCENT;
                    item.weight = weight;
                    item.time = now();
-                   item.rshares = rshares;
+                   if (posttable_obj.status == post_status::open)
+                       item.rshares = rshares;
                    ++item.count;
                 });
                 return;
@@ -219,24 +222,58 @@ void publication::set_vote(account_name voter, account_name author,
            item.percent = FIXED_CURATOR_PERCENT;
            item.weight = weight;
            item.time = now();
-           item.rshares = rshares;
+           if (posttable_obj.status == post_status::open)
+               item.rshares = rshares;
            ++item.count;
         });
-    }
+    } else
+        post_assert(false);
 }
 
-bool publication::get_post(account_name account, std::string permlink, structures::post &post) {
+template<typename Lambda>
+bool publication::get_post(account_name account, checksum256 &permlink, structures::post &post, Lambda &&lambda) {
     tables::post_table post_table(_self, account);
 
-    checksum256 permlink_hash;
-    sha256(permlink.c_str(), sizeof(permlink), &permlink_hash);
     auto posttable_index = post_table.get_index<N(permlink)>();
-    auto posttable_obj = posttable_index.find(structures::post::get_hash_key(permlink_hash));
+    auto posttable_obj = posttable_index.find(structures::post::get_hash_key(permlink));
 
-    eosio_assert(posttable_obj != posttable_index.end(), "Post doesn't exist.");
+    if (posttable_obj != posttable_index.end()) {
+        lambda(posttable_index, posttable_obj);
+        post = *posttable_obj;
+        return true;
+    } else
+        return false;
+}
 
-    post = *posttable_obj;
-    return true;
+template<typename Lambda>
+bool publication::get_post(account_name account, std::string &permlink, structures::post &post, Lambda &&lambda) {
+    checksum256 checksum = get_checksum256(permlink);
+    return get_post(account, checksum, post, lambda);
+}
+
+checksum256 publication::get_checksum256(std::string &permlink) {
+    checksum256 hash;
+    sha256(permlink.c_str(), sizeof(permlink), &hash);
+    return hash;
+}
+
+void publication::set_child_count(bool increase, account_name parentacc, checksum256 &parentprmlnk) {
+    structures::post post_obj;
+    get_post(parentacc, parentprmlnk, post_obj, [&](auto &posttable_index, auto &posttable_obj) {
+        posttable_index.modify(posttable_obj, 0, [&]( auto &item ) {
+            if (increase)
+                ++item.childcount;
+            else
+                --item.childcount;
+        });
+    });
+}
+
+void publication::post_assert(bool exist) {
+    if (exist)
+        eosio_assert(false, "This post already exists.");
+    else
+        eosio_assert(false, "Post doesn't exist.");
 }
 
 void publication::create_battery_user(account_name name) {
