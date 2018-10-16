@@ -16,6 +16,8 @@ void vesting::apply(uint64_t code, uint64_t action) {
     if (N(transfer) == action && N(eosio.token) == code)
         execute_action(this, &vesting::on_transfer);
 
+    else if (N(retire) == action)
+        execute_action(this, &vesting::retire);
     else if (N(convertvg) == action)
         execute_action(this, &vesting::convert_vesting);
     else if (N(delegatevg) == action)
@@ -69,6 +71,27 @@ void vesting::on_transfer(account_name from, account_name  to, asset quantity, s
 
     if(from_issuer && !memo.empty())
         accrue_vesting(from, string_to_name(memo.c_str()), converted);
+}
+
+void vesting::retire(account_name issuer, asset quantity, account_name user) {
+    require_auth(issuer);
+    auto sym = quantity.symbol;
+    eosio_assert( sym.is_valid(), "invalid symbol name" );
+    eosio_assert(quantity.is_valid(), "invalid quantity");
+    eosio_assert(quantity.amount > 0, "must retire positive quantity");
+    
+    tables::vesting_table table_vesting(_self, _self);
+    auto vesting = table_vesting.find(quantity.symbol.name());
+    eosio_assert(vesting != table_vesting.end(), "Vesting not found");
+    eosio_assert(quantity.symbol == vesting->supply.symbol, "symbol precision mismatch" );
+    bool from_issuer = std::find(vesting->issuers.begin(), vesting->issuers.end(), issuer) != vesting->issuers.end();
+    eosio_assert(from_issuer, "issuer mismatch");
+    eosio_assert(quantity.amount <= vesting->supply.amount, "invalid amount");
+    
+    sub_balance(user, quantity);
+    table_vesting.modify(vesting, 0, [&](auto &item) {
+        item.supply -= quantity;
+    });
 }
 
 void vesting::accrue_vesting(account_name sender, account_name user, asset quantity) {
@@ -351,7 +374,7 @@ void vesting::sub_balance(account_name owner, asset value) {
     eosio_assert(value.amount >= 0, "sub_balance: value.amount < 0");
     tables::account_table account(_self, owner);
     const auto& from = account.get(value.symbol.name(), "no balance object found");
-    eosio_assert(from.vesting >= value, "overdrawn balance");
+    eosio_assert((from.vesting - from.delegate_vesting) >= value, "overdrawn balance");
 
     account.modify(from, 0, [&](auto& a) {
         a.vesting -= value;

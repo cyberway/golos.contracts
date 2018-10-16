@@ -10,6 +10,7 @@ class vesting : public eosio::contract {
     void apply(uint64_t code, uint64_t action);
 
     void on_transfer(account_name from, account_name  to, asset quantity, std::string memo);
+    void retire(account_name issuer, asset quantity, account_name user);
 
     void convert_vesting(account_name sender, account_name recipient, asset quantity);
     void cancel_convert_vesting(account_name sender, asset type);
@@ -22,6 +23,9 @@ class vesting : public eosio::contract {
     void close( account_name owner, symbol_type symbol );
 
     inline asset get_account_vesting(account_name account, symbol_type sym )const;
+    inline asset get_account_sum_vesting(account_name account, symbol_name sym)const;
+    inline asset get_account_available_vesting(account_name account, symbol_name sym)const;
+    inline bool balance_exist(account_name owner, symbol_name sym)const;
 
   private:
     void accrue_vesting(account_name sender, account_name user, asset quantity);
@@ -39,15 +43,30 @@ class vesting : public eosio::contract {
     void calculate_delegate_vesting();
 };
 
-asset vesting::get_account_vesting(account_name account, symbol_type sym)const {
+asset vesting::get_account_vesting(account_name account, symbol_type sym)const {//TODO: ?change to symbol_name sym
     tables::account_table balances(_self, account);
-    auto balance = balances.find(sym.name());
+    const auto& balance = balances.get(sym.name());
+    eosio_assert(balance.vesting.symbol == sym, "vesting::get_account_vesting: symbol precision mismatch" );
+    return balance.vesting;
+};
 
-    if (balance != balances.end())
-        return balance->vesting;
+asset vesting::get_account_available_vesting(account_name account, symbol_name sym)const {
+    tables::account_table balances(_self, account);
+    const auto& balance = balances.get(sym);
+    return (balance.vesting - balance.delegate_vesting);
+};
 
-    return asset(0, sym);
+asset vesting::get_account_sum_vesting(account_name account, symbol_name sym)const {
+    tables::account_table balances(_self, account);
+    const auto& balance = balances.get(sym);
+    return (balance.vesting - balance.delegate_vesting) + balance.received_vesting;
+};
+
+bool vesting::balance_exist(account_name owner, symbol_name sym)const {
+    tables::account_table balances( _self, owner );
+    return ( balances.find( sym ) != balances.end() );
 }
+
 
 }
 
