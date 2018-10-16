@@ -160,8 +160,6 @@ void vesting::delegate_vesting(account_name sender, account_name recipient, asse
         item.delegate_vesting += quantity;
     });
 
-    sub_balance(sender, quantity);
-
     tables::delegate_table table(_self, quantity.symbol.name());
     auto index_table = table.get_index<N(unique)>();
     auto delegate_record = index_table.find(structures::delegate_record::unique_key(sender, recipient));
@@ -219,7 +217,7 @@ void vesting::undelegate_vesting(account_name sender, account_name recipient, as
     table_delegate_vesting.emplace(sender, [&](structures::return_delegate &item){
         item.id = table_delegate_vesting.available_primary_key();
         item.recipient = sender;
-        item.amount = quantity + part_deductions;
+        item.amount = quantity/*part_deductions*/;
         item.date = time_point_sec(now() + TIME_LIMIT_FOR_RETURN_DELEGATE_VESTING);
     });
 
@@ -228,13 +226,6 @@ void vesting::undelegate_vesting(account_name sender, account_name recipient, as
     eosio_assert(balance != account_recipient.end(), "This token is not on the recipient balance sheet");
     account_recipient.modify(balance, sender, [&](auto &item){
         item.received_vesting -= quantity;
-    });
-
-    tables::account_table account_sender(_self, sender);
-    auto balance_sender = account_sender.find(quantity.symbol.name());
-    eosio_assert(balance_sender != account_sender.end(), "This token is not on the sender balance sheet");
-    account_sender.modify(balance_sender, sender, [&](auto &item){
-        item.delegate_vesting -= quantity;
     });
 }
 
@@ -313,7 +304,13 @@ void vesting::calculate_delegate_vesting() {
         if (obj->date > time_point_sec(now()))
             break;
 
-        add_balance(obj->recipient, obj->amount, _self);
+        tables::account_table account_recipient(_self, obj->recipient);
+        auto balance_recipient = account_recipient.find(obj->amount.symbol.name());
+        eosio_assert(balance_recipient != account_recipient.end(), "This token is not on the sender balance sheet");
+        account_recipient.modify(balance_recipient, 0, [&](auto &item){
+            item.delegate_vesting -= obj->amount;
+        });
+
         obj = index.erase(obj);
     }
 }
