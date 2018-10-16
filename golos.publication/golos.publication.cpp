@@ -32,7 +32,6 @@ void publication::apply(uint64_t code, uint64_t action) {
         execute_action(this, &publication::unvote);
     if (N(closepost) == action)
         execute_action(this, &publication::close_post);
-
     if (N(createacc) == action)
         execute_action(this, &publication::create_battery_user);
 }
@@ -179,9 +178,9 @@ void publication::close_post_timer(account_name account, std::string permlink) {
     require_auth(account);
 
     transaction trx;
-    trx.actions.emplace_back(action{permission_level(_self, N(active)), _self, N(closepost), structures::closepost{account, permlink}});
+    trx.actions.emplace_back(action{permission_level(account, N(active)), _self, N(closepost), structures::closepost{account, permlink}});
     trx.delay_sec = CLOSE_POST_PERIOD;
-    trx.send(_self, _self);
+    trx.send(account, _self);
 }
 
 // weight is fixed point with two decimal digits,

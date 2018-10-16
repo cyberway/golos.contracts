@@ -110,7 +110,7 @@ public:
                               std::string headerpost, std::string bodypost,
                               std::string languagepost, std::vector<structures::tags> tags,
                               std::string jsonmetadata) {
-        return push_action(N(golos.pub), N(updatepost), mvo()
+        return push_action(account, N(updatepost), mvo()
                            ("account", account)
                            ("permlink", permlink)
                            ("headerpost", headerpost)
@@ -138,7 +138,7 @@ public:
     }
 
     action_result downvote(account_name voter, account_name author, std::string permlink, int16_t weight) {
-        return push_action(N(golos.pub), N(downvote), mvo()
+        return push_action(voter, N(downvote), mvo()
                            ("voter", voter)
                            ("author", author)
                            ("permlink", permlink)
@@ -146,12 +146,11 @@ public:
         );
     }
 
-    action_result unvote(account_name voter, account_name author, std::string permlink, int16_t weight) {
-        return push_action(N(golos.pub), N(unvote), mvo()
+    action_result unvote(account_name voter, account_name author, std::string permlink) {
+        return push_action(voter, N(unvote), mvo()
                            ("voter", voter)
                            ("author", author)
                            ("permlink", permlink)
-                           ("weight", weight)
         );
     }
 
@@ -162,29 +161,29 @@ public:
     }
 
     void require_equal(const fc::variant &obj1, const fc::variant &obj2) {
-        BOOST_REQUIRE_EQUAL(true, obj1.is_object() && obj2.is_object());
-        BOOST_REQUIRE_EQUAL(obj1.get_object()["id"].as<uint64_t>(), obj2.get_object()["id"].as<uint64_t>());
-        BOOST_REQUIRE_EQUAL(obj1.get_object()["account"].as<account_name>(), obj2.get_object()["account"].as<account_name>());
-        BOOST_REQUIRE_EQUAL(obj1.get_object()["permlink"].as<checksum256_type>().str(), obj2.get_object()["permlink"].as<checksum256_type>().str());
-        BOOST_REQUIRE_EQUAL(obj1.get_object()["parentacc"].as<account_name>(), obj2.get_object()["parentacc"].as<account_name>());
-        BOOST_REQUIRE_EQUAL(obj1.get_object()["parentprmlnk"].as<checksum256_type>().str(), obj2.get_object()["parentprmlnk"].as<checksum256_type>().str());
-        BOOST_REQUIRE_EQUAL(obj1.get_object()["curatorprcnt"].as<uint64_t>(), obj2.get_object()["curatorprcnt"].as<uint64_t>());
-        BOOST_REQUIRE_EQUAL(obj1.get_object()["payouttype"].as<std::string>(), obj2.get_object()["payouttype"].as<std::string>());
-        BOOST_REQUIRE_EQUAL(obj1.get_object()["beneficiaries"].get_array().at(0).get_object()["account"].as<account_name>(), obj2.get_object()["beneficiaries"].get_array().at(0).get_object()["account"].as<account_name>());
-        BOOST_REQUIRE_EQUAL(obj1.get_object()["beneficiaries"].get_array().at(0).get_object()["deductprcnt"].as<uint64_t>(), obj2.get_object()["beneficiaries"].get_array().at(0).get_object()["deductprcnt"].as<uint64_t>());
-        BOOST_REQUIRE_EQUAL(obj1.get_object()["paytype"].as<std::string>(), obj2.get_object()["paytype"].as<std::string>());
-        BOOST_REQUIRE_EQUAL(obj1.get_object()["childcount"].as<uint64_t>(), obj2.get_object()["childcount"].as<uint64_t>());
-        BOOST_REQUIRE_EQUAL(obj1.get_object()["status"].as<uint8_t>(), obj2.get_object()["status"].as<uint8_t>());
+        BOOST_CHECK_EQUAL(true, obj1.is_object() && obj2.is_object());
+        BOOST_CHECK_EQUAL(obj1.get_object()["id"].as<uint64_t>(), obj2.get_object()["id"].as<uint64_t>());
+        BOOST_CHECK_EQUAL(obj1.get_object()["account"].as<account_name>(), obj2.get_object()["account"].as<account_name>());
+        BOOST_CHECK_EQUAL(obj1.get_object()["permlink"].as<checksum256_type>().str(), obj2.get_object()["permlink"].as<checksum256_type>().str());
+        BOOST_CHECK_EQUAL(obj1.get_object()["parentacc"].as<account_name>(), obj2.get_object()["parentacc"].as<account_name>());
+        BOOST_CHECK_EQUAL(obj1.get_object()["parentprmlnk"].as<checksum256_type>().str(), obj2.get_object()["parentprmlnk"].as<checksum256_type>().str());
+        BOOST_CHECK_EQUAL(obj1.get_object()["curatorprcnt"].as<uint64_t>(), obj2.get_object()["curatorprcnt"].as<uint64_t>());
+        BOOST_CHECK_EQUAL(obj1.get_object()["payouttype"].as<std::string>(), obj2.get_object()["payouttype"].as<std::string>());
+        BOOST_CHECK_EQUAL(obj1.get_object()["beneficiaries"].get_array().at(0).get_object()["account"].as<account_name>(), obj2.get_object()["beneficiaries"].get_array().at(0).get_object()["account"].as<account_name>());
+        BOOST_CHECK_EQUAL(obj1.get_object()["beneficiaries"].get_array().at(0).get_object()["deductprcnt"].as<uint64_t>(), obj2.get_object()["beneficiaries"].get_array().at(0).get_object()["deductprcnt"].as<uint64_t>());
+        BOOST_CHECK_EQUAL(obj1.get_object()["paytype"].as<std::string>(), obj2.get_object()["paytype"].as<std::string>());
+        BOOST_CHECK_EQUAL(obj1.get_object()["childcount"].as<uint64_t>(), obj2.get_object()["childcount"].as<uint64_t>());
+        BOOST_CHECK_EQUAL(obj1.get_object()["status"].as<uint8_t>(), obj2.get_object()["status"].as<uint8_t>());
     }
 
     void require_equal_content(const fc::variant &obj1, const fc::variant &obj2) {
-        BOOST_REQUIRE_EQUAL(true, obj1.is_object() && obj2.is_object());
-        BOOST_REQUIRE_EQUAL(obj1.get_object()["id"].as<uint64_t>(), obj2.get_object()["id"].as<uint64_t>());
-        BOOST_REQUIRE_EQUAL(obj1.get_object()["headerpost"].as<std::string>(), obj2.get_object()["headerpost"].as<std::string>());
-        BOOST_REQUIRE_EQUAL(obj1.get_object()["bodypost"].as<std::string>(), obj2.get_object()["bodypost"].as<std::string>());
-        BOOST_REQUIRE_EQUAL(obj1.get_object()["languagepost"].as<std::string>(), obj2.get_object()["languagepost"].as<std::string>());
-        BOOST_REQUIRE_EQUAL(obj1.get_object()["tags"].get_array().at(0).get_object()["tag"].as_string(), obj2.get_object()["tags"].get_array().at(0).get_object()["tag"].as_string());
-        BOOST_REQUIRE_EQUAL(obj1.get_object()["jsonmetadata"].as<std::string>(), obj2.get_object()["jsonmetadata"].as<std::string>());
+        BOOST_CHECK_EQUAL(true, obj1.is_object() && obj2.is_object());
+        BOOST_CHECK_EQUAL(obj1.get_object()["id"].as<uint64_t>(), obj2.get_object()["id"].as<uint64_t>());
+        BOOST_CHECK_EQUAL(obj1.get_object()["headerpost"].as<std::string>(), obj2.get_object()["headerpost"].as<std::string>());
+        BOOST_CHECK_EQUAL(obj1.get_object()["bodypost"].as<std::string>(), obj2.get_object()["bodypost"].as<std::string>());
+        BOOST_CHECK_EQUAL(obj1.get_object()["languagepost"].as<std::string>(), obj2.get_object()["languagepost"].as<std::string>());
+        BOOST_CHECK_EQUAL(obj1.get_object()["tags"].get_array().at(0).get_object()["tag"].as_string(), obj2.get_object()["tags"].get_array().at(0).get_object()["tag"].as_string());
+        BOOST_CHECK_EQUAL(obj1.get_object()["jsonmetadata"].as<std::string>(), obj2.get_object()["jsonmetadata"].as<std::string>());
     }
 
     void require_equal_battery(const fc::variant &obj1, const fc::variant &obj2) {
@@ -202,11 +201,12 @@ public:
 BOOST_AUTO_TEST_SUITE(golos_publication_tests)
 
 BOOST_FIXTURE_TEST_CASE(create_post, golos_publication_tester) try {
-    BOOST_REQUIRE_EQUAL(success(), create_battery(N(golos.pub)));
+    BOOST_TEST_MESSAGE("Create post testing.");
+    BOOST_CHECK_EQUAL(success(), create_battery(N(brucelee)));
     produce_blocks(1);
 
-    BOOST_REQUIRE_EQUAL(success(), golos_publication_tester::create_post(
-                            N(golos.pub),
+    BOOST_CHECK_EQUAL(success(), golos_publication_tester::create_post(
+                            N(brucelee),
                             "permlink",
                             N(),
                             "parentprmlnk",
@@ -220,11 +220,11 @@ BOOST_FIXTURE_TEST_CASE(create_post, golos_publication_tester) try {
                             {{"tag"}},
                             "jsonmetadata"));
 
-    auto post_stats = get_posts(N(golos.pub), 0);
+    auto post_stats = get_posts(N(brucelee), 0);
     require_equal( post_stats, mvo()
                    ("id", 0)
                    ("date", 1577836804)
-                   ("account", "golos.pub")
+                   ("account", "brucelee")
                    ("permlink", "52487630bee6db98e71c7c56b2fe5be67d5cfe949ddfe0f3839eec332c05b3bf")
                    ("parentacc", "")
                    ("parentprmlnk", "8edcefcc0d9b78dc97a682829395b909c4b64309c1c3bb539d941873c18a5afc")
@@ -240,7 +240,7 @@ BOOST_FIXTURE_TEST_CASE(create_post, golos_publication_tester) try {
                    ("status", 0)
                    );
 
-    auto content_stats = get_content(N(golos.pub), 0);
+    auto content_stats = get_content(N(brucelee), 0);
     require_equal_content(content_stats, mvo()
                             ("id", 0)
                             ("headerpost", "headerpost")
@@ -252,23 +252,32 @@ BOOST_FIXTURE_TEST_CASE(create_post, golos_publication_tester) try {
                                               }))
                             ("jsonmetadata", "jsonmetadata"));
 
-    produce_blocks(21);
+    produce_blocks(19);
+
+    // checking that post wasn't closed before ten seconds
+    // it's value for testing
+    // if you need correct value please change CLOSE_POST_PERIOD in config.hpp
+    {
+        auto post_stats = get_posts(N(brucelee), 0);
+        BOOST_CHECK_EQUAL(fc::variant(post_stats).get_object()["status"].as<uint64_t>(), 0);
+    }
+    produce_blocks(1);
 
     // checking that post was closed
     {
-        auto post_stats = get_posts(N(golos.pub), 0);
-        BOOST_REQUIRE_EQUAL(fc::variant(post_stats).get_object()["status"].as<uint64_t>(), 1);
+        auto post_stats = get_posts(N(brucelee), 0);
+        BOOST_CHECK_EQUAL(fc::variant(post_stats).get_object()["status"].as<uint64_t>(), 1);
     }
 
     // checking that child was added
     {
-        BOOST_REQUIRE_EQUAL(success(), create_battery(N(jackiechan)));
+        BOOST_CHECK_EQUAL(success(), create_battery(N(jackiechan)));
         produce_blocks(1);
 
-        BOOST_REQUIRE_EQUAL(success(), golos_publication_tester::create_post(
+        BOOST_CHECK_EQUAL(success(), golos_publication_tester::create_post(
                                 N(jackiechan),
                                 "permlink1",
-                                N(golos.pub),
+                                N(brucelee),
                                 "permlink",
                                 333,
                                 "payouttype",
@@ -280,12 +289,12 @@ BOOST_FIXTURE_TEST_CASE(create_post, golos_publication_tester) try {
                                 {{"tag"}},
                                 "jsonmetadata"));
 
-        auto post_stats = get_posts(N(golos.pub), 0);
-        BOOST_REQUIRE_EQUAL(fc::variant(post_stats).get_object()["childcount"].as<uint8_t>(), 1);
+        auto post_stats = get_posts(N(brucelee), 0);
+        BOOST_CHECK_EQUAL(fc::variant(post_stats).get_object()["childcount"].as<uint8_t>(), 1);
     }
 
-    BOOST_REQUIRE_EQUAL(error("assertion failure with message: This post already exists."), golos_publication_tester::create_post(
-                            N(golos.pub),
+    BOOST_CHECK_EQUAL(error("assertion failure with message: This post already exists."), golos_publication_tester::create_post(
+                            N(brucelee),
                             "permlink",
                             N(),
                             "parentprmlnk",
@@ -298,15 +307,15 @@ BOOST_FIXTURE_TEST_CASE(create_post, golos_publication_tester) try {
                             "languagepost",
                             {{"tag"}},
                             "jsonmetadata"));
-
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE(update_post, golos_publication_tester) try {
-    BOOST_REQUIRE_EQUAL(success(), create_battery(N(golos.pub)));
+    BOOST_TEST_MESSAGE("Update post testing.");
+    BOOST_CHECK_EQUAL(success(), create_battery(N(brucelee)));
     produce_blocks(1);
 
-    BOOST_REQUIRE_EQUAL(success(), golos_publication_tester::create_post(
-                            N(golos.pub),
+    BOOST_CHECK_EQUAL(success(), golos_publication_tester::create_post(
+                            N(brucelee),
                             "permlink",
                             N(),
                             "parentprmlnk",
@@ -320,8 +329,8 @@ BOOST_FIXTURE_TEST_CASE(update_post, golos_publication_tester) try {
                             {{"tag"}},
                             "jsonmetadata"));
 
-    BOOST_REQUIRE_EQUAL(success(), golos_publication_tester::update_post(
-                            N(golos.pub),
+    BOOST_CHECK_EQUAL(success(), golos_publication_tester::update_post(
+                            N(brucelee),
                             "permlink",
                             "headerpostnew",
                             "bodypostnew",
@@ -329,7 +338,7 @@ BOOST_FIXTURE_TEST_CASE(update_post, golos_publication_tester) try {
                             {{"tagnew"}},
                             "jsonmetadatanew"));
 
-    auto content_stats = get_content(N(golos.pub), 0);
+    auto content_stats = get_content(N(brucelee), 0);
     require_equal_content(content_stats, mvo()
                             ("id", 0)
                             ("headerpost", "headerpostnew")
@@ -341,8 +350,8 @@ BOOST_FIXTURE_TEST_CASE(update_post, golos_publication_tester) try {
                                               }))
                             ("jsonmetadata", "jsonmetadatanew"));
 
-    BOOST_REQUIRE_EQUAL(error("assertion failure with message: Post doesn't exist."), golos_publication_tester::update_post(
-                            N(golos.pub),
+    BOOST_CHECK_EQUAL(error("assertion failure with message: Post doesn't exist."), golos_publication_tester::update_post(
+                            N(brucelee),
                             "permlinknew",
                             "headerpostnew",
                             "bodypostnew",
@@ -352,11 +361,12 @@ BOOST_FIXTURE_TEST_CASE(update_post, golos_publication_tester) try {
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE(delete_post, golos_publication_tester) try {
-    BOOST_REQUIRE_EQUAL(success(), create_battery(N(golos.pub)));
+    BOOST_TEST_MESSAGE("Delete post testing.");
+    BOOST_CHECK_EQUAL(success(), create_battery(N(brucelee)));
     produce_blocks(1);
 
-    BOOST_REQUIRE_EQUAL(success(), golos_publication_tester::create_post(
-                            N(golos.pub),
+    BOOST_CHECK_EQUAL(success(), golos_publication_tester::create_post(
+                            N(brucelee),
                             "permlink",
                             N(),
                             "parentprmlnk",
@@ -370,13 +380,13 @@ BOOST_FIXTURE_TEST_CASE(delete_post, golos_publication_tester) try {
                             {{"tag"}},
                             "jsonmetadata"));
 
-    BOOST_REQUIRE_EQUAL(success(), create_battery(N(jackiechan)));
+    BOOST_CHECK_EQUAL(success(), create_battery(N(jackiechan)));
     produce_blocks(1);
 
-    BOOST_REQUIRE_EQUAL(success(), golos_publication_tester::create_post(
+    BOOST_CHECK_EQUAL(success(), golos_publication_tester::create_post(
                             N(jackiechan),
                             "permlink1",
-                            N(golos.pub),
+                            N(brucelee),
                             "permlink",
                             333,
                             "payouttype",
@@ -388,25 +398,26 @@ BOOST_FIXTURE_TEST_CASE(delete_post, golos_publication_tester) try {
                             {{"tag"}},
                             "jsonmetadata"));
 
-    BOOST_REQUIRE_EQUAL(error("assertion failure with message: You can't delete comment with child comments."), golos_publication_tester::delete_post(
-                            N(golos.pub),
+    BOOST_CHECK_EQUAL(error("assertion failure with message: You can't delete comment with child comments."), golos_publication_tester::delete_post(
+                            N(brucelee),
                             "permlink"));
 
-    BOOST_REQUIRE_EQUAL(success(), golos_publication_tester::delete_post(
+    BOOST_CHECK_EQUAL(success(), golos_publication_tester::delete_post(
                             N(jackiechan),
                             "permlink1"));
 
-    BOOST_REQUIRE_EQUAL(error("assertion failure with message: Post doesn't exist."), golos_publication_tester::delete_post(
+    BOOST_CHECK_EQUAL(error("assertion failure with message: Post doesn't exist."), golos_publication_tester::delete_post(
                             N(jackiechan),
                             "permlink1"));
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE(upvote, golos_publication_tester) try {
-    BOOST_REQUIRE_EQUAL(success(), create_battery(N(golos.pub)));
+    BOOST_TEST_MESSAGE("Upvote testing.");
+    BOOST_CHECK_EQUAL(success(), create_battery(N(brucelee)));
     produce_blocks(1);
 
-    BOOST_REQUIRE_EQUAL(success(), golos_publication_tester::create_post(
-                            N(golos.pub),
+    BOOST_CHECK_EQUAL(success(), golos_publication_tester::create_post(
+                            N(brucelee),
                             "permlink",
                             N(),
                             "parentprmlnk",
@@ -420,82 +431,90 @@ BOOST_FIXTURE_TEST_CASE(upvote, golos_publication_tester) try {
                             {{"tag"}},
                             "jsonmetadata"));
 
-    BOOST_REQUIRE_EQUAL(success(), golos_publication_tester::upvote(
-                            N(golos.pub),
-                            N(golos.pub),
+    BOOST_CHECK_EQUAL(success(), golos_publication_tester::upvote(
+                            N(brucelee),
+                            N(brucelee),
                             "permlink",
                             123));
     produce_blocks(7);
 
-    BOOST_REQUIRE_EQUAL(error("assertion failure with message: Vote with the same weight has already existed."), golos_publication_tester::upvote(
-                            N(golos.pub),
-                            N(golos.pub),
+    BOOST_CHECK_EQUAL(error("assertion failure with message: Vote with the same weight has already existed."), golos_publication_tester::upvote(
+                            N(brucelee),
+                            N(brucelee),
                             "permlink",
                             123));
     produce_blocks(7);
 
-    BOOST_REQUIRE_EQUAL(error("assertion failure with message: Post doesn't exist."), golos_publication_tester::upvote(
-                            N(golos.pub),
+    BOOST_CHECK_EQUAL(error("assertion failure with message: Post doesn't exist."), golos_publication_tester::upvote(
+                            N(brucelee),
                             N(jackiechan),
                             "permlink",
                             111));
     produce_blocks(7);
 
-    BOOST_REQUIRE_EQUAL(error("assertion failure with message: The weight must be positive."), golos_publication_tester::upvote(
-                            N(golos.pub),
-                            N(golos.pub),
+    BOOST_CHECK_EQUAL(error("assertion failure with message: The weight must be positive."), golos_publication_tester::upvote(
+                            N(brucelee),
+                            N(brucelee),
                             "permlink",
                             -333));
     produce_blocks(7);
 
-    BOOST_REQUIRE_EQUAL(error("assertion failure with message: The weight can't be more than 100%."), golos_publication_tester::downvote(
-                            N(golos.pub),
-                            N(golos.pub),
+    BOOST_CHECK_EQUAL(error("assertion failure with message: The weight must be positive."), golos_publication_tester::upvote(
+                            N(brucelee),
+                            N(brucelee),
+                            "permlink",
+                            0));
+    produce_blocks(7);
+
+    BOOST_CHECK_EQUAL(success(), golos_publication_tester::upvote(
+                            N(brucelee),
+                            N(brucelee),
+                            "permlink",
+                            10000));
+    produce_blocks(7);
+
+    BOOST_CHECK_EQUAL(error("assertion failure with message: The weight can't be more than 100%."), golos_publication_tester::upvote(
+                            N(brucelee),
+                            N(brucelee),
                             "permlink",
                             10001));
     produce_blocks(7);
 
-    BOOST_REQUIRE_EQUAL(success(), golos_publication_tester::upvote(
-                            N(golos.pub),
-                            N(golos.pub),
+    BOOST_CHECK_EQUAL(success(), golos_publication_tester::upvote(
+                            N(brucelee),
+                            N(brucelee),
                             "permlink",
                             111));
     produce_blocks(7);
 
-    BOOST_REQUIRE_EQUAL(success(), golos_publication_tester::upvote(
-                            N(golos.pub),
-                            N(golos.pub),
+    BOOST_CHECK_EQUAL(success(), golos_publication_tester::upvote(
+                            N(brucelee),
+                            N(brucelee),
                             "permlink",
                             222));
     produce_blocks(7);
 
-    BOOST_REQUIRE_EQUAL(success(), golos_publication_tester::upvote(
-                            N(golos.pub),
-                            N(golos.pub),
+    BOOST_CHECK_EQUAL(success(), golos_publication_tester::upvote(
+                            N(brucelee),
+                            N(brucelee),
                             "permlink",
                             333));
     produce_blocks(7);
 
-    BOOST_REQUIRE_EQUAL(success(), golos_publication_tester::upvote(
-                            N(golos.pub),
-                            N(golos.pub),
-                            "permlink",
-                            444));
-    produce_blocks(7);
-
-    BOOST_REQUIRE_EQUAL(error("assertion failure with message: You can't revote anymore."), golos_publication_tester::upvote(
-                            N(golos.pub),
-                            N(golos.pub),
+    BOOST_CHECK_EQUAL(error("assertion failure with message: You can't revote anymore."), golos_publication_tester::upvote(
+                            N(brucelee),
+                            N(brucelee),
                             "permlink",
                             555));
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE(downvote, golos_publication_tester) try {
-    BOOST_REQUIRE_EQUAL(success(), create_battery(N(golos.pub)));
+    BOOST_TEST_MESSAGE("Downvote testing.");
+    BOOST_CHECK_EQUAL(success(), create_battery(N(brucelee)));
     produce_blocks(1);
 
-    BOOST_REQUIRE_EQUAL(success(), golos_publication_tester::create_post(
-                            N(golos.pub),
+    BOOST_CHECK_EQUAL(success(), golos_publication_tester::create_post(
+                            N(brucelee),
                             "permlink",
                             N(),
                             "parentprmlnk",
@@ -509,82 +528,90 @@ BOOST_FIXTURE_TEST_CASE(downvote, golos_publication_tester) try {
                             {{"tag"}},
                             "jsonmetadata"));
 
-    BOOST_REQUIRE_EQUAL(success(), golos_publication_tester::downvote(
-                            N(golos.pub),
-                            N(golos.pub),
+    BOOST_CHECK_EQUAL(success(), golos_publication_tester::downvote(
+                            N(brucelee),
+                            N(brucelee),
                             "permlink",
                             123));
     produce_blocks(7);
 
-    BOOST_REQUIRE_EQUAL(error("assertion failure with message: Vote with the same weight has already existed."), golos_publication_tester::downvote(
-                            N(golos.pub),
-                            N(golos.pub),
+    BOOST_CHECK_EQUAL(error("assertion failure with message: Vote with the same weight has already existed."), golos_publication_tester::downvote(
+                            N(brucelee),
+                            N(brucelee),
                             "permlink",
                             123));
     produce_blocks(7);
 
-    BOOST_REQUIRE_EQUAL(error("assertion failure with message: Post doesn't exist."), golos_publication_tester::downvote(
-                            N(golos.pub),
+    BOOST_CHECK_EQUAL(error("assertion failure with message: Post doesn't exist."), golos_publication_tester::downvote(
+                            N(brucelee),
                             N(jackiechan),
                             "permlink",
                             111));
     produce_blocks(7);
 
-    BOOST_REQUIRE_EQUAL(error("assertion failure with message: The weight sign can't be negative."), golos_publication_tester::downvote(
-                            N(golos.pub),
-                            N(golos.pub),
+    BOOST_CHECK_EQUAL(error("assertion failure with message: The weight sign can't be negative."), golos_publication_tester::downvote(
+                            N(brucelee),
+                            N(brucelee),
                             "permlink",
                             -333));
     produce_blocks(7);
 
-    BOOST_REQUIRE_EQUAL(error("assertion failure with message: The weight can't be more than 100%."), golos_publication_tester::downvote(
-                            N(golos.pub),
-                            N(golos.pub),
+    BOOST_CHECK_EQUAL(error("assertion failure with message: The weight sign can't be negative."), golos_publication_tester::downvote(
+                            N(brucelee),
+                            N(brucelee),
+                            "permlink",
+                            0));
+    produce_blocks(7);
+
+    BOOST_CHECK_EQUAL(success(), golos_publication_tester::downvote(
+                            N(brucelee),
+                            N(brucelee),
+                            "permlink",
+                            10000));
+    produce_blocks(7);
+
+    BOOST_CHECK_EQUAL(error("assertion failure with message: The weight can't be more than 100%."), golos_publication_tester::downvote(
+                            N(brucelee),
+                            N(brucelee),
                             "permlink",
                             10001));
     produce_blocks(7);
 
-    BOOST_REQUIRE_EQUAL(success(), golos_publication_tester::downvote(
-                            N(golos.pub),
-                            N(golos.pub),
+    BOOST_CHECK_EQUAL(success(), golos_publication_tester::downvote(
+                            N(brucelee),
+                            N(brucelee),
                             "permlink",
                             111));
     produce_blocks(7);
 
-    BOOST_REQUIRE_EQUAL(success(), golos_publication_tester::downvote(
-                            N(golos.pub),
-                            N(golos.pub),
+    BOOST_CHECK_EQUAL(success(), golos_publication_tester::downvote(
+                            N(brucelee),
+                            N(brucelee),
                             "permlink",
                             222));
     produce_blocks(7);
 
-    BOOST_REQUIRE_EQUAL(success(), golos_publication_tester::downvote(
-                            N(golos.pub),
-                            N(golos.pub),
+    BOOST_CHECK_EQUAL(success(), golos_publication_tester::downvote(
+                            N(brucelee),
+                            N(brucelee),
                             "permlink",
                             333));
     produce_blocks(7);
 
-    BOOST_REQUIRE_EQUAL(success(), golos_publication_tester::downvote(
-                            N(golos.pub),
-                            N(golos.pub),
-                            "permlink",
-                            444));
-    produce_blocks(7);
-
-    BOOST_REQUIRE_EQUAL(error("assertion failure with message: You can't revote anymore."), golos_publication_tester::downvote(
-                            N(golos.pub),
-                            N(golos.pub),
+    BOOST_CHECK_EQUAL(error("assertion failure with message: You can't revote anymore."), golos_publication_tester::downvote(
+                            N(brucelee),
+                            N(brucelee),
                             "permlink",
                             555));
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE(unvote, golos_publication_tester) try {
-    BOOST_REQUIRE_EQUAL(success(), create_battery(N(golos.pub)));
+    BOOST_TEST_MESSAGE("Unvote testing.");
+    BOOST_CHECK_EQUAL(success(), create_battery(N(brucelee)));
     produce_blocks(1);
 
-    BOOST_REQUIRE_EQUAL(success(), golos_publication_tester::create_post(
-                            N(golos.pub),
+    BOOST_CHECK_EQUAL(success(), golos_publication_tester::create_post(
+                            N(brucelee),
                             "permlink",
                             N(),
                             "parentprmlnk",
@@ -598,34 +625,33 @@ BOOST_FIXTURE_TEST_CASE(unvote, golos_publication_tester) try {
                             {{"tag"}},
                             "jsonmetadata"));
 
-    BOOST_REQUIRE_EQUAL(success(), golos_publication_tester::upvote(
-                            N(golos.pub),
-                            N(golos.pub),
+    BOOST_CHECK_EQUAL(success(), golos_publication_tester::upvote(
+                            N(brucelee),
+                            N(brucelee),
                             "permlink",
                             123));
     produce_blocks(7);
 
-    BOOST_REQUIRE_EQUAL(success(), golos_publication_tester::unvote(
-                            N(golos.pub),
-                            N(golos.pub),
-                            "permlink",
-                            0));
+    BOOST_CHECK_EQUAL(success(), golos_publication_tester::unvote(
+                            N(brucelee),
+                            N(brucelee),
+                            "permlink"));
 
-    auto vote_stats = get_vote(N(golos.pub), 0);
-    BOOST_REQUIRE_EQUAL(fc::variant(vote_stats).get_object()["rshares"].get_array().at(0).get_object()["net_rshares"].as<uint64_t>(), 0);
-    BOOST_REQUIRE_EQUAL(fc::variant(vote_stats).get_object()["rshares"].get_array().at(0).get_object()["abs_rshares"].as<uint64_t>(), 0);
-    BOOST_REQUIRE_EQUAL(fc::variant(vote_stats).get_object()["rshares"].get_array().at(0).get_object()["vote_rshares"].as<uint64_t>(), 0);
-    BOOST_REQUIRE_EQUAL(fc::variant(vote_stats).get_object()["rshares"].get_array().at(0).get_object()["children_abs_rshares"].as<uint64_t>(), 0);
+    auto vote_stats = get_vote(N(brucelee), 0);
+    BOOST_CHECK_EQUAL(fc::variant(vote_stats).get_object()["rshares"].get_array().at(0).get_object()["net_rshares"].as<uint64_t>(), 0);
+    BOOST_CHECK_EQUAL(fc::variant(vote_stats).get_object()["rshares"].get_array().at(0).get_object()["abs_rshares"].as<uint64_t>(), 0);
+    BOOST_CHECK_EQUAL(fc::variant(vote_stats).get_object()["rshares"].get_array().at(0).get_object()["vote_rshares"].as<uint64_t>(), 0);
+    BOOST_CHECK_EQUAL(fc::variant(vote_stats).get_object()["rshares"].get_array().at(0).get_object()["children_abs_rshares"].as<uint64_t>(), 0);
 
     produce_blocks(7);
-    BOOST_REQUIRE_EQUAL(error("assertion failure with message: Vote with the same weight has already existed."), golos_publication_tester::unvote(
-                            N(golos.pub),
-                            N(golos.pub),
-                            "permlink",
-                            0));
+    BOOST_CHECK_EQUAL(error("assertion failure with message: Vote with the same weight has already existed."), golos_publication_tester::unvote(
+                            N(brucelee),
+                            N(brucelee),
+                            "permlink"));
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE(test_create_post_and_battery_limit_post, golos_publication_tester) try {
+    BOOST_TEST_MESSAGE("Create post and battery limit post testing.");
     BOOST_CHECK_EQUAL(success(), create_battery(N(jackiechan)));
     produce_blocks(1);
 
@@ -772,6 +798,7 @@ BOOST_FIXTURE_TEST_CASE(test_create_post_and_battery_limit_post, golos_publicati
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE(test_create_comment_and_battery_limit_comment, golos_publication_tester) try {
+    BOOST_TEST_MESSAGE("Create comment and battery limit comment testing.");
     BOOST_CHECK_EQUAL(success(), create_battery(N(jackiechan)));
     produce_blocks(1);
 
@@ -842,6 +869,7 @@ BOOST_FIXTURE_TEST_CASE(test_create_comment_and_battery_limit_comment, golos_pub
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE(test_upvote_and_battery_limit_vote, golos_publication_tester) try {
+    BOOST_TEST_MESSAGE("Upvote and battery limit vote testing.");
     BOOST_CHECK_EQUAL(success(), create_battery(N(brucelee)));
     BOOST_CHECK_EQUAL(success(), create_battery(N(chucknorris)));
     produce_blocks(1);
