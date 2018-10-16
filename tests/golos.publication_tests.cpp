@@ -48,7 +48,7 @@ public:
 
         const auto& accnt = control->db().get<account_object, by_name>(N(golos.pub));
         abi_def abi;
-        BOOST_REQUIRE_EQUAL(abi_serializer::to_abi(accnt.abi, abi), true);
+        BOOST_CHECK_EQUAL(abi_serializer::to_abi(accnt.abi, abi), true);
         abi_ser.set_abi(abi, abi_serializer_max_time);
     }
 
@@ -103,7 +103,7 @@ public:
     }
 
     fc::variant get_battery( account_name acc) {
-        return get_tbl_struct_singleton(N(golos.pub), acc, N(batterytable), abi_ser);
+        return get_tbl_struct_singleton(N(golos.pub), acc, N(batterytable), "account_battery", abi_ser);
     }
 
     action_result update_post(account_name account, std::string permlink,
@@ -188,12 +188,12 @@ public:
     }
 
     void require_equal_battery(const fc::variant &obj1, const fc::variant &obj2) {
-        BOOST_REQUIRE_EQUAL(true, obj1.is_object() && obj2.is_object());
-        BOOST_REQUIRE_EQUAL(obj1.get_object()["posting_battery"].get_object()["charge"].as<uint16_t>(),        obj2.get_object()["posting_battery"].get_object()["charge"].as<uint16_t>());
-        BOOST_REQUIRE_EQUAL(obj1.get_object()["battery_of_votes"].get_object()["charge"].as<uint16_t>(),       obj2.get_object()["battery_of_votes"].get_object()["charge"].as<uint16_t>());
-        BOOST_REQUIRE_EQUAL(obj1.get_object()["limit_battery_posting"].get_object()["charge"].as<uint16_t>(),  obj2.get_object()["limit_battery_posting"].get_object()["charge"].as<uint16_t>());
-        BOOST_REQUIRE_EQUAL(obj1.get_object()["limit_battery_comment"].get_object()["charge"].as<uint16_t>(),  obj2.get_object()["limit_battery_comment"].get_object()["charge"].as<uint16_t>());
-        BOOST_REQUIRE_EQUAL(obj1.get_object()["limit_battery_of_votes"].get_object()["charge"].as<uint16_t>(), obj2.get_object()["limit_battery_of_votes"].get_object()["charge"].as<uint16_t>());
+        BOOST_CHECK_EQUAL(true, obj1.is_object() && obj2.is_object());
+        BOOST_CHECK_EQUAL(obj1.get_object()["posting_battery"].get_object()["charge"].as<uint16_t>(),        obj2.get_object()["posting_battery"].get_object()["charge"].as<uint16_t>());
+        BOOST_CHECK_EQUAL(obj1.get_object()["battery_of_votes"].get_object()["charge"].as<uint16_t>(),       obj2.get_object()["battery_of_votes"].get_object()["charge"].as<uint16_t>());
+        BOOST_CHECK_EQUAL(obj1.get_object()["limit_battery_posting"].get_object()["charge"].as<uint16_t>(),  obj2.get_object()["limit_battery_posting"].get_object()["charge"].as<uint16_t>());
+        BOOST_CHECK_EQUAL(obj1.get_object()["limit_battery_comment"].get_object()["charge"].as<uint16_t>(),  obj2.get_object()["limit_battery_comment"].get_object()["charge"].as<uint16_t>());
+        BOOST_CHECK_EQUAL(obj1.get_object()["limit_battery_of_votes"].get_object()["charge"].as<uint16_t>(), obj2.get_object()["limit_battery_of_votes"].get_object()["charge"].as<uint16_t>());
     }
 
     abi_serializer abi_ser;
@@ -891,7 +891,5 @@ BOOST_FIXTURE_TEST_CASE(test_upvote_and_battery_limit_vote, golos_publication_te
     BOOST_CHECK_EQUAL(success(), golos_publication_tester::upvote(N(chucknorris), N(brucelee), "permlink0", 500));
     BOOST_CHECK_EQUAL(error("assertion failure with message: Battery overrun"), golos_publication_tester::upvote(N(chucknorris), N(brucelee), "permlink0", 500));
 } FC_LOG_AND_RETHROW()
-
-
 
 BOOST_AUTO_TEST_SUITE_END()
