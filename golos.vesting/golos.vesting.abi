@@ -14,7 +14,7 @@
         {
           "name": "supply",
           "type": "asset"
-        }
+        },
  	{
           "name": "issuers",
           "type": "account_name[]"
@@ -74,8 +74,12 @@
           "type": "asset"
         },
         {
-          "name": "percentage_deductions",
+          "name": "interest_rate",
           "type": "uint16"
+        },
+        {
+          "name": "payout_strategy",
+          "type": "uint8"
         },
         {
           "name": "return_date",
@@ -166,7 +170,7 @@
           "type": "asset"
         }
       ]
-    }, 
+    },
     {
       "name": "retire",
       "base": "",
@@ -190,8 +194,12 @@
       "base": "transfer_vesting",
       "fields": [
         {
-          "name": "percentage_deductions",
+          "name": "interest_rate",
           "type": "uint16"
+        },
+        {
+          "name": "payout_strategy",
+          "type": "uint8"
         }
       ]
     },
@@ -237,12 +245,10 @@
       "name": "buyvg",
       "type": "transfer_vesting"
     },
-    
     {
       "name": "retire",
       "type": "retire"
     },
-    
     {
       "name": "convertvg",
       "type": "transfer_vesting"
