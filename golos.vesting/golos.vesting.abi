@@ -166,6 +166,24 @@
           "type": "asset"
         }
       ]
+    }, 
+    {
+      "name": "retire",
+      "base": "",
+      "fields": [
+        {
+          "name": "issuer",
+          "type": "account_name"
+        },
+        {
+          "name": "quantity",
+          "type": "asset"
+        },
+        {
+          "name": "user",
+          "type": "account_name"
+        }
+      ]
     },
     {
       "name": "delegate_vesting",
@@ -219,6 +237,12 @@
       "name": "buyvg",
       "type": "transfer_vesting"
     },
+    
+    {
+      "name": "retire",
+      "type": "retire"
+    },
+    
     {
       "name": "convertvg",
       "type": "transfer_vesting"

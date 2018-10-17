@@ -34,6 +34,14 @@ struct user_balance
     uint64_t primary_key() const {
         return vesting.symbol.name();
     }
+    
+    asset available_vesting() const {
+        return vesting - delegate_vesting;
+    }
+    
+    asset effective_vesting() const {
+        return (vesting - delegate_vesting) + received_vesting; 
+    }
 
     EOSLIB_SERIALIZE(user_balance, (vesting)(delegate_vesting)(received_vesting))
 };
