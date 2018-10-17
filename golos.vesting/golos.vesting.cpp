@@ -374,7 +374,7 @@ void vesting::sub_balance(account_name owner, asset value) {
     eosio_assert(value.amount >= 0, "sub_balance: value.amount < 0");
     tables::account_table account(_self, owner);
     const auto& from = account.get(value.symbol.name(), "no balance object found");
-    eosio_assert((from.vesting - from.delegate_vesting) >= value, "overdrawn balance");
+    eosio_assert(from.available_vesting() >= value, "overdrawn balance");
 
     account.modify(from, 0, [&](auto& a) {
         a.vesting -= value;

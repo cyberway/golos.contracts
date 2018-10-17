@@ -23,7 +23,7 @@ class vesting : public eosio::contract {
     void close( account_name owner, symbol_type symbol );
 
     inline asset get_account_vesting(account_name account, symbol_type sym )const;
-    inline asset get_account_sum_vesting(account_name account, symbol_name sym)const;
+    inline asset get_account_effective_vesting(account_name account, symbol_name sym)const;
     inline asset get_account_available_vesting(account_name account, symbol_name sym)const;
     inline bool balance_exist(account_name owner, symbol_name sym)const;
 
@@ -48,19 +48,19 @@ asset vesting::get_account_vesting(account_name account, symbol_type sym)const {
     const auto& balance = balances.get(sym.name());
     eosio_assert(balance.vesting.symbol == sym, "vesting::get_account_vesting: symbol precision mismatch" );
     return balance.vesting;
-};
+}
 
 asset vesting::get_account_available_vesting(account_name account, symbol_name sym)const {
     tables::account_table balances(_self, account);
     const auto& balance = balances.get(sym);
-    return (balance.vesting - balance.delegate_vesting);
-};
+    return balance.available_vesting();
+}
 
-asset vesting::get_account_sum_vesting(account_name account, symbol_name sym)const {
+asset vesting::get_account_effective_vesting(account_name account, symbol_name sym)const {
     tables::account_table balances(_self, account);
     const auto& balance = balances.get(sym);
-    return (balance.vesting - balance.delegate_vesting) + balance.received_vesting;
-};
+    return balance.effective_vesting();
+}
 
 bool vesting::balance_exist(account_name owner, symbol_name sym)const {
     tables::account_table balances( _self, owner );
