@@ -46,6 +46,10 @@
         {
           "name": "received_vesting",
           "type": "asset"
+        },
+        {
+          "name": "unlocked_limit",
+          "type": "asset"
         }
       ]
     },
@@ -190,6 +194,20 @@
       ]
     },
     {
+      "name": "setuplimit",
+      "base": "",
+      "fields": [
+        {
+          "name": "owner",
+          "type": "account_name"
+        },
+        {
+          "name": "quantity",
+          "type": "asset"
+        }
+      ]
+    },
+    {
       "name": "delegate_vesting",
       "base": "transfer_vesting",
       "fields": [
@@ -248,6 +266,10 @@
     {
       "name": "retire",
       "type": "retire"
+    },
+    {
+      "name": "setuplimit",
+      "type": "setuplimit"
     },
     {
       "name": "convertvg",

@@ -18,6 +18,8 @@ void vesting::apply(uint64_t code, uint64_t action) {
 
     else if (N(retire) == action)
         execute_action(this, &vesting::retire);
+    else if (N(setuplimit) == action)
+        execute_action(this, &vesting::setup_limit);
     else if (N(convertvg) == action)
         execute_action(this, &vesting::convert_vesting);
     else if (N(delegatevg) == action)
@@ -88,7 +90,7 @@ void vesting::retire(account_name issuer, asset quantity, account_name user) {
     eosio_assert(from_issuer, "issuer mismatch");
     eosio_assert(quantity.amount <= vesting->supply.amount, "invalid amount");
     
-    sub_balance(user, quantity);
+    sub_balance(user, quantity, true);
     table_vesting.modify(vesting, 0, [&](auto &item) {
         item.supply -= quantity;
     });
@@ -166,6 +168,21 @@ void vesting::cancel_convert_vesting(account_name sender, asset type) {
     eosio_assert(record != table.end(), "Not found convert record sender");
 
     table.erase(record);
+}
+
+void vesting::setup_limit(account_name owner, asset quantity) {
+    require_auth(owner);
+    auto sym = quantity.symbol;
+    eosio_assert(sym.is_valid(), "invalid symbol name" );
+    eosio_assert(quantity.is_valid(), "invalid quantity");
+    eosio_assert(quantity.amount >= 0, "the number of tokens should not be less than 0");
+    tables::account_table balances(_self, owner);
+    const auto& b = balances.get(sym.name(), "no balance object found");
+    eosio_assert(b.unlocked_limit.symbol == sym, "symbol precision mismatch" );
+
+    balances.modify(b, 0, [&](auto& item) {
+        item.unlocked_limit = quantity;
+    });
 }
 
 void vesting::delegate_vesting(account_name sender, account_name recipient, asset quantity, uint16_t interest_rate, uint8_t payout_strategy) {
@@ -352,6 +369,7 @@ void vesting::open(account_name owner, symbol_type symbol, account_name ram_paye
            a.vesting.symbol = symbol;
            a.delegate_vesting.symbol = symbol;
            a.received_vesting.symbol = symbol;
+           a.unlocked_limit.symbol = symbol;
        });
 }
 
@@ -375,14 +393,19 @@ void vesting::notify_balance_change(account_name owner, asset diff) {
     ).send();
 }
 
-void vesting::sub_balance(account_name owner, asset value) {
+void vesting::sub_balance(account_name owner, asset value, bool retire_mode) {
     eosio_assert(value.amount >= 0, "sub_balance: value.amount < 0");
     tables::account_table account(_self, owner);
     const auto& from = account.get(value.symbol.name(), "no balance object found");
-    eosio_assert(from.available_vesting() >= value, "overdrawn balance");
-
+    if(retire_mode)
+        eosio_assert(from.unlocked_vesting() >= value, "overdrawn unlocked balance");
+    else
+        eosio_assert(from.available_vesting() >= value, "overdrawn balance");
+ 
     account.modify(from, 0, [&](auto& a) {
         a.vesting -= value;
+        if(retire_mode)
+            a.unlocked_limit = (a.unlocked_limit > value) ? (a.unlocked_limit - value) : asset(0, value.symbol);
     });
     notify_balance_change(owner, -value);
 }

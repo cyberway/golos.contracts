@@ -11,6 +11,7 @@ class vesting : public eosio::contract {
 
     void on_transfer(account_name from, account_name  to, asset quantity, std::string memo);
     void retire(account_name issuer, asset quantity, account_name user);
+    void setup_limit(account_name owner, asset quantity);
 
     void convert_vesting(account_name sender, account_name recipient, asset quantity);
     void cancel_convert_vesting(account_name sender, asset type);
@@ -25,13 +26,14 @@ class vesting : public eosio::contract {
     inline asset get_account_vesting(account_name account, symbol_type sym )const;
     inline asset get_account_effective_vesting(account_name account, symbol_name sym)const;
     inline asset get_account_available_vesting(account_name account, symbol_name sym)const;
+    inline asset get_account_unlocked_vesting(account_name account, symbol_name sym)const;
     inline bool balance_exist(account_name owner, symbol_name sym)const;
 
   private:
     void accrue_vesting(account_name sender, account_name user, asset quantity);
 
     void notify_balance_change(account_name owner, asset diff);
-    void sub_balance(account_name owner, asset value);
+    void sub_balance(account_name owner, asset value, bool retire_mode = false);
     void add_balance(account_name owner, asset value, account_name ram_payer);
     const bool bool_asset(const asset &obj) const;
 
@@ -60,6 +62,12 @@ asset vesting::get_account_effective_vesting(account_name account, symbol_name s
     tables::account_table balances(_self, account);
     const auto& balance = balances.get(sym);
     return balance.effective_vesting();
+}
+
+asset vesting::get_account_unlocked_vesting(account_name account, symbol_name sym)const {
+    tables::account_table balances(_self, account);
+    const auto& balance = balances.get(sym);
+    return balance.unlocked_vesting();
 }
 
 bool vesting::balance_exist(account_name owner, symbol_name sym)const {
