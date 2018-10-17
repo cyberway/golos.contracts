@@ -172,6 +172,7 @@ void vesting::delegate_vesting(account_name sender, account_name recipient, asse
     require_auth(sender);
     eosio_assert(sender != recipient, "You can not delegate to yourself");
 
+    eosio_assert(payout_strategy >=0 && payout_strategy < 2, "not valid value payout_strategy");
     eosio_assert(quantity.amount >= 0, "the number of tokens should not be less than 0");
     eosio_assert(quantity.amount >= MIN_AMOUNT_DELEGATION_VESTING, "Insufficient funds for delegation");
     eosio_assert(interest_rate <= MAX_PERSENT_DELEGATION, "Exceeded the percentage of delegated vesting");
@@ -188,6 +189,10 @@ void vesting::delegate_vesting(account_name sender, account_name recipient, asse
     auto index_table = table.get_index<N(unique)>();
     auto delegate_record = index_table.find(structures::delegate_record::unique_key(sender, recipient));
     if (delegate_record != index_table.end()) {
+
+        eosio_assert(delegate_record->interest_rate == interest_rate, "interest_rate does not match");
+        eosio_assert(delegate_record->payout_strategy == payout_strategy, "payout_strategy does not match");
+
         index_table.modify(delegate_record, 0, [&](auto &item){
             item.quantity += quantity;
         });
