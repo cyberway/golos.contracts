@@ -74,8 +74,12 @@
           "type": "asset"
         },
         {
-          "name": "percentage_deductions",
+          "name": "interest_rate",
           "type": "uint16"
+        },
+        {
+          "name": "payout_strategy",
+          "type": "uint8"
         },
         {
           "name": "return_date",
@@ -166,32 +170,18 @@
           "type": "asset"
         }
       ]
-    }, 
-    {
-      "name": "retire",
-      "base": "",
-      "fields": [
-        {
-          "name": "issuer",
-          "type": "account_name"
-        },
-        {
-          "name": "quantity",
-          "type": "asset"
-        },
-        {
-          "name": "user",
-          "type": "account_name"
-        }
-      ]
     },
     {
       "name": "delegate_vesting",
       "base": "transfer_vesting",
       "fields": [
         {
-          "name": "percentage_deductions",
+          "name": "interest_rate",
           "type": "uint16"
+        },
+        {
+          "name": "payout_strategy",
+          "type": "uint8"
         }
       ]
     },
@@ -237,12 +227,6 @@
       "name": "buyvg",
       "type": "transfer_vesting"
     },
-    
-    {
-      "name": "retire",
-      "type": "retire"
-    },
-    
     {
       "name": "convertvg",
       "type": "transfer_vesting"

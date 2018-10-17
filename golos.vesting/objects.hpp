@@ -55,7 +55,8 @@ struct delegate_record
     account_name recipient;
     asset quantity;
     asset deductions;
-    uint16_t percentage_deductions;
+    uint16_t interest_rate;
+    uint16_t payout_strategy;
     time_point_sec return_date;
 
     static uint128_t unique_key(account_name u_sender, account_name u_recipient) {
@@ -79,7 +80,7 @@ struct delegate_record
     }
 
     EOSLIB_SERIALIZE(delegate_record, (id)(sender)(recipient)(quantity)
-                     (deductions)(percentage_deductions)(return_date))
+                     (deductions)(interest_rate)(payout_strategy)(return_date))
 };
 
 struct return_delegate

@@ -114,7 +114,7 @@ void vesting::accrue_vesting(account_name sender, account_name user, asset quant
     asset efective_vesting = balance->vesting + balance->received_vesting;
     while (it_index_user != index_delegate.end() && it_index_user->recipient == user && bool_asset(efective_vesting)) {
         auto proportion = it_index_user->quantity * FRACTION / efective_vesting;
-        const auto &delegates_award = (((quantity * proportion) / FRACTION) * it_index_user->percentage_deductions) / FRACTION;
+        const auto &delegates_award = (((quantity * proportion) / FRACTION) * it_index_user->interest_rate) / FRACTION;
 
         index_delegate.modify(it_index_user, 0, [&](auto &item) {
             item.deductions += delegates_award;
@@ -168,12 +168,13 @@ void vesting::cancel_convert_vesting(account_name sender, asset type) {
     table.erase(record);
 }
 
-void vesting::delegate_vesting(account_name sender, account_name recipient, asset quantity, uint16_t percentage_deductions) {
+void vesting::delegate_vesting(account_name sender, account_name recipient, asset quantity, uint16_t interest_rate, uint8_t payout_strategy) {
     require_auth(sender);
     eosio_assert(sender != recipient, "You can not delegate to yourself");
 
-    eosio_assert(MIN_AMOUNT_DELEGATION_VESTING <= quantity.amount, "Insufficient funds for delegation");
-    eosio_assert(percentage_deductions <= MAX_PERSENT_DELEGATION, "Exceeded the percentage of delegated vesting");
+    eosio_assert(quantity.amount >= 0, "the number of tokens should not be less than 0");
+    eosio_assert(quantity.amount >= MIN_AMOUNT_DELEGATION_VESTING, "Insufficient funds for delegation");
+    eosio_assert(interest_rate <= MAX_PERSENT_DELEGATION, "Exceeded the percentage of delegated vesting");
 
     tables::account_table account_sender(_self, sender);
     auto balance_sender = account_sender.find(quantity.symbol.name());
@@ -189,7 +190,6 @@ void vesting::delegate_vesting(account_name sender, account_name recipient, asse
     if (delegate_record != index_table.end()) {
         index_table.modify(delegate_record, 0, [&](auto &item){
             item.quantity += quantity;
-            item.percentage_deductions = percentage_deductions;
         });
     } else {
         table.emplace(sender, [&](structures::delegate_record &item){
@@ -198,7 +198,8 @@ void vesting::delegate_vesting(account_name sender, account_name recipient, asse
             item.recipient = recipient;
             item.quantity = quantity;
             item.deductions.symbol = quantity.symbol;
-            item.percentage_deductions = percentage_deductions;
+            item.interest_rate = interest_rate;
+            item.payout_strategy = payout_strategy; // TODO 0 - to_delegator, 1 - to_delegated_vestings
             item.return_date = time_point_sec(now() + TIME_LIMIT_FOR_RETURN_DELEGATE_VESTING);
         });
     }
@@ -209,6 +210,8 @@ void vesting::delegate_vesting(account_name sender, account_name recipient, asse
     account_recipient.modify(balance_recipient, sender, [&](auto &item){
         item.received_vesting += quantity;
     });
+
+    eosio_assert(balance_recipient->received_vesting.amount >= MIN_DELEGATION, "delegated vesting withdrawn");
 }
 
 void vesting::undelegate_vesting(account_name sender, account_name recipient, asset quantity) {
@@ -219,20 +222,15 @@ void vesting::undelegate_vesting(account_name sender, account_name recipient, as
     auto delegate_record = index_table.find(structures::delegate_record::unique_key(sender, recipient));
     eosio_assert(delegate_record != index_table.end(), "Not enough delegated vesting");
 
+    eosio_assert(quantity.amount >= MIN_AMOUNT_DELEGATION_VESTING, "Insufficient funds for undelegation");
     eosio_assert(delegate_record->return_date <= time_point_sec(now()), "Tokens are frozen until the end of the period");
     eosio_assert(delegate_record->quantity >= quantity, "There are not enough delegated tools for output");
 
-    asset part_deductions;
     if (delegate_record->quantity == quantity) {
-        part_deductions = delegate_record->deductions;
         index_table.erase(delegate_record);
     } else {
-        auto persent = (quantity * FULL_PERSENT) / delegate_record->quantity;
-        part_deductions = delegate_record->deductions * persent / FULL_PERSENT;
-
         index_table.modify(delegate_record, sender, [&](auto &item){
             item.quantity -= quantity;
-            item.deductions -= part_deductions;
         });
     }
 
@@ -240,7 +238,7 @@ void vesting::undelegate_vesting(account_name sender, account_name recipient, as
     table_delegate_vesting.emplace(sender, [&](structures::return_delegate &item){
         item.id = table_delegate_vesting.available_primary_key();
         item.recipient = sender;
-        item.amount = quantity/*part_deductions*/;
+        item.amount = quantity;
         item.date = time_point_sec(now() + TIME_LIMIT_FOR_RETURN_DELEGATE_VESTING);
     });
 
@@ -250,6 +248,8 @@ void vesting::undelegate_vesting(account_name sender, account_name recipient, as
     account_recipient.modify(balance, sender, [&](auto &item){
         item.received_vesting -= quantity;
     });
+
+    eosio_assert(balance->received_vesting.amount >= MIN_DELEGATION, "delegated vesting withdrawn");
 }
 
 void vesting::create(account_name creator, symbol_type symbol, std::vector<account_name> issuers) {
