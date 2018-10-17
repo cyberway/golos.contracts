@@ -173,7 +173,7 @@ void vesting::delegate_vesting(account_name sender, account_name recipient, asse
     eosio_assert(sender != recipient, "You can not delegate to yourself");
 
     eosio_assert(payout_strategy >=0 && payout_strategy < 2, "not valid value payout_strategy");
-    eosio_assert(quantity.amount >= 0, "the number of tokens should not be less than 0");
+    eosio_assert(quantity.amount > 0, "the number of tokens should not be less than 0");
     eosio_assert(quantity.amount >= MIN_AMOUNT_DELEGATION_VESTING, "Insufficient funds for delegation");
     eosio_assert(interest_rate <= MAX_PERSENT_DELEGATION, "Exceeded the percentage of delegated vesting");
 

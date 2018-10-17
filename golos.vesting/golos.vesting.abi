@@ -14,7 +14,7 @@
         {
           "name": "supply",
           "type": "asset"
-        }
+        },
  	{
           "name": "issuers",
           "type": "account_name[]"
