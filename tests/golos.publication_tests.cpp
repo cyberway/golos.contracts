@@ -6,9 +6,9 @@
 #include <fc/variant_object.hpp>
 
 #include "golos_tester.hpp"
-#include "config.hpp"
-#include <golos.publication/golos.publication.wast.hpp>
-#include <golos.publication/golos.publication.abi.hpp>
+#include "contracts.hpp"
+#include "../golos.publication/config.hpp"
+
 
 #define UNLOCKED_FOR_CREATE_POST 21
 
@@ -42,15 +42,7 @@ public:
         create_accounts({N(jackiechan), N(brucelee), N(chucknorris), N(golos.pub)});
         produce_blocks(2);
 
-        set_code(N(golos.pub), golos_publication_wast);
-        set_abi(N(golos.pub), golos_publication_abi);
-
-        produce_blocks();
-
-        const auto& accnt = control->db().get<account_object, by_name>(N(golos.pub));
-        abi_def abi;
-        BOOST_CHECK_EQUAL(abi_serializer::to_abi(accnt.abi, abi), true);
-        abi_ser.set_abi(abi, abi_serializer_max_time);
+        install_contract(N(golos.pub), contracts::posting_wasm(), contracts::posting_abi(), abi_ser);
     }
 
     action_result push_action(const account_name& signer,
