@@ -166,6 +166,7 @@ void publication::unvote(account_name voter, account_name author, std::string pe
 }
 
 void publication::close_post(account_name account, std::string permlink) {
+    require_auth(_self);
     structures::post post_obj;
 
     get_post(account, permlink, post_obj, [&](auto &posttable_index, auto &posttable_obj) {
@@ -176,8 +177,6 @@ void publication::close_post(account_name account, std::string permlink) {
 }
 
 void publication::close_post_timer(account_name account, std::string permlink) {
-    require_auth(account);
-
     checksum256 checksum = get_checksum256(permlink);
     const uint128_t *hash_uint128 = reinterpret_cast<const uint128_t *>(&checksum);
 
@@ -234,6 +233,8 @@ void publication::set_vote(account_name voter, account_name author,
                 item.id = vote_table.available_primary_key();
                 item.post_id = posttable_obj.id;
                 item.voter = voter;
+                item.weight = weight;
+                item.time = now();
                 item.count = -1;
             });
             return;

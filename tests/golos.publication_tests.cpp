@@ -346,6 +346,10 @@ BOOST_FIXTURE_TEST_CASE(delete_post, golos_publication_tester) try {
     BOOST_CHECK_EQUAL(error("assertion failure with message: Post doesn't exist."), golos_publication_tester::delete_post(
                             N(jackiechan),
                             "permlink1"));
+
+    BOOST_CHECK_EQUAL(success(), golos_publication_tester::delete_post(
+                            N(brucelee),
+                            "permlink"));
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE(upvote, golos_publication_tester) try {
