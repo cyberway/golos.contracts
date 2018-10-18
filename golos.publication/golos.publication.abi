@@ -357,7 +357,7 @@
       },
       {
         "name": "count",
-        "type": "uint64"
+        "type": "int64"
       }
     ]
   },

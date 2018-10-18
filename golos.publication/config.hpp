@@ -40,7 +40,7 @@
 #define PENALTY_WINDOW 30*60
 
 // closing post params
-#define CLOSE_POST_PERIOD 10 // ten seconds for unit_tests (correct value 7*24*60*60)
+#define CLOSE_POST_PERIOD 50 // 7*24*60*60
 #define QUNTITY_OF_CHANGES // quantity of changes before post closing
 
 #define UPPER_BOUND (10000) // 100.00%
