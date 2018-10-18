@@ -15,7 +15,21 @@
       "type": "uint64"
     }
   ],
-    "structs": [
+    "structs": [  
+        {
+            "name": "beneficiary",
+            "base": "",
+            "fields": [
+                {
+                    "name": "user",
+                    "type": "name"
+                },
+                {
+                    "name": "prop",
+                    "type": "base_t"
+                }
+            ]
+        },
         {
             "name": "addmessage",
             "base": "",
@@ -31,6 +45,14 @@
                 {
                     "name": "tokenprop",
                     "type": "int64"
+                },
+                {
+                    "name": "beneficiaries",
+                    "type": "beneficiary[]"
+                },
+                {
+                    "name": "vestpayment",
+                    "type": "bool"
                 }
             ]
         },
@@ -99,7 +121,119 @@
                     "type": "base_t[]"
                 }
             ]
+        },        
+        {
+            "name": "limitedact",
+            "base": "",
+            "fields": [
+                {
+                    "name": "chargenum",
+                    "type": "uint8"
+                },
+                {
+                    "name": "restorernum",
+                    "type": "uint8"
+                },
+                {
+                    "name": "cutoffval",
+                    "type": "base_t"
+                },
+                {
+                    "name": "chargeprice",
+                    "type": "base_t"
+                }
+            ]
         },
+        {
+            "name": "postbandwidth",
+            "base": "",
+            "fields": [
+                {
+                    "name": "chargenum",
+                    "type": "uint8"
+                },
+                {
+                    "name": "restorernum",
+                    "type": "uint8"
+                },
+                {
+                    "name": "chargeprice",
+                    "type": "base_t"
+                }
+            ]
+        },         
+        {
+            "name": "limits",
+            "base": "",
+            "fields": [
+                {
+                    "name": "restorers",
+                    "type": "bytecode[]"
+                },
+                {
+                    "name": "limitedacts",
+                    "type": "limitedact[]"
+                },
+                {
+                    "name": "vestingprices",
+                    "type": "int64[]"
+                },
+                {
+                    "name": "minvestings",
+                    "type": "int64[]"
+                }
+            ]
+        },
+        {
+            "name": "limitsarg",
+            "base": "",
+            "fields": [
+                {
+                    "name": "restorers",
+                    "type": "string[]"
+                },
+                {
+                    "name": "limitedacts",
+                    "type": "limitedact[]"
+                },
+                {
+                    "name": "vestingprices",
+                    "type": "int64[]"
+                },
+                {
+                    "name": "minvestings",
+                    "type": "int64[]"
+                }
+            ]
+        },        
+        {
+            "name": "chargeinfo",
+            "base": "",
+            "fields": [
+                {
+                    "name": "lastupdate",
+                    "type": "uint64"
+                },
+                {
+                    "name": "data",
+                    "type": "base_t"
+                }
+            ]
+        },
+        {
+            "name": "usercharges",
+            "base": "",
+            "fields": [
+                {
+                    "name": "poolcreated",
+                    "type": "uint64"
+                },
+                {
+                    "name": "vals",
+                    "type": "chargeinfo[]"
+                }
+            ]
+        },        
         {
             "name": "funcinfo",
             "base": "",
@@ -142,6 +276,14 @@
                 },
                 {
                     "name": "tokenprop",
+                    "type": "base_t"
+                },
+                {
+                    "name": "beneficiaries",
+                    "type": "beneficiary[]"
+                },
+                {
+                    "name": "rewardweight",
                     "type": "base_t"
                 },
                 {
@@ -221,6 +363,10 @@
                     "type": "rewardrules"
                 },
                 {
+                    "name": "lims",
+                    "type": "limits"
+                },
+                {
                     "name": "state",
                     "type": "poolstate"
                 }
@@ -279,6 +425,10 @@
                 {
                     "name": "tokensymbol",
                     "type": "symbol"
+                }
+                {
+                    "name": "lims",
+                    "type": "limitsarg"
                 }
             ]
         },
@@ -366,6 +516,13 @@
         {
             "name": "votes",
             "type": "vote",
+            "index_type": "i64",
+            "key_names": [],
+            "key_types": []
+        },
+        {
+            "name": "charges",
+            "type": "usercharges",
             "index_type": "i64",
             "key_names": [],
             "key_types": []
