@@ -18,8 +18,8 @@ void vesting::apply(uint64_t code, uint64_t action) {
 
     else if (N(retire) == action)
         execute_action(this, &vesting::retire);
-    else if (N(setuplimit) == action)
-        execute_action(this, &vesting::setup_limit);
+    else if (N(unlocklimit) == action)
+        execute_action(this, &vesting::unlock_limit);
     else if (N(convertvg) == action)
         execute_action(this, &vesting::convert_vesting);
     else if (N(delegatevg) == action)
@@ -170,7 +170,7 @@ void vesting::cancel_convert_vesting(account_name sender, asset type) {
     table.erase(record);
 }
 
-void vesting::setup_limit(account_name owner, asset quantity) {
+void vesting::unlock_limit(account_name owner, asset quantity) {
     require_auth(owner);
     auto sym = quantity.symbol;
     eosio_assert(sym.is_valid(), "invalid symbol name" );
@@ -395,6 +395,8 @@ void vesting::notify_balance_change(account_name owner, asset diff) {
 
 void vesting::sub_balance(account_name owner, asset value, bool retire_mode) {
     eosio_assert(value.amount >= 0, "sub_balance: value.amount < 0");
+    if(value.amount == 0)
+        return;
     tables::account_table account(_self, owner);
     const auto& from = account.get(value.symbol.name(), "no balance object found");
     if(retire_mode)
@@ -405,13 +407,15 @@ void vesting::sub_balance(account_name owner, asset value, bool retire_mode) {
     account.modify(from, 0, [&](auto& a) {
         a.vesting -= value;
         if(retire_mode)
-            a.unlocked_limit = (a.unlocked_limit > value) ? (a.unlocked_limit - value) : asset(0, value.symbol);
+            a.unlocked_limit -= value;
     });
     notify_balance_change(owner, -value);
 }
 
 void vesting::add_balance(account_name owner, asset value, account_name ram_payer) {
     eosio_assert(value.amount >= 0, "add_balance: value.amount < 0");
+    if(value.amount == 0)
+        return;
     tables::account_table account(_self, owner);
     auto to = account.find(value.symbol.name());
 //    eosio_assert(to != account.end(), "Not found balance token vesting");

@@ -194,7 +194,7 @@
       ]
     },
     {
-      "name": "setuplimit",
+      "name": "unlocklimit",
       "base": "",
       "fields": [
         {
@@ -268,8 +268,8 @@
       "type": "retire"
     },
     {
-      "name": "setuplimit",
-      "type": "setuplimit"
+      "name": "unlocklimit",
+      "type": "unlocklimit"
     },
     {
       "name": "convertvg",
