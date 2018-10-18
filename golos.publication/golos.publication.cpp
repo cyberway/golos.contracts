@@ -2,6 +2,7 @@
 #include "config.hpp"
 
 #include <eosiolib/transaction.hpp>
+#include <eosiolib/types.hpp>
 
 #define NULL_LAMBDA [](auto&, auto&) {}
 
@@ -32,7 +33,6 @@ void publication::apply(uint64_t code, uint64_t action) {
         execute_action(this, &publication::unvote);
     if (N(closepost) == action)
         execute_action(this, &publication::close_post);
-
     if (N(createacc) == action)
         execute_action(this, &publication::create_battery_user);
 }
@@ -166,6 +166,7 @@ void publication::unvote(account_name voter, account_name author, std::string pe
 }
 
 void publication::close_post(account_name account, std::string permlink) {
+    require_auth(_self);
     structures::post post_obj;
 
     get_post(account, permlink, post_obj, [&](auto &posttable_index, auto &posttable_obj) {
@@ -176,12 +177,13 @@ void publication::close_post(account_name account, std::string permlink) {
 }
 
 void publication::close_post_timer(account_name account, std::string permlink) {
-    require_auth(account);
+    checksum256 checksum = get_checksum256(permlink);
+    const uint128_t *hash_uint128 = reinterpret_cast<const uint128_t *>(&checksum);
 
     transaction trx;
     trx.actions.emplace_back(action{permission_level(_self, N(active)), _self, N(closepost), structures::closepost{account, permlink}});
     trx.delay_sec = CLOSE_POST_PERIOD;
-    trx.send(_self, _self);
+    trx.send(*hash_uint128, _self);
 }
 
 // weight is fixed point with two decimal digits,
@@ -193,28 +195,51 @@ void publication::set_vote(account_name voter, account_name author,
 
     structures::post posttable_obj;
 
-    std::vector<structures::rshares> rshares{{0, 0, 0, 0}};
+    std::vector<structures::rshares> rshares;
 
     if (get_post(author, permlink, posttable_obj, NULL_LAMBDA)) {
         auto votetable_index = vote_table.get_index<N(postid)>();
-        auto votetable_obj = votetable_index.find(posttable_obj.id);
+        auto votetable_obj = votetable_index.find(posttable_obj.id);            
+
+        if (posttable_obj.status == post_status::open)
+            rshares = {{0, 0, 0, 0}};
 
         while (votetable_obj != votetable_index.end()) {
             if (voter == votetable_obj->voter) {
+                // it's not consensus part and can be moved to storage in future
+                if (posttable_obj.status == post_status::closed) {
+                    votetable_index.modify(votetable_obj, voter, [&]( auto &item ) {
+                        item.count = -1;
+                    });
+                    return;
+                }
+                // end not consensus
                 eosio_assert(weight != votetable_obj->weight, "Vote with the same weight has already existed.");
                 eosio_assert(votetable_obj->count != MAX_REVOTES, "You can't revote anymore.");
                 votetable_index.modify(votetable_obj, voter, [&]( auto &item ) {
                    item.percent = FIXED_CURATOR_PERCENT;
                    item.weight = weight;
                    item.time = now();
-                   if (posttable_obj.status == post_status::open)
-                       item.rshares = rshares;
+                   item.rshares = rshares;
                    ++item.count;
                 });
                 return;
             }
             ++votetable_obj;
         }
+        // it's not consensus part and can be moved to storage in future
+        if (posttable_obj.status == post_status::closed) {
+            vote_table.emplace(voter, [&]( auto &item ) {
+                item.id = vote_table.available_primary_key();
+                item.post_id = posttable_obj.id;
+                item.voter = voter;
+                item.weight = weight;
+                item.time = now();
+                item.count = -1;
+            });
+            return;
+        }
+        // end not consensus
         vote_table.emplace(voter, [&]( auto &item ) {
            item.id = vote_table.available_primary_key();
            item.post_id = posttable_obj.id;
@@ -222,8 +247,7 @@ void publication::set_vote(account_name voter, account_name author,
            item.percent = FIXED_CURATOR_PERCENT;
            item.weight = weight;
            item.time = now();
-           if (posttable_obj.status == post_status::open)
-               item.rshares = rshares;
+           item.rshares = rshares;
            ++item.count;
         });
     } else

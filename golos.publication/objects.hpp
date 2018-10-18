@@ -154,7 +154,7 @@ struct voteinfo {
     int16_t weight;
     uint64_t time;
     std::vector<structures::rshares> rshares;
-    uint64_t count;
+    int64_t count;
 
     uint64_t primary_key() const {
         return id;
