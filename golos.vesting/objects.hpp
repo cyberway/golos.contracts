@@ -30,6 +30,7 @@ struct user_balance
     asset vesting;
     asset delegate_vesting;
     asset received_vesting;
+    asset unlocked_limit;
 
     uint64_t primary_key() const {
         return vesting.symbol.name();
@@ -42,8 +43,12 @@ struct user_balance
     asset effective_vesting() const {
         return (vesting - delegate_vesting) + received_vesting; 
     }
+    
+    asset unlocked_vesting() const {
+        return std::min(available_vesting(), unlocked_limit);
+    }
 
-    EOSLIB_SERIALIZE(user_balance, (vesting)(delegate_vesting)(received_vesting))
+    EOSLIB_SERIALIZE(user_balance, (vesting)(delegate_vesting)(received_vesting)(unlocked_limit))
 };
 
 struct delegate_record
