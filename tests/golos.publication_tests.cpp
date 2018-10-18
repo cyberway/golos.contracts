@@ -455,6 +455,17 @@ BOOST_FIXTURE_TEST_CASE(upvote, golos_publication_tester) try {
                             N(brucelee),
                             "permlink",
                             777));
+    produce_blocks(16); // this value blocks needed for testing disable upvote and
+                        // depends from previous count blocks in test case, CLOSE_POST_PERIOD, UPVOTE_DISABLE_PERIOD
+                        // now it works for CLOSE_POST_PERIOD == 50 and UPVOTE_DISABLE_PERIOD == 5
+    {
+        BOOST_TEST_MESSAGE("Disable upvote testing.");
+        BOOST_CHECK_EQUAL(error("assertion failure with message: You can't upvote, because publication will be closed soon."), golos_publication_tester::upvote(
+                                N(jackiechan),
+                                N(brucelee),
+                                "permlink",
+                                777));
+    }
     produce_blocks(CLOSE_POST_PERIOD*2);
 
     BOOST_CHECK_EQUAL(success(), golos_publication_tester::upvote(

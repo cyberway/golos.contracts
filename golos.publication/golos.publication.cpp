@@ -141,6 +141,12 @@ void publication::delete_post(account_name account, std::string permlink) {
 }
 
 void publication::upvote(account_name voter, account_name author, std::string permlink, int16_t weight) {
+    structures::post posttable_obj;
+    if (get_post(author, permlink, posttable_obj, NULL_LAMBDA))
+        if (now() >= posttable_obj.date + CLOSE_POST_PERIOD - UPVOTE_DISABLE_PERIOD)
+            eosio_assert(now() >= posttable_obj.date + CLOSE_POST_PERIOD,
+                        "You can't upvote, because publication will be closed soon.");
+
     require_auth(voter);
     recovery_battery(voter, &structures::account_battery::limit_battery_of_votes, {UPPER_BOUND, VOTE_OPERATION_INTERVAL, UPPER_BOUND, type_recovery::linear});
 
