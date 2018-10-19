@@ -195,9 +195,13 @@ void publication::set_vote(account_name voter, account_name author,
 
     structures::post posttable_obj;
 
-    std::vector<structures::rshares> rshares;
+    std::vector<structures::rshares> rshares;        
 
     if (get_post(author, permlink, posttable_obj, NULL_LAMBDA)) {
+        if (now() > posttable_obj.date + CLOSE_POST_PERIOD - UPVOTE_DISABLE_PERIOD)
+            eosio_assert(now() > posttable_obj.date + CLOSE_POST_PERIOD,
+                        "You can't upvote, because publication will be closed soon.");
+
         auto votetable_index = vote_table.get_index<N(postid)>();
         auto votetable_obj = votetable_index.find(posttable_obj.id);            
 

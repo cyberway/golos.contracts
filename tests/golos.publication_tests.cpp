@@ -447,18 +447,57 @@ BOOST_FIXTURE_TEST_CASE(upvote, golos_publication_tester) try {
                             N(brucelee),
                             "permlink",
                             777));
-    produce_blocks(CLOSE_POST_PERIOD*2);
+    produce_blocks(CLOSE_POST_PERIOD*2 - VOTE_OPERATION_INTERVAL*2*12-6);
 
     BOOST_CHECK_EQUAL(success(), golos_publication_tester::upvote(
-                            N(jackiechan),
-                            N(brucelee),
-                            "permlink",
-                            777));
+                          N(jackiechan),
+                          N(brucelee),
+                          "permlink",
+                          777));
 
     {
         auto vote_stats = get_vote(N(brucelee), 1);
         BOOST_CHECK_EQUAL(fc::variant(vote_stats).get_object()["count"].as<int64_t>(), -1);
     }
+} FC_LOG_AND_RETHROW()
+
+BOOST_FIXTURE_TEST_CASE(disable_upvote, golos_publication_tester) try {
+    BOOST_TEST_MESSAGE("Disable upvote testing.");
+    BOOST_CHECK_EQUAL(success(), create_battery(N(brucelee)));
+    produce_blocks(1);
+    BOOST_CHECK_EQUAL(success(), create_battery(N(jackiechan)));
+    produce_blocks(1);
+
+    BOOST_CHECK_EQUAL(success(), golos_publication_tester::create_post(
+                            N(brucelee),
+                            "permlink"));
+    produce_blocks((CLOSE_POST_PERIOD - UPVOTE_DISABLE_PERIOD)*2-1);
+
+    BOOST_CHECK_EQUAL(success(), golos_publication_tester::upvote(
+                            N(brucelee),
+                            N(brucelee),
+                            "permlink",
+                            888));
+        produce_blocks(1);
+        BOOST_CHECK_EQUAL(error("assertion failure with message: You can't upvote, because publication will be closed soon."), golos_publication_tester::upvote(
+                                N(jackiechan),
+                                N(brucelee),
+                                "permlink",
+                                777));
+        produce_blocks(UPVOTE_DISABLE_PERIOD*2-1);
+
+        BOOST_CHECK_EQUAL(error("assertion failure with message: You can't upvote, because publication will be closed soon."), golos_publication_tester::upvote(
+                                N(brucelee),
+                                N(brucelee),
+                                "permlink",
+                                777));
+        produce_blocks(1);
+
+        BOOST_CHECK_EQUAL(success(), golos_publication_tester::upvote(
+                                N(jackiechan),
+                                N(brucelee),
+                                "permlink",
+                                888));
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE(downvote, golos_publication_tester) try {
