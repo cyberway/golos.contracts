@@ -187,7 +187,8 @@ void vesting::delegate_vesting(account_name sender, account_name recipient, asse
     auto record_convert = table_convert.find(sender);
     if (record_convert != table_convert.end()) {
         auto user_balance = balance_sender->available_vesting() -
-                (record_convert->balance_amount - (record_convert->payout_part * record_convert->number_of_payments));
+                ((record_convert->payout_part * record_convert->number_of_payments) +
+                (record_convert->balance_amount - (record_convert->payout_part * NUMBER_OF_CONVERSIONS)));
         eosio_assert(user_balance >= quantity, "insufficient funds for delegation");
     }
 
