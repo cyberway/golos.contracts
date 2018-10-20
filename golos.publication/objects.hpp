@@ -7,55 +7,13 @@
 
 using namespace eosio;
 
-enum class type_recovery {
-    linear,
-    persent
-};
-
-enum post_status {
-    open,
-    closed
-};
-
 namespace structures {
-
-struct battery {
-    uint16_t charge;
-    time_point_sec renewal;
-
-    EOSLIB_SERIALIZE(battery, (charge)(renewal))
-};
-
-struct account_battery {
-    battery posting_battery;
-    battery battery_of_votes;
-
-    battery limit_battery_posting;
-    battery limit_battery_comment;
-    battery limit_battery_of_votes;
-
-    EOSLIB_SERIALIZE(account_battery, (posting_battery)(battery_of_votes)(limit_battery_posting)
-                     (limit_battery_comment)(limit_battery_of_votes))
-};
-
-struct closepost {
-    closepost() = default;
+    
+struct postkey {
+    postkey() = default;
 
     account_name account;
     std::string permlink;
-
-    EOSLIB_SERIALIZE(closepost, (account)(permlink))
-};
-
-struct rshares {
-    rshares() = default;
-
-    uint64_t net_rshares;
-    uint64_t abs_rshares;
-    uint64_t vote_rshares;
-    uint64_t children_abs_rshares;
-
-    EOSLIB_SERIALIZE(rshares, (net_rshares)(abs_rshares)(vote_rshares)(children_abs_rshares))
 };
 
 struct beneficiary {
@@ -63,8 +21,6 @@ struct beneficiary {
 
     account_name account;
     uint64_t deductprcnt;
-
-    EOSLIB_SERIALIZE(beneficiary, (account)(deductprcnt))
 };
 
 struct tag {
@@ -88,44 +44,19 @@ struct content {
     uint64_t primary_key() const {
         return id;
     }
-
-    EOSLIB_SERIALIZE(content, (id)(headerpost)(bodypost)(languagepost)
-                     (tags)(jsonmetadata))
 };
 
-struct common_post_data {
-    common_post_data() = default;
-
-    account_name account;
-    account_name parentacc;
-    uint64_t curatorprcnt;
-    std::string payouttype;
-    std::vector<structures::beneficiary> beneficiaries;
-    std::string paytype;
-
-    EOSLIB_SERIALIZE(common_post_data, (account)(parentacc)(curatorprcnt)
-                     (payouttype)(beneficiaries)(paytype))
-};
-
-struct createpost : common_post_data {
-    createpost() = default;
-
-    std::string permlink;
-    std::string parentprmlnk;
-
-    EOSLIB_SERIALIZE(createpost, (account)(permlink)(parentacc)(parentprmlnk)(curatorprcnt)
-                     (payouttype)(beneficiaries)(paytype))
-};
-
-struct post : common_post_data {
+struct post {
     post() = default;
 
     uint64_t id;
     uint64_t date;
     checksum256 permlink;
+    account_name parentacc;
     checksum256 parentprmlnk;
+    std::vector<structures::beneficiary> beneficiaries;
     uint64_t childcount;
-    uint8_t status;
+    bool closed;
 
     uint64_t primary_key() const {
         return id;
@@ -139,9 +70,6 @@ struct post : common_post_data {
         const uint64_t *p64 = reinterpret_cast<const uint64_t *>(&permlink);
         return key256::make_from_word_sequence<uint64_t>(p64[0], p64[1], p64[2], p64[3]);
     }
-
-    EOSLIB_SERIALIZE(post, (id)(date)(account)(permlink)(parentacc)(parentprmlnk)(curatorprcnt)(payouttype)
-                     (beneficiaries)(paytype)(childcount)(status))
 };
 
 struct voteinfo {
@@ -150,10 +78,8 @@ struct voteinfo {
     uint64_t id;
     uint64_t post_id;
     account_name voter;
-    uint64_t percent;
     int16_t weight;
     uint64_t time;
-    std::vector<structures::rshares> rshares;
     int64_t count;
 
     uint64_t primary_key() const {
@@ -163,15 +89,6 @@ struct voteinfo {
     uint64_t secondary_key() const {
         return post_id;
     }
-
-    EOSLIB_SERIALIZE(voteinfo, (id)(post_id)(voter)(percent)(weight)(time)(rshares)(count))
-};
-
-struct params_battery {
-    uint64_t max_charge;  // M, points
-    uint64_t time_to_charge; // W, seconds
-    uint64_t consume_battery;  // C, points
-    type_recovery mode;
 };
 
 }
@@ -188,5 +105,4 @@ namespace tables {
     using vote_postid_index = indexed_by<N(postid), const_mem_fun<structures::voteinfo, uint64_t, &structures::voteinfo::secondary_key>>;
     using vote_table = eosio::multi_index<N(votetable), structures::voteinfo, vote_id_index, vote_postid_index>;
 
-    using accounts_battery_table = eosio::singleton<N(batterytable), structures::account_battery>;
 }

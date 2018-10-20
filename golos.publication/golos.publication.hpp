@@ -11,8 +11,7 @@ class publication : public eosio::contract {
   private:
     void create_post(account_name account, std::string permlink,
                      account_name parentacc, std::string parentprmlnk,
-                     uint64_t curatorprcnt, std::string payouttype,
-                     std::vector<structures::beneficiary> beneficiaries, std::string paytype,
+                     std::vector<structures::beneficiary> beneficiaries,
                      std::string headerpost, std::string bodypost,
                      std::string languagepost, std::vector<structures::tag> tags,
                      std::string jsonmetadata);
@@ -34,17 +33,9 @@ class publication : public eosio::contract {
     bool get_post(account_name account, checksum256 &permlink, structures::post &post, Lambda &&lambda);
     checksum256 get_checksum256(std::string &permlink);
     void set_child_count(bool increase, account_name parentacc, checksum256 &parentprmlnk);
-    void post_assert(bool exist);
 
-  private: // check battery limits
-    void create_battery_user(account_name name);
-
-    int64_t current_consumed(const structures::battery &battery, const structures::params_battery &params);
-    int64_t consume(structures::battery &battery, const structures::params_battery &params);
-    int64_t consume_allow_overusage(structures::battery &battery, const structures::params_battery &params);
-
-    template<typename T>
-    void recovery_battery(scope_name scope, T structures::account_battery::* element, const structures::params_battery &params);
+  private:
+    void create_acc(account_name name);
 };
 
 }

@@ -3,50 +3,11 @@
   "types": [{
     "new_type_name": "account_name",
     "type": "name"
-  }],
+  }
+  ],
   "structs": [
   {
-    "name": "battery",
-    "base": "",
-    "fields": [
-      {
-        "name": "charge",
-        "type": "uint16"
-      },
-      {
-        "name": "renewal",
-        "type": "time_point_sec"
-      }
-    ]
-  },
-  {
-    "name": "account_battery",
-    "base": "",
-    "fields": [
-      {
-        "name": "posting_battery",
-        "type": "battery"
-      },
-      {
-        "name": "battery_of_votes",
-        "type": "battery"
-      },
-      {
-        "name": "limit_battery_posting",
-        "type": "battery"
-      },
-      {
-        "name": "limit_battery_comment",
-        "type": "battery"
-      },
-      {
-        "name": "limit_battery_of_votes",
-        "type": "battery"
-      }
-    ]
-  },
-  {
-    "name": "closepost",
+    "name": "postkey",
     "base": "",
     "fields": [
       {
@@ -80,28 +41,6 @@
       {
         "name": "tag",
         "type": "string"
-      }
-    ]
-  },
-  {
-    "name": "rshares",
-    "base": "",
-    "fields": [
-      {
-        "name": "net_rshares",
-        "type": "uint64"
-      },
-      {
-        "name": "abs_rshares",
-        "type": "uint64"
-      },
-      {
-        "name": "vote_rshares",
-        "type": "uint64"
-      },
-      {
-        "name": "children_abs_rshares",
-        "type": "uint64"
       }
     ]
   },
@@ -148,10 +87,6 @@
         "type": "uint64"
       },
       {
-        "name": "account",
-        "type": "account_name"
-      },
-      {
         "name": "permlink",
         "type": "checksum256"
       },
@@ -164,28 +99,16 @@
         "type": "checksum256"
       },
       {
-        "name": "curatorprcnt",
-        "type": "uint64"
-      },
-      {
-        "name": "payouttype",
-        "type": "string"
-      },
-      {
         "name": "beneficiaries",
         "type": "beneficiaries[]"
-      },
-      {
-        "name": "paytype",
-        "type": "string"
       },
       {
         "name": "childcount",
         "type": "uint64"
       },
       {
-        "name": "status",
-        "type": "uint8"
+        "name": "closed",
+        "type": "bool"
       }
     ]
   },
@@ -210,20 +133,8 @@
         "type": "string"
       },
       {
-        "name": "curatorprcnt",
-        "type": "uint64"
-      },
-      {
-        "name": "payouttype",
-        "type": "string"
-      },
-      {
         "name": "beneficiaries",
         "type": "beneficiaries[]"
-      },
-      {
-        "name": "paytype",
-        "type": "string"
       },
       {
         "name": "headerpost",
@@ -340,20 +251,12 @@
         "type": "account_name"
       },
       {
-        "name": "percent",
-        "type": "uint64"
-      },
-      {
         "name": "weight",
         "type": "int16"
       },
       {
         "name": "time",
         "type": "uint64"
-      },
-      {
-        "name": "rshares",
-        "type": "rshares[]"
       },
       {
         "name": "count",
@@ -399,7 +302,7 @@
   },
   {
     "name": "closepost",
-    "type": "closepost"
+    "type": "postkey"
   },
   {
     "name": "createacc",
@@ -439,13 +342,6 @@
     "key_types" : [
       "uint64"
     ]
-  },
-  {
-    "name": "batterytable",
-    "type": "account_battery",
-    "index_type": "i64",
-    "key_names" : [],
-    "key_types" : []
   }
   ],
   "ricardian_clauses": [],
