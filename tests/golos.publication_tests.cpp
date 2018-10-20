@@ -171,6 +171,11 @@ BOOST_FIXTURE_TEST_CASE(create_post, golos_publication_tester) try {
     BOOST_CHECK_EQUAL(success(), golos_publication_tester::create_post(
                             N(brucelee),
                             "permlink"));
+                            
+    BOOST_TEST_MESSAGE("Checking that another user can create a post with the same permlink.");
+    BOOST_CHECK_EQUAL(success(), golos_publication_tester::create_post(
+                            N(chucknorris),
+                            "permlink"));
 
     auto post_stats = get_posts(N(brucelee), 0);
     check_equal( post_stats, mvo()
@@ -200,7 +205,7 @@ BOOST_FIXTURE_TEST_CASE(create_post, golos_publication_tester) try {
                                               }))
                             ("jsonmetadata", "jsonmetadata"));
 
-    produce_blocks(CLOSE_POST_PERIOD*2-1);
+    produce_blocks(CLOSE_POST_PERIOD*2-2);
 
     {
         BOOST_TEST_MESSAGE("Checking that post wasn't closed.");

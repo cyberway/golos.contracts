@@ -165,12 +165,12 @@ void publication::close_post(account_name account, std::string permlink) {
 
 void publication::close_post_timer(account_name account, std::string permlink) {
     checksum256 checksum = get_checksum256(permlink);
-    const uint128_t *hash_uint128 = reinterpret_cast<const uint128_t *>(&checksum);
+    const uint64_t *hash_uint64 = reinterpret_cast<const uint64_t *>(&checksum);
 
     transaction trx;
     trx.actions.emplace_back(action{permission_level(_self, N(active)), _self, N(closepost), structures::postkey{account, permlink}});
     trx.delay_sec = CLOSE_POST_PERIOD;
-    trx.send(*hash_uint128, _self);
+    trx.send((static_cast<uint128_t>(*hash_uint64) << 64) | account, _self);
 }
 
 void publication::set_vote(account_name voter, account_name author,
