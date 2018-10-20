@@ -8,20 +8,13 @@
 using namespace eosio;
 
 namespace structures {
-    
-struct postkey {
-    postkey() = default;
 
+struct accandvalue {
     account_name account;
-    std::string permlink;
+    uint64_t value;
 };
 
-struct beneficiary {
-    beneficiary() = default;
-
-    account_name account;
-    uint64_t deductprcnt;
-};
+using beneficiary = accandvalue;
 
 struct tag {
     tag() = default;
@@ -35,6 +28,7 @@ struct content {
     content() = default;
 
     uint64_t id;
+    //std::string permlink; //?
     std::string headerpost;
     std::string bodypost;
     std::string languagepost;
@@ -51,24 +45,14 @@ struct post {
 
     uint64_t id;
     uint64_t date;
-    checksum256 permlink;
     account_name parentacc;
-    checksum256 parentprmlnk;
+    uint64_t parent_id;
     std::vector<structures::beneficiary> beneficiaries;
     uint64_t childcount;
     bool closed;
 
     uint64_t primary_key() const {
         return id;
-    }
-
-    key256 permlink_hash_key() const {
-        return get_hash_key(permlink);
-    }
-
-    static key256 get_hash_key(const checksum256& permlink) {
-        const uint64_t *p64 = reinterpret_cast<const uint64_t *>(&permlink);
-        return key256::make_from_word_sequence<uint64_t>(p64[0], p64[1], p64[2], p64[3]);
     }
 };
 
@@ -95,8 +79,7 @@ struct voteinfo {
 
 namespace tables {
     using id_index = indexed_by<N(id), const_mem_fun<structures::post, uint64_t, &structures::post::primary_key>>;
-    using permlink_hash_index = indexed_by<N(permlink), const_mem_fun<structures::post, key256, &structures::post::permlink_hash_key>>;
-    using post_table = eosio::multi_index<N(posttable), structures::post, id_index, permlink_hash_index>;
+    using post_table = eosio::multi_index<N(posttable), structures::post, id_index>;
 
     using content_id_index = indexed_by<N(id), const_mem_fun<structures::content, uint64_t, &structures::content::primary_key>>;
     using content_table = eosio::multi_index<N(contenttable), structures::content, content_id_index>;

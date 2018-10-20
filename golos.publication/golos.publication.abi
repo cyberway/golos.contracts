@@ -21,7 +21,7 @@
     ]
   },
   {
-    "name": "beneficiaries",
+    "name": "beneficiary",
     "base": "",
     "fields": [
       {
@@ -87,20 +87,16 @@
         "type": "uint64"
       },
       {
-        "name": "permlink",
-        "type": "checksum256"
-      },
-      {
         "name": "parentacc",
         "type": "account_name"
       },
       {
-        "name": "parentprmlnk",
-        "type": "checksum256"
+        "name": "parent_id",
+        "type": "uint64"
       },
       {
         "name": "beneficiaries",
-        "type": "beneficiaries[]"
+        "type": "beneficiary[]"
       },
       {
         "name": "childcount",
@@ -134,7 +130,7 @@
       },
       {
         "name": "beneficiaries",
-        "type": "beneficiaries[]"
+        "type": "beneficiary[]"
       },
       {
         "name": "headerpost",

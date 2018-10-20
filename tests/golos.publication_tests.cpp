@@ -1,14 +1,15 @@
 #include <boost/test/unit_test.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 #include <eosio/chain/abi_serializer.hpp>
+//#include <eosio/chain/types.hpp>
 
 #include <Runtime/Runtime.h>
 #include <fc/variant_object.hpp>
+#include <eosio/testing/tester.hpp>
 
 #include "golos_tester.hpp"
 #include "contracts.hpp"
 #include "../golos.publication/config.hpp"
-
 
 #define UNLOCKED_FOR_CREATE_POST 21
 
@@ -142,9 +143,8 @@ public:
     void check_equal(const fc::variant &obj1, const fc::variant &obj2) {
         BOOST_CHECK_EQUAL(true, obj1.is_object() && obj2.is_object());
         BOOST_CHECK_EQUAL(obj1.get_object()["id"].as<uint64_t>(), obj2.get_object()["id"].as<uint64_t>());
-        BOOST_CHECK_EQUAL(obj1.get_object()["permlink"].as<checksum256_type>().str(), obj2.get_object()["permlink"].as<checksum256_type>().str());
         BOOST_CHECK_EQUAL(obj1.get_object()["parentacc"].as<account_name>(), obj2.get_object()["parentacc"].as<account_name>());
-        BOOST_CHECK_EQUAL(obj1.get_object()["parentprmlnk"].as<checksum256_type>().str(), obj2.get_object()["parentprmlnk"].as<checksum256_type>().str());
+        BOOST_CHECK_EQUAL(obj1.get_object()["parent_id"].as<uint64_t>(), obj2.get_object()["parent_id"].as<uint64_t>());
         BOOST_CHECK_EQUAL(obj1.get_object()["beneficiaries"].get_array().at(0).get_object()["account"].as<account_name>(), obj2.get_object()["beneficiaries"].get_array().at(0).get_object()["account"].as<account_name>());
         BOOST_CHECK_EQUAL(obj1.get_object()["beneficiaries"].get_array().at(0).get_object()["deductprcnt"].as<uint64_t>(), obj2.get_object()["beneficiaries"].get_array().at(0).get_object()["deductprcnt"].as<uint64_t>());
         BOOST_CHECK_EQUAL(obj1.get_object()["childcount"].as<uint64_t>(), obj2.get_object()["childcount"].as<uint64_t>());
@@ -179,11 +179,10 @@ BOOST_FIXTURE_TEST_CASE(create_post, golos_publication_tester) try {
 
     auto post_stats = get_posts(N(brucelee), 0);
     check_equal( post_stats, mvo()
-                   ("id", 0)
+                   ("id", hash64("permlink"))
                    ("date", 1577836804)
-                   ("permlink", "52487630bee6db98e71c7c56b2fe5be67d5cfe949ddfe0f3839eec332c05b3bf")
                    ("parentacc", "")
-                   ("parentprmlnk", "8edcefcc0d9b78dc97a682829395b909c4b64309c1c3bb539d941873c18a5afc")
+                   ("parent_id", 0)
                    ("beneficiaries", variants({
                                                   mvo()
                                                   ("account", "beneficiary")
@@ -193,9 +192,9 @@ BOOST_FIXTURE_TEST_CASE(create_post, golos_publication_tester) try {
                    ("closed", false)
                    );
 
-    auto content_stats = get_content(N(brucelee), 0);
+    auto content_stats = get_content(N(brucelee), hash64("permlink"));
     check_equal_content(content_stats, mvo()
-                            ("id", 0)
+                            ("id", hash64("permlink"))
                             ("headerpost", "headerpost")
                             ("bodypost", "bodypost")
                             ("languagepost", "languagepost")
@@ -209,14 +208,14 @@ BOOST_FIXTURE_TEST_CASE(create_post, golos_publication_tester) try {
 
     {
         BOOST_TEST_MESSAGE("Checking that post wasn't closed.");
-        auto post_stats = get_posts(N(brucelee), 0);
+        auto post_stats = get_posts(N(brucelee), hash64("permlink"));
         BOOST_CHECK_EQUAL(fc::variant(post_stats).get_object()["closed"].as<bool>(), false);
     }
 
     {
         BOOST_TEST_MESSAGE("Checking that post was closed.");
         produce_blocks(1);
-        auto post_stats = get_posts(N(brucelee), 0);
+        auto post_stats = get_posts(N(brucelee), hash64("permlink"));
         BOOST_CHECK_EQUAL(fc::variant(post_stats).get_object()["closed"].as<bool>(), true);
     }
 
@@ -252,9 +251,9 @@ BOOST_FIXTURE_TEST_CASE(update_post, golos_publication_tester) try {
                             {{"tagnew"}},
                             "jsonmetadatanew"));
 
-    auto content_stats = get_content(N(brucelee), 0);
+    auto content_stats = get_content(N(brucelee), hash64("permlink"));
     check_equal_content(content_stats, mvo()
-                            ("id", 0)
+                            ("id", hash64("permlink"))
                             ("headerpost", "headerpostnew")
                             ("bodypost", "bodypostnew")
                             ("languagepost", "languagepostnew")
@@ -264,7 +263,7 @@ BOOST_FIXTURE_TEST_CASE(update_post, golos_publication_tester) try {
                                               }))
                             ("jsonmetadata", "jsonmetadatanew"));
 
-    BOOST_CHECK_EQUAL(error("assertion failure with message: Post doesn't exist."), golos_publication_tester::update_post(
+    BOOST_CHECK_EQUAL(error("assertion failure with message: Content doesn't exist."), golos_publication_tester::update_post(
                             N(brucelee),
                             "permlinknew",
                             "headerpostnew",

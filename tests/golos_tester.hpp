@@ -4,6 +4,10 @@
 #include <eosio/chain/abi_serializer.hpp>
 #include <fc/variant_object.hpp>
 
+namespace fc {
+uint64_t hash64(const std::string& arg);
+}
+
 // Note: cannot check nested mvo
 #define CHECK_EQUAL_OBJECTS(left, right) { \
     auto a = fc::variant(left); \

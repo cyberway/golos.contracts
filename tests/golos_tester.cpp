@@ -126,5 +126,11 @@ fc::variant golos_tester::get_tbl_struct_singleton(name code, name scope, name t
     return data.empty() ? fc::variant() : abi.binary_to_variant( n, data, abi_serializer_max_time );
 }
 
-
 }} // eosio::tesing
+
+namespace fc {
+uint64_t hash64(const std::string& arg) {
+    return hash64(arg.c_str(), arg.size());
+}
+}
+
