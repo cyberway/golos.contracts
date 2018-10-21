@@ -115,8 +115,8 @@ void publication::delete_post(account_name account, std::string permlink) {
     content_table.erase(cont_itr);
     
     auto votetable_index = vote_table.get_index<N(postid)>();
-    auto votetable_obj = votetable_index.find(post_id);
-    while (votetable_obj != votetable_index.end())
+    auto votetable_obj = votetable_index.lower_bound(post_id);
+    while ((votetable_obj != votetable_index.end()) && (votetable_obj->post_id == post_id))
         votetable_obj = votetable_index.erase(votetable_obj);
 }
 
@@ -173,9 +173,8 @@ void publication::set_vote(account_name voter, account_name author, uint64_t id,
                   "You can't upvote, because publication will be closed soon.");
 
     auto votetable_index = vote_table.get_index<N(postid)>();
-    auto votetable_obj = votetable_index.find(id);         
-
-    while (votetable_obj != votetable_index.end()) {
+    auto votetable_obj = votetable_index.lower_bound(id);
+    while ((votetable_obj != votetable_index.end()) && (votetable_obj->post_id == id)) {
         if (voter == votetable_obj->voter) {
             // it's not consensus part and can be moved to storage in future
             if (post_itr->closed) {

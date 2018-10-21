@@ -642,4 +642,43 @@ BOOST_FIXTURE_TEST_CASE(mixed_vote_test, golos_publication_tester) try {
     BOOST_CHECK_EQUAL(fc::variant(vote_stats).get_object()["count"].as<uint64_t>(), 3);
 } FC_LOG_AND_RETHROW()
 
+BOOST_FIXTURE_TEST_CASE(erase_vote_test, golos_publication_tester) try {
+    BOOST_TEST_MESSAGE("Erase vote testing.");
+
+    BOOST_CHECK_EQUAL(success(), golos_publication_tester::create_post(
+                            N(brucelee),
+                            "permlink"));
+    
+    BOOST_CHECK_EQUAL(success(), golos_publication_tester::create_post(
+                            N(brucelee),
+                            "permlink1"));
+
+    BOOST_CHECK_EQUAL(success(), golos_publication_tester::downvote(
+                            N(brucelee),
+                            N(brucelee),
+                            "permlink",
+                            123));
+    produce_blocks(VOTE_OPERATION_INTERVAL*2);
+
+    BOOST_CHECK_EQUAL(success(), golos_publication_tester::downvote(
+                            N(chucknorris),
+                            N(brucelee),
+                            "permlink1",
+                            321));
+    produce_blocks(VOTE_OPERATION_INTERVAL*2);
+    
+    BOOST_CHECK_EQUAL(success(), golos_publication_tester::delete_post(
+                            N(brucelee),
+                            "permlink1"));
+    produce_blocks(1);
+    
+    BOOST_CHECK_EQUAL(error("assertion failure with message: Vote with the same weight has already existed."), golos_publication_tester::downvote(
+                            N(brucelee),
+                            N(brucelee),
+                            "permlink",
+                            123));
+
+    
+} FC_LOG_AND_RETHROW()
+
 BOOST_AUTO_TEST_SUITE_END()
