@@ -168,7 +168,8 @@ void publication::set_vote(account_name voter, account_name author, uint64_t id,
     tables::vote_table vote_table(_self, author);
 
     eosio_assert((now() <= post_itr->date + CLOSE_POST_PERIOD - UPVOTE_DISABLE_PERIOD) ||
-                 (now() > post_itr->date + CLOSE_POST_PERIOD),
+                 (now() > post_itr->date + CLOSE_POST_PERIOD) ||
+                 (weight <= 0),
                   "You can't upvote, because publication will be closed soon.");
 
     auto votetable_index = vote_table.get_index<N(postid)>();
