@@ -33,6 +33,42 @@
     ]
   },
   {
+    "name": "funcparams",
+    "base": "",
+    "fields": [
+        {
+            "name": "str",
+            "type": "string"
+        },
+        {
+            "name": "maxarg",
+            "type": "base_t"
+        }
+    ]
+  },
+  {
+    "name": "limitsarg",
+    "base": "",
+    "fields": [
+        {
+            "name": "restorers",
+            "type": "string[]"
+        },
+        {
+            "name": "limitedacts",
+            "type": "limitedact[]"
+        },
+        {
+            "name": "vestingprices",
+            "type": "int64[]"
+        },
+        {
+            "name": "minvestings",
+            "type": "int64[]"
+        }
+    ]
+  }, 
+  {
     "name": "bytecode",
     "base": "",
     "fields": [
@@ -515,6 +551,40 @@
         "type": "account_name"
       }
     ]
+  },
+  {
+    "name": "setrules",
+    "base": "",
+    "fields": [
+        {
+            "name": "mainfunc",
+            "type": "funcparams"
+        },
+        {
+            "name": "curationfunc",
+            "type": "funcparams"
+        },
+        {
+            "name": "timepenalty",
+            "type": "funcparams"
+        },
+        {
+            "name": "curatorsprop",
+            "type": "int64"
+        },
+        {
+            "name": "maxtokenprop",
+            "type": "int64"
+        },
+        {
+            "name": "tokensymbol",
+            "type": "symbol"
+        }
+        {
+            "name": "lims",
+            "type": "limitsarg"
+        }
+    ]
   }
   ],
   "actions": [
@@ -549,6 +619,10 @@
   {
     "name": "createacc",
     "type": "createacc"
+  },
+  {
+    "name": "setrules",
+    "type": "setrules"
   }
   ],
   "tables": [

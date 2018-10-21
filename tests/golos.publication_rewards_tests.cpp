@@ -8,8 +8,8 @@
 #include <Runtime/Runtime.h> 
 #include <fc/variant_object.hpp>
 #include "contracts.hpp"
-#include "../reward_calcs/types.h"
-#include "../reward_calcs/config.h"
+#include "../golos.publication/types.h"
+#include "../golos.publication/config.hpp"
 using namespace fixed_point_utils;
 #define PRECESION 0
 #define TOKEN_NAME "GOLOS"
@@ -21,6 +21,7 @@ using namespace golos::config;
 struct balance_data {
     double tokenamount = 0.0; 
     double vestamount = 0.0;
+    //vesting delegation isn't covered by these tests
 };
 
 struct pool_data {
@@ -38,8 +39,8 @@ struct message_data {
 };   
      
 constexpr struct {
-    balance_data balance {3.0, 3.0};
-    pool_data pool {0.001, 10, -0.01, -0.01};
+    balance_data balance {10.0, 20.0};
+    pool_data pool {0.001, 15, -0.01, -0.01};
     message_data message {-0.01, -0.01, -0.01, -0.01};   
 } delta;  
 
@@ -51,7 +52,6 @@ constexpr double pool_rsharesfn_delta = 0.01;
 using namespace eosio::testing;
 using namespace eosio;
 using namespace eosio::chain;
-using namespace eosio::testing;
 using namespace fc;
 using namespace std;
  
@@ -59,7 +59,11 @@ using mvo = fc::mutable_variant_object;
 
 double log2(double arg) {
     return log(arg) / log(2.0);
-} 
+}
+
+double get_prop(int64_t arg) {
+    return static_cast<double>(arg) / static_cast<double>(ONE_HUNDRED_PERCENT);
+}
 
 struct message_key {
     account_name author;
@@ -77,8 +81,7 @@ struct aprox_val_t {
         if(((rhs.val > 0.0) && (val < 0.0)) || ((rhs.val < 0.0) && (val > 0.0)))
             return false;
         double d = std::min(double(std::abs(rhs.delta)), std::abs(double(delta)));
-        if(delta < 0.0)
-        {
+        if(delta < 0.0) {
             double a = std::min(std::abs(rhs.val), std::abs(val));
             double b = std::max(std::abs(rhs.val), std::abs(val));
             return (b < 1.e-20) || ((a / b) > (1.0 - d));
@@ -166,7 +169,7 @@ std::ostream& operator<< (std::ostream& os, const statemap& rhs) {
     return os; 
 }   
 
-class extended_tester : public golos_tester {  
+class extended_tester : public golos_tester {
     fc::microseconds _cur_time;
     void update_cur_time() { _cur_time = control->head_block_time().time_since_epoch();};
     
@@ -174,23 +177,6 @@ protected:
     const fc::microseconds& cur_time()const { return _cur_time; };
     
 public:
-    vector<vector<char> > get_all_rows(uint64_t code, uint64_t scope, uint64_t table, bool strict = true)const {
-        vector<vector<char> > ret;
-        const auto& db = control->db();
-        const auto* t_id = db.find<chain::table_id_object, chain::by_code_scope_table>(boost::make_tuple(code, scope, table));
-        if(strict)
-            BOOST_REQUIRE_EQUAL(true, static_cast<bool>(t_id));
-        else if(!static_cast<bool>(t_id))
-            return ret;
-        const auto& idx = db.get_index<chain::key_value_index, chain::by_scope_primary>();
-        for(auto itr = idx.lower_bound(boost::make_tuple(t_id->id, 0)); (itr != idx.end()) && (itr->t_id == t_id->id); ++itr) {
-            ret.push_back(vector<char>());
-            auto& data = ret.back();
-            data.resize(itr->value.size());
-            memcpy(data.data(), itr->value.data(), data.size());
-        }
-        return ret;  
-    }
     
     void step(uint32_t n = 1) {
         produce_blocks(n);
@@ -198,7 +184,7 @@ public:
     }
     
     void run(const fc::microseconds& t) {
-        produce_min_num_of_blocks_to_spend_time_wo_inactive_prod(t);
+        _produce_block(t);
         update_cur_time();
     }
 };
@@ -207,19 +193,30 @@ struct vote {
     account_name voter;
     double weight;
     double vesting;
+    double created;//time
 };
 
+struct beneficiary {
+    account_name user;
+    base_t prop;
+};
+FC_REFLECT(beneficiary, (user)(prop))
+
 struct message {
-    message_key key;
+    message_key key;    
     double tokenprop;
     std::list<vote> votes;
+    double created;//time
+    std::vector<beneficiary> beneficiaries;
+    double reward_weight;
     double get_rshares_sum()const {
         double ret = 0.0;
         for(auto& v : votes)
             ret += v.weight * v.vesting;
         return ret;
     };
-    message(message_key k, double tokenprop_) : key(k), tokenprop(tokenprop_) {};
+    message(message_key k, double tokenprop_, double created_, const std::vector<beneficiary>& beneficiaries_, double reward_weight_) : 
+        key(k), tokenprop(tokenprop_), created(created_), beneficiaries(beneficiaries_), reward_weight(reward_weight_) {};
 };
 
 class cutted_func {
@@ -247,12 +244,122 @@ struct rewardrules {
         timepenalty(std::move(timepenalty_)),
         curatorsprop(curatorsprop_) {};
 };
+
+struct chargeinfo {
+    uint64_t lastupdate;
+    double data;
+};
+
+using usercharges = std::vector<chargeinfo>;
+
+struct limits {
+    using func_t = std::function<double(double, double, double)>;
+    enum kind_t: enum_t {POST, COMM, VOTE, POSTBW, UNDEF};
+    std::vector<func_t> restorers; //(funcs of: prev_charge (p), vesting (v), elapsed_seconds (t))
+    std::vector<limitedact> limitedacts;
+    std::vector<int64_t> vestingprices;//disabled if < 0
+    std::vector<int64_t> minvestings;
+    
+    const limitedact& get_limited_act(kind_t kind)const {
+        return limitedacts.at(static_cast<size_t>(kind));
+    }
+    
+    const func_t* get_restorer(kind_t kind)const {
+        uint8_t num = get_limited_act(kind).restorernum;
+        return (num == disabled_restorer) ? nullptr : &(restorers.at(num));
+    }
+    
+    double get_vesting_price(kind_t kind)const {
+        auto k = static_cast<size_t>(kind);
+        return (k < vestingprices.size()) ? vestingprices[k] : -1.0;
+    } 
+    
+    double get_min_vesting_for(kind_t kind)const {
+        return minvestings.at(static_cast<size_t>(kind));
+    }
+    
+    size_t get_charges_num()const {
+        size_t ret = 0;
+        for(auto& act : limitedacts)
+            ret = std::max(ret, static_cast<size_t>(act.chargenum) + 1);
+        return ret;
+    }
+    
+    bool check()const {
+        if((vestingprices.size() >= 3) || (minvestings.size() != 3))
+            return false;
+        for(auto& act : limitedacts)
+            if(!(act.restorernum < restorers.size()) || (act.restorernum == disabled_restorer))
+                return false;
+        return true;
+    }
+                       
+    void update_charge(chargeinfo& chg, const func_t* restorer, uint64_t cur_time, double vesting, double price, double w = 1.0)const {
+        if(restorer != nullptr) {
+            using namespace limit_restorer_domain;            
+            auto prev = std::min(chg.data, static_cast<double>(max_prev));
+            auto v_corr = std::min(vesting, static_cast<double>(max_vesting));
+            auto elapsed_seconds = std::min(static_cast<double>((cur_time - chg.lastupdate) / seconds(1).count()), static_cast<double>(max_elapsed_seconds));           
+            auto restored = (*restorer)(prev, v_corr, elapsed_seconds); 
+            if(restored > prev)
+                chg.data = 0.0;
+            else
+                chg.data = std::min(chg.data - restored, static_cast<double>(limit_restorer_domain::max_res));
+        }        
+        if(price > 0.0) {            
+            auto added = std::max(price * w, static_cast<double>(std::numeric_limits<fixp_t>::min()));
+            chg.data = std::min(chg.data + added, static_cast<double>(limit_restorer_domain::max_res));
+        }
+        chg.lastupdate = cur_time;
+    }
+   // charges are not const here
+    double calc_power(limits::kind_t kind, usercharges& charges, uint64_t cur_time, double vesting, double w)const {
+        auto& lim_act = get_limited_act(kind);
+        auto restorer = get_restorer(kind);
+        auto& chg = charges[lim_act.chargenum];
+        update_charge(chg, restorer, cur_time, vesting, get_prop(lim_act.chargeprice), w);
+        return (chg.data > get_prop(lim_act.cutoffval)) ? (get_prop(lim_act.cutoffval) / chg.data) : 1.0;
+    }
+    
+    double apply(kind_t kind, usercharges& charges, double& vesting_ref, uint64_t cur_time, double w)const {
+        if((kind == limits::VOTE) && (w != 0)) {
+            if((w * vesting_ref) < get_min_vesting_for(kind))
+                return -1.0;
+        }
+        
+        else if((kind != limits::VOTE) && (vesting_ref < get_min_vesting_for(kind)))
+            return -1.0;
+        
+        auto charges_prev = charges;
+        if(charges.empty())
+            charges.resize(get_charges_num(), {cur_time, 0});
+        auto power = calc_power(kind, charges, cur_time, vesting_ref, (kind == limits::VOTE) ? w : 1.0);
+        if(power != 1.0)
+            charges = charges_prev;
+            
+        if(kind == limits::VOTE)
+            return (power == 1.0) ? 1.0 : -1.0;
+        
+        if((power != 1.0) && (w == 0.0))
+            return -1.0;
+        
+        if(power != 1.0) {//=> w != 0
+            auto price = get_vesting_price(kind);
+            if((price <= 0) || (price > vesting_ref))
+                return -1.0;
+            vesting_ref -= price;
+        }
+        return calc_power(limits::POSTBW, charges, cur_time, vesting_ref, 1.0);
+    }
+};
  
-struct rewardpool {   
+struct rewardpool {
     uint64_t id;
     double funds;
     rewardrules rules;
+    limits lims;
     std::list<message> messages;
+    std::map<account_name, usercharges> charges;
     
     double get_rshares_sum()const {
         double ret = 0.0;
@@ -274,7 +381,7 @@ struct rewardpool {
         auto r = get_rshares_sum();
         return (r > 0) ? (funds / r) : std::numeric_limits<double>::max();
     }
-    rewardpool(uint64_t id_, rewardrules&& rules_) : id(id_), funds(0.0), rules(rules_) {};
+    rewardpool(uint64_t id_, rewardrules&& rules_, limits&& lims_) : id(id_), funds(0.0), rules(std::move(rules_)), lims(std::move(lims_)) {};
     
 };
  
@@ -299,17 +406,17 @@ class reward_calcs_tester : public extended_tester {
         BOOST_REQUIRE_EQUAL(abi_serializer::to_abi(accnt.abi, abi), true);
         _serializers[account].set_abi(abi, abi_serializer_max_time);
     }
-       
-protected:    
+
+protected:
     account_name _forum_name;
     account_name _issuer;
     std::vector<account_name> _users;
+    account_name _stranger;
     statemap _req;
     statemap _res;
     state _state;
     
     void init(int64_t issuer_funds, int64_t user_vesting_funds) {
-        BOOST_TEST_MESSAGE("init: issuer_funds = " << static_cast<double>(issuer_funds) << ", user_vesting_funds = " << static_cast<double>(user_vesting_funds));
         
         BOOST_REQUIRE_EQUAL(success(), push_action( N(eosio.token), N(create), 
             mvo()
@@ -325,7 +432,7 @@ protected:
        
        step();   
        
-       BOOST_REQUIRE_EQUAL(success(), push_action( _forum_name, N(open), 
+       BOOST_REQUIRE_EQUAL(success(), push_action(_forum_name, N(open), 
             mvo()( "owner", _forum_name)
             ( "symbol", _token_symbol)
             ( "ram_payer", _forum_name), 
@@ -343,7 +450,7 @@ protected:
             mvo()( "owner", _forum_name)
             ( "symbol", _token_symbol)
             ( "ram_payer", _forum_name), 
-            vesting_name));    
+            vesting_name));
 
         for(auto& u : _users) {
             BOOST_REQUIRE_EQUAL(success(), push_action( u, N(open), 
@@ -365,17 +472,19 @@ public:
         _forum_name(N(reward.calcs)), _issuer(N(issuer.acc)),
         _users{ N(alice),  N(alice1),  N(alice2), N(alice3), N(alice4), N(alice5),
                 N(bob), N(bob1), N(bob2), N(bob3), N(bob4), N(bob5),
-                N(why), N(has), N(my), N(imagination), N(become), N(poor) } {
+                N(why), N(has), N(my), N(imagination), N(become), N(poor) }, 
+                _stranger(N(dan.larimer)) {
         step(2); 
         create_accounts({_forum_name});
         create_accounts({_issuer});
         create_accounts({vesting_name}); 
         create_accounts({N(eosio.token)});
         create_accounts({N(golos.ctrl)});
-        create_accounts(_users); 
+        create_accounts(_users);
+        create_accounts({_stranger});
         step(2);  
         
-        setup_code(_forum_name, contracts::reward_calcs_wasm(), contracts::reward_calcs_abi());
+        setup_code(_forum_name, contracts::posting_wasm(), contracts::posting_abi());
         setup_code(N(eosio.token), contracts::token_wasm(), contracts::token_abi());
         setup_code(vesting_name, contracts::vesting_wasm(), contracts::vesting_abi());
         
@@ -384,26 +493,48 @@ public:
     }
     
     action_result add_funds_to(account_name user, int64_t amount) {
-        _state.balances[user].tokenamount  += amount;
-        return push_action( _issuer, N(transfer), mvo()
+        auto ret = push_action( _issuer, N(transfer), mvo()
                             ( "from", _issuer)
                             ( "to", user)
                             ( "quantity", eosio::chain::asset(amount, _token_symbol))
                             ( "memo", ""), 
                             N(eosio.token));
+        if(ret == success())
+            _state.balances[user].tokenamount  += amount;
+        return ret;
+    }
+    
+    double convert_to_vesting(double arg) {
+        vector<char> data = get_row_by_account( N(eosio.token), vesting_name, N(accounts), _token_symbol.to_symbol_code().value);
+        double tokn_total = _serializers[N(eosio.token)].binary_to_variant("account", data, abi_serializer_max_time)
+            ["balance"].as<eosio::chain::asset>().to_real();
+        
+        data = get_row_by_account(vesting_name, vesting_name, N(vesting), _token_symbol.to_symbol_code().value);    
+        double vest_total = _serializers[vesting_name].binary_to_variant("balance_vesting", data, abi_serializer_max_time)
+            ["supply"].as<eosio::chain::asset>().to_real();
+        
+        double price = (vest_total < 1.e-20) || (tokn_total < 1.e-20) ? 1.0 : (vest_total / tokn_total);
+        return arg * price;
     }
     
     action_result buy_vesting_for(account_name user, int64_t amount) {
-        _state.balances[user].tokenamount  -= amount;
         auto ret = push_action(user, N(transfer), 
-                mvo()( "from", user)( "to", account_name(vesting_name))(
-                    "quantity", eosio::chain::asset(amount, _token_symbol))( "memo", ""), 
-                N(eosio.token));
-                
-        //we are not checking token->vesting conversion here, so:
-        set_vesting_balance_from_table(user, _res);
-        _state.balances[user].vestamount = _res[statemap::get_balance_str(user) + "vestamount"].val;
+                mvo()
+                ( "from", user)
+                ( "to", account_name(vesting_name))
+                ("quantity", eosio::chain::asset(amount, _token_symbol))
+                ( "memo", ""), 
+            N(eosio.token));
+        if(ret == success()) {
+            _state.balances[user].tokenamount  -= amount;
+            _state.balances[user].vestamount += convert_to_vesting(amount); 
         
+            BOOST_REQUIRE_EQUAL(success(), push_action(user, N(unlocklimit), 
+                mvo()
+                ( "owner", user)
+                ("quantity", eosio::chain::asset(amount * 10, _token_symbol)), 
+                vesting_name));
+        }
         return ret;
     }
     
@@ -422,17 +553,17 @@ public:
     }
          
     action_result add_funds_to_forum(int64_t amount) {
-  
-        BOOST_REQUIRE_MESSAGE(!_state.pools.empty(), "issue: _state.pools is empty");
-        fill_depleted_pool(amount, _state.pools.size());        
-        
-        eosio::chain::asset quantity(amount, _token_symbol);
-        return push_action( _issuer, N(transfer), mvo()
+        auto ret = push_action( _issuer, N(transfer), mvo()
                             ( "from", _issuer)
                             ( "to", _forum_name)
-                            ( "quantity", quantity)
+                            ( "quantity", eosio::chain::asset(amount, _token_symbol))
                             ( "memo", ""), 
                             N(eosio.token));
+        if(ret == success()) {
+            BOOST_REQUIRE_MESSAGE(!_state.pools.empty(), "issue: _state.pools is empty");
+            fill_depleted_pool(amount, _state.pools.size()); 
+        }
+        return ret;
     }
     
     action_result push_action( const account_name& signer, const action_name &name, const variant_object &data, const account_name& code ) {
@@ -446,25 +577,26 @@ public:
              
         auto ret = base_tester::push_action( std::move(act), uint64_t(signer));
         return ret;    
-    }
-         
-    action_result setrules(      
-        const funcparams& mainfunc, const funcparams& curationfunc, const funcparams& timepenalty,
-        int64_t curatorsprop,
+    } 
+
+    action_result setrules(const funcparams& mainfunc, const funcparams& curationfunc, const funcparams& timepenalty, int64_t curatorsprop,
         std::function<double(double)>&&  mainfunc_,
         std::function<double(double)>&& curationfunc_,
-        std::function<double(double)>&& timepenalty_   
-        ) { 
+        std::function<double(double)>&& timepenalty_,
+        const limitsarg& lims = {{"0"}, {{0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}}, {0, 0}, {0, 0, 0}}, 
+        std::vector<limits::func_t>&& func_restorers = {
+            [](double, double, double){ return 0.0; } 
+        }) {
         auto ret = push_action(_forum_name, N(setrules), mvo()                
                 ("mainfunc", mvo()("str", mainfunc.str)("maxarg", mainfunc.maxarg))
                 ("curationfunc", mvo()("str", curationfunc.str)("maxarg", curationfunc.maxarg))
                 ("timepenalty", mvo()("str", timepenalty.str)("maxarg", timepenalty.maxarg))
                 ("curatorsprop", curatorsprop)
                 ("maxtokenprop", MAXTOKENPROB)
-                ("tokensymbol", _token_symbol), _forum_name
-                );
-                
-        if(ret == success()) {   
+                ("tokensymbol", _token_symbol)
+                ("lims", lims),
+                 _forum_name);
+        if(ret == success()) {
             double unclaimed_funds = 0.0;
             for(auto& p : _state.pools)
                 if(!p.messages.size())
@@ -476,106 +608,21 @@ public:
             auto rows = get_all_rows(_forum_name, _forum_name, N(rewardpools), false);
             auto created = _serializers[_forum_name].binary_to_variant("rewardpool", *rows.rbegin(), abi_serializer_max_time)["created"].as<uint64_t>();        
             _state.pools.emplace_back(rewardpool(created, 
-            rewardrules(
-            {std::move(mainfunc_), static_cast<double>(mainfunc.maxarg)}, 
-            {std::move(curationfunc_), static_cast<double>(curationfunc.maxarg)}, 
-            {std::move(timepenalty_), static_cast<double>(timepenalty.maxarg)}, 
-            static_cast<double>(curatorsprop) / static_cast<double>(ONE_HUNDRED_PERCENT))));
+                rewardrules(
+                    {std::move(mainfunc_), static_cast<double>(mainfunc.maxarg)}, 
+                    {std::move(curationfunc_), static_cast<double>(curationfunc.maxarg)}, 
+                    {std::move(timepenalty_), static_cast<double>(timepenalty.maxarg)}, 
+                    static_cast<double>(curatorsprop) / static_cast<double>(ONE_HUNDRED_PERCENT)
+                ),
+                limits{
+                    .restorers = std::move(func_restorers),
+                    .limitedacts = lims.limitedacts,
+                    .vestingprices = lims.vestingprices,
+                    .minvestings = lims.minvestings
+                }));
             _state.pools.back().funds += unclaimed_funds;
         }
         return ret;
-    }
-    
-    action_result addmessage(const message_key& key, int64_t tokenprop) {
-        _state.pools.back().messages.emplace_back(message(key, static_cast<double>(std::min(tokenprop, MAXTOKENPROB)) / static_cast<double>(ONE_HUNDRED_PERCENT)));
-         return push_action(key.author, N(addmessage), mvo()("author", key.author)("id", key.id)("tokenprop", tokenprop), _forum_name);
-    }
-    
-    action_result addvote(const message_key& msg_key, account_name voter, int64_t weight) {
-    
-        auto ret = push_action(voter, N(addvote), mvo()
-                    ("author", msg_key.author)
-                    ("msgid", msg_key.id)
-                    ("voter", voter)
-                    ("weight", weight), _forum_name);
-                    
-        for(auto& p : _state.pools)            
-            for(auto& m : p.messages)
-                if(m.key == msg_key) {
-                    m.votes.emplace_back(vote{voter, std::min(static_cast<double>(weight) / static_cast<double>(ONE_HUNDRED_PERCENT), 1.0), _state.balances[voter].vestamount});
-                    return ret;
-                }
-        
-        if(ret == success())
-            BOOST_REQUIRE_MESSAGE(false, "addvote: ret == success(), but message not found in state");
-        return ret;    
-    }
-    
-    action_result payrewards(const message_key& msg_key) {
-        
-        auto ret = push_action(_forum_name, N(payrewards), mvo()
-                    ("author", msg_key.author)
-                    ("id", msg_key.id), _forum_name);    
-        
-        for(auto itr_p = _state.pools.begin(); itr_p != _state.pools.end(); itr_p++) {
-            auto& p = *itr_p;
-            for(auto itr_m = p.messages.begin(); itr_m != p.messages.end(); itr_m++)
-            {   
-                auto m = *itr_m;                  
-                if(m.key == msg_key)
-                {                   
-                    double pool_rsharesfn_sum = p.get_rsharesfn_sum();
-                                 
-                    int64_t payout = 0;
-                    if(p.messages.size() == 1) 
-                        payout = p.funds;
-                    else if(pool_rsharesfn_sum > 1.e-20)
-                        payout = (p.rules.mainfunc(m.get_rshares_sum()) * p.funds) / pool_rsharesfn_sum;
-                        
-                    auto curation_payout = p.rules.curatorsprop * payout;                    
-                    
-                    double unclaimed_funds = 0.0;//TODO 
-                    
-                    std::list<std::pair<account_name, double> > cur_rewards;
-                    double curators_fn_sum = 0.0;
-                    double rshares_sum = 0.0;    
-                    for(auto& v : m.votes)
-                    {    
-                        if(v.weight > 0.0)
-                          rshares_sum += v.weight * v.vesting;
-                        double new_cur_fn = p.rules.curationfunc(rshares_sum);
-                        cur_rewards.emplace_back(std::make_pair(v.voter, new_cur_fn - curators_fn_sum));
-                        curators_fn_sum = new_cur_fn;
-                    }  
-                    if(curators_fn_sum > 1.e-20)
-                        for(auto& r : cur_rewards)
-                            r.second *= (curation_payout / curators_fn_sum);
-                    
-                    for(auto& r : cur_rewards)
-                        _state.balances[r.first].vestamount += r.second;
-                    
-                    auto author_payout =  payout - curation_payout;
-                    _state.balances[m.key.author].tokenamount += author_payout * m.tokenprop;
-                    _state.balances[m.key.author].vestamount += author_payout * (1.0 - m.tokenprop);
-                    
-                    p.messages.erase(itr_m);
-                    p.funds -= (payout - unclaimed_funds);
-                    
-                    if(p.messages.size() == 0) {
-                        auto itr_p_next = itr_p;
-                        if((++itr_p_next) != _state.pools.end()) {                
-                           fill_depleted_pool(p.funds, std::distance(_state.pools.begin(), itr_p));
-                           _state.pools.erase(itr_p);
-                        }  
-                    }               
-                                     
-                    return ret;
-                }
-            }
-        }              
-        if(ret == success()) 
-                BOOST_REQUIRE_MESSAGE(false, "payrewards: ret == success(), but message not found in state");
-        return ret;    
     }
     
     void set_token_balance_from_table(account_name user, statemap& s) {
@@ -624,7 +671,7 @@ public:
                 netshares  = std::min(MAX_ARG, netshares);
                 voteshares = std::min(MAX_ARG, voteshares);          
                 s.set_message(m.key, {absshares, netshares, voteshares, p.rules.curationfunc(voteshares)});           
-                pool_rshares_sum = std::min(MAX_ARG, netshares + pool_rshares_sum);//+= netshares;               
+                pool_rshares_sum = std::min(MAX_ARG, netshares + pool_rshares_sum);            
                 pool_rsharesfn_sum += p.rules.mainfunc(netshares);
             }
             s.set_pool(p.id, {static_cast<double>(p.messages.size()), p.funds, pool_rshares_sum, pool_rsharesfn_sum});
@@ -647,7 +694,6 @@ public:
                 auto cur = _serializers[_forum_name].binary_to_variant("rewardpool", *itr, abi_serializer_max_time);
                  s.set_pool(cur["created"].as<uint64_t>(), {
                     static_cast<double>(cur["state"]["msgs"].as<uint64_t>()),
-                    //static_cast<double>(cur["state"]["funds"].as<int64_t>()),
                     static_cast<double>(cur["state"]["funds"].as<eosio::chain::asset>().to_real()),
                     static_cast<double>(FP(cur["state"]["rshares"].as<base_t>())),
                     static_cast<double>(FP(cur["state"]["rsharesfn"].as<base_t>()))
@@ -686,143 +732,40 @@ public:
             BOOST_TEST_MESSAGE( "_req:" );
             BOOST_TEST_MESSAGE(_req);
             BOOST_REQUIRE(false);  
-        } 
+        }
     }  
 };  
 
 BOOST_AUTO_TEST_SUITE(reward_calcs_tests)
 
 BOOST_FIXTURE_TEST_CASE(basic_tests, reward_calcs_tester) try {
-    BOOST_TEST_MESSAGE("reward_calcs_tester: basic_tests");
-    init(500000000000, 500000);
+    BOOST_TEST_MESSAGE("Basic publication_rewards tests");
+    auto bignum = static_cast<base_t>(500000000000);
+    init(bignum, 500000);
     _req.clear();
     _res.clear();
     step();
-    
-    auto bignum = static_cast<base_t>(1.e13);   
-    
-    BOOST_REQUIRE_EQUAL("assertion failure with message: forum::check monotonic failed for time penalty func",
-        setrules({"x", bignum}, {"log2(x + 1.0)", bignum}, {"x", bignum}, 2500, 
-        [](double x){ return x; }, [](double x){ return log2(x + 1.0); }, [](double x){ return x; }));
+    BOOST_TEST_MESSAGE("--- setrules");  
+    BOOST_REQUIRE_EQUAL("assertion failure with message: check monotonic failed for time penalty func",
+        setrules({"x", bignum}, {"log2(x + 1.0)", bignum}, {"1-x", bignum}, 2500, 
+        [](double x){ return x; }, [](double x){ return log2(x + 1.0); }, [](double x){ return 1.0-x; }));
     
     BOOST_REQUIRE_EQUAL("assertion failure with message: fp_cast: overflow",
-        setrules({"x", std::numeric_limits<base_t>::max()}, {"sqrt(x)", bignum}, {"0", bignum}, 2500, 
-        [](double x){ return x; }, [](double x){ return sqrt(x); }, [](double x){ return 0.0; })); 
+        setrules({"x", std::numeric_limits<base_t>::max()}, {"sqrt(x)", bignum}, {"1", bignum}, 2500, 
+        [](double x){ return x; }, [](double x){ return sqrt(x); }, [](double x){ return 1.0; })); 
           
-    BOOST_REQUIRE_EQUAL("assertion failure with message: forum::check positive failed for time penalty func", 
-        setrules({"x", bignum}, {"sqrt(x)", bignum}, {"10.0-x", 15}, 2500, 
-        [](double x){ return x; }, [](double x){ return sqrt(x); }, [](double x){ return 10.0 - x; }));        
+    BOOST_REQUIRE_EQUAL("assertion failure with message: check positive failed for time penalty func", 
+        setrules({"x", bignum}, {"sqrt(x)", bignum}, {"-10.0+x", 15}, 2500, 
+        [](double x){ return x; }, [](double x){ return sqrt(x); }, [](double x){ return -10.0 + x; }));        
     
-    BOOST_REQUIRE_EQUAL(success(), setrules({"x", bignum}, {"sqrt(x)", bignum}, {"10.0-x", 10}, 2500, 
-        [](double x){ return x; }, [](double x){ return sqrt(x); }, [](double x){ return 10.0 - x; }));    
-    check("set first rule");
+    BOOST_REQUIRE_EQUAL(success(), setrules({"x", bignum}, {"sqrt(x)", bignum}, {"sqrt(x / (3600 * 6))", bignum}, 2500, 
+        [](double x){ return x; }, [](double x){ return sqrt(x); }, [](double x){ return sqrt(x / (3600.0 * 6.0)); }));    
+    check();
     
+    BOOST_TEST_MESSAGE("--- add_funds_to_forum");
     BOOST_REQUIRE_EQUAL(success(), add_funds_to_forum(50000));    
-    check("add_funds_to_forum 50");
-    
-    std::vector<message_key> msg_keys;  
-    msg_keys.emplace_back(message_key{ .author = _users[0], .id = static_cast<uint64_t>(cur_time().to_seconds()) });     
-    BOOST_REQUIRE_EQUAL(success(), addmessage(msg_keys.back(), 5000));   
-    check("new_msg");
-    
-    BOOST_REQUIRE_EQUAL("assertion failure with message: forum::check monotonic failed for reward func",
-        setrules({"x^2", bignum}, {"log2(x + 1.0)", bignum}, {"0", bignum}, 2500, 
-        [](double x){ return x * x; }, [](double x){ return log2(x + 1.0); }, [](double x){ return 0.0; }));
-  
-    BOOST_REQUIRE_EQUAL(success(), setrules({"x^2", static_cast<base_t>(sqrt(bignum))}, {"log2(x + 1.0)", bignum}, {"0", bignum}, 2500, 
-        [](double x){ return x * x; }, [](double x){ return log2(x + 1.0); }, [](double x){ return 0.0; }));
-    check("set second rule");            
-    
-    msg_keys.emplace_back(message_key{ .author = N(alice5), .id = static_cast<uint64_t>(cur_time().to_seconds()) });     
-    BOOST_REQUIRE_EQUAL(success(), addmessage(msg_keys.back(), 10000));    
-    check("new_msg1");
-    msg_keys.emplace_back(message_key{ .author = N(bob), .id = static_cast<uint64_t>(cur_time().to_seconds()) });     
-    BOOST_REQUIRE_EQUAL(success(), addmessage(msg_keys.back(), 1000));        
-    check("new_msg2"); 
-    BOOST_REQUIRE_EQUAL(success(), addvote(msg_keys[0], _users[1], -5000));
-    check("new_votes-5a");
-    BOOST_REQUIRE_EQUAL(success(), addvote(msg_keys[0], _users[2], 7000));
-    check("new_votes7a");
-    
-    BOOST_REQUIRE_EQUAL(success(), add_funds_to_forum(8000));
-    check("add_funds_to_forum 8");
-      
-    BOOST_REQUIRE_EQUAL(success(), addvote(msg_keys[0], _users[3], 18000));
-    check("new_votes18a");
-    
-    BOOST_REQUIRE_EQUAL(success(), add_funds_to_forum(9000));
-    check("add_funds_to_forum 9");  
-          
-    BOOST_REQUIRE_EQUAL(success(), addvote(msg_keys[1], _users[1], 5000));
-    check("new_votes5b");
-    
-    BOOST_REQUIRE_EQUAL(success(), add_funds_to_forum(7000));
-    check("add_funds_to_forum 7");  
-    
-    BOOST_REQUIRE_EQUAL(success(), addvote(msg_keys[1], _users[2], 7000));
-    check("new_votes7b");
-    BOOST_REQUIRE_EQUAL(success(), addvote(msg_keys[1], _users[3], 8000));
-    check("new_votes8b");
-    
-    BOOST_REQUIRE_EQUAL(success(), addvote(msg_keys[2], N(bob1), 10000));
-    check("new_votes10c");  
-    
-    BOOST_REQUIRE_EQUAL(success(), add_funds_to_forum(30000));
-    check("add_funds_to_forum 30");  
-    
-    BOOST_REQUIRE_EQUAL(success(), payrewards(msg_keys[0]));
-    check("payrewards");
-    BOOST_REQUIRE_EQUAL(success(), payrewards(msg_keys[1]));
-    check("payrewards1");   
-      
-    fill_from_tables(_res);
-    BOOST_TEST_MESSAGE( "_res: \n" << _res );
-    fill_from_state(_req);
-    BOOST_TEST_MESSAGE( "_req: \n" << _req );
+    check();
     
 } FC_LOG_AND_RETHROW()
-
-
-template <typename T>
-void print_type_info(T expr, const std::string& name) {    
-BOOST_TEST_MESSAGE(name << ": val = " << static_cast<double>(expr)
-    << "; max val = " << static_cast<double>(std::numeric_limits<T>::max())
-    << "; int_digits = " << (T::integer_digits) 
-    << "; fract_digits = " << (T::fractional_digits) 
-    << "\n");    
-}
-
-BOOST_FIXTURE_TEST_CASE(overflow_test, reward_calcs_tester) try {    
-    BOOST_TEST_MESSAGE("reward_calcs_tester: fixed_point_overflow_test");
-    
-    auto max_fixp_val = static_cast<base_t>(std::numeric_limits<fixp_t>::max());
-    auto max_base_val = static_cast<base_t>(std::numeric_limits<base_t>::max());    
-    
-    init(max_fixp_val * 50, max_fixp_val / 5);
-    BOOST_REQUIRE_EQUAL(success(), setrules({"x", max_fixp_val / 2}, {"sqrt(x)", max_fixp_val / 2}, {"10.0-x", 10}, 2500, 
-        [](double x){ return x; }, [](double x){ return sqrt(x); }, [](double x){ return 10.0 - x; }));
-        
-    BOOST_REQUIRE_EQUAL(success(), add_funds_to_forum(50000));
-    check("add_funds_to_forum 50");
-    
-    std::vector<message_key> msg_keys;  
-    msg_keys.emplace_back(message_key{ .author = _users[0], .id = static_cast<uint64_t>(cur_time().to_seconds()) });     
-    BOOST_REQUIRE_EQUAL(success(), addmessage(msg_keys.back(), 5000));
-    check("new_msg");    
-    for(auto& user : _users) {
-        BOOST_REQUIRE_EQUAL(success(), addvote(msg_keys[0], user, 10000));
-        check("new_vote");
-    }
-    
-    BOOST_REQUIRE_EQUAL(success(), payrewards(msg_keys[0]));
-    check("payrewards");
-    
-    fill_from_tables(_res);
-    BOOST_TEST_MESSAGE( "_res: \n" << _res );
-    fill_from_state(_req);
-    BOOST_TEST_MESSAGE( "_req: \n" << _req );
-
-} FC_LOG_AND_RETHROW()
-
  
 BOOST_AUTO_TEST_SUITE_END()

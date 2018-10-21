@@ -126,6 +126,7 @@ struct rewardpool {
     poolstate state;
     
     uint64_t primary_key() const { return created; }
+    EOSLIB_SERIALIZE(rewardpool, (created)(rules)(lims)(state)) 
 };
 
 }

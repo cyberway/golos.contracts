@@ -2,9 +2,11 @@
 #include <common/hash64.hpp>
 #include <eosiolib/transaction.hpp>
 #include <eosiolib/types.hpp>
+#include <eosio.token/eosio.token.hpp>
 
 using namespace eosio;
 using namespace golos::config;
+using namespace atmsp::storable;
 
 extern "C" {
     void apply(uint64_t receiver, uint64_t code, uint64_t action) {
@@ -17,6 +19,9 @@ publication::publication(account_name self)
 {}
 
 void publication::apply(uint64_t code, uint64_t action) {
+    if (N(transfer) == action && N(eosio.token) == code)
+        execute_action(this, &publication::on_transfer);
+    
     if (N(createmssg) == action)
         execute_action(this, &publication::create_message);
     if (N(updatemssg) == action)
@@ -33,6 +38,8 @@ void publication::apply(uint64_t code, uint64_t action) {
         execute_action(this, &publication::close_message);
     if (N(createacc) == action)
         execute_action(this, &publication::create_acc);
+    if (N(setrules) == action)
+        execute_action(this, &publication::set_rules);
 }
 
 void publication::create_message(account_name account, std::string permlink,
@@ -217,6 +224,118 @@ void publication::set_child_count(bool increase, account_name parentacc, uint64_
             --item.childcount;
     }); 
 }
+
+void publication::fill_depleted_pool(tables::reward_pools& pools, eosio::asset quantity, tables::reward_pools::const_iterator excluded) {
+    using namespace tables;
+    using namespace structures;
+    eosio_assert(quantity.amount >= 0, "fill_depleted_pool: quantity.amount < 0");
+    if(quantity.amount == 0)
+        return;
+    auto choice = pools.end();
+    auto min_ratio = std::numeric_limits<poolstate::ratio_t>::max();
+    for(auto pool = pools.begin(); pool != pools.end(); ++pool)
+        if((pool->state.funds.symbol == quantity.symbol) && (pool != excluded)) {
+            auto cur_ratio = pool->state.get_ratio();
+            if(cur_ratio <= min_ratio) {
+                min_ratio = cur_ratio;
+                choice = pool;
+            }
+        }
+    //sic. we don't need assert here
+    if(choice != pools.end())
+        pools.modify(*choice, _self, [&](auto &item){ item.state.funds += quantity; });
+}
+
+void publication::on_transfer(account_name from, account_name to, eosio::asset quantity, std::string memo) {        
+    (void)memo;
+    require_auth(from);  
+    if(_self != to)
+        return;  
+
+    tables::reward_pools pools(_self, _self); 
+    fill_depleted_pool(pools, quantity, pools.end()); 
+}
+
+void publication::set_rules(const funcparams& mainfunc, const funcparams& curationfunc, const funcparams& timepenalty, 
+    int64_t curatorsprop, int64_t maxtokenprop, eosio::symbol_type tokensymbol, limitsarg lims_arg) {
+    //TODO: machine's constants
+    using namespace tables;
+    using namespace structures;
+    require_auth(_self);        
+    reward_pools pools(_self, _self);   
+    uint64_t created = current_time();
+    
+    eosio::asset unclaimed_funds = eosio::token(N(eosio.token)).get_balance(_self, tokensymbol.name());
+
+    auto old_pool = pools.begin();
+    while(old_pool != pools.end())
+        if(!old_pool->state.msgs)                
+            old_pool = pools.erase(old_pool);            
+        else {
+            if(old_pool->state.funds.symbol == tokensymbol)
+                unclaimed_funds -= old_pool->state.funds;
+            ++old_pool;
+        }
+    eosio_assert(pools.find(created) == pools.end(), "rules with this key already exist");
+
+    rewardrules newrules;
+    atmsp::parser<fixp_t> pa;
+    atmsp::machine<fixp_t> machine;
+    
+    newrules.mainfunc     = load_func(mainfunc, "reward func", pa, machine, true);
+    newrules.curationfunc = load_func(curationfunc, "curation func", pa, machine, true);
+    newrules.timepenalty  = load_func(timepenalty, "time penalty func", pa, machine, true);
+    
+    newrules.curatorsprop = static_cast<base_t>(get_limit_prop(curatorsprop).data());
+    newrules.maxtokenprop = static_cast<base_t>(get_limit_prop(maxtokenprop).data()); 
+   
+    limits lims{{}, {}, lims_arg.vestingprices, lims_arg.minvestings};
+    for(auto& restorer_str : lims_arg.restorers)
+        lims.restorers.emplace_back(load_restorer_func(restorer_str, pa, machine));
+    for(auto& act : lims_arg.limitedacts)
+        lims.limitedacts.emplace_back(limitedact{
+            .chargenum   = act.chargenum, 
+            .restorernum = act.restorernum, 
+            .cutoffval   = get_prop(act.cutoffval).data(), 
+            .chargeprice = get_prop(act.chargeprice).data()
+        });
+    lims.check();
+          
+    pools.emplace(_self, [&](auto &item) {
+        item.created = created; 
+        item.rules = newrules;
+        item.lims = lims;
+        item.state.msgs = 0; 
+        item.state.funds = unclaimed_funds;
+        item.state.rshares = (fixp_t(0)).data();
+        item.state.rsharesfn = (fixp_t(0)).data(); 
+    });
+}
+
+structures::funcinfo publication::load_func(const funcparams& params, const std::string& name, const atmsp::parser<fixp_t>& pa, atmsp::machine<fixp_t>& machine, bool inc) {
+    eosio_assert(params.maxarg > 0, "forum::load_func: params.maxarg <= 0");
+    structures::funcinfo ret;     
+    ret.maxarg = fp_cast<fixp_t>(params.maxarg).data();
+    pa(machine, params.str, "x");
+    check_positive_monotonic(machine, FP(ret.maxarg), name, inc);
+    ret.code.from_machine(machine);
+    return ret;
+}
+
+bytecode publication::load_restorer_func(const std::string str_func, const atmsp::parser<fixp_t>& pa, atmsp::machine<fixp_t>& machine) {
+    bytecode ret;
+    pa(machine, str_func, "p,v,t");//prev value, vesting, time(elapsed seconds)
+    ret.from_machine(machine);
+    return ret;
+}
+
+fixp_t publication::get_delta(atmsp::machine<fixp_t>& machine, fixp_t old_val, fixp_t new_val, const structures::funcinfo& func) {
+    func.code.to_machine(machine);
+    elap_t old_fn = machine.run({old_val}, {{fixp_t(0), FP(func.maxarg)}});
+    elap_t new_fn = machine.run({new_val}, {{fixp_t(0), FP(func.maxarg)}});
+    return fp_cast<fixp_t>(new_fn - old_fn, false);
+}
+
 
 void publication::create_acc(account_name name) { //DUMMY 
 }

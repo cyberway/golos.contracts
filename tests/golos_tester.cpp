@@ -126,6 +126,24 @@ fc::variant golos_tester::get_tbl_struct_singleton(name code, name scope, name t
     return data.empty() ? fc::variant() : abi.binary_to_variant( n, data, abi_serializer_max_time );
 }
 
+vector<vector<char> > golos_tester::get_all_rows(uint64_t code, uint64_t scope, uint64_t table, bool strict)const {
+    vector<vector<char> > ret;
+    const auto& db = control->db();
+    const auto* t_id = db.find<chain::table_id_object, chain::by_code_scope_table>(boost::make_tuple(code, scope, table));
+    if(strict)
+        BOOST_REQUIRE_EQUAL(true, static_cast<bool>(t_id));
+    else if(!static_cast<bool>(t_id))
+        return ret;
+    const auto& idx = db.get_index<chain::key_value_index, chain::by_scope_primary>();
+    for(auto itr = idx.lower_bound(boost::make_tuple(t_id->id, 0)); (itr != idx.end()) && (itr->t_id == t_id->id); ++itr) {
+        ret.push_back(vector<char>());
+        auto& data = ret.back();
+        data.resize(itr->value.size());
+        memcpy(data.data(), itr->value.data(), data.size());
+    }
+    return ret;
+}
+
 }} // eosio::tesing
 
 namespace fc {
