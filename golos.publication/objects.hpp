@@ -29,9 +29,9 @@ struct content {
 
     uint64_t id;
     //std::string permlink; //?
-    std::string headerpost;
-    std::string bodypost;
-    std::string languagepost;
+    std::string headermssg;
+    std::string bodymssg;
+    std::string languagemssg;
     std::vector<structures::tag> tags;
     std::string jsonmetadata;
 
@@ -40,8 +40,8 @@ struct content {
     }
 };
 
-struct post {
-    post() = default;
+struct message {
+    message() = default;
 
     uint64_t id;
     uint64_t date;
@@ -60,7 +60,7 @@ struct voteinfo {
     voteinfo() = default;
 
     uint64_t id;
-    uint64_t post_id;
+    uint64_t message_id;
     account_name voter;
     int16_t weight;
     uint64_t time;
@@ -71,21 +71,21 @@ struct voteinfo {
     }
 
     uint64_t secondary_key() const {
-        return post_id;
+        return message_id;
     }
 };
 
 }
 
 namespace tables {
-    using id_index = indexed_by<N(id), const_mem_fun<structures::post, uint64_t, &structures::post::primary_key>>;
-    using post_table = eosio::multi_index<N(posttable), structures::post, id_index>;
+    using id_index = indexed_by<N(id), const_mem_fun<structures::message, uint64_t, &structures::message::primary_key>>;
+    using message_table = eosio::multi_index<N(messagetable), structures::message, id_index>;
 
     using content_id_index = indexed_by<N(id), const_mem_fun<structures::content, uint64_t, &structures::content::primary_key>>;
     using content_table = eosio::multi_index<N(contenttable), structures::content, content_id_index>;
 
     using vote_id_index = indexed_by<N(id), const_mem_fun<structures::voteinfo, uint64_t, &structures::voteinfo::primary_key>>;
-    using vote_postid_index = indexed_by<N(postid), const_mem_fun<structures::voteinfo, uint64_t, &structures::voteinfo::secondary_key>>;
-    using vote_table = eosio::multi_index<N(votetable), structures::voteinfo, vote_id_index, vote_postid_index>;
+    using vote_messageid_index = indexed_by<N(messageid), const_mem_fun<structures::voteinfo, uint64_t, &structures::voteinfo::secondary_key>>;
+    using vote_table = eosio::multi_index<N(votetable), structures::voteinfo, vote_id_index, vote_messageid_index>;
 
 }

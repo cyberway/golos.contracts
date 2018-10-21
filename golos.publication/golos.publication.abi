@@ -7,7 +7,7 @@
   ],
   "structs": [
   {
-    "name": "postkey",
+    "name": "messagekey",
     "base": "",
     "fields": [
       {
@@ -53,15 +53,15 @@
         "type": "uint64"
       },
       {
-        "name": "headerpost",
+        "name": "headermssg",
         "type": "string"
       },
       {
-        "name": "bodypost",
+        "name": "bodymssg",
         "type": "string"
       },
       {
-        "name": "languagepost",
+        "name": "languagemssg",
         "type": "string"
       },
       {
@@ -75,7 +75,7 @@
     ]
   },
   {
-    "name": "post",
+    "name": "message",
     "base": "",
     "fields": [
       {
@@ -109,7 +109,7 @@
     ]
   },
   {
-    "name": "createpost",
+    "name": "createmssg",
     "base": "",
     "fields": [
       {
@@ -133,15 +133,15 @@
         "type": "beneficiary[]"
       },
       {
-        "name": "headerpost",
+        "name": "headermssg",
         "type": "string"
       },
       {
-        "name": "bodypost",
+        "name": "bodymssg",
         "type": "string"
       },
       {
-        "name": "languagepost",
+        "name": "languagemssg",
         "type": "string"
       },
       {
@@ -155,7 +155,7 @@
     ]
   },
   {
-    "name": "updatepost",
+    "name": "updatemssg",
     "base": "",
     "fields": [
       {
@@ -167,15 +167,15 @@
         "type": "string"
       },
       {
-        "name": "headerpost",
+        "name": "headermssg",
         "type": "string"
       },
       {
-        "name": "bodypost",
+        "name": "bodymssg",
         "type": "string"
       },
       {
-        "name": "languagepost",
+        "name": "languagemssg",
         "type": "string"
       },
       {
@@ -189,7 +189,7 @@
     ]
   },
   {
-    "name": "deletepost",
+    "name": "deletemssg",
     "base": "",
     "fields": [
       {
@@ -239,7 +239,7 @@
         "type": "uint64"
       },
       {
-        "name": "post_id",
+        "name": "message_id",
         "type": "uint64"
       },
       {
@@ -273,16 +273,16 @@
   ],
   "actions": [
   {
-    "name": "createpost",
-    "type": "createpost"
+    "name": "createmssg",
+    "type": "createmssg"
   },
   {
-    "name": "updatepost",
-    "type": "updatepost"
+    "name": "updatemssg",
+    "type": "updatemssg"
   },
   {
-    "name": "deletepost",
-    "type": "deletepost"
+    "name": "deletemssg",
+    "type": "deletemssg"
   },
   {
     "name": "upvote",
@@ -297,8 +297,8 @@
     "type": "unvote"
   },
   {
-    "name": "closepost",
-    "type": "postkey"
+    "name": "closemssg",
+    "type": "messagekey"
   },
   {
     "name": "createacc",
@@ -307,8 +307,8 @@
   ],
   "tables": [
   {
-    "name": "posttable",
-    "type": "post",
+    "name": "messagetable",
+    "type": "message",
     "index_type": "i64",
     "key_names" : [
       "id"
