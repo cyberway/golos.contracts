@@ -3,9 +3,61 @@
   "types": [{
     "new_type_name": "account_name",
     "type": "name"
-  }
+    },{
+      "new_type_name": "base_t",
+      "type": "int64"
+    },{
+      "new_type_name": "index_t",
+      "type": "uint64"
+    },{
+      "new_type_name": "enum_t",
+      "type": "uint8"
+    },{
+      "new_type_name": "counter_t",
+      "type": "uint64"
+    }
   ],
   "structs": [
+  {
+    "name": "value",
+    "base": "",
+    "fields": [
+        {
+            "name": "kind",
+            "type": "enum_t"
+        },
+        {
+            "name": "idx",
+            "type": "index_t"
+        }
+    ]
+  },
+  {
+    "name": "bytecode",
+    "base": "",
+    "fields": [
+        {
+            "name": "varssize",
+            "type": "index_t"
+        },
+        {
+            "name": "operators",
+            "type": "index_t[]"
+        },
+        {
+            "name": "values",
+            "type": "value[]"
+        },
+        {
+            "name": "nums",
+            "type": "base_t[]"
+        },
+        {
+            "name": "consts",
+            "type": "base_t[]"
+        }
+    ]
+  }, 
   {
     "name": "messagekey",
     "base": "",
@@ -75,6 +127,28 @@
     ]
   },
   {
+    "name": "messagestate",
+    "base": "",
+    "fields": [
+        {
+            "name": "absshares",
+            "type": "base_t"
+        },
+        {
+            "name": "netshares",
+            "type": "base_t"
+        },
+        {
+            "name": "voteshares",
+            "type": "base_t"
+        },
+        {
+            "name": "sumcuratorsw",
+            "type": "base_t"
+        }
+    ]
+  },
+  {
     "name": "message",
     "base": "",
     "fields": [
@@ -95,8 +169,20 @@
         "type": "uint64"
       },
       {
+        "name": "tokenprop",
+        "type": "base_t"
+      },
+      {
         "name": "beneficiaries",
         "type": "beneficiary[]"
+      },
+      {
+        "name": "rewardweight",
+        "type": "base_t"
+      },
+      {
+        "name": "state",
+        "type": "messagestate"
       },
       {
         "name": "childcount",
@@ -257,7 +343,167 @@
       {
         "name": "count",
         "type": "int64"
+      },
+      {
+        "name": "curatorsw",
+        "type": "base_t"
       }
+    ]
+  },
+  {
+    "name": "limitedact",
+    "base": "",
+    "fields": [
+        {
+            "name": "chargenum",
+            "type": "uint8"
+        },
+        {
+            "name": "restorernum",
+            "type": "uint8"
+        },
+        {
+            "name": "cutoffval",
+            "type": "base_t"
+        },
+        {
+            "name": "chargeprice",
+            "type": "base_t"
+        }
+    ]
+  },
+  {
+    "name": "limits",
+    "base": "",
+    "fields": [
+        {
+            "name": "restorers",
+            "type": "bytecode[]"
+        },
+        {
+            "name": "limitedacts",
+            "type": "limitedact[]"
+        },
+        {
+            "name": "vestingprices",
+            "type": "int64[]"
+        },
+        {
+            "name": "minvestings",
+            "type": "int64[]"
+        }
+    ]
+  },
+  {
+    "name": "chargeinfo",
+    "base": "",
+    "fields": [
+        {
+            "name": "lastupdate",
+            "type": "uint64"
+        },
+        {
+            "name": "data",
+            "type": "base_t"
+        }
+    ]
+  },
+  {
+    "name": "usercharges",
+    "base": "",
+    "fields": [
+        {
+            "name": "poolcreated",
+            "type": "uint64"
+        },
+        {
+            "name": "vals",
+            "type": "chargeinfo[]"
+        }
+    ]
+  },  
+  {
+    "name": "funcinfo",
+    "base": "",
+    "fields": [
+        {
+            "name": "code",
+            "type": "bytecode"
+        },
+        {
+            "name": "maxarg",
+            "type": "base_t"
+        }
+    ]
+  },
+  {
+    "name": "rewardrules",
+    "base": "",
+    "fields": [
+        {
+            "name": "mainfunc",
+            "type": "funcinfo"
+        },
+        {
+            "name": "curationfunc",
+            "type": "funcinfo"
+        },
+        {
+            "name": "timepenalty",
+            "type": "funcinfo"
+        },
+        {
+            "name": "curatorsprop",
+            "type": "base_t"
+        },
+        {
+            "name": "maxtokenprop",
+            "type": "base_t"
+        }
+    ]
+  },
+  {
+    "name": "poolstate",
+    "base": "",
+    "fields": [
+        {
+            "name": "msgs",
+            "type": "counter_t"
+        },
+        {
+            "name": "funds",
+            "type": "asset"
+        },
+        {
+            "name": "rshares",
+            "type": "base_t"
+        },
+        {
+            "name": "rsharesfn",
+            "type": "base_t"
+        }
+    ]
+  },
+  {
+    "name": "rewardpool",
+    "base": "",
+    "fields": [
+        {
+            "name": "created",
+            "type": "uint64"
+        },
+        {
+            "name": "rules",
+            "type": "rewardrules"
+        },
+        {
+            "name": "lims",
+            "type": "limits"
+        },
+        {
+            "name": "state",
+            "type": "poolstate"
+        }
     ]
   },
   {
@@ -338,6 +584,20 @@
     "key_types" : [
       "uint64"
     ]
+  },
+  {
+    "name": "rewardpools",
+    "type": "rewardpool",
+    "index_type": "i64",
+    "key_names": [],
+    "key_types": []
+  },
+  {
+    "name": "charges",
+    "type": "usercharges",
+    "index_type": "i64",
+    "key_names": [],
+    "key_types": []
   }
   ],
   "ricardian_clauses": [],

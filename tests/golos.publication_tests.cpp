@@ -1,7 +1,7 @@
+#define UNIT_TEST_ENV
 #include <boost/test/unit_test.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 #include <eosio/chain/abi_serializer.hpp>
-//#include <eosio/chain/types.hpp>
 
 #include <Runtime/Runtime.h>
 #include <fc/variant_object.hpp>
@@ -9,6 +9,8 @@
 
 #include "golos_tester.hpp"
 #include "contracts.hpp"
+
+#include "../golos.publication/types.h"
 #include "../golos.publication/config.hpp"
 
 #define UNLOCKED_FOR_CREATE_MESSAGE 21

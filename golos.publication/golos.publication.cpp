@@ -1,10 +1,10 @@
 #include "golos.publication.hpp"
-#include "config.hpp"
 #include <common/hash64.hpp>
 #include <eosiolib/transaction.hpp>
 #include <eosiolib/types.hpp>
 
 using namespace eosio;
+using namespace golos::config;
 
 extern "C" {
     void apply(uint64_t receiver, uint64_t code, uint64_t action) {
@@ -123,7 +123,7 @@ void publication::delete_message(account_name account, std::string permlink) {
 void publication::upvote(account_name voter, account_name author, std::string permlink, int16_t weight) {
     require_auth(voter);
     eosio_assert(weight > 0, "The weight must be positive.");
-    eosio_assert(weight <= MAX_WEIGHT, "The weight can't be more than 100%.");
+    eosio_assert(weight <= ONE_HUNDRED_PERCENT, "The weight can't be more than 100%.");
 
     set_vote(voter, author, fc::hash64(permlink), weight);
 }
@@ -132,7 +132,7 @@ void publication::downvote(account_name voter, account_name author, std::string 
     require_auth(voter);
 
     eosio_assert(weight > 0, "The weight sign can't be negative.");
-    eosio_assert(weight <= MAX_WEIGHT, "The weight can't be more than 100%.");
+    eosio_assert(weight <= ONE_HUNDRED_PERCENT, "The weight can't be more than 100%.");
 
     set_vote(voter, author, fc::hash64(permlink), -weight);
 }
