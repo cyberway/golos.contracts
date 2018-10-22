@@ -1,0 +1,66 @@
+{
+    "____comment": "This file was generated with eosio-abigen. DO NOT EDIT Mon Oct 20 16:06:14 2018",
+    "version": "eosio::abi/1.0",
+    "types": [{
+        "new_type_name": "account_name",
+        "type": "name"
+    }],
+    "structs": [
+        {
+            "name": "state",
+            "base": "",
+            "fields": [
+                {"type": "uint64", "name": "prev_emit"},
+                {"type": "uint128", "name": "tx_id"},
+                {"type": "uint64", "name": "start_time"},
+                {"type": "account_name", "name": "post_name"},
+                {"type": "account_name", "name": "work_name"},
+                {"type": "bool", "name": "active"}
+            ]
+        },
+        {
+            "name": "emit",
+            "base": "",
+            "fields": []
+        },
+        {
+            "name": "start",
+            "base": "",
+            "fields": []
+        },
+        {
+            "name": "stop",
+            "base": "",
+            "fields": []
+        }
+    ],
+    "types": [],
+    "actions": [
+        {
+            "name": "emit",
+            "type": "emit",
+            "ricardian_contract": ""
+        },
+        {
+            "name": "start",
+            "type": "start",
+            "ricardian_contract": ""
+        },
+        {
+            "name": "stop",
+            "type": "stop",
+            "ricardian_contract": ""
+        }
+    ],
+    "tables": [
+        {
+            "name": "state",
+            "type": "state",
+            "index_type": "i64",
+            "key_names": [],
+            "key_types": []
+        }
+    ],
+    "ricardian_clauses": [],
+    "abi_extensions": []
+}

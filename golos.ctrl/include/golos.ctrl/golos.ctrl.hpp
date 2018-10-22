@@ -1,5 +1,6 @@
 #pragma once
 #include <common/upsert.hpp>
+#include <common/config.hpp>
 #include <eosiolib/eosio.hpp>
 #include <eosiolib/asset.hpp>
 #include <eosiolib/public_key.hpp>
@@ -13,12 +14,35 @@ using share_type = int64_t;
 
 
 struct [[eosio::table]] properties {
+    // control
     uint16_t max_witnesses = 21;            // MAX_WITNESSES
     uint16_t witness_supermajority = 0;     // 0 = auto
     uint16_t witness_majority = 0;          // 0 = auto
     uint16_t witness_minority = 0;          // 0 = auto
     uint16_t max_witness_votes = 30;        // MAX_ACCOUNT_WITNESS_VOTES
 
+    // emission
+    uint16_t infrate_start = 1500;          // INFLATION_RATE_START_PERCENT
+    uint16_t infrate_stop = 95;             // INFLATION_RATE_STOP_PERCENT
+    uint32_t infrate_narrowing = 250000*6;  // INFLATION_NARROWING_PERIOD
+    uint16_t content_reward = 6667-667;     // CONTENT_REWARD_PERCENT
+    uint16_t vesting_reward = 2667-267;     // VESTING_FUND_PERCENT
+    uint16_t workers_reward = 1000;         // 10%
+    account_name workers_pool = N(worker);  // TODO: remove from defaults
+
+    void validate_emit_params() const {
+        eosio_assert(infrate_start >= infrate_stop, "infrate_start can not be less than infrate_stop");
+        eosio_assert(content_reward <= config::_100percent, "content reward must be <= 100%");
+        eosio_assert(vesting_reward <= config::_100percent, "vesting reward must be <= 100%");
+        eosio_assert(workers_reward <= config::_100percent, "workers reward must be <= 100%");
+        eosio_assert((content_reward + vesting_reward + workers_reward) <= config::_100percent,
+            "sum of rewards must be <= 100%");
+        eosio_assert(is_account(workers_pool), "workers pool account must exist");
+        // TODO: validate params change (compare with prev values)
+        // TODO: maybe separate params so some settable only on creation and cannot be changed
+    }
+
+    // helpers
     bool validate() const;
     uint16_t active_threshold() const;
     uint16_t majority_threshold() const;
@@ -102,7 +126,7 @@ using bw_user_tbl = eosio::multi_index<N(bwuser), bw_user>;
 
 class control: public contract {
 public:
-    control(account_name self, symbol_type token, uint64_t action)
+    control(account_name self, symbol_type token, uint64_t action = 0)
         : contract(self)
         , _token(token)
         , _props_tbl(_self, token)
@@ -124,8 +148,9 @@ public:
 
     [[eosio::action]] void changevest(account_name owner, asset diff);
 
-    vector<account_name> top_witnesses();
-    vector<witness_info> top_witness_info();  //internal
+    inline vector<account_name> get_top_witnesses();
+    static inline properties get_params(symbol_type token);
+    static inline account_name get_owner(symbol_type token);
 
 private:
     symbol_type _token;
@@ -136,15 +161,18 @@ private:
     properties _props;          // cache
 
 private:
+    vector<account_name> top_witnesses();
+    vector<witness_info> top_witness_info();
+
     const properties& props(bool allow_default = false) {
         if (!_has_props) {
             auto i = _props_tbl.begin();
-            bool exist = i != _props_tbl.end();
-            eosio_assert(exist || allow_default, "symbol not found");
-            _props = exist ? i->props : properties();
-            if (exist)
+            bool exists = i != _props_tbl.end();
+            eosio_assert(exists || allow_default, "symbol not found");
+            _props = exists ? i->props : properties();
+            if (exists)
                 _owner = i->owner;
-            _has_props = exist;
+            _has_props = exists;
         }
         return _props;
     }
@@ -170,6 +198,30 @@ bool control::is_attached(account_name user) const {
     auto itr = tbl.find(user);
     bool exists = itr != tbl.end();
     return exists && itr->attached;
+}
+
+// separate helper for public usage
+std::vector<account_name> control::get_top_witnesses() {
+    std::vector<account_name> top;
+    const auto l = props().max_witnesses;
+    top.reserve(l);
+    witness_tbl witness(_self, _token);
+    auto idx = witness.get_index<N(byweight)>();
+    for (auto itr = idx.begin(); itr != idx.end() && top.size() < l; ++itr) {
+        if (itr->active && itr->total_weight > 0)
+            top.emplace_back(itr->name);
+    }
+    return top;
+}
+
+properties control::get_params(symbol_type token) {
+    static auto ctrl = control(config::control_name, token);
+    return ctrl._props;
+}
+account_name control::get_owner(symbol_type token) {
+    // TODO: find better way than creating second control instance
+    static auto ctrl = control(config::control_name, token);
+    return ctrl._owner;
 }
 
 

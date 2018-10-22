@@ -20,6 +20,7 @@ using std::string;
 bool properties::validate() const {
     eosio_assert(max_witnesses > 0, "max_witnesses cannot be 0");
     eosio_assert(max_witness_votes > 0, "max_witness_votes cannot be 0");
+    validate_emit_params();
     return true;
 }
 
