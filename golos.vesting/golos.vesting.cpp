@@ -96,40 +96,6 @@ void vesting::retire(account_name issuer, asset quantity, account_name user) {
     });
 }
 
-void vesting::accrue_vesting(account_name sender, account_name user, asset quantity) {
-    require_auth(sender);
-    require_recipient(user);
-
-    auto sym_name = quantity.symbol.name();
-
-    tables::account_table account(_self, user);
-    auto balance = account.find(sym_name);
-    eosio_assert(balance != account.end(), "Not found balance account");
-
-    asset summary_delegate;
-    summary_delegate.symbol = quantity.symbol;
-
-    tables::delegate_table table_delegate(_self, sym_name);
-    auto index_delegate = table_delegate.get_index<N(recipient)>();
-    auto it_index_user = index_delegate.find(user);
-
-    asset efective_vesting = balance->vesting + balance->received_vesting;
-    while (it_index_user != index_delegate.end() && it_index_user->recipient == user && bool_asset(efective_vesting)) {
-        auto proportion = it_index_user->quantity * FRACTION / efective_vesting;
-        const auto &delegates_award = (((quantity * proportion) / FRACTION) * it_index_user->interest_rate) / FRACTION;
-
-        index_delegate.modify(it_index_user, 0, [&](auto &item) {
-            item.deductions += delegates_award;
-        });
-
-        summary_delegate += delegates_award;
-        ++it_index_user;
-    }
-
-    sub_balance(sender, quantity);
-    add_balance(user, quantity - summary_delegate, sender);
-}
-
 void vesting::convert_vesting(account_name sender, account_name recipient, asset quantity) {
     require_auth(sender);
 
@@ -447,7 +413,8 @@ const asset vesting::convert_to_token(const asset &m_token, const structures::ve
     if (!vinfo.supply.amount || !this_balance.amount)
         amount = m_token.amount;
     else {
-        amount = (m_token.amount * this_balance.amount) / (vinfo.supply.amount + m_token.amount);
+        amount = static_cast<int64_t>((static_cast<uint128_t>(m_token.amount) * static_cast<uint128_t>(this_balance.amount))
+                                      / (static_cast<uint128_t>(vinfo.supply.amount) + static_cast<uint128_t>(m_token.amount)));
     }
 
     return asset(amount, symbol);
