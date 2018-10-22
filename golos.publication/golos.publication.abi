@@ -255,6 +255,10 @@
         "type": "beneficiary[]"
       },
       {
+        "name": "tokenprop",
+        "type": "int64"
+      },
+      {
         "name": "headermssg",
         "type": "string"
       },

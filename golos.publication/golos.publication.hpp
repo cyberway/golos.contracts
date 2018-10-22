@@ -18,6 +18,7 @@ class publication : public eosio::contract {
     void create_message(account_name account, std::string permlink,
                      account_name parentacc, std::string parentprmlnk,
                      std::vector<structures::beneficiary> beneficiaries,
+                     int64_t tokenprop,
                      std::string headermssg, std::string bodymssg,
                      std::string languagemssg, std::vector<structures::tag> tags,
                      std::string jsonmetadata);
@@ -37,6 +38,11 @@ class publication : public eosio::contract {
     void set_child_count(bool increase, account_name parentacc, uint64_t parent_id);
     void fill_depleted_pool(tables::reward_pools& pools, eosio::asset quantity, 
                      tables::reward_pools::const_iterator excluded);
+    auto get_pool(tables::reward_pools& pools, uint64_t time);
+    int64_t pay_curators(account_name author, uint64_t msgid, int64_t max_rewards,
+                     fixp_t weights_sum, eosio::symbol_type tokensymbol);
+    void payto(account_name user, eosio::asset quantity, enum_t mode);
+         
     
     static structures::funcinfo load_func(const funcparams& params, const std::string& name, 
                      const atmsp::parser<fixp_t>& pa, atmsp::machine<fixp_t>& machine, bool inc);                    

@@ -19,6 +19,7 @@ using namespace eosio;
 using namespace eosio::chain;
 using namespace eosio::testing;
 using namespace fc;
+using namespace golos::config;
 
 using mvo = fc::mutable_variant_object;
 
@@ -37,33 +38,65 @@ FC_REFLECT(structures::beneficiaries, (account)(deductprcnt))
 
 
 class golos_publication_tester : public golos_tester {
+    std::vector<account_name> _users;
 public:
 
-    golos_publication_tester() {
+    golos_publication_tester(): _users{N(jackiechan), N(brucelee), N(chucknorris), N(golos.pub)}{
+        produce_blocks(2);
+        create_accounts(_users);
+        create_accounts({N(eosio.token)});
+        create_accounts({vesting_name});
+        
         produce_blocks(2);
 
-        create_accounts({N(jackiechan), N(brucelee), N(chucknorris), N(golos.pub)});
-        produce_blocks(2);
-
-        install_contract(N(golos.pub), contracts::posting_wasm(), contracts::posting_abi(), abi_ser);
+        install_contract(N(golos.pub), contracts::posting_wasm(), contracts::posting_abi(), _serializers[N(golos.pub)]);
+        install_contract(N(eosio.token), contracts::token_wasm(), contracts::token_abi(), _serializers[N(eosio.token)]);
+        install_contract(vesting_name, contracts::vesting_wasm(), contracts::vesting_abi(), _serializers[vesting_name]);
     }
 
     action_result push_action(const account_name& signer,
                               const action_name &name,
-                              const variant_object &data) {
-       string action_type_name = abi_ser.get_action_type(name);
-
+                              const variant_object &data, const account_name& code = N(golos.pub)) {
+       auto& abi_ser = _serializers[code]; 
+       string action_type_name = abi_ser.get_action_type(name);       
        action act;
-       act.account = N(golos.pub);
+       act.account = code;
        act.name = name;
        act.data = abi_ser.variant_to_binary(action_type_name, data, abi_serializer_max_time);
 
        return base_tester::push_action(std::move(act), uint64_t(signer));
-    } 
+    }
+    
+    void init() {
+        symbol sym(0, "DUMMY");
+        BOOST_REQUIRE_EQUAL(success(), push_action(N(golos.pub), N(open), 
+            mvo()( "owner", account_name(N(golos.pub)))
+            ( "symbol", sym)
+            ( "ram_payer", account_name(N(golos.pub))), 
+            N(eosio.token)));  
+        
+        limitsarg lims = {{"0"}, {{0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}}, {0, 0}, {0, 0, 0}};
+        BOOST_REQUIRE_EQUAL(success(), push_action(N(golos.pub), N(setrules), mvo()                
+                ("mainfunc", mvo()("str", "0")("maxarg", 1))
+                ("curationfunc", mvo()("str", "0")("maxarg", 1))
+                ("timepenalty", mvo()("str", "0")("maxarg", 1))
+                ("curatorsprop", 0)
+                ("maxtokenprop", 0)
+                ("tokensymbol", sym)
+                ("lims", lims)));
+        for(auto& u : _users) {
+            BOOST_REQUIRE_EQUAL(success(), push_action( u, N(open), 
+                mvo()( "owner", u)
+                ( "symbol", sym)
+                ( "ram_payer", u), 
+                vesting_name));   
+        }
+    }
 
     action_result create_message(account_name account, std::string permlink,
                               account_name parentacc = N(), std::string parentprmlnk = "parentprmlnk",
                               std::vector<structures::beneficiaries> beneficiaries = {{N(beneficiary), 777}},
+                              int64_t tokenprop = 5000,
                               std::string headermssg = "headermssg",
                               std::string bodymssg = "bodymssg", std::string languagemssg = "languagemssg",
                               std::vector<structures::tags> tags = {{"tag"}},
@@ -74,6 +107,7 @@ public:
                            ("parentacc", parentacc)
                            ("parentprmlnk", parentprmlnk)
                            ("beneficiaries", beneficiaries)
+                           ("tokenprop", tokenprop)
                            ("headermssg", headermssg)
                            ("bodymssg", bodymssg)
                            ("languagemssg", languagemssg)
@@ -83,15 +117,15 @@ public:
     }
 
     fc::variant get_messages( account_name acc, uint64_t id ) {
-        return get_tbl_struct(N(golos.pub), acc, N(messagetable), id, "message", abi_ser);
+        return get_tbl_struct(N(golos.pub), acc, N(messagetable), id, "message", _serializers[N(golos.pub)]);
     }
 
     fc::variant get_content( account_name acc, uint64_t id ) {
-        return get_tbl_struct(N(golos.pub), acc, N(contenttable), id, "content", abi_ser);
+        return get_tbl_struct(N(golos.pub), acc, N(contenttable), id, "content", _serializers[N(golos.pub)]);
     }
 
     fc::variant get_vote( account_name acc, uint64_t id ) {
-        return get_tbl_struct(N(golos.pub), acc, N(votetable), id, "voteinfo", abi_ser);
+        return get_tbl_struct(N(golos.pub), acc, N(votetable), id, "voteinfo", _serializers[N(golos.pub)]);
     }
 
     action_result update_message(account_name account, std::string permlink,
@@ -163,13 +197,14 @@ public:
         BOOST_CHECK_EQUAL(obj1.get_object()["jsonmetadata"].as<std::string>(), obj2.get_object()["jsonmetadata"].as<std::string>());
     }
 
-    abi_serializer abi_ser;
+    std::map<account_name, abi_serializer> _serializers;
 };
 
 BOOST_AUTO_TEST_SUITE(golos_publication_tests)
 
 BOOST_FIXTURE_TEST_CASE(create_message, golos_publication_tester) try {
     BOOST_TEST_MESSAGE("Create message testing.");
+    init();
     BOOST_CHECK_EQUAL(success(), golos_publication_tester::create_message(
                             N(brucelee),
                             "permlink"));
@@ -239,6 +274,7 @@ BOOST_FIXTURE_TEST_CASE(create_message, golos_publication_tester) try {
 
 BOOST_FIXTURE_TEST_CASE(update_message, golos_publication_tester) try {
     BOOST_TEST_MESSAGE("Update message testing.");
+    init();
 
     BOOST_CHECK_EQUAL(success(), golos_publication_tester::create_message(
                             N(brucelee),
@@ -277,6 +313,7 @@ BOOST_FIXTURE_TEST_CASE(update_message, golos_publication_tester) try {
 
 BOOST_FIXTURE_TEST_CASE(delete_message, golos_publication_tester) try {
     BOOST_TEST_MESSAGE("Delete message testing.");
+    init();
 
     BOOST_CHECK_EQUAL(success(), golos_publication_tester::create_message(
                             N(brucelee),
@@ -307,6 +344,7 @@ BOOST_FIXTURE_TEST_CASE(delete_message, golos_publication_tester) try {
 
 BOOST_FIXTURE_TEST_CASE(upvote, golos_publication_tester) try {
     BOOST_TEST_MESSAGE("Upvote testing.");
+    init();
     
     BOOST_CHECK_EQUAL(success(), golos_publication_tester::create_message(
                             N(brucelee),
@@ -420,7 +458,8 @@ BOOST_FIXTURE_TEST_CASE(upvote, golos_publication_tester) try {
 
 BOOST_FIXTURE_TEST_CASE(disable_upvote, golos_publication_tester) try {
     BOOST_TEST_MESSAGE("Disable upvote testing.");
-
+    init();
+    
     BOOST_CHECK_EQUAL(success(), golos_publication_tester::create_message(
                             N(brucelee),
                             "permlink"));
@@ -431,13 +470,13 @@ BOOST_FIXTURE_TEST_CASE(disable_upvote, golos_publication_tester) try {
                             N(brucelee),
                             "permlink",
                             888));
-        produce_blocks(1);
+        produce_blocks(2);
         BOOST_CHECK_EQUAL(error("assertion failure with message: You can't upvote, because publication will be closed soon."), golos_publication_tester::upvote(
                                 N(jackiechan),
                                 N(brucelee),
                                 "permlink",
                                 777));
-        produce_blocks(UPVOTE_DISABLE_PERIOD*2-1);
+        produce_blocks(UPVOTE_DISABLE_PERIOD*2-3);
 
         BOOST_CHECK_EQUAL(error("assertion failure with message: You can't upvote, because publication will be closed soon."), golos_publication_tester::upvote(
                                 N(brucelee),
@@ -455,6 +494,7 @@ BOOST_FIXTURE_TEST_CASE(disable_upvote, golos_publication_tester) try {
 
 BOOST_FIXTURE_TEST_CASE(downvote, golos_publication_tester) try {
     BOOST_TEST_MESSAGE("Downvote testing.");
+    init();
 
     BOOST_CHECK_EQUAL(success(), golos_publication_tester::create_message(
                             N(brucelee),
@@ -568,6 +608,7 @@ BOOST_FIXTURE_TEST_CASE(downvote, golos_publication_tester) try {
 
 BOOST_FIXTURE_TEST_CASE(unvote, golos_publication_tester) try {
     BOOST_TEST_MESSAGE("Unvote testing.");
+    init();
 
     BOOST_CHECK_EQUAL(success(), golos_publication_tester::create_message(
                             N(brucelee),
@@ -614,6 +655,7 @@ BOOST_FIXTURE_TEST_CASE(unvote, golos_publication_tester) try {
 
 BOOST_FIXTURE_TEST_CASE(mixed_vote_test, golos_publication_tester) try {
     BOOST_TEST_MESSAGE("Mixed vote testing.");
+    init();
 
     BOOST_CHECK_EQUAL(success(), golos_publication_tester::create_message(
                             N(brucelee),
@@ -646,6 +688,7 @@ BOOST_FIXTURE_TEST_CASE(mixed_vote_test, golos_publication_tester) try {
 
 BOOST_FIXTURE_TEST_CASE(erase_vote_test, golos_publication_tester) try {
     BOOST_TEST_MESSAGE("Erase vote testing.");
+    init();
 
     BOOST_CHECK_EQUAL(success(), golos_publication_tester::create_message(
                             N(brucelee),

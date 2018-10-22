@@ -119,7 +119,7 @@ struct poolstate {
     }    
 };
 
-struct rewardpool { 
+struct rewardpool {
     uint64_t created;
     rewardrules rules;
     limits lims;

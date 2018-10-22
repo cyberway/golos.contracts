@@ -3,6 +3,7 @@
 #include <eosiolib/transaction.hpp>
 #include <eosiolib/types.hpp>
 #include <eosio.token/eosio.token.hpp>
+#include <golos.vesting/golos.vesting.hpp>
 
 using namespace eosio;
 using namespace golos::config;
@@ -45,11 +46,24 @@ void publication::apply(uint64_t code, uint64_t action) {
 void publication::create_message(account_name account, std::string permlink,
                               account_name parentacc, std::string parentprmlnk,
                               std::vector<structures::beneficiary> beneficiaries,
+                              int64_t tokenprop,
                               std::string headermssg,
                               std::string bodymssg, std::string languagemssg,
                               std::vector<structures::tag> tags,
                               std::string jsonmetadata) {
     require_auth(account);
+
+    tables::reward_pools pools(_self, _self);
+    auto pool = pools.rbegin();
+    eosio_assert(pool != pools.rend(), "publication::create_message: [pools] is empty");
+    //TODO: check_account
+    //TODO: beneficiaries (uint64_t -> base_t)
+    //TODO: apply_limits, reward_weight
+       
+    auto cur_time = current_time();
+    eosio_assert(cur_time >= pool->created, "publication::create_message: cur_time < pool.created");
+    eosio_assert(pool->state.msgs < std::numeric_limits<structures::counter_t>::max(), "publication::create_message: pool->msgs == max_counter_val"); 
+    pools.modify(*pool, _self, [&](auto &item){ item.state.msgs++; });
 
     tables::message_table message_table(_self, account);
     auto message_id = fc::hash64(permlink);
@@ -60,10 +74,12 @@ void publication::create_message(account_name account, std::string permlink,
  
     message_table.emplace(account, [&]( auto &item ) {
         item.id = message_id;
-        item.date = now();
+        item.date = cur_time;
         item.parentacc = parentacc;
         item.parent_id = parent_id;
+        item.tokenprop = static_cast<base_t>(std::min(get_limit_prop(tokenprop), ELF(pool->rules.maxtokenprop)).data()),
         item.beneficiaries = beneficiaries;
+        item.rewardweight = static_cast<base_t>(elaf_t(1).data());//TODO
         item.childcount = 0;
         item.closed = false;
     });
@@ -150,15 +166,129 @@ void publication::unvote(account_name voter, account_name author, std::string pe
     set_vote(voter, author, fc::hash64(permlink), 0);
 }
 
+void publication::payto(account_name user, eosio::asset quantity, enum_t mode) {
+    require_auth(_self);
+    eosio_assert(quantity.amount >= 0, "LOGIC ERROR! publication::payto: quantity.amount < 0");
+    if(quantity.amount == 0)
+        return;
+
+    if(static_cast<payment_t>(mode) == payment_t::TOKEN)
+        INLINE_ACTION_SENDER(eosio::token, transfer) (N(eosio.token), {_self, N(active)}, {_self, user, quantity, ""});
+    else if(static_cast<payment_t>(mode) == payment_t::VESTING)
+        INLINE_ACTION_SENDER(eosio::token, transfer) (N(eosio.token), {_self, N(active)}, {_self, vesting_name, quantity, name{user}.to_string()});
+    else
+        eosio_assert(false, "publication::payto: unknown kind of payment");
+} 
+ 
+int64_t publication::pay_curators(account_name author, uint64_t msgid, int64_t max_rewards, fixp_t weights_sum, eosio::symbol_type tokensymbol) {
+    tables::vote_table vs(_self, author);
+    int64_t unclaimed_rewards = max_rewards;
+            
+    auto idx = vs.get_index<N(messageid)>();
+    auto v = idx.lower_bound(msgid);
+    while ((v != idx.end()) && (v->message_id == msgid)) {
+        if((weights_sum > fixp_t(0)) && (max_rewards > 0)) {
+            auto claim = int_cast(elai_t(max_rewards) * elaf_t(FP(v->curatorsw) / weights_sum));
+            eosio_assert(claim <= unclaimed_rewards, "LOGIC ERROR! publication::pay_curators: claim > unclaimed_rewards");
+            if(claim > 0) {
+                unclaimed_rewards -= claim;
+                payto(v->voter, eosio::asset(claim, tokensymbol), static_cast<enum_t>(payment_t::VESTING));
+            }
+        }
+        //v = idx.erase(v);
+        ++v;
+    }
+    return unclaimed_rewards;
+}
+
+auto publication::get_pool(tables::reward_pools& pools, uint64_t time) {
+    eosio_assert(pools.begin() != pools.end(), "publication::get_pool: [pools] is empty");
+    
+    auto pool = pools.upper_bound(time);
+    
+    eosio_assert(pool != pools.begin(), "publication::get_pool: can't find an appropriate pool");        
+    return (--pool);
+}
+
 void publication::close_message(account_name account, uint64_t id) {
     require_auth(_self);
     tables::message_table message_table(_self, account);
     auto mssg_itr = message_table.find(id);
     eosio_assert(mssg_itr != message_table.end(), "Message doesn't exist.");
+    eosio_assert(!mssg_itr->closed, "Message is already closed.");
     
+    tables::reward_pools pools(_self, _self);
+    auto pool = get_pool(pools, mssg_itr->date);     
+
+    eosio_assert(pool->state.msgs != 0, "LOGIC ERROR! forum::payrewards: pool.msgs is equal to zero");
+    atmsp::machine<fixp_t> machine;
+    fixp_t sharesfn = set_and_run(machine, pool->rules.mainfunc.code, {FP(mssg_itr->state.netshares)}, {{fixp_t(0), FP(pool->rules.mainfunc.maxarg)}});
+    
+    auto state = pool->state;
+    
+    int64_t payout = 0;
+    if(state.msgs == 1) {
+        payout = state.funds.amount;
+        eosio_assert(state.rshares == mssg_itr->state.netshares, "LOGIC ERROR! forum::payrewards: pool->rshares != mssg_itr->netshares for last message"); 
+        eosio_assert(state.rsharesfn == sharesfn.data(), "LOGIC ERROR! forum::payrewards: pool->rsharesfn != sharesfn.data() for last message"); 
+        state.funds.amount = 0;
+        state.rshares = 0; 
+        state.rsharesfn = 0;
+    } 
+    else {
+        auto total_rsharesfn = FP(state.rsharesfn);
+        
+        if(sharesfn > fixp_t(0)) {
+            eosio_assert(total_rsharesfn > fixp_t(0), "LOGIC ERROR! forum::payrewards: total_rshares_fn <= 0"); 
+            payout = int_cast(ELF(mssg_itr->rewardweight) * elai_t(elai_t(state.funds.amount) * static_cast<elaf_t>(sharesfn / total_rsharesfn)));
+            state.funds.amount -= payout;
+            eosio_assert(state.funds.amount >= 0, "LOGIC ERROR! forum::payrewards: state.funds < 0"); 
+        }
+        
+        auto new_rshares = FP(state.rshares) - FP(mssg_itr->state.netshares);
+        auto new_rsharesfn = FP(state.rsharesfn) - sharesfn;
+        
+        eosio_assert(new_rshares >= fixp_t(0), "LOGIC ERROR! forum::payrewards: new_rshares < 0"); 
+        eosio_assert(new_rsharesfn >= fixp_t(0), "LOGIC ERROR! forum::payrewards: new_rsharesfn < 0"); 
+        
+        state.rshares = new_rshares.data();
+        state.rsharesfn = new_rsharesfn.data();            
+    }
+    auto curation_payout = int_cast(ELF(pool->rules.curatorsprop) * elai_t(payout));
+           
+    eosio_assert((curation_payout <= payout) && (curation_payout >= 0), "forum::payrewards: wrong curation_payout");
+     
+    auto unclaimed_rewards = pay_curators(account, id, curation_payout, FP(mssg_itr->state.sumcuratorsw), state.funds.symbol);
+       
+    eosio_assert(unclaimed_rewards >= 0, "forum::payrewards: unclaimed_rewards < 0");
+       
+    state.funds.amount += unclaimed_rewards;        
+    payout -= curation_payout;
+    //TODO: beneficiaries
+    
+    auto token_payout = int_cast(elai_t(payout) * ELF(mssg_itr->tokenprop));
+    eosio_assert(payout >= token_payout, "forum::payrewards: wrong token_payout value");
+    
+    payto(account, eosio::asset(token_payout, state.funds.symbol), static_cast<enum_t>(payment_t::TOKEN));
+    payto(account, eosio::asset(payout - token_payout, state.funds.symbol), static_cast<enum_t>(payment_t::VESTING));
+     
+    //message_table.erase(mssg_itr);
     message_table.modify(mssg_itr, _self, [&]( auto &item) {
         item.closed = true;
     });
+    
+    bool pool_erased = false;
+    state.msgs--;      
+    if(state.msgs == 0) {
+        if(pool != --pools.end()) {//there is a pool after, so we can delete this one        
+            eosio_assert(state.funds.amount == unclaimed_rewards, "LOGIC ERROR! forum::payrewards: state.funds != unclaimed_rewards");                
+            fill_depleted_pool(pools, state.funds, pool);
+            pools.erase(pool);
+            pool_erased = true;             
+        }
+    }        
+    if(!pool_erased)
+        pools.modify(pool, _self, [&](auto &item) { item.state = state; });
 }
 
 void publication::close_message_timer(account_name account, uint64_t id) {
@@ -172,10 +302,15 @@ void publication::set_vote(account_name voter, account_name author, uint64_t id,
     tables::message_table message_table(_self, author);
     auto mssg_itr = message_table.find(id);
     eosio_assert(mssg_itr != message_table.end(), "Message doesn't exist.");
+    tables::reward_pools pools(_self, _self);
+    auto pool = get_pool(pools, mssg_itr->date); 
+    //check_account(voter, pool->state.funds.symbol); //TODO
     tables::vote_table vote_table(_self, author);
+    
+    auto cur_time = current_time();
 
-    eosio_assert((now() <= mssg_itr->date + CLOSE_MESSAGE_PERIOD - UPVOTE_DISABLE_PERIOD) ||
-                 (now() > mssg_itr->date + CLOSE_MESSAGE_PERIOD) ||
+    eosio_assert((cur_time <= mssg_itr->date + ((CLOSE_MESSAGE_PERIOD - UPVOTE_DISABLE_PERIOD) * seconds(1).count())) ||
+                 (cur_time > mssg_itr->date + (CLOSE_MESSAGE_PERIOD * seconds(1).count())) ||
                  (weight <= 0),
                   "You can't upvote, because publication will be closed soon.");
 
@@ -190,26 +325,55 @@ void publication::set_vote(account_name voter, account_name author, uint64_t id,
                 });
                 return;
             }
-            // end not consensus
+            //TODO: recalc: pool.rshares message.rshares; message.sumcuratorsw -= curatorw; curatorw := 0;
             eosio_assert(weight != vote_itr->weight, "Vote with the same weight has already existed.");
             eosio_assert(vote_itr->count != MAX_REVOTES, "You can't revote anymore.");
             votetable_index.modify(vote_itr, voter, [&]( auto &item ) {
                item.weight = weight;
-               item.time = now();
+               item.time = cur_time;
                ++item.count;
             });
             return;
         }
         ++vote_itr;
     }
+
+    elaf_t abs_w = get_limit_prop(abs(weight));
+    atmsp::machine<fixp_t> machine;
+    //TODO: apply_limits
+    
+    int64_t sum_vesting = eosio::vesting(vesting_name).get_account_effective_vesting(voter, pool->state.funds.symbol.name()).amount;        
+    fixp_t abs_rshares = fp_cast<fixp_t>(sum_vesting, false) * abs_w;              
+    fixp_t rshares = (weight < 0) ? -abs_rshares : abs_rshares;
+    
+    structures::messagestate msg_new_state = {
+        .absshares = add_cut(FP(mssg_itr->state.absshares), abs_rshares).data(),
+        .netshares = add_cut(FP(mssg_itr->state.netshares), rshares).data(),
+        .voteshares = ((rshares > fixp_t(0)) ? 
+            add_cut(FP(mssg_itr->state.voteshares), rshares) :
+            FP(mssg_itr->state.voteshares)).data()
+        //.sumcuratorsw = see below
+    };
+    
+    auto rsharesfn_delta = get_delta(machine, FP(mssg_itr->state.netshares), FP(msg_new_state.netshares), pool->rules.mainfunc);
+   
+    pools.modify(*pool, _self, [&](auto &item) {
+         item.state.rshares = add_cut(FP(item.state.rshares), rshares).data();
+         item.state.rsharesfn =  (FP(item.state.rsharesfn) + rsharesfn_delta).data();
+    });   
+    
+    auto sumcuratorsw_delta = get_delta(machine, FP(mssg_itr->state.voteshares), FP(msg_new_state.voteshares), pool->rules.curationfunc);
+    msg_new_state.sumcuratorsw = (FP(mssg_itr->state.sumcuratorsw) + sumcuratorsw_delta).data();        
+    message_table.modify(mssg_itr, _self, [&](auto &item) { item.state = msg_new_state; });     
     
     vote_table.emplace(voter, [&]( auto &item ) {
         item.id = vote_table.available_primary_key();
         item.message_id = mssg_itr->id;
         item.voter = voter;
         item.weight = weight;
-        item.time = now();
+        item.time = cur_time;
         item.count = mssg_itr->closed ? -1 : (item.count + 1);
+        item.curatorsw = sumcuratorsw_delta.data(); //TODO: timepenalty   
     });
 }
 
