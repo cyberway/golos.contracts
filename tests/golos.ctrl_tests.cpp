@@ -16,7 +16,7 @@ class golos_ctrl_tester : public golos_tester {
 public:
     golos_ctrl_tester(): golos_tester(N(golos.ctrl), symbol(6,"TST").value()) {
         create_accounts({_code, BLOG, N(witn1), N(witn2), N(witn3), N(witn4), N(witn5), _alice, _bob, _carol,
-            _vesting_name, N(eosio.token)});
+            _vesting_name, N(eosio.token), N(worker)});
         produce_block();
 
         install_contract(_code, contracts::ctrl_wasm(), contracts::ctrl_abi(), abi_ser);
@@ -227,8 +227,17 @@ public:
         ("max_witness_votes",_max_witness_votes)
         ("witness_supermajority",0)
         ("witness_majority",0)
-        ("witness_minority",0);
-    const string _test_key = "EOS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV";
+        ("witness_minority",0)
+        ("infrate_start", 1500)
+        ("infrate_stop", 95)
+        ("infrate_narrowing", 250000*6)
+        ("content_reward", 6667-667)
+        ("vesting_reward", 2667-267)
+        ("workers_reward", 1000)
+        ("workers_pool", "worker");
+
+    const string _test_key = string(fc::crypto::config::public_key_legacy_prefix)
+        + "6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV";
 
     const string err_no_symbol      = wasm_assert_msg("symbol not found");
     const string err_already_created= wasm_assert_msg("this token already created");
@@ -530,7 +539,7 @@ BOOST_FIXTURE_TEST_CASE(change_vesting_test, golos_ctrl_tester) try {
     BOOST_CHECK_NE(success(), change_vests(_token, _bob, dasset(-5)));
     produce_block();
 
-    BOOST_TEST_MESSAGE("--- witness weight change owhenn adding vesting");
+    BOOST_TEST_MESSAGE("--- witness weight change when adding vesting");
     auto wp = mvo()("name","witn1")("key",_test_key)("url","localhost")("active",true);
     CHECK_EQUAL_OBJECTS(get_witness(_w[0]), wp("total_weight",(800+700+100)*1e6));
     CHECK_MATCHING_OBJECT(get_witness(_w[1]), wp("total_weight",(800)*1e6)("name","witn2"));
