@@ -56,7 +56,7 @@ void publication::create_message(account_name account, std::string permlink,
     tables::reward_pools pools(_self, _self);
     auto pool = pools.rbegin();
     eosio_assert(pool != pools.rend(), "publication::create_message: [pools] is empty");
-    //TODO: check_account
+    check_account(account, pool->state.funds.symbol);
     //TODO: beneficiaries (uint64_t -> base_t)
     //TODO: apply_limits, reward_weight
        
@@ -304,7 +304,7 @@ void publication::set_vote(account_name voter, account_name author, uint64_t id,
     eosio_assert(mssg_itr != message_table.end(), "Message doesn't exist.");
     tables::reward_pools pools(_self, _self);
     auto pool = get_pool(pools, mssg_itr->date); 
-    //check_account(voter, pool->state.funds.symbol); //TODO
+    check_account(voter, pool->state.funds.symbol);
     tables::vote_table vote_table(_self, author);
     
     auto cur_time = current_time();
@@ -500,6 +500,9 @@ fixp_t publication::get_delta(atmsp::machine<fixp_t>& machine, fixp_t old_val, f
     return fp_cast<fixp_t>(new_fn - old_fn, false);
 }
 
+void publication::check_account(account_name user, eosio::symbol_type tokensymbol) {
+    eosio_assert(eosio::vesting(vesting_name).balance_exist(user, tokensymbol.name()), ("unregistered user: " + name{user}.to_string()).c_str());    
+}
 
 void publication::create_acc(account_name name) { //DUMMY 
 }

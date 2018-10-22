@@ -42,6 +42,7 @@ class publication : public eosio::contract {
     int64_t pay_curators(account_name author, uint64_t msgid, int64_t max_rewards,
                      fixp_t weights_sum, eosio::symbol_type tokensymbol);
     void payto(account_name user, eosio::asset quantity, enum_t mode);
+    void check_account(account_name user, eosio::symbol_type tokensymbol);
          
     
     static structures::funcinfo load_func(const funcparams& params, const std::string& name, 

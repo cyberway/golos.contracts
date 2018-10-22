@@ -46,6 +46,7 @@ public:
         create_accounts(_users);
         create_accounts({N(eosio.token)});
         create_accounts({vesting_name});
+        create_accounts({N(dan.larimer)});
         
         produce_blocks(2);
 
@@ -270,6 +271,10 @@ BOOST_FIXTURE_TEST_CASE(create_message, golos_publication_tester) try {
     BOOST_CHECK_EQUAL(error("assertion failure with message: This message already exists."), golos_publication_tester::create_message(
                             N(brucelee),
                             "permlink"));
+    BOOST_CHECK_EQUAL(error("assertion failure with message: unregistered user: dan.larimer"), golos_publication_tester::create_message(
+                            N(dan.larimer),
+                            "Hi"));
+    
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE(update_message, golos_publication_tester) try {
