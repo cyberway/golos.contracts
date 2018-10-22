@@ -12,6 +12,7 @@
 
 #include "../golos.publication/types.h"
 #include "../golos.publication/config.hpp"
+using namespace fixed_point_utils;
 
 #define UNLOCKED_FOR_CREATE_MESSAGE 21
 
@@ -26,7 +27,7 @@ using mvo = fc::mutable_variant_object;
 namespace structures {
     struct beneficiaries {
         account_name account;
-        uint64_t deductprcnt;
+        int64_t deductprcnt;
     };
 
     struct tags {
@@ -96,7 +97,7 @@ public:
 
     action_result create_message(account_name account, std::string permlink,
                               account_name parentacc = N(), std::string parentprmlnk = "parentprmlnk",
-                              std::vector<structures::beneficiaries> beneficiaries = {{N(beneficiary), 777}},
+                              std::vector<structures::beneficiaries> beneficiaries = {{N(golos.pub), 777}},
                               int64_t tokenprop = 5000,
                               std::string headermssg = "headermssg",
                               std::string bodymssg = "bodymssg", std::string languagemssg = "languagemssg",
@@ -223,8 +224,8 @@ BOOST_FIXTURE_TEST_CASE(create_message, golos_publication_tester) try {
                    ("parent_id", 0)
                    ("beneficiaries", variants({
                                                   mvo()
-                                                  ("account", "beneficiary")
-                                                  ("deductprcnt", 777)
+                                                  ("account", "golos.pub")
+                                                  ("deductprcnt", static_cast<base_t>(elaf_t(elai_t(777) / elai_t(10000)).data()))
                                               }))
                    ("childcount", 0)
                    ("closed", false)

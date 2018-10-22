@@ -118,7 +118,7 @@
       },
       {
         "name": "deductprcnt",
-        "type": "uint64"
+        "type": "base_t"
       }
     ]
   },

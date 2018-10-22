@@ -18,7 +18,10 @@ struct accandvalue {
     uint64_t value;
 };
 using counter_t = uint64_t;
-using beneficiary = accandvalue;
+struct beneficiary {
+    account_name account;
+    int64_t deductprcnt; //elaf_t
+};
 
 struct tag {
     tag() = default;

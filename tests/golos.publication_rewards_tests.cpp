@@ -197,7 +197,7 @@ struct vote {
 
 struct beneficiary {
     account_name account;
-    uint64_t deductprcnt;
+    int64_t deductprcnt;
 };
 FC_REFLECT(beneficiary, (account)(deductprcnt))
 
@@ -978,6 +978,17 @@ BOOST_FIXTURE_TEST_CASE(basic_tests, reward_calcs_tester) try {
     BOOST_REQUIRE_EQUAL(success(), add_funds_to_forum(100000)); 
     check();
     BOOST_TEST_MESSAGE("--- waiting");
+    run(seconds(100));
+    check();
+    BOOST_TEST_MESSAGE("--- create_message: why");
+    BOOST_REQUIRE_EQUAL(success(), create_message(N(why), "why not", N(), "", {{N(alice5), 5000}, {N(bob5), 2500}}));
+    check();
+    BOOST_TEST_MESSAGE("--- add_funds_to_forum");
+    BOOST_REQUIRE_EQUAL(success(), add_funds_to_forum(100000));
+    check();
+    BOOST_TEST_MESSAGE("--- why voted (100%) for why");
+    BOOST_CHECK_EQUAL(success(), addvote(N(why), N(why), "why not", 10000));
+    check();
     run(seconds(100));
     check();
     show();

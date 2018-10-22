@@ -46,6 +46,8 @@ void publication::apply(uint64_t code, uint64_t action) {
 void publication::create_message(account_name account, std::string permlink,
                               account_name parentacc, std::string parentprmlnk,
                               std::vector<structures::beneficiary> beneficiaries,
+                            //actually, beneficiaries[i].prop _here_ should be interpreted as (share * ONE_HUNDRED_PERCENT)
+                            //but not as a raw data for elaf_t, may be it's better to use another type (with uint16_t field for prop).
                               int64_t tokenprop,
                               std::string headermssg,
                               std::string bodymssg, std::string languagemssg,
@@ -57,7 +59,27 @@ void publication::create_message(account_name account, std::string permlink,
     auto pool = pools.rbegin();
     eosio_assert(pool != pools.rend(), "publication::create_message: [pools] is empty");
     check_account(account, pool->state.funds.symbol);
-    //TODO: beneficiaries (uint64_t -> base_t)
+    
+    std::map<account_name, int64_t> benefic_map;
+    int64_t prop_sum = 0;
+    for(auto& ben : beneficiaries) {
+        check_account(ben.account, pool->state.funds.symbol);
+        eosio_assert((0 <= ben.deductprcnt) && (ben.deductprcnt <= ONE_HUNDRED_PERCENT), "publication::create_message: wrong ben.prop value");
+        prop_sum += ben.deductprcnt;
+        eosio_assert(prop_sum <= ONE_HUNDRED_PERCENT, "publication::create_message: prop_sum > ONE_HUNDRED_PERCENT");
+        benefic_map[ben.account] += ben.deductprcnt; //several entries for one user? ok.                     
+    }
+    eosio_assert((benefic_map.size() <= MAX_BENEFICIARIES), "publication::create_message: benafic_map.size() > MAX_BENEFICIARIES");
+    
+    //reusing a vector
+    beneficiaries.reserve(benefic_map.size());
+    beneficiaries.clear();
+    for(auto & ben : benefic_map)
+        beneficiaries.emplace_back(structures::beneficiary{
+            .account = ben.first,
+            .deductprcnt = static_cast<base_t>(get_limit_prop(ben.second).data())
+        });
+    
     //TODO: apply_limits, reward_weight
        
     auto cur_time = current_time();
@@ -220,7 +242,7 @@ void publication::close_message(account_name account, uint64_t id) {
     tables::reward_pools pools(_self, _self);
     auto pool = get_pool(pools, mssg_itr->date);     
 
-    eosio_assert(pool->state.msgs != 0, "LOGIC ERROR! forum::payrewards: pool.msgs is equal to zero");
+    eosio_assert(pool->state.msgs != 0, "LOGIC ERROR! publication::payrewards: pool.msgs is equal to zero");
     atmsp::machine<fixp_t> machine;
     fixp_t sharesfn = set_and_run(machine, pool->rules.mainfunc.code, {FP(mssg_itr->state.netshares)}, {{fixp_t(0), FP(pool->rules.mainfunc.maxarg)}});
     
@@ -229,8 +251,8 @@ void publication::close_message(account_name account, uint64_t id) {
     int64_t payout = 0;
     if(state.msgs == 1) {
         payout = state.funds.amount;
-        eosio_assert(state.rshares == mssg_itr->state.netshares, "LOGIC ERROR! forum::payrewards: pool->rshares != mssg_itr->netshares for last message"); 
-        eosio_assert(state.rsharesfn == sharesfn.data(), "LOGIC ERROR! forum::payrewards: pool->rsharesfn != sharesfn.data() for last message"); 
+        eosio_assert(state.rshares == mssg_itr->state.netshares, "LOGIC ERROR! publication::payrewards: pool->rshares != mssg_itr->netshares for last message"); 
+        eosio_assert(state.rsharesfn == sharesfn.data(), "LOGIC ERROR! publication::payrewards: pool->rsharesfn != sharesfn.data() for last message"); 
         state.funds.amount = 0;
         state.rshares = 0; 
         state.rsharesfn = 0;
@@ -239,35 +261,43 @@ void publication::close_message(account_name account, uint64_t id) {
         auto total_rsharesfn = FP(state.rsharesfn);
         
         if(sharesfn > fixp_t(0)) {
-            eosio_assert(total_rsharesfn > fixp_t(0), "LOGIC ERROR! forum::payrewards: total_rshares_fn <= 0"); 
+            eosio_assert(total_rsharesfn > fixp_t(0), "LOGIC ERROR! publication::payrewards: total_rshares_fn <= 0"); 
             payout = int_cast(ELF(mssg_itr->rewardweight) * elai_t(elai_t(state.funds.amount) * static_cast<elaf_t>(sharesfn / total_rsharesfn)));
             state.funds.amount -= payout;
-            eosio_assert(state.funds.amount >= 0, "LOGIC ERROR! forum::payrewards: state.funds < 0"); 
+            eosio_assert(state.funds.amount >= 0, "LOGIC ERROR! publication::payrewards: state.funds < 0"); 
         }
         
         auto new_rshares = FP(state.rshares) - FP(mssg_itr->state.netshares);
         auto new_rsharesfn = FP(state.rsharesfn) - sharesfn;
         
-        eosio_assert(new_rshares >= fixp_t(0), "LOGIC ERROR! forum::payrewards: new_rshares < 0"); 
-        eosio_assert(new_rsharesfn >= fixp_t(0), "LOGIC ERROR! forum::payrewards: new_rsharesfn < 0"); 
+        eosio_assert(new_rshares >= fixp_t(0), "LOGIC ERROR! publication::payrewards: new_rshares < 0"); 
+        eosio_assert(new_rsharesfn >= fixp_t(0), "LOGIC ERROR! publication::payrewards: new_rsharesfn < 0"); 
         
         state.rshares = new_rshares.data();
         state.rsharesfn = new_rsharesfn.data();            
     }
     auto curation_payout = int_cast(ELF(pool->rules.curatorsprop) * elai_t(payout));
            
-    eosio_assert((curation_payout <= payout) && (curation_payout >= 0), "forum::payrewards: wrong curation_payout");
+    eosio_assert((curation_payout <= payout) && (curation_payout >= 0), "publication::payrewards: wrong curation_payout");
      
     auto unclaimed_rewards = pay_curators(account, id, curation_payout, FP(mssg_itr->state.sumcuratorsw), state.funds.symbol);
        
-    eosio_assert(unclaimed_rewards >= 0, "forum::payrewards: unclaimed_rewards < 0");
+    eosio_assert(unclaimed_rewards >= 0, "publication::payrewards: unclaimed_rewards < 0");
        
     state.funds.amount += unclaimed_rewards;        
     payout -= curation_payout;
-    //TODO: beneficiaries
+    
+    int64_t ben_payout_sum = 0;
+    for(auto& ben : mssg_itr->beneficiaries) {
+        auto ben_payout = int_cast(elai_t(payout) * ELF(ben.deductprcnt));
+        eosio_assert((0 <= ben_payout) && (ben_payout <= payout - ben_payout_sum), "LOGIC ERROR! publication::payrewards: wrong ben_payout value");
+        payto(ben.account, eosio::asset(ben_payout, state.funds.symbol), static_cast<enum_t>(payment_t::VESTING));
+        ben_payout_sum += ben_payout;
+    }        
+    payout -= ben_payout_sum;
     
     auto token_payout = int_cast(elai_t(payout) * ELF(mssg_itr->tokenprop));
-    eosio_assert(payout >= token_payout, "forum::payrewards: wrong token_payout value");
+    eosio_assert(payout >= token_payout, "publication::payrewards: wrong token_payout value");
     
     payto(account, eosio::asset(token_payout, state.funds.symbol), static_cast<enum_t>(payment_t::TOKEN));
     payto(account, eosio::asset(payout - token_payout, state.funds.symbol), static_cast<enum_t>(payment_t::VESTING));
@@ -281,7 +311,7 @@ void publication::close_message(account_name account, uint64_t id) {
     state.msgs--;      
     if(state.msgs == 0) {
         if(pool != --pools.end()) {//there is a pool after, so we can delete this one        
-            eosio_assert(state.funds.amount == unclaimed_rewards, "LOGIC ERROR! forum::payrewards: state.funds != unclaimed_rewards");                
+            eosio_assert(state.funds.amount == unclaimed_rewards, "LOGIC ERROR! publication::payrewards: state.funds != unclaimed_rewards");                
             fill_depleted_pool(pools, state.funds, pool);
             pools.erase(pool);
             pool_erased = true;             
