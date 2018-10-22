@@ -276,6 +276,7 @@ void publication::close_message(account_name account, uint64_t id) {
         state.rshares = new_rshares.data();
         state.rsharesfn = new_rsharesfn.data();            
     }
+    
     auto curation_payout = int_cast(ELF(pool->rules.curatorsprop) * elai_t(payout));
            
     eosio_assert((curation_payout <= payout) && (curation_payout >= 0), "publication::payrewards: wrong curation_payout");
@@ -394,7 +395,13 @@ void publication::set_vote(account_name voter, account_name author, uint64_t id,
     
     auto sumcuratorsw_delta = get_delta(machine, FP(mssg_itr->state.voteshares), FP(msg_new_state.voteshares), pool->rules.curationfunc);
     msg_new_state.sumcuratorsw = (FP(mssg_itr->state.sumcuratorsw) + sumcuratorsw_delta).data();        
-    message_table.modify(mssg_itr, _self, [&](auto &item) { item.state = msg_new_state; });     
+    message_table.modify(mssg_itr, _self, [&](auto &item) { item.state = msg_new_state; });  
+    
+    auto time_delta = static_cast<int64_t>((cur_time - mssg_itr->date) / seconds(1).count());
+    auto curatorsw_factor = 
+        std::max(std::min(
+        set_and_run(machine, pool->rules.timepenalty.code, {fp_cast<fixp_t>(time_delta, false)}, {{fixp_t(0), FP(pool->rules.timepenalty.maxarg)}}),
+        fixp_t(1)), fixp_t(0));   
     
     vote_table.emplace(voter, [&]( auto &item ) {
         item.id = vote_table.available_primary_key();
@@ -403,7 +410,7 @@ void publication::set_vote(account_name voter, account_name author, uint64_t id,
         item.weight = weight;
         item.time = cur_time;
         item.count = mssg_itr->closed ? -1 : (item.count + 1);
-        item.curatorsw = sumcuratorsw_delta.data(); //TODO: timepenalty   
+        item.curatorsw = (fixp_t(sumcuratorsw_delta * curatorsw_factor)).data();   
     });
 }
 

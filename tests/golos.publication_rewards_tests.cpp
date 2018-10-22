@@ -1,4 +1,5 @@
 #define UNIT_TEST_ENV
+//#define SHOW_ENABLE
 #include "golos_tester.hpp"
 #include <boost/test/unit_test.hpp>
 #include <eosio/testing/tester.hpp>
@@ -468,7 +469,9 @@ protected:
             BOOST_REQUIRE_EQUAL(success(), buy_vesting_for(u, user_vesting_funds));
             step();   
         }
-        check();   
+        check();
+        _req.clear();
+        _res.clear();  
     }
     
 public: 
@@ -724,6 +727,7 @@ public:
     }
     
     void show(bool req = true, bool res = true) {
+#ifdef SHOW_ENABLE
         if(req) {
             fill_from_state(_req);
             BOOST_TEST_MESSAGE("_req:\n" << _req);
@@ -732,6 +736,7 @@ public:
              fill_from_tables(_res);
              BOOST_TEST_MESSAGE("_res :\n" << _res);
         }
+#endif
     }
     void pay_rewards_in_state() {
         for(auto itr_p = _state.pools.begin(); itr_p != _state.pools.end(); itr_p++) {
@@ -925,8 +930,6 @@ BOOST_FIXTURE_TEST_CASE(basic_tests, reward_calcs_tester) try {
     BOOST_TEST_MESSAGE("Basic publication_rewards tests");
     auto bignum = 500000000000;
     init(bignum, 500000);
-    _req.clear();
-    _res.clear();
     step();
     BOOST_TEST_MESSAGE("--- setrules");  
     BOOST_REQUIRE_EQUAL("assertion failure with message: check monotonic failed for time penalty func",
@@ -990,9 +993,38 @@ BOOST_FIXTURE_TEST_CASE(basic_tests, reward_calcs_tester) try {
     BOOST_CHECK_EQUAL(success(), addvote(N(why), N(why), "why not", 10000));
     check();
     run(seconds(100));
+    BOOST_TEST_MESSAGE("--- rewards");
     check();
     show();
     
+} FC_LOG_AND_RETHROW()
+
+BOOST_FIXTURE_TEST_CASE(timepenalty_test, reward_calcs_tester) try {
+    BOOST_TEST_MESSAGE("Simple timepenalty test");
+    auto bignum = 500000000000;
+    init(bignum, 500000);
+    step();
+    
+    BOOST_REQUIRE_EQUAL(success(), setrules({"x", bignum}, {"x", bignum}, {"x/50", 50}, 2500, 
+        [](double x){ return x; }, [](double x){ return x; }, [](double x){ return x / 50.0; }));    
+    check();
+    BOOST_TEST_MESSAGE("--- add_funds_to_forum");
+    BOOST_REQUIRE_EQUAL(success(), add_funds_to_forum(50000)); 
+    check();
+    BOOST_TEST_MESSAGE("--- create_message: bob");
+    BOOST_REQUIRE_EQUAL(success(), create_message(N(bob), "permlink"));
+    check();
+    BOOST_TEST_MESSAGE("--- voting");
+    for(size_t i = 0; i < 6; i++) {
+        
+        BOOST_CHECK_EQUAL(success(), addvote(_users[i], N(bob), "permlink", 10000));
+        check();
+        run(seconds(2));
+    }
+    run(seconds(100));
+    BOOST_TEST_MESSAGE("--- rewards");
+    check();
+    show();
 } FC_LOG_AND_RETHROW()
  
 BOOST_AUTO_TEST_SUITE_END()
