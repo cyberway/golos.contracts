@@ -1,6 +1,5 @@
-#include <boost/test/unit_test.hpp>
-#include <eosio/testing/tester.hpp>
-#include <eosio/chain/abi_serializer.hpp>
+#include "golos_tester.hpp"
+#include "contracts.hpp"
 #include <Runtime/Runtime.h>
 
 #include <fc/variant_object.hpp>
@@ -23,30 +22,18 @@ using mvo = fc::mutable_variant_object;
 class golos_vesting_tester : public tester {
 public:
 
-    golos_vesting_tester() {
-        produce_blocks( 2 );
+    golos_vesting_tester(): golos_tester() {
+        produce_blocks(2);
 
-        create_accounts( { N(sania), N(pasha), N(tanya), N(golos.vest), N(eosio.token), N(golos.emiss), N(golos.issuer), N(golos.ctrl) } );
-        produce_blocks( 2 );
+        create_accounts( { N(sania), N(pasha), N(tania) N(golos.vest), N(golos.ctrl), N(eosio.token), N(golos.emiss), N(golos.issuer) } );
+        produce_blocks(2);
 
-        set_code(N(eosio.token), eosio_token_wast);
-        set_abi (N(eosio.token), eosio_token_abi);
-
-        set_code(N(golos.vest), golos_vesting_wast);
-        set_abi (N(golos.vest), golos_vesting_abi);
-
-        produce_blocks();
-
-        const auto& account_token = control->db().get<account_object,by_name>( N(eosio.token) );
-        abi_def abi_t;
-        BOOST_REQUIRE_EQUAL(abi_serializer::to_abi(account_token.abi, abi_t), true);
-        abi_ser_t.set_abi(abi_t, abi_serializer_max_time);
-
-        const auto& account_vesting = control->db().get<account_object,by_name>( N(golos.vest) );
-        abi_def abi_v;
-        BOOST_REQUIRE_EQUAL(abi_serializer::to_abi(account_vesting.abi, abi_v), true);
-        abi_ser_v.set_abi(abi_v, abi_serializer_max_time);
+        install_contract(N(eosio.token), contracts::token_wasm(), contracts::token_abi(), abi_ser_t);
+        install_contract(N(golos.vest), contracts::vesting_wasm(), contracts::vesting_abi(), abi_ser_v);
+        abi_serializer t;
+        install_contract(N(golos.ctrl), contracts::ctrl_wasm(), contracts::ctrl_abi(), t);
     }
+
     action_result push_action( const account_name& signer, const action_name &name, const variant_object &data ) {
         string action_type_name = abi_ser_t.get_action_type(name);
 
@@ -460,6 +447,7 @@ BOOST_FIXTURE_TEST_CASE( error_sender_equals_test_delegate_vesting, golos_vestin
                              ("vesting", "100.0000 GOLOS")
                              ("delegate_vesting", "0.0000 GOLOS")
                              ("received_vesting", "0.0000 GOLOS")
+                             ("unlocked_limit", "0.0000 GOLOS")
                              );
 
     auto pasha_vesting_balance = get_account_vesting(N(pasha), "4,GOLOS");
@@ -467,6 +455,7 @@ BOOST_FIXTURE_TEST_CASE( error_sender_equals_test_delegate_vesting, golos_vestin
                              ("vesting", "100.0000 GOLOS")
                              ("delegate_vesting", "0.0000 GOLOS")
                              ("received_vesting", "0.0000 GOLOS")
+                             ("unlocked_limit", "0.0000 GOLOS")
                              );
 
     BOOST_REQUIRE_EQUAL( error("assertion failure with message: You can not delegate to yourself"), delegate_vesting(N(sania), N(sania), asset::from_string("15.0000 GOLOS"), 0, 0) );
@@ -500,6 +489,7 @@ BOOST_FIXTURE_TEST_CASE( error_payout_strategy_test_delegate_vesting, golos_vest
                              ("vesting", "100.0000 GOLOS")
                              ("delegate_vesting", "0.0000 GOLOS")
                              ("received_vesting", "0.0000 GOLOS")
+                             ("unlocked_limit", "0.0000 GOLOS")
                              );
 
     auto pasha_vesting_balance = get_account_vesting(N(pasha), "4,GOLOS");
@@ -507,6 +497,7 @@ BOOST_FIXTURE_TEST_CASE( error_payout_strategy_test_delegate_vesting, golos_vest
                              ("vesting", "100.0000 GOLOS")
                              ("delegate_vesting", "0.0000 GOLOS")
                              ("received_vesting", "0.0000 GOLOS")
+                             ("unlocked_limit", "0.0000 GOLOS")
                              );
 
     BOOST_REQUIRE_EQUAL( error("assertion failure with message: not valid value payout_strategy"), delegate_vesting(N(sania), N(pasha), asset::from_string("15.0000 GOLOS"), 0, -1) );
@@ -541,6 +532,7 @@ BOOST_FIXTURE_TEST_CASE( error_zero_quantity_test_delegate_vesting, golos_vestin
                              ("vesting", "100.0000 GOLOS")
                              ("delegate_vesting", "0.0000 GOLOS")
                              ("received_vesting", "0.0000 GOLOS")
+                             ("unlocked_limit", "0.0000 GOLOS")
                              );
 
     auto pasha_vesting_balance = get_account_vesting(N(pasha), "4,GOLOS");
@@ -548,6 +540,7 @@ BOOST_FIXTURE_TEST_CASE( error_zero_quantity_test_delegate_vesting, golos_vestin
                              ("vesting", "100.0000 GOLOS")
                              ("delegate_vesting", "0.0000 GOLOS")
                              ("received_vesting", "0.0000 GOLOS")
+                             ("unlocked_limit", "0.0000 GOLOS")
                              );
 
     BOOST_REQUIRE_EQUAL( error("assertion failure with message: the number of tokens should not be less than 0"), delegate_vesting(N(sania), N(pasha), asset::from_string("0.0000 GOLOS"), 0, 0) );
@@ -581,6 +574,7 @@ BOOST_FIXTURE_TEST_CASE( error_min_amount_delegate_test_delegate_vesting, golos_
                              ("vesting", "100.0000 GOLOS")
                              ("delegate_vesting", "0.0000 GOLOS")
                              ("received_vesting", "0.0000 GOLOS")
+                             ("unlocked_limit", "0.0000 GOLOS")
                              );
 
     auto pasha_vesting_balance = get_account_vesting(N(pasha), "4,GOLOS");
@@ -588,6 +582,7 @@ BOOST_FIXTURE_TEST_CASE( error_min_amount_delegate_test_delegate_vesting, golos_
                              ("vesting", "100.0000 GOLOS")
                              ("delegate_vesting", "0.0000 GOLOS")
                              ("received_vesting", "0.0000 GOLOS")
+                             ("unlocked_limit", "0.0000 GOLOS")
                              );
 
     BOOST_REQUIRE_EQUAL( error("assertion failure with message: Insufficient funds for delegation"), delegate_vesting(N(sania), N(pasha), asset::from_string("0.0001 GOLOS"), 0, 0) );
@@ -621,6 +616,7 @@ BOOST_FIXTURE_TEST_CASE( error_interest_rate_test_delegate_vesting, golos_vestin
                              ("vesting", "100.0000 GOLOS")
                              ("delegate_vesting", "0.0000 GOLOS")
                              ("received_vesting", "0.0000 GOLOS")
+                             ("unlocked_limit", "0.0000 GOLOS")
                              );
 
     auto pasha_vesting_balance = get_account_vesting(N(pasha), "4,GOLOS");
@@ -628,6 +624,7 @@ BOOST_FIXTURE_TEST_CASE( error_interest_rate_test_delegate_vesting, golos_vestin
                              ("vesting", "100.0000 GOLOS")
                              ("delegate_vesting", "0.0000 GOLOS")
                              ("received_vesting", "0.0000 GOLOS")
+                             ("unlocked_limit", "0.0000 GOLOS")
                              );
 
     BOOST_REQUIRE_EQUAL( error("assertion failure with message: Exceeded the percentage of delegated vesting"), delegate_vesting(N(sania), N(pasha), asset::from_string("15.0000 GOLOS"), 50, 0) );
@@ -663,6 +660,7 @@ BOOST_FIXTURE_TEST_CASE( error_insufficient_funds_test_delegate_vesting, golos_v
                              ("vesting", "100.0000 GOLOS")
                              ("delegate_vesting", "0.0000 GOLOS")
                              ("received_vesting", "0.0000 GOLOS")
+                             ("unlocked_limit", "0.0000 GOLOS")
                              );
 
     auto pasha_vesting_balance = get_account_vesting(N(pasha), "4,GOLOS");
@@ -670,6 +668,7 @@ BOOST_FIXTURE_TEST_CASE( error_insufficient_funds_test_delegate_vesting, golos_v
                              ("vesting", "100.0000 GOLOS")
                              ("delegate_vesting", "0.0000 GOLOS")
                              ("received_vesting", "0.0000 GOLOS")
+                             ("unlocked_limit", "0.0000 GOLOS")
                              );
 
     BOOST_REQUIRE_EQUAL( success(), delegate_vesting(N(sania), N(tanya), asset::from_string("15.0000 GOLOS"), 0, 0) );
@@ -713,6 +712,7 @@ BOOST_FIXTURE_TEST_CASE( test_delegate_vesting, golos_vesting_tester ) try {
                              ("vesting", "100.0000 GOLOS")
                              ("delegate_vesting", "0.0000 GOLOS")
                              ("received_vesting", "0.0000 GOLOS")
+                             ("unlocked_limit", "0.0000 GOLOS")
                              );
 
     BOOST_REQUIRE_EQUAL( success(), delegate_vesting(N(sania), N(pasha), asset::from_string("15.0000 GOLOS"), 0, 0) );
@@ -722,6 +722,7 @@ BOOST_FIXTURE_TEST_CASE( test_delegate_vesting, golos_vesting_tester ) try {
                              ("vesting", "100.0000 GOLOS")
                              ("delegate_vesting", "0.0000 GOLOS")
                              ("received_vesting", "15.0000 GOLOS")
+                             ("unlocked_limit", "0.0000 GOLOS")
                              );
 
     auto sania_vesting_balance_delegate = get_account_vesting(N(sania), "4,GOLOS");
@@ -729,6 +730,7 @@ BOOST_FIXTURE_TEST_CASE( test_delegate_vesting, golos_vesting_tester ) try {
                              ("vesting", "100.0000 GOLOS")
                              ("delegate_vesting", "15.0000 GOLOS")
                              ("received_vesting", "0.0000 GOLOS")
+                             ("unlocked_limit", "0.0000 GOLOS")
                              );
 } FC_LOG_AND_RETHROW()
 
@@ -760,6 +762,7 @@ BOOST_FIXTURE_TEST_CASE( error_insufficient_funds_test_undelegate_vesting, golos
                              ("vesting", "100.0000 GOLOS")
                              ("delegate_vesting", "0.0000 GOLOS")
                              ("received_vesting", "0.0000 GOLOS")
+                             ("unlocked_limit", "0.0000 GOLOS")
                              );
 
     auto pasha_vesting_balance = get_account_vesting(N(pasha), "4,GOLOS");
@@ -767,6 +770,7 @@ BOOST_FIXTURE_TEST_CASE( error_insufficient_funds_test_undelegate_vesting, golos
                              ("vesting", "100.0000 GOLOS")
                              ("delegate_vesting", "0.0000 GOLOS")
                              ("received_vesting", "0.0000 GOLOS")
+                             ("unlocked_limit", "0.0000 GOLOS")
                              );
 
     BOOST_REQUIRE_EQUAL( success(), delegate_vesting(N(sania), N(pasha), asset::from_string("20.0000 GOLOS"), 0, 1) );
@@ -776,6 +780,7 @@ BOOST_FIXTURE_TEST_CASE( error_insufficient_funds_test_undelegate_vesting, golos
                              ("vesting", "100.0000 GOLOS")
                              ("delegate_vesting", "0.0000 GOLOS")
                              ("received_vesting", "20.0000 GOLOS")
+                             ("unlocked_limit", "0.0000 GOLOS")
                              );
 
     auto sania_vesting_balance_delegate = get_account_vesting(N(sania), "4,GOLOS");
@@ -783,6 +788,7 @@ BOOST_FIXTURE_TEST_CASE( error_insufficient_funds_test_undelegate_vesting, golos
                              ("vesting", "100.0000 GOLOS")
                              ("delegate_vesting", "20.0000 GOLOS")
                              ("received_vesting", "0.0000 GOLOS")
+                             ("unlocked_limit", "0.0000 GOLOS")
                              );
 
     produce_blocks(100);
@@ -818,6 +824,7 @@ BOOST_FIXTURE_TEST_CASE( error_frozen_tokens_test_undelegate_vesting, golos_vest
                              ("vesting", "100.0000 GOLOS")
                              ("delegate_vesting", "0.0000 GOLOS")
                              ("received_vesting", "0.0000 GOLOS")
+                             ("unlocked_limit", "0.0000 GOLOS")
                              );
 
     auto pasha_vesting_balance = get_account_vesting(N(pasha), "4,GOLOS");
@@ -825,6 +832,7 @@ BOOST_FIXTURE_TEST_CASE( error_frozen_tokens_test_undelegate_vesting, golos_vest
                              ("vesting", "100.0000 GOLOS")
                              ("delegate_vesting", "0.0000 GOLOS")
                              ("received_vesting", "0.0000 GOLOS")
+                             ("unlocked_limit", "0.0000 GOLOS")
                              );
 
     BOOST_REQUIRE_EQUAL( success(), delegate_vesting(N(sania), N(pasha), asset::from_string("20.0000 GOLOS"), 0, 1) );
@@ -834,6 +842,7 @@ BOOST_FIXTURE_TEST_CASE( error_frozen_tokens_test_undelegate_vesting, golos_vest
                              ("vesting", "100.0000 GOLOS")
                              ("delegate_vesting", "0.0000 GOLOS")
                              ("received_vesting", "20.0000 GOLOS")
+                             ("unlocked_limit", "0.0000 GOLOS")
                              );
 
     auto sania_vesting_balance_delegate = get_account_vesting(N(sania), "4,GOLOS");
@@ -841,6 +850,7 @@ BOOST_FIXTURE_TEST_CASE( error_frozen_tokens_test_undelegate_vesting, golos_vest
                              ("vesting", "100.0000 GOLOS")
                              ("delegate_vesting", "20.0000 GOLOS")
                              ("received_vesting", "0.0000 GOLOS")
+                             ("unlocked_limit", "0.0000 GOLOS")
                              );
     BOOST_REQUIRE_EQUAL( error("assertion failure with message: Tokens are frozen until the end of the period"), undelegate_vesting(N(sania), N(pasha), asset::from_string("5.0000 GOLOS")) );
 } FC_LOG_AND_RETHROW()
@@ -880,6 +890,7 @@ BOOST_FIXTURE_TEST_CASE( error_lack_of_funds_test_undelegate_vesting, golos_vest
                              ("vesting", "100.0000 GOLOS")
                              ("delegate_vesting", "0.0000 GOLOS")
                              ("received_vesting", "0.0000 GOLOS")
+                             ("unlocked_limit", "0.0000 GOLOS")
                              );
 
     BOOST_REQUIRE_EQUAL( success(), delegate_vesting(N(sania), N(pasha), asset::from_string("20.0000 GOLOS"), 0, 1) );
@@ -889,6 +900,7 @@ BOOST_FIXTURE_TEST_CASE( error_lack_of_funds_test_undelegate_vesting, golos_vest
                              ("vesting", "100.0000 GOLOS")
                              ("delegate_vesting", "0.0000 GOLOS")
                              ("received_vesting", "20.0000 GOLOS")
+                             ("unlocked_limit", "0.0000 GOLOS")
                              );
 
     auto sania_vesting_balance_delegate = get_account_vesting(N(sania), "4,GOLOS");
@@ -896,6 +908,7 @@ BOOST_FIXTURE_TEST_CASE( error_lack_of_funds_test_undelegate_vesting, golos_vest
                              ("vesting", "100.0000 GOLOS")
                              ("delegate_vesting", "20.0000 GOLOS")
                              ("received_vesting", "0.0000 GOLOS")
+                             ("unlocked_limit", "0.0000 GOLOS")
                              );
 
     produce_blocks(100);
@@ -932,6 +945,7 @@ BOOST_FIXTURE_TEST_CASE( error_delegated_vesting_withdrawn_test_undelegate_vesti
                              ("vesting", "100.0000 GOLOS")
                              ("delegate_vesting", "0.0000 GOLOS")
                              ("received_vesting", "0.0000 GOLOS")
+                             ("unlocked_limit", "0.0000 GOLOS")
                              );
 
     auto pasha_vesting_balance = get_account_vesting(N(pasha), "4,GOLOS");
@@ -939,6 +953,7 @@ BOOST_FIXTURE_TEST_CASE( error_delegated_vesting_withdrawn_test_undelegate_vesti
                              ("vesting", "100.0000 GOLOS")
                              ("delegate_vesting", "0.0000 GOLOS")
                              ("received_vesting", "0.0000 GOLOS")
+                             ("unlocked_limit", "0.0000 GOLOS")
                              );
 
     BOOST_REQUIRE_EQUAL( success(), delegate_vesting(N(sania), N(pasha), asset::from_string("20.0000 GOLOS"), 0, 1) );
@@ -948,6 +963,7 @@ BOOST_FIXTURE_TEST_CASE( error_delegated_vesting_withdrawn_test_undelegate_vesti
                              ("vesting", "100.0000 GOLOS")
                              ("delegate_vesting", "0.0000 GOLOS")
                              ("received_vesting", "20.0000 GOLOS")
+                             ("unlocked_limit", "0.0000 GOLOS")
                              );
 
     auto sania_vesting_balance_delegate = get_account_vesting(N(sania), "4,GOLOS");
@@ -955,6 +971,7 @@ BOOST_FIXTURE_TEST_CASE( error_delegated_vesting_withdrawn_test_undelegate_vesti
                              ("vesting", "100.0000 GOLOS")
                              ("delegate_vesting", "20.0000 GOLOS")
                              ("received_vesting", "0.0000 GOLOS")
+                             ("unlocked_limit", "0.0000 GOLOS")
                              );
 
     produce_blocks(100);
@@ -991,6 +1008,7 @@ BOOST_FIXTURE_TEST_CASE( test_undelegate_vesting, golos_vesting_tester ) try {
                              ("vesting", "100.0000 GOLOS")
                              ("delegate_vesting", "0.0000 GOLOS")
                              ("received_vesting", "0.0000 GOLOS")
+                             ("unlocked_limit", "0.0000 GOLOS")
                              );
 
     auto pasha_vesting_balance = get_account_vesting(N(pasha), "4,GOLOS");
@@ -998,6 +1016,7 @@ BOOST_FIXTURE_TEST_CASE( test_undelegate_vesting, golos_vesting_tester ) try {
                              ("vesting", "100.0000 GOLOS")
                              ("delegate_vesting", "0.0000 GOLOS")
                              ("received_vesting", "0.0000 GOLOS")
+                             ("unlocked_limit", "0.0000 GOLOS")
                              );
 
     BOOST_REQUIRE_EQUAL( success(), delegate_vesting(N(sania), N(pasha), asset::from_string("20.0000 GOLOS"), 0, 1) );
@@ -1007,6 +1026,7 @@ BOOST_FIXTURE_TEST_CASE( test_undelegate_vesting, golos_vesting_tester ) try {
                              ("vesting", "100.0000 GOLOS")
                              ("delegate_vesting", "0.0000 GOLOS")
                              ("received_vesting", "20.0000 GOLOS")
+                             ("unlocked_limit", "0.0000 GOLOS")
                              );
 
     auto sania_vesting_balance_delegate = get_account_vesting(N(sania), "4,GOLOS");
@@ -1014,6 +1034,7 @@ BOOST_FIXTURE_TEST_CASE( test_undelegate_vesting, golos_vesting_tester ) try {
                              ("vesting", "100.0000 GOLOS")
                              ("delegate_vesting", "20.0000 GOLOS")
                              ("received_vesting", "0.0000 GOLOS")
+                             ("unlocked_limit", "0.0000 GOLOS")
                              );
 
     produce_blocks(100);
@@ -1025,6 +1046,7 @@ BOOST_FIXTURE_TEST_CASE( test_undelegate_vesting, golos_vesting_tester ) try {
                              ("vesting", "100.0000 GOLOS")
                              ("delegate_vesting", "0.0000 GOLOS")
                              ("received_vesting", "15.0000 GOLOS")
+                             ("unlocked_limit", "0.0000 GOLOS")
                              );
 
     auto sania_vesting_balance_undelegate = get_account_vesting(N(sania), "4,GOLOS");
@@ -1032,6 +1054,7 @@ BOOST_FIXTURE_TEST_CASE( test_undelegate_vesting, golos_vesting_tester ) try {
                              ("vesting", "100.0000 GOLOS")
                              ("delegate_vesting", "20.0000 GOLOS")
                              ("received_vesting", "0.0000 GOLOS")
+                             ("unlocked_limit", "0.0000 GOLOS")
                              );
 
     start_timer_trx();
@@ -1046,6 +1069,7 @@ BOOST_FIXTURE_TEST_CASE( test_undelegate_vesting, golos_vesting_tester ) try {
                              ("vesting", "100.0000 GOLOS")
                              ("delegate_vesting", "15.0000 GOLOS")
                              ("received_vesting", "0.0000 GOLOS")
+                             ("unlocked_limit", "0.0000 GOLOS")
                              );
 
     pasha_vesting_balance_delegate = get_account_vesting(N(pasha), "4,GOLOS");
@@ -1053,6 +1077,7 @@ BOOST_FIXTURE_TEST_CASE( test_undelegate_vesting, golos_vesting_tester ) try {
                              ("vesting", "100.0000 GOLOS")
                              ("delegate_vesting", "0.0000 GOLOS")
                              ("received_vesting", "15.0000 GOLOS")
+                             ("unlocked_limit", "0.0000 GOLOS")
                              );
 
 } FC_LOG_AND_RETHROW()
@@ -1085,6 +1110,7 @@ BOOST_FIXTURE_TEST_CASE( accrue_vesting_user, golos_vesting_tester ) try {
                              ("vesting", "0.0000 GOLOS")
                              ("delegate_vesting", "0.0000 GOLOS")
                              ("received_vesting", "0.0000 GOLOS")
+                             ("unlocked_limit", "0.0000 GOLOS")
                              );
 
     auto sania_vesting_balance = get_account_vesting(N(sania), "4,GOLOS");
@@ -1092,6 +1118,7 @@ BOOST_FIXTURE_TEST_CASE( accrue_vesting_user, golos_vesting_tester ) try {
                              ("vesting", "107.5000 GOLOS")
                              ("delegate_vesting", "0.0000 GOLOS")
                              ("received_vesting", "0.0000 GOLOS")
+                             ("unlocked_limit", "0.0000 GOLOS")
                              );
 
     auto pasha_vesting_balance = get_account_vesting(N(pasha), "4,GOLOS");
@@ -1099,6 +1126,7 @@ BOOST_FIXTURE_TEST_CASE( accrue_vesting_user, golos_vesting_tester ) try {
                              ("vesting", "107.5000 GOLOS")
                              ("delegate_vesting", "0.0000 GOLOS")
                              ("received_vesting", "0.0000 GOLOS")
+                             ("unlocked_limit", "0.0000 GOLOS")
                              );
 } FC_LOG_AND_RETHROW()
 
@@ -1134,6 +1162,7 @@ BOOST_FIXTURE_TEST_CASE( delegate_and_accrue_vesting_user, golos_vesting_tester 
                              ("vesting", "100.0000 GOLOS")
                              ("delegate_vesting", "0.0000 GOLOS")
                              ("received_vesting", "0.0000 GOLOS")
+                             ("unlocked_limit", "0.0000 GOLOS")
                              );
 
     auto pasha_vesting_balance = get_account_vesting(N(pasha), "4,GOLOS");
@@ -1141,6 +1170,7 @@ BOOST_FIXTURE_TEST_CASE( delegate_and_accrue_vesting_user, golos_vesting_tester 
                              ("vesting", "100.0000 GOLOS")
                              ("delegate_vesting", "0.0000 GOLOS")
                              ("received_vesting", "0.0000 GOLOS")
+                             ("unlocked_limit", "0.0000 GOLOS")
                              );
 
     BOOST_REQUIRE_EQUAL( success(), delegate_vesting(N(sania), N(pasha), asset::from_string("20.0000 GOLOS"), 0, 0) ); // TODO MAX_PERSENT_DELEGATION 0%
@@ -1150,6 +1180,7 @@ BOOST_FIXTURE_TEST_CASE( delegate_and_accrue_vesting_user, golos_vesting_tester 
                              ("vesting", "100.0000 GOLOS")
                              ("delegate_vesting", "0.0000 GOLOS")
                              ("received_vesting", "20.0000 GOLOS")
+                             ("unlocked_limit", "0.0000 GOLOS")
                              );
 
     auto sania_vesting_balance_delegate = get_account_vesting(N(sania), "4,GOLOS");
@@ -1157,6 +1188,7 @@ BOOST_FIXTURE_TEST_CASE( delegate_and_accrue_vesting_user, golos_vesting_tester 
                              ("vesting", "100.0000 GOLOS")
                              ("delegate_vesting", "20.0000 GOLOS")
                              ("received_vesting", "0.0000 GOLOS")
+                             ("unlocked_limit", "0.0000 GOLOS")
                              );
 
     BOOST_REQUIRE_EQUAL( success(), transfer(N(golos.emiss), N(golos.vest), asset::from_string("5.0000 GOLOS"), "pasha") );
@@ -1166,6 +1198,7 @@ BOOST_FIXTURE_TEST_CASE( delegate_and_accrue_vesting_user, golos_vesting_tester 
                              ("vesting", "100.0000 GOLOS")
                              ("delegate_vesting", "20.0000 GOLOS")
                              ("received_vesting", "0.0000 GOLOS")
+                             ("unlocked_limit", "0.0000 GOLOS")
                              );
 
     pasha_vesting_balance = get_account_vesting(N(pasha), "4,GOLOS");
@@ -1173,6 +1206,7 @@ BOOST_FIXTURE_TEST_CASE( delegate_and_accrue_vesting_user, golos_vesting_tester 
                              ("vesting", "105.0000 GOLOS")
                              ("delegate_vesting", "0.0000 GOLOS")
                              ("received_vesting", "20.0000 GOLOS")
+                             ("unlocked_limit", "0.0000 GOLOS")
                              );
 
     produce_blocks(100);
@@ -1192,6 +1226,7 @@ BOOST_FIXTURE_TEST_CASE( delegate_and_accrue_vesting_user, golos_vesting_tester 
                              ("vesting", "100.0000 GOLOS")
                              ("delegate_vesting", "15.0000 GOLOS")
                              ("received_vesting", "0.0000 GOLOS")
+                             ("unlocked_limit", "0.0000 GOLOS")
                              );
 
     auto pasha_vesting_balance_undelegate = get_account_vesting(N(pasha), "4,GOLOS");
@@ -1199,6 +1234,7 @@ BOOST_FIXTURE_TEST_CASE( delegate_and_accrue_vesting_user, golos_vesting_tester 
                              ("vesting", "105.0000 GOLOS")
                              ("delegate_vesting", "0.0000 GOLOS")
                              ("received_vesting", "15.0000 GOLOS")
+                             ("unlocked_limit", "0.0000 GOLOS")
                              );
 } FC_LOG_AND_RETHROW()
 
