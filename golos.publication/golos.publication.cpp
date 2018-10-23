@@ -96,6 +96,11 @@ void publication::create_message(account_name account, std::string permlink,
     
     tables::content_table content_table(_self, account);
     auto parent_id = parentacc ? fc::hash64(parentprmlnk) : 0;
+    
+    uint8_t level = 0;
+    if(parentacc)
+        level = 1 + notify_parent(true, parentacc, parent_id);
+    eosio_assert(level <= MAX_NESTING_LEVEL, "publication::create_message: level > MAX_NESTING_LEVEL");    
  
     message_table.emplace(account, [&]( auto &item ) {
         item.id = message_id;
@@ -107,10 +112,10 @@ void publication::create_message(account_name account, std::string permlink,
         item.rewardweight = static_cast<base_t>(reward_weight.data());
         item.childcount = 0;
         item.closed = false;
+        item.level = level;
     });
     
-    if(parentacc)
-        set_child_count(true, parentacc, parent_id);        
+   
     
     content_table.emplace(account, [&]( auto &item ) {
         item.id = message_id;
@@ -157,7 +162,7 @@ void publication::delete_message(account_name account, std::string permlink) {
     eosio_assert(cont_itr != content_table.end(), "Content doesn't exist.");    
 
     if(mssg_itr->parentacc)
-        set_child_count(false, mssg_itr->parentacc, mssg_itr->parent_id);
+        notify_parent(false, mssg_itr->parentacc, mssg_itr->parent_id);
     
     message_table.erase(mssg_itr);    
     content_table.erase(cont_itr);
@@ -417,7 +422,7 @@ void publication::set_vote(account_name voter, account_name author, uint64_t id,
     });
 }
 
-void publication::set_child_count(bool increase, account_name parentacc, uint64_t parent_id) {
+uint8_t publication::notify_parent(bool increase, account_name parentacc, uint64_t parent_id) {
     tables::message_table message_table(_self, parentacc);
     auto mssg_itr = message_table.find(parent_id);
     eosio_assert(mssg_itr != message_table.end(), "Parent message doesn't exist");
@@ -426,7 +431,8 @@ void publication::set_child_count(bool increase, account_name parentacc, uint64_
             ++item.childcount;
         else
             --item.childcount;
-    }); 
+    });
+    return mssg_itr->level;
 }
 
 void publication::fill_depleted_pool(tables::reward_pools& pools, eosio::asset quantity, tables::reward_pools::const_iterator excluded) {

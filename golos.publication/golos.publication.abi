@@ -227,6 +227,10 @@
       {
         "name": "closed",
         "type": "bool"
+      },
+      {
+        "name": "level",
+        "type": "uint8"
       }
     ]
   },

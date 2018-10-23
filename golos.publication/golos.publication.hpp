@@ -35,7 +35,7 @@ class publication : public eosio::contract {
     void close_message(account_name account, uint64_t id);
     void close_message_timer(account_name account, uint64_t id);
     void set_vote(account_name voter, account_name author, uint64_t id, int16_t weight);
-    void set_child_count(bool increase, account_name parentacc, uint64_t parent_id);
+    uint8_t notify_parent(bool increase, account_name parentacc, uint64_t parent_id);
     void fill_depleted_pool(tables::reward_pools& pools, eosio::asset quantity, 
                      tables::reward_pools::const_iterator excluded);
     auto get_pool(tables::reward_pools& pools, uint64_t time);

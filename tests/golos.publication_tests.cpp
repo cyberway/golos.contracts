@@ -733,4 +733,22 @@ BOOST_FIXTURE_TEST_CASE(erase_vote_test, golos_publication_tester) try {
     
 } FC_LOG_AND_RETHROW()
 
+BOOST_FIXTURE_TEST_CASE(nesting_level_test, golos_publication_tester) try {
+    BOOST_TEST_MESSAGE("nesting level test.");
+    init();
+    BOOST_CHECK_EQUAL(success(), golos_publication_tester::create_message(N(brucelee), "permlink0"));
+    size_t i = 0;
+    for(; i < MAX_NESTING_LEVEL; i++)
+     BOOST_CHECK_EQUAL(success(), golos_publication_tester::create_message(
+        N(brucelee), "permlink" + std::to_string(i + 1),
+        N(brucelee), "permlink" + std::to_string(i)));
+    
+    BOOST_CHECK_EQUAL("assertion failure with message: publication::create_message: level > MAX_NESTING_LEVEL", 
+        golos_publication_tester::create_message(
+            N(brucelee), "permlink" + std::to_string(i + 1),
+            N(brucelee), "permlink" + std::to_string(i)));
+        
+    
+} FC_LOG_AND_RETHROW()
+
 BOOST_AUTO_TEST_SUITE_END()
