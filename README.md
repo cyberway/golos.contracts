@@ -1,6 +1,6 @@
 # golos dapp prototype contracts
 
-Build `golos.contracts` submodule first, it's wasm/abi files required for tests.
+Build `cyberway.contracts` submodule first, it's wasm/abi files required for tests.
 
 Dependencies:
 * [eosio v1.x.x](https://github.com/EOSIO/eos/releases/tag/v1.3.0)
