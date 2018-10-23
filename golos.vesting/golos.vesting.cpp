@@ -70,9 +70,6 @@ void vesting::on_transfer(account_name from, account_name  to, asset quantity, s
         auto payer = has_auth(to) ? to : from;
         add_balance(from, converted, payer);
     }
-
-    if(from_issuer && !memo.empty())
-        accrue_vesting(from, string_to_name(memo.c_str()), converted);
 }
 
 void vesting::retire(account_name issuer, asset quantity, account_name user) {
@@ -413,8 +410,8 @@ const asset vesting::convert_to_token(const asset &m_token, const structures::ve
     if (!vinfo.supply.amount || !this_balance.amount)
         amount = m_token.amount;
     else {
-        amount = static_cast<int64_t>((static_cast<uint128_t>(m_token.amount) * static_cast<uint128_t>(this_balance.amount))
-                                      / (static_cast<uint128_t>(vinfo.supply.amount) + static_cast<uint128_t>(m_token.amount)));
+        amount = static_cast<int64_t>((static_cast<uint128_t>(m_token.amount) * this_balance.amount)
+                                      / (vinfo.supply.amount + m_token.amount));
     }
 
     return asset(amount, symbol);
