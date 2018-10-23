@@ -1,11 +1,11 @@
-add_executable(golos.vesting.wasm ${CMAKE_CURRENT_SOURCE_DIR}/golos.vesting.cpp)
-target_include_directories(golos.vesting.wasm
+set(CMAKE_CXX_FLAGS " -abigen ${CMAKE_CXX_FLAGS} ")
+add_executable(reward_calcs.wasm ${CMAKE_CURRENT_SOURCE_DIR}/reward_calcs.cpp)
+target_include_directories(reward_calcs.wasm
    PUBLIC
-  #  ${CMAKE_CURRENT_SOURCE_DIR}/include
    ${CMAKE_CURRENT_SOURCE_DIR}/../cyberway.contracts/eosio.token/include
    ${CMAKE_CURRENT_SOURCE_DIR}/..)
 
-set_target_properties(golos.vesting.wasm
+set_target_properties(reward_calcs.wasm
    PROPERTIES
    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
 
