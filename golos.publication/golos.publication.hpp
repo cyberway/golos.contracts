@@ -18,7 +18,7 @@ class publication : public eosio::contract {
     void create_message(account_name account, std::string permlink,
                      account_name parentacc, std::string parentprmlnk,
                      std::vector<structures::beneficiary> beneficiaries,
-                     int64_t tokenprop,
+                     int64_t tokenprop, bool vestpayment,
                      std::string headermssg, std::string bodymssg,
                      std::string languagemssg, std::vector<structures::tag> tags,
                      std::string jsonmetadata);
@@ -43,6 +43,10 @@ class publication : public eosio::contract {
                      fixp_t weights_sum, eosio::symbol_type tokensymbol);
     void payto(account_name user, eosio::asset quantity, enum_t mode);
     void check_account(account_name user, eosio::symbol_type tokensymbol);
+    elaf_t apply_limits(atmsp::machine<fixp_t>& machine, 
+                    account_name user, const structures::rewardpool& pool, 
+                    structures::limits::kind_t kind, uint64_t cur_time, 
+                    elaf_t w);
          
     
     static structures::funcinfo load_func(const funcparams& params, const std::string& name, 

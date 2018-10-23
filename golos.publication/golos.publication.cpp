@@ -48,7 +48,7 @@ void publication::create_message(account_name account, std::string permlink,
                               std::vector<structures::beneficiary> beneficiaries,
                             //actually, beneficiaries[i].prop _here_ should be interpreted as (share * ONE_HUNDRED_PERCENT)
                             //but not as a raw data for elaf_t, may be it's better to use another type (with uint16_t field for prop).
-                              int64_t tokenprop,
+                              int64_t tokenprop, bool vestpayment,
                               std::string headermssg,
                               std::string bodymssg, std::string languagemssg,
                               std::vector<structures::tag> tags,
@@ -79,10 +79,13 @@ void publication::create_message(account_name account, std::string permlink,
             .account = ben.first,
             .deductprcnt = static_cast<base_t>(get_limit_prop(ben.second).data())
         });
-    
-    //TODO: apply_limits, reward_weight
-       
+
     auto cur_time = current_time();
+    
+    atmsp::machine<fixp_t> machine;
+    auto reward_weight = apply_limits(machine, account, *pool, 
+        parentacc ? structures::limits::COMM : structures::limits::POST, cur_time, vestpayment); 
+
     eosio_assert(cur_time >= pool->created, "publication::create_message: cur_time < pool.created");
     eosio_assert(pool->state.msgs < std::numeric_limits<structures::counter_t>::max(), "publication::create_message: pool->msgs == max_counter_val"); 
     pools.modify(*pool, _self, [&](auto &item){ item.state.msgs++; });
@@ -101,7 +104,7 @@ void publication::create_message(account_name account, std::string permlink,
         item.parent_id = parent_id;
         item.tokenprop = static_cast<base_t>(std::min(get_limit_prop(tokenprop), ELF(pool->rules.maxtokenprop)).data()),
         item.beneficiaries = beneficiaries;
-        item.rewardweight = static_cast<base_t>(elaf_t(1).data());//TODO
+        item.rewardweight = static_cast<base_t>(reward_weight.data());
         item.childcount = 0;
         item.closed = false;
     });
@@ -371,7 +374,7 @@ void publication::set_vote(account_name voter, account_name author, uint64_t id,
 
     elaf_t abs_w = get_limit_prop(abs(weight));
     atmsp::machine<fixp_t> machine;
-    //TODO: apply_limits
+    apply_limits(machine, voter, *pool, structures::limits::VOTE, cur_time, abs_w);
     
     int64_t sum_vesting = eosio::vesting(vesting_name).get_account_effective_vesting(voter, pool->state.funds.symbol.name()).amount;        
     fixp_t abs_rshares = fp_cast<fixp_t>(sum_vesting, false) * abs_w;              
@@ -539,6 +542,63 @@ fixp_t publication::get_delta(atmsp::machine<fixp_t>& machine, fixp_t old_val, f
 
 void publication::check_account(account_name user, eosio::symbol_type tokensymbol) {
     eosio_assert(eosio::vesting(vesting_name).balance_exist(user, tokensymbol.name()), ("unregistered user: " + name{user}.to_string()).c_str());    
+}
+
+elaf_t publication::apply_limits(atmsp::machine<fixp_t>& machine, account_name user, 
+                    const structures::rewardpool& pool, 
+                    structures::limits::kind_t kind, uint64_t cur_time, 
+                    elaf_t w //it's abs_weight for vote and enable_vesting_payment-flag for post/comment
+                    ) {
+    using namespace tables;
+    using namespace structures;
+    eosio_assert((kind == limits::POST) || (kind == limits::COMM) || (kind == limits::VOTE), "publication::apply_limits: wrong act type");
+    int64_t sum_vesting = eosio::vesting(vesting_name).get_account_effective_vesting(user, pool.state.funds.symbol.name()).amount;   
+    if((kind == limits::VOTE) && (w != elaf_t(0))) {
+        int64_t weighted_vesting = fp_cast<int64_t>(elai_t(sum_vesting) * w, false);
+        eosio_assert(weighted_vesting >= pool.lims.get_min_vesting_for(kind), "publication::apply_limits: can't vote, not enough vesting");
+    }
+    else if(kind != limits::VOTE)
+        eosio_assert(sum_vesting >= pool.lims.get_min_vesting_for(kind), "publication::apply_limits: can't post, not enough vesting");
+    
+    auto fp_vesting = fp_cast<fixp_t>(sum_vesting, false);
+    
+    charges chgs(_self, user);
+    auto chgs_itr = get_itr(chgs, pool.created, _self, [&](auto &item) {item = {
+            .poolcreated = pool.created,
+            .vals = {pool.lims.get_charges_num(), {cur_time, 0}}
+        };});
+           
+    auto cur_chgs = *chgs_itr;
+    auto pre_chgs = cur_chgs;//we need it when POSTBW has no own charge
+    auto power = cur_chgs.calc_power(machine, pool.lims, kind, cur_time, fp_vesting, (kind == limits::VOTE) ? w : elaf_t(1));
+    
+    auto ret = elaf_t(1);
+    if(kind == limits::VOTE) {
+         eosio_assert(power == 1, "publication::apply_limits: can't vote, not enough power");
+         chgs.modify(chgs_itr, _self, [&](auto &item) { item = cur_chgs; });
+    }
+    else {
+        if(power == 1)
+            chgs.modify(chgs_itr, _self, [&](auto &item) { item = cur_chgs; });
+        else if(w > elaf_t(0)) {//enable_vesting_payment
+            int64_t user_vesting = eosio::vesting(vesting_name).get_account_unlocked_vesting(user, pool.state.funds.symbol.name()).amount;
+            auto price = pool.lims.get_vesting_price(kind);
+            eosio_assert(price > 0, "publication::apply_limits: can't post, not enough power, vesting payment is disabled");
+            eosio_assert(user_vesting >= price, "publication::apply_limits: insufficient vesting amount");
+            INLINE_ACTION_SENDER(eosio::vesting, retire) (vesting_name, {_self, N(active)}, {_self, eosio::asset(price, pool.state.funds.symbol), user});
+            cur_chgs = pre_chgs;
+        }
+        else
+            eosio_assert(false, "publication::apply_limits: can't post, not enough power");
+        ret = cur_chgs.calc_power(machine, pool.lims, limits::POSTBW, cur_time, fp_vesting);
+    } 
+    
+    for(auto itr = chgs.begin(); itr != chgs.end();)
+        if((cur_time - itr->poolcreated) / seconds(1).count() > MAX_CASHOUT_TIME)
+            itr = chgs.erase(itr);
+        else
+            ++itr;
+    return ret;
 }
 
 void publication::create_acc(account_name name) { //DUMMY 

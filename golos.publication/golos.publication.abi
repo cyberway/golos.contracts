@@ -259,6 +259,10 @@
         "type": "int64"
       },
       {
+        "name": "vestpayment",
+        "type": "bool"
+      },
+      {
         "name": "headermssg",
         "type": "string"
       },

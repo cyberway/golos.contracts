@@ -848,6 +848,7 @@ public:
                ("parentprmlnk", parentprmlnk)
                ("beneficiaries", beneficiaries)
                ("tokenprop", tokenprop)
+               ("vestpayment", vestpayment)
                ("headermssg", headermssg)
                ("bodymssg", bodymssg)
                ("languagemssg", languagemssg)
@@ -860,7 +861,7 @@ public:
         std::string ret_str = ret;
         if((ret == success()) || (ret_str.find("forum::apply_limits:") != std::string::npos)) {
             reward_weight = _state.pools.back().lims.apply(
-                    limits::POST, _state.pools.back().charges[key.author], 
+                    parentacc ? limits::COMM : limits::POST, _state.pools.back().charges[key.author], 
                     _state.balances[key.author].vestamount, cur_time().count(), vestpayment);
             BOOST_REQUIRE_MESSAGE(((ret == success()) == (reward_weight >= 0.0)), "wrong ret_str: " + ret_str 
                 + "; vesting = " + std::to_string(_state.balances[key.author].vestamount) 
@@ -1023,6 +1024,65 @@ BOOST_FIXTURE_TEST_CASE(timepenalty_test, reward_calcs_tester) try {
     }
     run(seconds(100));
     BOOST_TEST_MESSAGE("--- rewards");
+    check();
+    show();
+} FC_LOG_AND_RETHROW()
+
+BOOST_FIXTURE_TEST_CASE(limits_test, reward_calcs_tester) try {
+    BOOST_TEST_MESSAGE("Simple limits test");
+    auto bignum = 500000000000;
+    init(bignum, 500000);
+    
+    BOOST_REQUIRE_EQUAL(success(), setrules({"x", bignum}, {"sqrt(x)", bignum}, {"x / 1800", 1800}, 
+    0, //curatorsprop
+    [](double x){ return x; }, [](double x){ return sqrt(x); }, [](double x){ return x / 1800.0; }, 
+    {
+        .restorers = {"sqrt(v / 500000) * (t / 150)", "t / 250"},
+        .limitedacts = {
+            {.chargenum = 0, .restorernum = 0,                 .cutoffval = 20000, .chargeprice = 9900}, //POST
+            {.chargenum = 0, .restorernum = 0,                 .cutoffval = 30000, .chargeprice = 1000}, //COMMENT
+            {.chargenum = 1, .restorernum = 1,                 .cutoffval = 10000, .chargeprice = 1000}, //VOTE
+            {.chargenum = 0, .restorernum = disabled_restorer, .cutoffval = 10000, .chargeprice = 0}},   //POST BW
+        .vestingprices = {150000, -1},
+        .minvestings = {300000, 100000, 100000}
+    }, 
+    {
+        [](double p, double v, double t){ return sqrt(v / 500000.0) * (t / 150.0); },
+        [](double p, double v, double t){ return t / 250.0; }
+    }));
+    
+    BOOST_TEST_MESSAGE("--- add_funds_to_forum");
+    BOOST_REQUIRE_EQUAL(success(), add_funds_to_forum(100000));
+    check();
+    
+    BOOST_REQUIRE_EQUAL(success(), create_message(N(bob), "permlink"));
+    BOOST_REQUIRE_EQUAL(success(), create_message(N(bob), "permlink1"));
+    BOOST_REQUIRE_EQUAL("assertion failure with message: publication::apply_limits: can't post, not enough power", 
+        create_message(N(bob), "permlink2"));
+    BOOST_TEST_MESSAGE("--- comments");
+    for(size_t i = 0; i < 10; i++)
+        BOOST_REQUIRE_EQUAL(success(), create_message(N(bob), "comment" + std::to_string(i), N(bob), "permlink"));
+    BOOST_REQUIRE_EQUAL("assertion failure with message: publication::apply_limits: can't post, not enough power", 
+        create_message(N(bob), "oops", N(bob), "permlink"));
+    BOOST_REQUIRE_EQUAL("assertion failure with message: publication::apply_limits: can't post, not enough power", 
+        create_message(N(bob), "oops", N(bob), "permlink"));
+    BOOST_REQUIRE_EQUAL(success(), create_message(N(bob), "I can pay for posting", N(), "", {}, 5000, true));
+    BOOST_REQUIRE_EQUAL(
+        "assertion failure with message: publication::apply_limits: can't post, not enough power, vesting payment is disabled", 
+        create_message(N(bob), "only if it is not a comment", N(bob), "permlink", {}, 5000, true));
+    BOOST_CHECK_EQUAL(success(), addvote(N(alice), N(bob), "I can pay for posting", 10000));
+    BOOST_CHECK_EQUAL(success(), addvote(N(bob), N(bob), "I can pay for posting", 10000)); //He can also vote
+    BOOST_REQUIRE_EQUAL(success(), create_message(N(bob1), "permlink"));
+    BOOST_TEST_MESSAGE("--- waiting");
+    run(seconds(170));
+    check();
+    run(seconds(170));
+    check();
+    BOOST_REQUIRE_EQUAL(
+        "assertion failure with message: publication::apply_limits: can't post, not enough power", 
+        create_message(N(bob), ":("));
+    run(seconds(20));
+    BOOST_REQUIRE_EQUAL(success(), create_message(N(bob), ":)"));
     check();
     show();
 } FC_LOG_AND_RETHROW()

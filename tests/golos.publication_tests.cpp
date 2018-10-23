@@ -98,7 +98,7 @@ public:
     action_result create_message(account_name account, std::string permlink,
                               account_name parentacc = N(), std::string parentprmlnk = "parentprmlnk",
                               std::vector<structures::beneficiaries> beneficiaries = {{N(golos.pub), 777}},
-                              int64_t tokenprop = 5000,
+                              int64_t tokenprop = 5000, bool vestpayment = false,
                               std::string headermssg = "headermssg",
                               std::string bodymssg = "bodymssg", std::string languagemssg = "languagemssg",
                               std::vector<structures::tags> tags = {{"tag"}},
@@ -110,6 +110,7 @@ public:
                            ("parentprmlnk", parentprmlnk)
                            ("beneficiaries", beneficiaries)
                            ("tokenprop", tokenprop)
+                           ("vestpayment", vestpayment)
                            ("headermssg", headermssg)
                            ("bodymssg", bodymssg)
                            ("languagemssg", languagemssg)
