@@ -100,7 +100,7 @@ void publication::create_message(account_name account, std::string permlink,
     uint8_t level = 0;
     if(parentacc)
         level = 1 + notify_parent(true, parentacc, parent_id);
-    eosio_assert(level <= MAX_NESTING_LEVEL, "publication::create_message: level > MAX_NESTING_LEVEL");    
+    eosio_assert(level <= MAX_COMMENT_DEPTH, "publication::create_message: level > MAX_COMMENT_DEPTH");    
  
     message_table.emplace(account, [&]( auto &item ) {
         item.id = message_id;
@@ -422,7 +422,7 @@ void publication::set_vote(account_name voter, account_name author, uint64_t id,
     });
 }
 
-uint8_t publication::notify_parent(bool increase, account_name parentacc, uint64_t parent_id) {
+uint16_t publication::notify_parent(bool increase, account_name parentacc, uint64_t parent_id) {
     tables::message_table message_table(_self, parentacc);
     auto mssg_itr = message_table.find(parent_id);
     eosio_assert(mssg_itr != message_table.end(), "Parent message doesn't exist");

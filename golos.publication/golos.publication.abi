@@ -230,7 +230,7 @@
       },
       {
         "name": "level",
-        "type": "uint8"
+        "type": "uint16"
       }
     ]
   },

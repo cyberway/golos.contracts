@@ -12,7 +12,7 @@ constexpr size_t CHECK_MONOTONIC_STEPS = 10;
 constexpr int64_t ONE_HUNDRED_PERCENT = 10000;
 constexpr size_t MAX_BENEFICIARIES = 64;
 constexpr int64_t MAX_CASHOUT_TIME = 60 * 60 * 24 * 40; //40 days
-constexpr uint8_t MAX_NESTING_LEVEL = 15;
+constexpr uint16_t MAX_COMMENT_DEPTH = 127;
 
 namespace limit_restorer_domain {//TODO: it will look better in a rule settings
     using namespace fixed_point_utils;

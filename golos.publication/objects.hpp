@@ -67,7 +67,7 @@ struct message {
     messagestate state;
     uint64_t childcount;
     bool closed;
-    uint8_t level;
+    uint16_t level;
 
     uint64_t primary_key() const {
         return id;
