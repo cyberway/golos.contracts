@@ -130,28 +130,30 @@ void vesting::accrue_vesting(account_name sender, account_name user, asset quant
     add_balance(user, quantity - summary_delegate, sender);
 }
 
-void vesting::convert_vesting(account_name sender, account_name recipient, asset quantity) {
-    require_auth(sender);
+void vesting::convert_vesting(account_name from, account_name to, asset quantity) {
+    require_auth(from);
 
-    tables::account_table account(_self, sender);
+    tables::account_table account(_self, from);
     auto vest = account.find(quantity.symbol.name());
-    eosio_assert(vest->vesting.amount >= quantity.amount, "Insufficient funds.");
+    eosio_assert(vest->available_vesting().amount >= quantity.amount, "Insufficient funds.");
     eosio_assert(MIN_AMOUNT_VESTING_CONCLUSION <= vest->vesting.amount, "Insufficient funds for converting");
+    eosio_assert(quantity.amount > 0, "no conversion allowed");
+
 
     tables::convert_table table(_self, quantity.symbol.name());
-    auto record = table.find(sender);
+    auto record = table.find(from);
     if (record != table.end()) {
-        table.modify(record, sender, [&]( auto &item ) {
-            item.recipient = recipient;
+        table.modify(record, from, [&]( auto &item ) {
+            item.recipient = to;
             item.number_of_payments = NUMBER_OF_CONVERSIONS;
             item.payout_time = time_point_sec(now() + TOTAL_TERM_OF_CONCLUSION);
             item.payout_part = quantity/NUMBER_OF_CONVERSIONS;
             item.balance_amount = quantity;
         });
     } else {
-        table.emplace(sender, [&]( auto &item ) {
-            item.sender = sender;
-            item.recipient = recipient;
+        table.emplace(from, [&]( auto &item ) {
+            item.sender = from;
+            item.recipient = to;
             item.number_of_payments = NUMBER_OF_CONVERSIONS;
             item.payout_time = time_point_sec(now() + TOTAL_TERM_OF_CONCLUSION);
             item.payout_part = quantity/NUMBER_OF_CONVERSIONS;
@@ -189,7 +191,7 @@ void vesting::delegate_vesting(account_name sender, account_name recipient, asse
     require_auth(sender);
     eosio_assert(sender != recipient, "You can not delegate to yourself");
 
-    eosio_assert(payout_strategy >=0 && payout_strategy < 2, "not valid value payout_strategy");
+    eosio_assert(payout_strategy >= 0 && payout_strategy < 2, "not valid value payout_strategy");
     eosio_assert(quantity.amount > 0, "the number of tokens should not be less than 0");
     eosio_assert(quantity.amount >= MIN_AMOUNT_DELEGATION_VESTING, "Insufficient funds for delegation");
     eosio_assert(interest_rate <= MAX_PERSENT_DELEGATION, "Exceeded the percentage of delegated vesting");
@@ -197,6 +199,15 @@ void vesting::delegate_vesting(account_name sender, account_name recipient, asse
     tables::account_table account_sender(_self, sender);
     auto balance_sender = account_sender.find(quantity.symbol.name());
     eosio_assert(balance_sender != account_sender.end(), "Not found token");
+
+    tables::convert_table table_convert(_self, quantity.symbol.name());
+    auto record_convert = table_convert.find(sender);
+    if (record_convert != table_convert.end()) {
+        auto user_balance = balance_sender->available_vesting() -
+                ((record_convert->payout_part * record_convert->number_of_payments) +
+                (record_convert->balance_amount - (record_convert->payout_part * NUMBER_OF_CONVERSIONS)));
+        eosio_assert(user_balance >= quantity, "insufficient funds for delegation");
+    }
 
     account_sender.modify(balance_sender, sender, [&](auto &item){
         item.delegate_vesting += quantity;

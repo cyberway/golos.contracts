@@ -41,6 +41,7 @@
 
 // closing post params
 #define CLOSE_POST_PERIOD 50 // 7*24*60*60
+#define UPVOTE_DISABLE_PERIOD 5 // 60*60
 #define QUNTITY_OF_CHANGES // quantity of changes before post closing
 
 #define UPPER_BOUND (10000) // 100.00%
