@@ -3,50 +3,99 @@
   "types": [{
     "new_type_name": "account_name",
     "type": "name"
-  }],
+    },{
+      "new_type_name": "base_t",
+      "type": "int64"
+    },{
+      "new_type_name": "index_t",
+      "type": "uint64"
+    },{
+      "new_type_name": "enum_t",
+      "type": "uint8"
+    },{
+      "new_type_name": "counter_t",
+      "type": "uint64"
+    }
+  ],
   "structs": [
   {
-    "name": "battery",
+    "name": "value",
     "base": "",
     "fields": [
-      {
-        "name": "charge",
-        "type": "uint16"
-      },
-      {
-        "name": "renewal",
-        "type": "time_point_sec"
-      }
+        {
+            "name": "kind",
+            "type": "enum_t"
+        },
+        {
+            "name": "idx",
+            "type": "index_t"
+        }
     ]
   },
   {
-    "name": "account_battery",
+    "name": "funcparams",
     "base": "",
     "fields": [
-      {
-        "name": "posting_battery",
-        "type": "battery"
-      },
-      {
-        "name": "battery_of_votes",
-        "type": "battery"
-      },
-      {
-        "name": "limit_battery_posting",
-        "type": "battery"
-      },
-      {
-        "name": "limit_battery_comment",
-        "type": "battery"
-      },
-      {
-        "name": "limit_battery_of_votes",
-        "type": "battery"
-      }
+        {
+            "name": "str",
+            "type": "string"
+        },
+        {
+            "name": "maxarg",
+            "type": "base_t"
+        }
     ]
   },
   {
-    "name": "closepost",
+    "name": "limitsarg",
+    "base": "",
+    "fields": [
+        {
+            "name": "restorers",
+            "type": "string[]"
+        },
+        {
+            "name": "limitedacts",
+            "type": "limitedact[]"
+        },
+        {
+            "name": "vestingprices",
+            "type": "int64[]"
+        },
+        {
+            "name": "minvestings",
+            "type": "int64[]"
+        }
+    ]
+  }, 
+  {
+    "name": "bytecode",
+    "base": "",
+    "fields": [
+        {
+            "name": "varssize",
+            "type": "index_t"
+        },
+        {
+            "name": "operators",
+            "type": "index_t[]"
+        },
+        {
+            "name": "values",
+            "type": "value[]"
+        },
+        {
+            "name": "nums",
+            "type": "base_t[]"
+        },
+        {
+            "name": "consts",
+            "type": "base_t[]"
+        }
+    ]
+  }, 
+  {
+    "name": "messagekey",
     "base": "",
     "fields": [
       {
@@ -60,7 +109,7 @@
     ]
   },
   {
-    "name": "beneficiaries",
+    "name": "beneficiary",
     "base": "",
     "fields": [
       {
@@ -69,7 +118,7 @@
       },
       {
         "name": "deductprcnt",
-        "type": "uint64"
+        "type": "base_t"
       }
     ]
   },
@@ -84,28 +133,6 @@
     ]
   },
   {
-    "name": "rshares",
-    "base": "",
-    "fields": [
-      {
-        "name": "net_rshares",
-        "type": "uint64"
-      },
-      {
-        "name": "abs_rshares",
-        "type": "uint64"
-      },
-      {
-        "name": "vote_rshares",
-        "type": "uint64"
-      },
-      {
-        "name": "children_abs_rshares",
-        "type": "uint64"
-      }
-    ]
-  },
-  {
     "name": "content",
     "base": "",
     "fields": [
@@ -114,15 +141,15 @@
         "type": "uint64"
       },
       {
-        "name": "headerpost",
+        "name": "headermssg",
         "type": "string"
       },
       {
-        "name": "bodypost",
+        "name": "bodymssg",
         "type": "string"
       },
       {
-        "name": "languagepost",
+        "name": "languagemssg",
         "type": "string"
       },
       {
@@ -136,7 +163,29 @@
     ]
   },
   {
-    "name": "post",
+    "name": "messagestate",
+    "base": "",
+    "fields": [
+        {
+            "name": "absshares",
+            "type": "base_t"
+        },
+        {
+            "name": "netshares",
+            "type": "base_t"
+        },
+        {
+            "name": "voteshares",
+            "type": "base_t"
+        },
+        {
+            "name": "sumcuratorsw",
+            "type": "base_t"
+        }
+    ]
+  },
+  {
+    "name": "message",
     "base": "",
     "fields": [
       {
@@ -148,49 +197,45 @@
         "type": "uint64"
       },
       {
-        "name": "account",
-        "type": "account_name"
-      },
-      {
-        "name": "permlink",
-        "type": "checksum256"
-      },
-      {
         "name": "parentacc",
         "type": "account_name"
       },
       {
-        "name": "parentprmlnk",
-        "type": "checksum256"
-      },
-      {
-        "name": "curatorprcnt",
+        "name": "parent_id",
         "type": "uint64"
       },
       {
-        "name": "payouttype",
-        "type": "string"
+        "name": "tokenprop",
+        "type": "base_t"
       },
       {
         "name": "beneficiaries",
-        "type": "beneficiaries[]"
+        "type": "beneficiary[]"
       },
       {
-        "name": "paytype",
-        "type": "string"
+        "name": "rewardweight",
+        "type": "base_t"
+      },
+      {
+        "name": "state",
+        "type": "messagestate"
       },
       {
         "name": "childcount",
         "type": "uint64"
       },
       {
-        "name": "status",
-        "type": "uint8"
+        "name": "closed",
+        "type": "bool"
+      },
+      {
+        "name": "level",
+        "type": "uint16"
       }
     ]
   },
   {
-    "name": "createpost",
+    "name": "createmssg",
     "base": "",
     "fields": [
       {
@@ -210,31 +255,27 @@
         "type": "string"
       },
       {
-        "name": "curatorprcnt",
-        "type": "uint64"
-      },
-      {
-        "name": "payouttype",
-        "type": "string"
-      },
-      {
         "name": "beneficiaries",
-        "type": "beneficiaries[]"
+        "type": "beneficiary[]"
       },
       {
-        "name": "paytype",
+        "name": "tokenprop",
+        "type": "int64"
+      },
+      {
+        "name": "vestpayment",
+        "type": "bool"
+      },
+      {
+        "name": "headermssg",
         "type": "string"
       },
       {
-        "name": "headerpost",
+        "name": "bodymssg",
         "type": "string"
       },
       {
-        "name": "bodypost",
-        "type": "string"
-      },
-      {
-        "name": "languagepost",
+        "name": "languagemssg",
         "type": "string"
       },
       {
@@ -248,7 +289,7 @@
     ]
   },
   {
-    "name": "updatepost",
+    "name": "updatemssg",
     "base": "",
     "fields": [
       {
@@ -260,15 +301,15 @@
         "type": "string"
       },
       {
-        "name": "headerpost",
+        "name": "headermssg",
         "type": "string"
       },
       {
-        "name": "bodypost",
+        "name": "bodymssg",
         "type": "string"
       },
       {
-        "name": "languagepost",
+        "name": "languagemssg",
         "type": "string"
       },
       {
@@ -282,7 +323,7 @@
     ]
   },
   {
-    "name": "deletepost",
+    "name": "deletemssg",
     "base": "",
     "fields": [
       {
@@ -332,16 +373,12 @@
         "type": "uint64"
       },
       {
-        "name": "post_id",
+        "name": "message_id",
         "type": "uint64"
       },
       {
         "name": "voter",
         "type": "account_name"
-      },
-      {
-        "name": "percent",
-        "type": "uint64"
       },
       {
         "name": "weight",
@@ -352,13 +389,169 @@
         "type": "uint64"
       },
       {
-        "name": "rshares",
-        "type": "rshares[]"
-      },
-      {
         "name": "count",
         "type": "int64"
+      },
+      {
+        "name": "curatorsw",
+        "type": "base_t"
       }
+    ]
+  },
+  {
+    "name": "limitedact",
+    "base": "",
+    "fields": [
+        {
+            "name": "chargenum",
+            "type": "uint8"
+        },
+        {
+            "name": "restorernum",
+            "type": "uint8"
+        },
+        {
+            "name": "cutoffval",
+            "type": "base_t"
+        },
+        {
+            "name": "chargeprice",
+            "type": "base_t"
+        }
+    ]
+  },
+  {
+    "name": "limits",
+    "base": "",
+    "fields": [
+        {
+            "name": "restorers",
+            "type": "bytecode[]"
+        },
+        {
+            "name": "limitedacts",
+            "type": "limitedact[]"
+        },
+        {
+            "name": "vestingprices",
+            "type": "int64[]"
+        },
+        {
+            "name": "minvestings",
+            "type": "int64[]"
+        }
+    ]
+  },
+  {
+    "name": "chargeinfo",
+    "base": "",
+    "fields": [
+        {
+            "name": "lastupdate",
+            "type": "uint64"
+        },
+        {
+            "name": "data",
+            "type": "base_t"
+        }
+    ]
+  },
+  {
+    "name": "usercharges",
+    "base": "",
+    "fields": [
+        {
+            "name": "poolcreated",
+            "type": "uint64"
+        },
+        {
+            "name": "vals",
+            "type": "chargeinfo[]"
+        }
+    ]
+  },  
+  {
+    "name": "funcinfo",
+    "base": "",
+    "fields": [
+        {
+            "name": "code",
+            "type": "bytecode"
+        },
+        {
+            "name": "maxarg",
+            "type": "base_t"
+        }
+    ]
+  },
+  {
+    "name": "rewardrules",
+    "base": "",
+    "fields": [
+        {
+            "name": "mainfunc",
+            "type": "funcinfo"
+        },
+        {
+            "name": "curationfunc",
+            "type": "funcinfo"
+        },
+        {
+            "name": "timepenalty",
+            "type": "funcinfo"
+        },
+        {
+            "name": "curatorsprop",
+            "type": "base_t"
+        },
+        {
+            "name": "maxtokenprop",
+            "type": "base_t"
+        }
+    ]
+  },
+  {
+    "name": "poolstate",
+    "base": "",
+    "fields": [
+        {
+            "name": "msgs",
+            "type": "counter_t"
+        },
+        {
+            "name": "funds",
+            "type": "asset"
+        },
+        {
+            "name": "rshares",
+            "type": "base_t"
+        },
+        {
+            "name": "rsharesfn",
+            "type": "base_t"
+        }
+    ]
+  },
+  {
+    "name": "rewardpool",
+    "base": "",
+    "fields": [
+        {
+            "name": "created",
+            "type": "uint64"
+        },
+        {
+            "name": "rules",
+            "type": "rewardrules"
+        },
+        {
+            "name": "lims",
+            "type": "limits"
+        },
+        {
+            "name": "state",
+            "type": "poolstate"
+        }
     ]
   },
   {
@@ -370,20 +563,54 @@
         "type": "account_name"
       }
     ]
+  },
+  {
+    "name": "setrules",
+    "base": "",
+    "fields": [
+        {
+            "name": "mainfunc",
+            "type": "funcparams"
+        },
+        {
+            "name": "curationfunc",
+            "type": "funcparams"
+        },
+        {
+            "name": "timepenalty",
+            "type": "funcparams"
+        },
+        {
+            "name": "curatorsprop",
+            "type": "int64"
+        },
+        {
+            "name": "maxtokenprop",
+            "type": "int64"
+        },
+        {
+            "name": "tokensymbol",
+            "type": "symbol"
+        }
+        {
+            "name": "lims",
+            "type": "limitsarg"
+        }
+    ]
   }
   ],
   "actions": [
   {
-    "name": "createpost",
-    "type": "createpost"
+    "name": "createmssg",
+    "type": "createmssg"
   },
   {
-    "name": "updatepost",
-    "type": "updatepost"
+    "name": "updatemssg",
+    "type": "updatemssg"
   },
   {
-    "name": "deletepost",
-    "type": "deletepost"
+    "name": "deletemssg",
+    "type": "deletemssg"
   },
   {
     "name": "upvote",
@@ -398,18 +625,22 @@
     "type": "unvote"
   },
   {
-    "name": "closepost",
-    "type": "closepost"
+    "name": "closemssg",
+    "type": "messagekey"
   },
   {
     "name": "createacc",
     "type": "createacc"
+  },
+  {
+    "name": "setrules",
+    "type": "setrules"
   }
   ],
   "tables": [
   {
-    "name": "posttable",
-    "type": "post",
+    "name": "messagetable",
+    "type": "message",
     "index_type": "i64",
     "key_names" : [
       "id"
@@ -441,11 +672,18 @@
     ]
   },
   {
-    "name": "batterytable",
-    "type": "account_battery",
+    "name": "rewardpools",
+    "type": "rewardpool",
     "index_type": "i64",
-    "key_names" : [],
-    "key_types" : []
+    "key_names": [],
+    "key_types": []
+  },
+  {
+    "name": "charges",
+    "type": "usercharges",
+    "index_type": "i64",
+    "key_names": [],
+    "key_types": []
   }
   ],
   "ricardian_clauses": [],

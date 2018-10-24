@@ -1,70 +1,26 @@
 #pragma once
-
-#include <eosiolib/time.hpp>
 #include <eosiolib/eosio.hpp>
+#include "types.h"
+#include "config.hpp"
+#include <common/calclib/atmsp_storable.h>
+#include <eosiolib/time.hpp>
+#include <eosiolib/asset.hpp>
 #include <eosiolib/singleton.hpp>
 #include <eosiolib/crypto.h>
+#include "charges.hpp"
 
 using namespace eosio;
 
-enum class type_recovery {
-    linear,
-    persent
-};
-
-enum post_status {
-    open,
-    closed
-};
-
 namespace structures {
 
-struct battery {
-    uint16_t charge;
-    time_point_sec renewal;
-
-    EOSLIB_SERIALIZE(battery, (charge)(renewal))
-};
-
-struct account_battery {
-    battery posting_battery;
-    battery battery_of_votes;
-
-    battery limit_battery_posting;
-    battery limit_battery_comment;
-    battery limit_battery_of_votes;
-
-    EOSLIB_SERIALIZE(account_battery, (posting_battery)(battery_of_votes)(limit_battery_posting)
-                     (limit_battery_comment)(limit_battery_of_votes))
-};
-
-struct closepost {
-    closepost() = default;
-
+struct accandvalue {
     account_name account;
-    std::string permlink;
-
-    EOSLIB_SERIALIZE(closepost, (account)(permlink))
+    uint64_t value;
 };
-
-struct rshares {
-    rshares() = default;
-
-    uint64_t net_rshares;
-    uint64_t abs_rshares;
-    uint64_t vote_rshares;
-    uint64_t children_abs_rshares;
-
-    EOSLIB_SERIALIZE(rshares, (net_rshares)(abs_rshares)(vote_rshares)(children_abs_rshares))
-};
-
+using counter_t = uint64_t;
 struct beneficiary {
-    beneficiary() = default;
-
     account_name account;
-    uint64_t deductprcnt;
-
-    EOSLIB_SERIALIZE(beneficiary, (account)(deductprcnt))
+    int64_t deductprcnt; //elaf_t
 };
 
 struct tag {
@@ -79,114 +35,117 @@ struct content {
     content() = default;
 
     uint64_t id;
-    std::string headerpost;
-    std::string bodypost;
-    std::string languagepost;
+    //std::string permlink; //?
+    std::string headermssg;
+    std::string bodymssg;
+    std::string languagemssg;
     std::vector<structures::tag> tags;
     std::string jsonmetadata;
 
     uint64_t primary_key() const {
         return id;
     }
-
-    EOSLIB_SERIALIZE(content, (id)(headerpost)(bodypost)(languagepost)
-                     (tags)(jsonmetadata))
 };
 
-struct common_post_data {
-    common_post_data() = default;
-
-    account_name account;
-    account_name parentacc;
-    uint64_t curatorprcnt;
-    std::string payouttype;
-    std::vector<structures::beneficiary> beneficiaries;
-    std::string paytype;
-
-    EOSLIB_SERIALIZE(common_post_data, (account)(parentacc)(curatorprcnt)
-                     (payouttype)(beneficiaries)(paytype))
+struct messagestate {
+    base_t absshares = 0;
+    base_t netshares = 0;
+    base_t voteshares = 0;
+    base_t sumcuratorsw = 0;
 };
 
-struct createpost : common_post_data {
-    createpost() = default;
-
-    std::string permlink;
-    std::string parentprmlnk;
-
-    EOSLIB_SERIALIZE(createpost, (account)(permlink)(parentacc)(parentprmlnk)(curatorprcnt)
-                     (payouttype)(beneficiaries)(paytype))
-};
-
-struct post : common_post_data {
-    post() = default;
+struct message {
+    message() = default;
 
     uint64_t id;
     uint64_t date;
-    checksum256 permlink;
-    checksum256 parentprmlnk;
+    account_name parentacc;
+    uint64_t parent_id;
+    base_t tokenprop; //elaf_t
+    std::vector<structures::beneficiary> beneficiaries;
+    base_t rewardweight;//elaf_t
+    messagestate state;
     uint64_t childcount;
-    uint8_t status;
+    bool closed;
+    uint16_t level;
 
     uint64_t primary_key() const {
         return id;
     }
-
-    key256 permlink_hash_key() const {
-        return get_hash_key(permlink);
-    }
-
-    static key256 get_hash_key(const checksum256& permlink) {
-        const uint64_t *p64 = reinterpret_cast<const uint64_t *>(&permlink);
-        return key256::make_from_word_sequence<uint64_t>(p64[0], p64[1], p64[2], p64[3]);
-    }
-
-    EOSLIB_SERIALIZE(post, (id)(date)(account)(permlink)(parentacc)(parentprmlnk)(curatorprcnt)(payouttype)
-                     (beneficiaries)(paytype)(childcount)(status))
 };
 
 struct voteinfo {
     voteinfo() = default;
 
     uint64_t id;
-    uint64_t post_id;
+    uint64_t message_id;
     account_name voter;
-    uint64_t percent;
     int16_t weight;
     uint64_t time;
-    std::vector<structures::rshares> rshares;
     int64_t count;
+    
+    base_t curatorsw;
 
     uint64_t primary_key() const {
         return id;
     }
 
-    uint64_t secondary_key() const {
-        return post_id;
+    uint64_t by_message() const {
+        return message_id;
     }
-
-    EOSLIB_SERIALIZE(voteinfo, (id)(post_id)(voter)(percent)(weight)(time)(rshares)(count))
 };
 
-struct params_battery {
-    uint64_t max_charge;  // M, points
-    uint64_t time_to_charge; // W, seconds
-    uint64_t consume_battery;  // C, points
-    type_recovery mode;
+struct funcinfo {
+    atmsp::storable::bytecode code;
+    base_t maxarg;
+};
+
+struct rewardrules {
+    funcinfo mainfunc;
+    funcinfo curationfunc; 
+    funcinfo timepenalty;
+    base_t curatorsprop; //elaf_t
+    base_t maxtokenprop; //elaf_t
+    //uint64_t cashout_time; //TODO:
+};
+  
+struct poolstate {
+    counter_t msgs;
+    eosio::asset funds;    
+    base_t rshares;
+    base_t rsharesfn;    
+    
+    using ratio_t = decltype(fixp_t(funds.amount) / FP(rshares));
+    ratio_t get_ratio() const {
+        eosio_assert(funds.amount >= 0, "poolstate::get_ratio: funds < 0");
+        auto r = FP(rshares);     
+        return (r > 0) ? (fixp_t(funds.amount) / r) : std::numeric_limits<ratio_t>::max();
+    }    
+};
+
+struct rewardpool {
+    uint64_t created;
+    rewardrules rules;
+    limits lims;
+    poolstate state;
+    
+    uint64_t primary_key() const { return created; }
+    EOSLIB_SERIALIZE(rewardpool, (created)(rules)(lims)(state)) 
 };
 
 }
 
 namespace tables {
-    using id_index = indexed_by<N(id), const_mem_fun<structures::post, uint64_t, &structures::post::primary_key>>;
-    using permlink_hash_index = indexed_by<N(permlink), const_mem_fun<structures::post, key256, &structures::post::permlink_hash_key>>;
-    using post_table = eosio::multi_index<N(posttable), structures::post, id_index, permlink_hash_index>;
+    using id_index = indexed_by<N(id), const_mem_fun<structures::message, uint64_t, &structures::message::primary_key>>;
+    using message_table = eosio::multi_index<N(messagetable), structures::message, id_index>;
 
     using content_id_index = indexed_by<N(id), const_mem_fun<structures::content, uint64_t, &structures::content::primary_key>>;
     using content_table = eosio::multi_index<N(contenttable), structures::content, content_id_index>;
 
     using vote_id_index = indexed_by<N(id), const_mem_fun<structures::voteinfo, uint64_t, &structures::voteinfo::primary_key>>;
-    using vote_postid_index = indexed_by<N(postid), const_mem_fun<structures::voteinfo, uint64_t, &structures::voteinfo::secondary_key>>;
-    using vote_table = eosio::multi_index<N(votetable), structures::voteinfo, vote_id_index, vote_postid_index>;
+    using vote_messageid_index = indexed_by<N(messageid), const_mem_fun<structures::voteinfo, uint64_t, &structures::voteinfo::by_message>>;
+    using vote_table = eosio::multi_index<N(votetable), structures::voteinfo, vote_id_index, vote_messageid_index>;
 
-    using accounts_battery_table = eosio::singleton<N(batterytable), structures::account_battery>;
+    using reward_pools = eosio::multi_index<N(rewardpools), structures::rewardpool>;
+    using charges = eosio::multi_index<N(charges), structures::usercharges>;
 }

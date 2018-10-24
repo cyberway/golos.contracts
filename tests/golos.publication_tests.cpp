@@ -1,28 +1,33 @@
+#define UNIT_TEST_ENV
 #include <boost/test/unit_test.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 #include <eosio/chain/abi_serializer.hpp>
 
 #include <Runtime/Runtime.h>
 #include <fc/variant_object.hpp>
+#include <eosio/testing/tester.hpp>
 
 #include "golos_tester.hpp"
 #include "contracts.hpp"
+
+#include "../golos.publication/types.h"
 #include "../golos.publication/config.hpp"
+using namespace fixed_point_utils;
 
-
-#define UNLOCKED_FOR_CREATE_POST 21
+#define UNLOCKED_FOR_CREATE_MESSAGE 21
 
 using namespace eosio;
 using namespace eosio::chain;
 using namespace eosio::testing;
 using namespace fc;
+using namespace golos::config;
 
 using mvo = fc::mutable_variant_object;
 
 namespace structures {
     struct beneficiaries {
         account_name account;
-        uint64_t deductprcnt;
+        int64_t deductprcnt;
     };
 
     struct tags {
@@ -34,88 +39,115 @@ FC_REFLECT(structures::beneficiaries, (account)(deductprcnt))
 
 
 class golos_publication_tester : public golos_tester {
+    std::vector<account_name> _users;
 public:
 
-    golos_publication_tester() {
+    golos_publication_tester(): _users{N(jackiechan), N(brucelee), N(chucknorris), N(golos.pub)}{
+        produce_blocks(2);
+        create_accounts(_users);
+        create_accounts({N(eosio.token)});
+        create_accounts({vesting_name});
+        create_accounts({N(dan.larimer)});
+        
         produce_blocks(2);
 
-        create_accounts({N(jackiechan), N(brucelee), N(chucknorris), N(golos.pub)});
-        produce_blocks(2);
-
-        install_contract(N(golos.pub), contracts::posting_wasm(), contracts::posting_abi(), abi_ser);
+        install_contract(N(golos.pub), contracts::posting_wasm(), contracts::posting_abi(), _serializers[N(golos.pub)]);
+        install_contract(N(eosio.token), contracts::token_wasm(), contracts::token_abi(), _serializers[N(eosio.token)]);
+        install_contract(vesting_name, contracts::vesting_wasm(), contracts::vesting_abi(), _serializers[vesting_name]);
     }
 
     action_result push_action(const account_name& signer,
                               const action_name &name,
-                              const variant_object &data) {
-       string action_type_name = abi_ser.get_action_type(name);
-
+                              const variant_object &data, const account_name& code = N(golos.pub)) {
+       auto& abi_ser = _serializers[code]; 
+       string action_type_name = abi_ser.get_action_type(name);       
        action act;
-       act.account = N(golos.pub);
+       act.account = code;
        act.name = name;
        act.data = abi_ser.variant_to_binary(action_type_name, data, abi_serializer_max_time);
 
        return base_tester::push_action(std::move(act), uint64_t(signer));
     }
+    
+    void init() {
+        symbol sym(0, "DUMMY");
+        BOOST_REQUIRE_EQUAL(success(), push_action(N(golos.pub), N(open), 
+            mvo()( "owner", account_name(N(golos.pub)))
+            ( "symbol", sym)
+            ( "ram_payer", account_name(N(golos.pub))), 
+            N(eosio.token)));  
+        
+        limitsarg lims = {{"0"}, {{0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}}, {0, 0}, {0, 0, 0}};
+        BOOST_REQUIRE_EQUAL(success(), push_action(N(golos.pub), N(setrules), mvo()                
+                ("mainfunc", mvo()("str", "0")("maxarg", 1))
+                ("curationfunc", mvo()("str", "0")("maxarg", 1))
+                ("timepenalty", mvo()("str", "0")("maxarg", 1))
+                ("curatorsprop", 0)
+                ("maxtokenprop", 0)
+                ("tokensymbol", sym)
+                ("lims", lims)));
+        for(auto& u : _users) {
+            BOOST_REQUIRE_EQUAL(success(), push_action( u, N(open), 
+                mvo()( "owner", u)
+                ( "symbol", sym)
+                ( "ram_payer", u), 
+                vesting_name));   
+        }
+    }
 
-    action_result create_post(account_name account, std::string permlink,
+    action_result create_message(account_name account, std::string permlink,
                               account_name parentacc = N(), std::string parentprmlnk = "parentprmlnk",
-                              uint64_t curatorprcnt = 333, std::string payouttype = "payouttype",
-                              std::vector<structures::beneficiaries> beneficiaries = {{N(beneficiary), 777}},
-                              std::string paytype = "paytype", std::string headerpost = "headerpost",
-                              std::string bodypost = "bodypost", std::string languagepost = "languagepost",
+                              std::vector<structures::beneficiaries> beneficiaries = {{N(golos.pub), 777}},
+                              int64_t tokenprop = 5000, bool vestpayment = false,
+                              std::string headermssg = "headermssg",
+                              std::string bodymssg = "bodymssg", std::string languagemssg = "languagemssg",
                               std::vector<structures::tags> tags = {{"tag"}},
                               std::string jsonmetadata = "jsonmetadata") {
-        return push_action(account, N(createpost), mvo()
+        return push_action(account, N(createmssg), mvo()
                            ("account", account)
                            ("permlink", permlink)
                            ("parentacc", parentacc)
                            ("parentprmlnk", parentprmlnk)
-                           ("curatorprcnt", curatorprcnt)
-                           ("payouttype", payouttype)
                            ("beneficiaries", beneficiaries)
-                           ("paytype", paytype)
-                           ("headerpost", headerpost)
-                           ("bodypost", bodypost)
-                           ("languagepost", languagepost)
+                           ("tokenprop", tokenprop)
+                           ("vestpayment", vestpayment)
+                           ("headermssg", headermssg)
+                           ("bodymssg", bodymssg)
+                           ("languagemssg", languagemssg)
                            ("tags", tags)
                            ("jsonmetadata", jsonmetadata)
         );
     }
 
-    fc::variant get_posts( account_name acc, uint64_t id ) {
-        return get_tbl_struct(N(golos.pub), acc, N(posttable), id, "post", abi_ser);
+    fc::variant get_messages( account_name acc, uint64_t id ) {
+        return get_tbl_struct(N(golos.pub), acc, N(messagetable), id, "message", _serializers[N(golos.pub)]);
     }
 
     fc::variant get_content( account_name acc, uint64_t id ) {
-        return get_tbl_struct(N(golos.pub), acc, N(contenttable), id, "content", abi_ser);
+        return get_tbl_struct(N(golos.pub), acc, N(contenttable), id, "content", _serializers[N(golos.pub)]);
     }
 
     fc::variant get_vote( account_name acc, uint64_t id ) {
-        return get_tbl_struct(N(golos.pub), acc, N(votetable), id, "voteinfo", abi_ser);
+        return get_tbl_struct(N(golos.pub), acc, N(votetable), id, "voteinfo", _serializers[N(golos.pub)]);
     }
 
-    fc::variant get_battery( account_name acc) {
-        return get_tbl_struct_singleton(N(golos.pub), acc, N(batterytable), "account_battery", abi_ser);
-    }
-
-    action_result update_post(account_name account, std::string permlink,
-                              std::string headerpost, std::string bodypost,
-                              std::string languagepost, std::vector<structures::tags> tags,
+    action_result update_message(account_name account, std::string permlink,
+                              std::string headermssg, std::string bodymssg,
+                              std::string languagemssg, std::vector<structures::tags> tags,
                               std::string jsonmetadata) {
-        return push_action(account, N(updatepost), mvo()
+        return push_action(account, N(updatemssg), mvo()
                            ("account", account)
                            ("permlink", permlink)
-                           ("headerpost", headerpost)
-                           ("bodypost", bodypost)
-                           ("languagepost", languagepost)
+                           ("headermssg", headermssg)
+                           ("bodymssg", bodymssg)
+                           ("languagemssg", languagemssg)
                            ("tags",tags)
                            ("jsonmetadata", jsonmetadata)
         );
     }
 
-    action_result delete_post(account_name account, std::string permlink) {
-        return push_action(account, N(deletepost), mvo()
+    action_result delete_message(account_name account, std::string permlink) {
+        return push_action(account, N(deletemssg), mvo()
                            ("account", account)
                            ("permlink", permlink)
         );
@@ -147,211 +179,181 @@ public:
         );
     }
 
-    action_result create_battery(account_name account) {
-        return push_action(account, N(createacc), mvo()
-                           ("name", account)
-                          );
-    }
-
     void check_equal(const fc::variant &obj1, const fc::variant &obj2) {
         BOOST_CHECK_EQUAL(true, obj1.is_object() && obj2.is_object());
         BOOST_CHECK_EQUAL(obj1.get_object()["id"].as<uint64_t>(), obj2.get_object()["id"].as<uint64_t>());
-        BOOST_CHECK_EQUAL(obj1.get_object()["account"].as<account_name>(), obj2.get_object()["account"].as<account_name>());
-        BOOST_CHECK_EQUAL(obj1.get_object()["permlink"].as<checksum256_type>().str(), obj2.get_object()["permlink"].as<checksum256_type>().str());
         BOOST_CHECK_EQUAL(obj1.get_object()["parentacc"].as<account_name>(), obj2.get_object()["parentacc"].as<account_name>());
-        BOOST_CHECK_EQUAL(obj1.get_object()["parentprmlnk"].as<checksum256_type>().str(), obj2.get_object()["parentprmlnk"].as<checksum256_type>().str());
-        BOOST_CHECK_EQUAL(obj1.get_object()["curatorprcnt"].as<uint64_t>(), obj2.get_object()["curatorprcnt"].as<uint64_t>());
-        BOOST_CHECK_EQUAL(obj1.get_object()["payouttype"].as<std::string>(), obj2.get_object()["payouttype"].as<std::string>());
+        BOOST_CHECK_EQUAL(obj1.get_object()["parent_id"].as<uint64_t>(), obj2.get_object()["parent_id"].as<uint64_t>());
         BOOST_CHECK_EQUAL(obj1.get_object()["beneficiaries"].get_array().at(0).get_object()["account"].as<account_name>(), obj2.get_object()["beneficiaries"].get_array().at(0).get_object()["account"].as<account_name>());
         BOOST_CHECK_EQUAL(obj1.get_object()["beneficiaries"].get_array().at(0).get_object()["deductprcnt"].as<uint64_t>(), obj2.get_object()["beneficiaries"].get_array().at(0).get_object()["deductprcnt"].as<uint64_t>());
-        BOOST_CHECK_EQUAL(obj1.get_object()["paytype"].as<std::string>(), obj2.get_object()["paytype"].as<std::string>());
         BOOST_CHECK_EQUAL(obj1.get_object()["childcount"].as<uint64_t>(), obj2.get_object()["childcount"].as<uint64_t>());
-        BOOST_CHECK_EQUAL(obj1.get_object()["status"].as<uint8_t>(), obj2.get_object()["status"].as<uint8_t>());
+        BOOST_CHECK_EQUAL(obj1.get_object()["closed"].as<bool>(), obj2.get_object()["closed"].as<bool>());
     }
 
     void check_equal_content(const fc::variant &obj1, const fc::variant &obj2) {
         BOOST_CHECK_EQUAL(true, obj1.is_object() && obj2.is_object());
         BOOST_CHECK_EQUAL(obj1.get_object()["id"].as<uint64_t>(), obj2.get_object()["id"].as<uint64_t>());
-        BOOST_CHECK_EQUAL(obj1.get_object()["headerpost"].as<std::string>(), obj2.get_object()["headerpost"].as<std::string>());
-        BOOST_CHECK_EQUAL(obj1.get_object()["bodypost"].as<std::string>(), obj2.get_object()["bodypost"].as<std::string>());
-        BOOST_CHECK_EQUAL(obj1.get_object()["languagepost"].as<std::string>(), obj2.get_object()["languagepost"].as<std::string>());
+        BOOST_CHECK_EQUAL(obj1.get_object()["headermssg"].as<std::string>(), obj2.get_object()["headermssg"].as<std::string>());
+        BOOST_CHECK_EQUAL(obj1.get_object()["bodymssg"].as<std::string>(), obj2.get_object()["bodymssg"].as<std::string>());
+        BOOST_CHECK_EQUAL(obj1.get_object()["languagemssg"].as<std::string>(), obj2.get_object()["languagemssg"].as<std::string>());
         BOOST_CHECK_EQUAL(obj1.get_object()["tags"].get_array().at(0).get_object()["tag"].as_string(), obj2.get_object()["tags"].get_array().at(0).get_object()["tag"].as_string());
         BOOST_CHECK_EQUAL(obj1.get_object()["jsonmetadata"].as<std::string>(), obj2.get_object()["jsonmetadata"].as<std::string>());
     }
 
-    void check_equal_battery(const fc::variant &obj1, const fc::variant &obj2) {
-        BOOST_CHECK_EQUAL(true, obj1.is_object() && obj2.is_object());
-        BOOST_CHECK_EQUAL(obj1.get_object()["posting_battery"].get_object()["charge"].as<uint16_t>(),        obj2.get_object()["posting_battery"].get_object()["charge"].as<uint16_t>());
-        BOOST_CHECK_EQUAL(obj1.get_object()["battery_of_votes"].get_object()["charge"].as<uint16_t>(),       obj2.get_object()["battery_of_votes"].get_object()["charge"].as<uint16_t>());
-        BOOST_CHECK_EQUAL(obj1.get_object()["limit_battery_posting"].get_object()["charge"].as<uint16_t>(),  obj2.get_object()["limit_battery_posting"].get_object()["charge"].as<uint16_t>());
-        BOOST_CHECK_EQUAL(obj1.get_object()["limit_battery_comment"].get_object()["charge"].as<uint16_t>(),  obj2.get_object()["limit_battery_comment"].get_object()["charge"].as<uint16_t>());
-        BOOST_CHECK_EQUAL(obj1.get_object()["limit_battery_of_votes"].get_object()["charge"].as<uint16_t>(), obj2.get_object()["limit_battery_of_votes"].get_object()["charge"].as<uint16_t>());
-    }
-
-    abi_serializer abi_ser;
+    std::map<account_name, abi_serializer> _serializers;
 };
 
 BOOST_AUTO_TEST_SUITE(golos_publication_tests)
 
-BOOST_FIXTURE_TEST_CASE(create_post, golos_publication_tester) try {
-    BOOST_TEST_MESSAGE("Create post testing.");
-    BOOST_CHECK_EQUAL(success(), create_battery(N(brucelee)));
-    produce_blocks(1);
-
-    BOOST_CHECK_EQUAL(success(), golos_publication_tester::create_post(
+BOOST_FIXTURE_TEST_CASE(create_message, golos_publication_tester) try {
+    BOOST_TEST_MESSAGE("Create message testing.");
+    init();
+    BOOST_CHECK_EQUAL(success(), golos_publication_tester::create_message(
                             N(brucelee),
                             "permlink"));
+                            
+    BOOST_TEST_MESSAGE("Checking that another user can create a message with the same permlink.");
+    BOOST_CHECK_EQUAL(success(), golos_publication_tester::create_message(
+                            N(chucknorris),
+                            "permlink"));
 
-    auto post_stats = get_posts(N(brucelee), 0);
-    check_equal( post_stats, mvo()
-                   ("id", 0)
+    auto mssg_stats = get_messages(N(brucelee), 0);
+    check_equal( mssg_stats, mvo()
+                   ("id", hash64("permlink"))
                    ("date", 1577836804)
-                   ("account", "brucelee")
-                   ("permlink", "52487630bee6db98e71c7c56b2fe5be67d5cfe949ddfe0f3839eec332c05b3bf")
                    ("parentacc", "")
-                   ("parentprmlnk", "8edcefcc0d9b78dc97a682829395b909c4b64309c1c3bb539d941873c18a5afc")
-                   ("curatorprcnt", 333)
-                   ("payouttype", "payouttype")
+                   ("parent_id", 0)
                    ("beneficiaries", variants({
                                                   mvo()
-                                                  ("account", "beneficiary")
-                                                  ("deductprcnt", 777)
+                                                  ("account", "golos.pub")
+                                                  ("deductprcnt", static_cast<base_t>(elaf_t(elai_t(777) / elai_t(10000)).data()))
                                               }))
-                   ("paytype", "paytype")
                    ("childcount", 0)
-                   ("status", 0)
+                   ("closed", false)
                    );
 
-    auto content_stats = get_content(N(brucelee), 0);
+    auto content_stats = get_content(N(brucelee), hash64("permlink"));
     check_equal_content(content_stats, mvo()
-                            ("id", 0)
-                            ("headerpost", "headerpost")
-                            ("bodypost", "bodypost")
-                            ("languagepost", "languagepost")
+                            ("id", hash64("permlink"))
+                            ("headermssg", "headermssg")
+                            ("bodymssg", "bodymssg")
+                            ("languagemssg", "languagemssg")
                             ("tags", variants({
                                                   mvo()
                                                   ("tag", "tag")
                                               }))
                             ("jsonmetadata", "jsonmetadata"));
 
-    produce_blocks(CLOSE_POST_PERIOD*2-1);
+    produce_blocks(CLOSE_MESSAGE_PERIOD*2-2);
 
     {
-        BOOST_TEST_MESSAGE("Checking that post wasn't closed.");
-        auto post_stats = get_posts(N(brucelee), 0);
-        BOOST_CHECK_EQUAL(fc::variant(post_stats).get_object()["status"].as<uint8_t>(), 0);
+        BOOST_TEST_MESSAGE("Checking that message wasn't closed.");
+        auto mssg_stats = get_messages(N(brucelee), hash64("permlink"));
+        BOOST_CHECK_EQUAL(fc::variant(mssg_stats).get_object()["closed"].as<bool>(), false);
     }
 
     {
-        BOOST_TEST_MESSAGE("Checking that post was closed.");
+        BOOST_TEST_MESSAGE("Checking that message was closed.");
         produce_blocks(1);
-        auto post_stats = get_posts(N(brucelee), 0);
-        BOOST_CHECK_EQUAL(fc::variant(post_stats).get_object()["status"].as<uint8_t>(), 1);
+        auto mssg_stats = get_messages(N(brucelee), hash64("permlink"));
+        BOOST_CHECK_EQUAL(fc::variant(mssg_stats).get_object()["closed"].as<bool>(), true);
     }
 
     {
-        BOOST_TEST_MESSAGE("Checking that child was added.");
-        BOOST_CHECK_EQUAL(success(), create_battery(N(jackiechan)));
-        produce_blocks(1);
-
-        BOOST_CHECK_EQUAL(success(), golos_publication_tester::create_post(
+        BOOST_CHECK_EQUAL(success(), golos_publication_tester::create_message(
                                 N(jackiechan),
                                 "permlink1",
                                 N(brucelee),
                                 "permlink"));
 
-        auto post_stats = get_posts(N(brucelee), 0);
-        BOOST_CHECK_EQUAL(fc::variant(post_stats).get_object()["childcount"].as<uint64_t>(), 1);
+        auto mssg_stats = get_messages(N(brucelee), 0);
+        BOOST_CHECK_EQUAL(fc::variant(mssg_stats).get_object()["childcount"].as<uint64_t>(), 1);
     }
 
-    BOOST_CHECK_EQUAL(error("assertion failure with message: This post already exists."), golos_publication_tester::create_post(
+    BOOST_CHECK_EQUAL(error("assertion failure with message: This message already exists."), golos_publication_tester::create_message(
                             N(brucelee),
                             "permlink"));
+    BOOST_CHECK_EQUAL(error("assertion failure with message: unregistered user: dan.larimer"), golos_publication_tester::create_message(
+                            N(dan.larimer),
+                            "Hi"));
+    
 } FC_LOG_AND_RETHROW()
 
-BOOST_FIXTURE_TEST_CASE(update_post, golos_publication_tester) try {
-    BOOST_TEST_MESSAGE("Update post testing.");
-    BOOST_CHECK_EQUAL(success(), create_battery(N(brucelee)));
-    produce_blocks(1);
+BOOST_FIXTURE_TEST_CASE(update_message, golos_publication_tester) try {
+    BOOST_TEST_MESSAGE("Update message testing.");
+    init();
 
-    BOOST_CHECK_EQUAL(success(), golos_publication_tester::create_post(
+    BOOST_CHECK_EQUAL(success(), golos_publication_tester::create_message(
                             N(brucelee),
                             "permlink"));
 
-    BOOST_CHECK_EQUAL(success(), golos_publication_tester::update_post(
+    BOOST_CHECK_EQUAL(success(), golos_publication_tester::update_message(
                             N(brucelee),
                             "permlink",
-                            "headerpostnew",
-                            "bodypostnew",
-                            "languagepostnew",
+                            "headermssgnew",
+                            "bodymssgnew",
+                            "languagemssgnew",
                             {{"tagnew"}},
                             "jsonmetadatanew"));
 
-    auto content_stats = get_content(N(brucelee), 0);
+    auto content_stats = get_content(N(brucelee), hash64("permlink"));
     check_equal_content(content_stats, mvo()
-                            ("id", 0)
-                            ("headerpost", "headerpostnew")
-                            ("bodypost", "bodypostnew")
-                            ("languagepost", "languagepostnew")
+                            ("id", hash64("permlink"))
+                            ("headermssg", "headermssgnew")
+                            ("bodymssg", "bodymssgnew")
+                            ("languagemssg", "languagemssgnew")
                             ("tags", variants({
                                                   mvo()
                                                   ("tag", "tagnew")
                                               }))
                             ("jsonmetadata", "jsonmetadatanew"));
 
-    BOOST_CHECK_EQUAL(error("assertion failure with message: Post doesn't exist."), golos_publication_tester::update_post(
+    BOOST_CHECK_EQUAL(error("assertion failure with message: Content doesn't exist."), golos_publication_tester::update_message(
                             N(brucelee),
                             "permlinknew",
-                            "headerpostnew",
-                            "bodypostnew",
-                            "languagepostnew",
+                            "headermssgnew",
+                            "bodymssgnew",
+                            "languagemssgnew",
                             {{"tagnew"}},
                             "jsonmetadatanew"));
 } FC_LOG_AND_RETHROW()
 
-BOOST_FIXTURE_TEST_CASE(delete_post, golos_publication_tester) try {
-    BOOST_TEST_MESSAGE("Delete post testing.");
-    BOOST_CHECK_EQUAL(success(), create_battery(N(brucelee)));
-    produce_blocks(1);
+BOOST_FIXTURE_TEST_CASE(delete_message, golos_publication_tester) try {
+    BOOST_TEST_MESSAGE("Delete message testing.");
+    init();
 
-    BOOST_CHECK_EQUAL(success(), golos_publication_tester::create_post(
+    BOOST_CHECK_EQUAL(success(), golos_publication_tester::create_message(
                             N(brucelee),
                             "permlink"));
 
-    BOOST_CHECK_EQUAL(success(), create_battery(N(jackiechan)));
-    produce_blocks(1);
-
-    BOOST_CHECK_EQUAL(success(), golos_publication_tester::create_post(
+    BOOST_CHECK_EQUAL(success(), golos_publication_tester::create_message(
                             N(jackiechan),
                             "permlink1",
                             N(brucelee),
                             "permlink"));
 
-    BOOST_CHECK_EQUAL(error("assertion failure with message: You can't delete comment with child comments."), golos_publication_tester::delete_post(
+    BOOST_CHECK_EQUAL(error("assertion failure with message: You can't delete comment with child comments."), golos_publication_tester::delete_message(
                             N(brucelee),
                             "permlink"));
 
-    BOOST_CHECK_EQUAL(success(), golos_publication_tester::delete_post(
+    BOOST_CHECK_EQUAL(success(), golos_publication_tester::delete_message(
                             N(jackiechan),
                             "permlink1"));
 
-    BOOST_CHECK_EQUAL(error("assertion failure with message: Post doesn't exist."), golos_publication_tester::delete_post(
+    BOOST_CHECK_EQUAL(error("assertion failure with message: Message doesn't exist."), golos_publication_tester::delete_message(
                             N(jackiechan),
                             "permlink1"));
 
-    BOOST_CHECK_EQUAL(success(), golos_publication_tester::delete_post(
+    BOOST_CHECK_EQUAL(success(), golos_publication_tester::delete_message(
                             N(brucelee),
                             "permlink"));
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE(upvote, golos_publication_tester) try {
     BOOST_TEST_MESSAGE("Upvote testing.");
-    BOOST_CHECK_EQUAL(success(), create_battery(N(brucelee)));
-    produce_blocks(1);
-    BOOST_CHECK_EQUAL(success(), create_battery(N(jackiechan)));
-    produce_blocks(1);
-
-    BOOST_CHECK_EQUAL(success(), golos_publication_tester::create_post(
+    init();
+    
+    BOOST_CHECK_EQUAL(success(), golos_publication_tester::create_message(
                             N(brucelee),
                             "permlink"));
 
@@ -369,7 +371,7 @@ BOOST_FIXTURE_TEST_CASE(upvote, golos_publication_tester) try {
                             123));
     produce_blocks(VOTE_OPERATION_INTERVAL*2);
 
-    BOOST_CHECK_EQUAL(error("assertion failure with message: Post doesn't exist."), golos_publication_tester::upvote(
+    BOOST_CHECK_EQUAL(error("assertion failure with message: Message doesn't exist."), golos_publication_tester::upvote(
                             N(brucelee),
                             N(jackiechan),
                             "permlink",
@@ -447,7 +449,7 @@ BOOST_FIXTURE_TEST_CASE(upvote, golos_publication_tester) try {
                             N(brucelee),
                             "permlink",
                             777));
-    produce_blocks(CLOSE_POST_PERIOD*2 - VOTE_OPERATION_INTERVAL*2*12-6);
+    produce_blocks(CLOSE_MESSAGE_PERIOD*2 - VOTE_OPERATION_INTERVAL*2*12-6);
 
     BOOST_CHECK_EQUAL(success(), golos_publication_tester::upvote(
                           N(jackiechan),
@@ -463,28 +465,25 @@ BOOST_FIXTURE_TEST_CASE(upvote, golos_publication_tester) try {
 
 BOOST_FIXTURE_TEST_CASE(disable_upvote, golos_publication_tester) try {
     BOOST_TEST_MESSAGE("Disable upvote testing.");
-    BOOST_CHECK_EQUAL(success(), create_battery(N(brucelee)));
-    produce_blocks(1);
-    BOOST_CHECK_EQUAL(success(), create_battery(N(jackiechan)));
-    produce_blocks(1);
-
-    BOOST_CHECK_EQUAL(success(), golos_publication_tester::create_post(
+    init();
+    
+    BOOST_CHECK_EQUAL(success(), golos_publication_tester::create_message(
                             N(brucelee),
                             "permlink"));
-    produce_blocks((CLOSE_POST_PERIOD - UPVOTE_DISABLE_PERIOD)*2-1);
+    produce_blocks((CLOSE_MESSAGE_PERIOD - UPVOTE_DISABLE_PERIOD)*2-1);
 
     BOOST_CHECK_EQUAL(success(), golos_publication_tester::upvote(
                             N(brucelee),
                             N(brucelee),
                             "permlink",
                             888));
-        produce_blocks(1);
+        produce_blocks(2);
         BOOST_CHECK_EQUAL(error("assertion failure with message: You can't upvote, because publication will be closed soon."), golos_publication_tester::upvote(
                                 N(jackiechan),
                                 N(brucelee),
                                 "permlink",
                                 777));
-        produce_blocks(UPVOTE_DISABLE_PERIOD*2-1);
+        produce_blocks(UPVOTE_DISABLE_PERIOD*2-3);
 
         BOOST_CHECK_EQUAL(error("assertion failure with message: You can't upvote, because publication will be closed soon."), golos_publication_tester::upvote(
                                 N(brucelee),
@@ -502,10 +501,9 @@ BOOST_FIXTURE_TEST_CASE(disable_upvote, golos_publication_tester) try {
 
 BOOST_FIXTURE_TEST_CASE(downvote, golos_publication_tester) try {
     BOOST_TEST_MESSAGE("Downvote testing.");
-    BOOST_CHECK_EQUAL(success(), create_battery(N(brucelee)));
-    produce_blocks(1);
+    init();
 
-    BOOST_CHECK_EQUAL(success(), golos_publication_tester::create_post(
+    BOOST_CHECK_EQUAL(success(), golos_publication_tester::create_message(
                             N(brucelee),
                             "permlink"));
 
@@ -523,7 +521,7 @@ BOOST_FIXTURE_TEST_CASE(downvote, golos_publication_tester) try {
                             123));
     produce_blocks(VOTE_OPERATION_INTERVAL*2);
 
-    BOOST_CHECK_EQUAL(error("assertion failure with message: Post doesn't exist."), golos_publication_tester::downvote(
+    BOOST_CHECK_EQUAL(error("assertion failure with message: Message doesn't exist."), golos_publication_tester::downvote(
                             N(brucelee),
                             N(jackiechan),
                             "permlink",
@@ -601,7 +599,7 @@ BOOST_FIXTURE_TEST_CASE(downvote, golos_publication_tester) try {
                             N(brucelee),
                             "permlink",
                             777));
-    produce_blocks(CLOSE_POST_PERIOD*2);
+    produce_blocks(CLOSE_MESSAGE_PERIOD*2);
 
     BOOST_CHECK_EQUAL(success(), golos_publication_tester::downvote(
                             N(jackiechan),
@@ -617,10 +615,9 @@ BOOST_FIXTURE_TEST_CASE(downvote, golos_publication_tester) try {
 
 BOOST_FIXTURE_TEST_CASE(unvote, golos_publication_tester) try {
     BOOST_TEST_MESSAGE("Unvote testing.");
-    BOOST_CHECK_EQUAL(success(), create_battery(N(brucelee)));
-    produce_blocks(1);
+    init();
 
-    BOOST_CHECK_EQUAL(success(), golos_publication_tester::create_post(
+    BOOST_CHECK_EQUAL(success(), golos_publication_tester::create_message(
                             N(brucelee),
                             "permlink"));
 
@@ -656,7 +653,7 @@ BOOST_FIXTURE_TEST_CASE(unvote, golos_publication_tester) try {
                             N(brucelee),
                             "permlink"));
 
-    BOOST_CHECK_EQUAL(error("assertion failure with message: Post doesn't exist."), golos_publication_tester::unvote(
+    BOOST_CHECK_EQUAL(error("assertion failure with message: Message doesn't exist."), golos_publication_tester::unvote(
                             N(brucelee),
                             N(jackiechan),
                             "permlink1"));
@@ -665,10 +662,9 @@ BOOST_FIXTURE_TEST_CASE(unvote, golos_publication_tester) try {
 
 BOOST_FIXTURE_TEST_CASE(mixed_vote_test, golos_publication_tester) try {
     BOOST_TEST_MESSAGE("Mixed vote testing.");
-    BOOST_CHECK_EQUAL(success(), create_battery(N(brucelee)));
-    produce_blocks(1);
+    init();
 
-    BOOST_CHECK_EQUAL(success(), golos_publication_tester::create_post(
+    BOOST_CHECK_EQUAL(success(), golos_publication_tester::create_message(
                             N(brucelee),
                             "permlink"));
 
@@ -697,170 +693,62 @@ BOOST_FIXTURE_TEST_CASE(mixed_vote_test, golos_publication_tester) try {
     BOOST_CHECK_EQUAL(fc::variant(vote_stats).get_object()["count"].as<uint64_t>(), 3);
 } FC_LOG_AND_RETHROW()
 
-BOOST_FIXTURE_TEST_CASE(test_create_post_and_battery_limit_post, golos_publication_tester) try {
-    BOOST_TEST_MESSAGE("Create post and battery limit post testing.");
-    BOOST_CHECK_EQUAL(success(), create_battery(N(jackiechan)));
-    produce_blocks(1);
+BOOST_FIXTURE_TEST_CASE(erase_vote_test, golos_publication_tester) try {
+    BOOST_TEST_MESSAGE("Erase vote testing.");
+    init();
 
-    auto account_battery = get_battery(N(jackiechan));
-    check_equal_battery(account_battery, mvo()
-                          ("posting_battery", mvo()("charge", 0))
-                          ("battery_of_votes", mvo()("charge", 0))
-                          ("limit_battery_posting", mvo()("charge", 0))
-                          ("limit_battery_comment", mvo()("charge", 0))
-                          ("limit_battery_of_votes", mvo()("charge", 0))
-                          );
-
-    BOOST_CHECK_EQUAL(success(), golos_publication_tester::create_post(
-                            N(jackiechan),
-                            "permlink0"));
-
-    account_battery = get_battery(N(jackiechan));
-    check_equal_battery(account_battery, mvo()
-                          ("posting_battery", mvo()("charge", 2500))
-                          ("battery_of_votes", mvo()("charge", 0))
-                          ("limit_battery_posting", mvo()("charge", 10000))
-                          ("limit_battery_comment", mvo()("charge", 0))
-                          ("limit_battery_of_votes", mvo()("charge", 0))
-                          );
-    produce_blocks(10);
-
-    BOOST_CHECK_EQUAL(error("assertion failure with message: Battery overrun"), golos_publication_tester::create_post(
-                            N(jackiechan),
+    BOOST_CHECK_EQUAL(success(), golos_publication_tester::create_message(
+                            N(brucelee),
+                            "permlink"));
+    
+    BOOST_CHECK_EQUAL(success(), golos_publication_tester::create_message(
+                            N(brucelee),
                             "permlink1"));
 
-    account_battery = get_battery(N(jackiechan));
-    check_equal_battery(account_battery, mvo()
-                          ("posting_battery", mvo()("charge", 2500))
-                          ("battery_of_votes", mvo()("charge", 0))
-                          ("limit_battery_posting", mvo()("charge", 10000))
-                          ("limit_battery_comment", mvo()("charge", 0))
-                          ("limit_battery_of_votes", mvo()("charge", 0))
-                          );
-    produce_blocks(UNLOCKED_FOR_CREATE_POST);
-
-    BOOST_CHECK_EQUAL(success(), golos_publication_tester::create_post(
-                            N(jackiechan),
-                            "permlink2"));
-    produce_blocks(UNLOCKED_FOR_CREATE_POST);
-
-    BOOST_CHECK_EQUAL(success(), golos_publication_tester::create_post(
-                            N(jackiechan),
-                            "permlink3"));
-    produce_blocks(UNLOCKED_FOR_CREATE_POST);
-
-    BOOST_CHECK_EQUAL(success(), golos_publication_tester::create_post(
-                            N(jackiechan),
-                            "permlink4"));
-
-    account_battery = get_battery(N(jackiechan));
-    check_equal_battery(account_battery, mvo()
-                          ("posting_battery", mvo()("charge", 10000))
-                          ("battery_of_votes", mvo()("charge", 0))
-                          ("limit_battery_posting", mvo()("charge", 10000))
-                          ("limit_battery_comment", mvo()("charge", 0))
-                          ("limit_battery_of_votes", mvo()("charge", 0))
-                          );
-
-    produce_blocks(UNLOCKED_FOR_CREATE_POST);
-
-    BOOST_CHECK_EQUAL(success(), golos_publication_tester::create_post( // TODO no check in smart-contract
-                            N(jackiechan),
-                            "permlink5"));
-
-    account_battery = get_battery(N(jackiechan));
-    check_equal_battery(account_battery, mvo()
-                          ("posting_battery", mvo()("charge", 12499))
-                          ("battery_of_votes", mvo()("charge", 0))
-                          ("limit_battery_posting", mvo()("charge", 10000))
-                          ("limit_battery_comment", mvo()("charge", 0))
-                          ("limit_battery_of_votes", mvo()("charge", 0))
-                          );
-} FC_LOG_AND_RETHROW()
-
-BOOST_FIXTURE_TEST_CASE(test_create_comment_and_battery_limit_comment, golos_publication_tester) try {
-    BOOST_TEST_MESSAGE("Create comment and battery limit comment testing.");
-    BOOST_CHECK_EQUAL(success(), create_battery(N(jackiechan)));
-    produce_blocks(1);
-
-    auto account_battery = get_battery(N(jackiechan));
-    check_equal_battery(account_battery, mvo()
-                          ("posting_battery", mvo()("charge", 0))
-                          ("battery_of_votes", mvo()("charge", 0))
-                          ("limit_battery_posting", mvo()("charge", 0))
-                          ("limit_battery_comment", mvo()("charge", 0))
-                          ("limit_battery_of_votes", mvo()("charge", 0))
-                          );
-
-    BOOST_CHECK_EQUAL(success(), golos_publication_tester::create_post(
-                            N(jackiechan),
-                            "permlink0",
-                            N(jackiechan),
-                            "permlink"));
-
-    account_battery = get_battery(N(jackiechan));
-    check_equal_battery(account_battery, mvo()
-                          ("posting_battery", mvo()("charge", 0))
-                          ("battery_of_votes", mvo()("charge", 0))
-                          ("limit_battery_posting", mvo()("charge", 0))
-                          ("limit_battery_comment", mvo()("charge", 10000))
-                          ("limit_battery_of_votes", mvo()("charge", 0))
-                          );
-    produce_blocks(10);
-
-    BOOST_CHECK_EQUAL(error("assertion failure with message: Battery overrun"), golos_publication_tester::create_post(
-                            N(jackiechan),
-                            "permlink1",
-                            N(jackiechan),
-                            "permlink0"));
-    produce_blocks(30);
-
-    BOOST_CHECK_EQUAL(success(), golos_publication_tester::create_post(
-                            N(jackiechan),
-                            "permlink2",
-                            N(jackiechan),
-                            "permlink0"));
-} FC_LOG_AND_RETHROW()
-
-BOOST_FIXTURE_TEST_CASE(test_upvote_and_battery_limit_vote, golos_publication_tester) try {
-    BOOST_TEST_MESSAGE("Upvote and battery limit vote testing.");
-    BOOST_CHECK_EQUAL(success(), create_battery(N(brucelee)));
-    BOOST_CHECK_EQUAL(success(), create_battery(N(chucknorris)));
-    produce_blocks(1);
-
-    auto account_battery_brucelee = get_battery(N(brucelee));
-    check_equal_battery(account_battery_brucelee, mvo()
-                          ("posting_battery", mvo()("charge", 0))
-                          ("battery_of_votes", mvo()("charge", 0))
-                          ("limit_battery_posting", mvo()("charge", 0))
-                          ("limit_battery_comment", mvo()("charge", 0))
-                          ("limit_battery_of_votes", mvo()("charge", 0))
-                          );
-
-    auto account_battery_chucknorris = get_battery(N(chucknorris));
-    check_equal_battery(account_battery_chucknorris, mvo()
-                          ("posting_battery", mvo()("charge", 0))
-                          ("battery_of_votes", mvo()("charge", 0))
-                          ("limit_battery_posting", mvo()("charge", 0))
-                          ("limit_battery_comment", mvo()("charge", 0))
-                          ("limit_battery_of_votes", mvo()("charge", 0))
-                          );
-
-    BOOST_CHECK_EQUAL(success(), golos_publication_tester::create_post(
+    BOOST_CHECK_EQUAL(success(), golos_publication_tester::downvote(
                             N(brucelee),
-                            "permlink0"));
+                            N(brucelee),
+                            "permlink",
+                            123));
+    produce_blocks(VOTE_OPERATION_INTERVAL*2);
 
-    account_battery_brucelee = get_battery(N(brucelee));
-    check_equal_battery(account_battery_brucelee, mvo()
-                          ("posting_battery", mvo()("charge", 2500))
-                          ("battery_of_votes", mvo()("charge", 0))
-                          ("limit_battery_posting", mvo()("charge", 10000))
-                          ("limit_battery_comment", mvo()("charge", 0))
-                          ("limit_battery_of_votes", mvo()("charge", 0))
-                          );
+    BOOST_CHECK_EQUAL(success(), golos_publication_tester::downvote(
+                            N(chucknorris),
+                            N(brucelee),
+                            "permlink1",
+                            321));
+    produce_blocks(VOTE_OPERATION_INTERVAL*2);
+    
+    BOOST_CHECK_EQUAL(success(), golos_publication_tester::delete_message(
+                            N(brucelee),
+                            "permlink1"));
+    produce_blocks(1);
+    
+    BOOST_CHECK_EQUAL(error("assertion failure with message: Vote with the same weight has already existed."), golos_publication_tester::downvote(
+                            N(brucelee),
+                            N(brucelee),
+                            "permlink",
+                            123));
 
-    BOOST_CHECK_EQUAL(success(), golos_publication_tester::upvote(N(chucknorris), N(brucelee), "permlink0", 500));
-    BOOST_CHECK_EQUAL(error("assertion failure with message: Battery overrun"), golos_publication_tester::upvote(N(chucknorris), N(brucelee), "permlink0", 500));
+    
+} FC_LOG_AND_RETHROW()
+
+BOOST_FIXTURE_TEST_CASE(nesting_level_test, golos_publication_tester) try {
+    BOOST_TEST_MESSAGE("nesting level test.");
+    init();
+    BOOST_CHECK_EQUAL(success(), golos_publication_tester::create_message(N(brucelee), "permlink0"));
+    size_t i = 0;
+    for(; i < MAX_COMMENT_DEPTH; i++)
+     BOOST_CHECK_EQUAL(success(), golos_publication_tester::create_message(
+        N(brucelee), "permlink" + std::to_string(i + 1),
+        N(brucelee), "permlink" + std::to_string(i)));
+    
+    BOOST_CHECK_EQUAL("assertion failure with message: publication::create_message: level > MAX_COMMENT_DEPTH", 
+        golos_publication_tester::create_message(
+            N(brucelee), "permlink" + std::to_string(i + 1),
+            N(brucelee), "permlink" + std::to_string(i)));
+        
+    
 } FC_LOG_AND_RETHROW()
 
 BOOST_AUTO_TEST_SUITE_END()

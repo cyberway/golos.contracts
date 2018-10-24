@@ -4,6 +4,10 @@
 #include <eosio/chain/abi_serializer.hpp>
 #include <fc/variant_object.hpp>
 
+namespace fc {
+uint64_t hash64(const std::string& arg);
+}
+
 // Note: cannot check nested mvo
 #define CHECK_EQUAL_OBJECTS(left, right) { \
     auto a = fc::variant(left); \
@@ -69,6 +73,9 @@ public:
     std::vector<char> get_row(name tbl, uint64_t id) const {
         return get_tbl_row(_code, _scope, tbl, id);
     }
+    
+    vector<vector<char> > get_all_rows(uint64_t code, uint64_t scope, uint64_t table, bool strict = true) const;
+    
     fc::variant get_struct(name tbl, uint64_t id, const std::string name, const abi_serializer& abi) const {
         return get_tbl_struct(_code, _scope, tbl, id, name, abi);
     }
