@@ -30,8 +30,6 @@ class vesting : public eosio::contract {
     inline bool balance_exist(account_name owner, symbol_name sym)const;
 
   private:
-    void accrue_vesting(account_name sender, account_name user, asset quantity);
-
     void notify_balance_change(account_name owner, asset diff);
     void sub_balance(account_name owner, asset value, bool retire_mode = false);
     void add_balance(account_name owner, asset value, account_name ram_payer);
