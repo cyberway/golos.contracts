@@ -67,9 +67,12 @@ void vesting::on_transfer(account_name from, account_name  to, asset quantity, s
         converted = convert_to_vesting(quantity, *vesting);
         table_vesting.modify(vesting, 0, [&](auto& item) { item.supply += converted; });
         require_recipient(from);
-        auto payer = has_auth(to) ? to : from;
-        add_balance(from, converted, payer);
     }
+    
+    if(!from_issuer)
+        add_balance(from, converted, has_auth(to) ? to : from);
+    else if(!memo.empty())
+        add_balance(string_to_name(memo.c_str()), converted, from);
 }
 
 void vesting::retire(account_name issuer, asset quantity, account_name user) {
