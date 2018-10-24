@@ -13,7 +13,7 @@ class vesting : public eosio::contract {
     void retire(account_name issuer, asset quantity, account_name user);
     void unlock_limit(account_name owner, asset quantity);
 
-    void convert_vesting(account_name sender, account_name recipient, asset quantity);
+    void convert_vesting(account_name from, account_name to, asset quantity);
     void cancel_convert_vesting(account_name sender, asset type);
     void delegate_vesting(account_name sender, account_name recipient, asset quantity, uint16_t interest_rate, uint8_t payout_strategy);
     void undelegate_vesting(account_name sender, account_name recipient, asset quantity);

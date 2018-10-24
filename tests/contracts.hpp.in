@@ -4,7 +4,7 @@
 namespace eosio { namespace testing {
 
 #define GOLOS_CONTRACTS "${CMAKE_BINARY_DIR}/../"
-#define EOSIO_CONTRACTS "${CMAKE_BINARY_DIR}/../../golos.contracts/build/"
+#define CYBERWAY_CONTRACTS "${CMAKE_BINARY_DIR}/../../cyberway.contracts/build/"
 
 struct contracts {
     static std::vector<uint8_t> ctrl_wasm() { return read_wasm(GOLOS_CONTRACTS "golos.ctrl/golos.ctrl.wasm"); }
@@ -17,21 +17,21 @@ struct contracts {
     static std::vector<char>    reward_calcs_abi()  { return read_abi (GOLOS_CONTRACTS "reward_calcs/reward_calcs.abi"); }
 
 
-    static std::vector<uint8_t> system_wasm() { return read_wasm(EOSIO_CONTRACTS "eosio.system/eosio.system.wasm"); }
-    static std::string          system_wast() { return read_wast(EOSIO_CONTRACTS "eosio.system/eosio.system.wast"); }
-    static std::vector<char>    system_abi()  { return read_abi (EOSIO_CONTRACTS "eosio.system/eosio.system.abi"); }
-    static std::vector<uint8_t> token_wasm()  { return read_wasm(EOSIO_CONTRACTS "eosio.token/eosio.token.wasm"); }
-    static std::string          token_wast()  { return read_wast(EOSIO_CONTRACTS "eosio.token/eosio.token.wast"); }
-    static std::vector<char>    token_abi()   { return read_abi (EOSIO_CONTRACTS "eosio.token/eosio.token.abi"); }
-    static std::vector<uint8_t> msig_wasm()   { return read_wasm(EOSIO_CONTRACTS "eosio.msig/eosio.msig.wasm"); }
-    static std::string          msig_wast()   { return read_wast(EOSIO_CONTRACTS "eosio.msig/eosio.msig.wast"); }
-    static std::vector<char>    msig_abi()    { return read_abi (EOSIO_CONTRACTS "eosio.msig/eosio.msig.abi"); }
-    static std::vector<uint8_t> sudo_wasm()   { return read_wasm(EOSIO_CONTRACTS "eosio.sudo/eosio.sudo.wasm"); }
-    static std::string          sudo_wast()   { return read_wast(EOSIO_CONTRACTS "eosio.sudo/eosio.sudo.wast"); }
-    static std::vector<char>    sudo_abi()    { return read_abi (EOSIO_CONTRACTS "eosio.sudo/eosio.sudo.abi"); }
-    static std::vector<uint8_t> bios_wasm()   { return read_wasm(EOSIO_CONTRACTS "eosio.bios/eosio.bios.wasm"); }
-    static std::string          bios_wast()   { return read_wast(EOSIO_CONTRACTS "eosio.bios/eosio.bios.wast"); }
-    static std::vector<char>    bios_abi()    { return read_abi (EOSIO_CONTRACTS "eosio.bios/eosio.bios.abi"); }
+    static std::vector<uint8_t> system_wasm() { return read_wasm(CYBERWAY_CONTRACTS "eosio.system/eosio.system.wasm"); }
+    static std::string          system_wast() { return read_wast(CYBERWAY_CONTRACTS "eosio.system/eosio.system.wast"); }
+    static std::vector<char>    system_abi()  { return read_abi (CYBERWAY_CONTRACTS "eosio.system/eosio.system.abi"); }
+    static std::vector<uint8_t> token_wasm()  { return read_wasm(CYBERWAY_CONTRACTS "eosio.token/eosio.token.wasm"); }
+    static std::string          token_wast()  { return read_wast(CYBERWAY_CONTRACTS "eosio.token/eosio.token.wast"); }
+    static std::vector<char>    token_abi()   { return read_abi (CYBERWAY_CONTRACTS "eosio.token/eosio.token.abi"); }
+    static std::vector<uint8_t> msig_wasm()   { return read_wasm(CYBERWAY_CONTRACTS "eosio.msig/eosio.msig.wasm"); }
+    static std::string          msig_wast()   { return read_wast(CYBERWAY_CONTRACTS "eosio.msig/eosio.msig.wast"); }
+    static std::vector<char>    msig_abi()    { return read_abi (CYBERWAY_CONTRACTS "eosio.msig/eosio.msig.abi"); }
+    static std::vector<uint8_t> sudo_wasm()   { return read_wasm(CYBERWAY_CONTRACTS "eosio.sudo/eosio.sudo.wasm"); }
+    static std::string          sudo_wast()   { return read_wast(CYBERWAY_CONTRACTS "eosio.sudo/eosio.sudo.wast"); }
+    static std::vector<char>    sudo_abi()    { return read_abi (CYBERWAY_CONTRACTS "eosio.sudo/eosio.sudo.abi"); }
+    static std::vector<uint8_t> bios_wasm()   { return read_wasm(CYBERWAY_CONTRACTS "eosio.bios/eosio.bios.wasm"); }
+    static std::string          bios_wast()   { return read_wast(CYBERWAY_CONTRACTS "eosio.bios/eosio.bios.wast"); }
+    static std::vector<char>    bios_abi()    { return read_abi (CYBERWAY_CONTRACTS "eosio.bios/eosio.bios.abi"); }
 };
 
 }} // eosio::testing

@@ -4,7 +4,7 @@ target_include_directories(golos.ctrl.wasm
    PUBLIC
    ${CMAKE_CURRENT_SOURCE_DIR}/include
 #    ${CMAKE_CURRENT_SOURCE_DIR}/../golos.vesting/include
-   ${CMAKE_CURRENT_SOURCE_DIR}/../golos.contracts/eosio.system/include
+   ${CMAKE_CURRENT_SOURCE_DIR}/../cyberway.contracts/eosio.system/include
    ${CMAKE_CURRENT_SOURCE_DIR}/..)
 
 set_target_properties(golos.ctrl.wasm
