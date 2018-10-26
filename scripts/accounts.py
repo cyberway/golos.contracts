@@ -1,17 +1,21 @@
 import dbs
+import bson
 
 def convert_accounts():
     golos_accounts = dbs.golos_db['account_object']
+    cyberway_accounts = dbs.cyberway_db['account']
 
-    id_count = 0
+    id_count = cyberway_accounts.find().sort('id', -1).limit(1)[0]['id'] + 1
 
     for doc in golos_accounts.find():
+        if cyberway_accounts.find({"name":doc["name"]}).count():
+            continue
         account = {
-            "id" : id_count,
+            "id" : bson.Int64(id_count),
             "name" : doc["name"],
-            "vm_type" : 0,
-            "vm_version" : 0,
-            "privileged" : "false",
+            "vm_type" : bson.Int64(0),
+            "vm_version" : bson.Int64(0),
+            "privileged" : False,
             "last_code_update" : "1970-01-01T00:00:00.000",
             "code_version" : "0000000000000000000000000000000000000000000000000000000000000000",
             "creation_date" : doc["created"],
@@ -19,53 +23,53 @@ def convert_accounts():
             "abi" : "",
             "_SCOPE_" : "_CYBERWAY_",
             "_PAYER_" : "",
-            "_SIZE_" : 65
+            "_SIZE_" : bson.Int64(65)
         }
         dbs.cyberway_db['account'].save(account)
 
         accountseq = {
-            "id" : id_count,
+            "id" : bson.Int64(id_count),
             "name" : doc["name"],
-            "recv_sequence" : 0,
-            "auth_sequence" : 0,
-            "code_sequence" : 0,
-            "abi_sequence" : 0,
+            "recv_sequence" : bson.Int64(0),
+            "auth_sequence" : bson.Int64(0),
+            "code_sequence" : bson.Int64(0),
+            "abi_sequence" : bson.Int64(0),
             "_SCOPE_" : "_CYBERWAY_",
             "_PAYER_" : "",
-            "_SIZE_" : 48
+            "_SIZE_" : bson.Int64(48)
         }
         dbs.cyberway_db['accountseq'].save(accountseq)
 
         reslimit = {
-            "id" : id_count,
+            "id" : bson.Int64(id_count),
             "owner" : doc["name"],
-            "pending" : "false",
-            "net_weight" : -1,
-            "cpu_weight" : -1,
-            "ram_bytes" : -1,
+            "pending" : False,
+            "net_weight" : bson.Int64(-1),
+            "cpu_weight" : bson.Int64(-1),
+            "ram_bytes" : bson.Int64(-1),
             "_SCOPE_" : "_CYBERWAY_",
             "_PAYER_" : "",
-            "_SIZE_" : 41
+            "_SIZE_" : bson.Int64(41)
         }
         dbs.cyberway_db['reslimit'].save(reslimit)
 
         resusage = {
-            "id" : id_count,
+            "id" : bson.Int64(id_count),
             "owner" : doc["name"],
             "net_usage" : {
-    	        "last_ordinal" : 0,
-    	        "value_ex" : 0,
-    	        "consumed" : 0
+    	        "last_ordinal" : bson.Int64(0),
+    	        "value_ex" : bson.Int64(0),
+    	        "consumed" : bson.Int64(0)
             },
             "cpu_usage" : {
-    	        "last_ordinal" : 0,
-    	        "value_ex" : 0,
-    	        "consumed" : 0
+    	        "last_ordinal" : bson.Int64(0),
+    	        "value_ex" : bson.Int64(0),
+    	        "consumed" : bson.Int64(0)
             },
-            "ram_usage" : 2724,
+            "ram_usage" : bson.Int64(2724),
             "_SCOPE_" : "_CYBERWAY_",
             "_PAYER_" : "",
-            "_SIZE_" : 64
+            "_SIZE_" : bson.Int64(64)
         }
         dbs.cyberway_db['resusage'].save(resusage)
 

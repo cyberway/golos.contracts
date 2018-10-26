@@ -6,10 +6,10 @@ import authority_keys
 def print_success():
     print('SUCCESS!')
 
-print('Accounts converting: ')
+print('Accounts are converting, please waiting: ')
 if accounts.convert_accounts():
     print_success()
 
-print('Authority converting: ')
+print('Authority keys are converting, please waiting: ')
 if authority_keys.convert_authority_keys():
     print_success()
