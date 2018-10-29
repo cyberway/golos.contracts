@@ -1,5 +1,5 @@
 {
-  "version": "eosio::abi/1.0",
+  "version": "cyberway::abi/1.0",
   "types": [{
     "new_type_name": "account_name",
     "type": "name"
@@ -338,8 +338,20 @@
   },
   {
     "name": "vote",
-    "base": "unvote",
+    "base": "",
     "fields": [
+      {
+        "name": "voter",
+        "type": "account_name"
+      },
+      {
+        "name": "author",
+        "type": "account_name"
+      },
+      {
+        "name": "permlink",
+        "type": "string"
+      },
       {
         "name": "weight",
         "type": "int16"
@@ -641,49 +653,74 @@
   {
     "name": "messagetable",
     "type": "message",
-    "index_type": "i64",
-    "key_names" : [
-      "id"
-    ],
-    "key_types" : [
-      "uint64"
+    "indexes": [
+       {
+          "name": "primary",
+          "unique": "true",
+          "orders": [
+              {"field": "id", "order": "asc"}
+          ]
+       }
     ]
   },
   {
     "name": "contenttable",
     "type": "content",
-    "index_type": "i64",
-    "key_names" : [
-      "id"
-    ],
-    "key_types" : [
-      "uint64"
+    "indexes": [
+       {
+          "name": "primary",
+          "unique": "true",
+          "orders": [
+              {"field": "id", "order": "asc"}
+          ]
+       }
     ]
   },
   {
     "name": "votetable",
     "type": "voteinfo",
-    "index_type": "i64",
-    "key_names" : [
-      "id"
-    ],
-    "key_types" : [
-      "uint64"
+    "indexes": [
+       {
+          "name": "primary",
+          "unique": "true",
+          "orders": [
+              {"field": "id", "order": "asc"}
+          ]
+       },
+       {
+          "name": "messageid",
+          "unique": "false",
+          "orders": [
+              {"field": "message_id", "order": "asc"}
+          ]
+       }
     ]
   },
   {
     "name": "rewardpools",
     "type": "rewardpool",
-    "index_type": "i64",
-    "key_names": [],
-    "key_types": []
+    "indexes": [
+       {
+          "name": "primary",
+          "unique": "true",
+          "orders": [
+              {"field": "created", "order": "asc"}
+          ]
+       }
+    ]
   },
   {
     "name": "charges",
     "type": "usercharges",
-    "index_type": "i64",
-    "key_names": [],
-    "key_types": []
+    "indexes": [
+       {
+          "name": "primary",
+          "unique": "true",
+          "orders": [
+              {"field": "poolcreated", "order": "asc"}
+          ]
+       }
+    ]
   }
   ],
   "ricardian_clauses": [],
