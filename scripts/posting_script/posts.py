@@ -1,10 +1,15 @@
 import dbs
-
+import bson
+from time import sleep
 
 def convert_posts():
     golos_posts = dbs.golos_db['comment_object']
 
-    id_count = 0
+    length = golos_posts.count()
+    dbs.printProgressBar(0, length, prefix = 'Progress:', suffix = 'Complete', length = 50)
+
+    id_count = 0 
+
     for doc in golos_posts.find():
         messagestate = {
             "absshares": doc["abs_rshares"],
@@ -54,7 +59,10 @@ def convert_posts():
         dbs.cyberway_db['contenttable'].save(content)
         
         id_count += 1
-        break
+        
+        sleep(0.1)
+        dbs.printProgressBar(id_count + 1, length, prefix = 'Progress:', suffix = 'Complete', length = 50)
 
+    
     return True
 
