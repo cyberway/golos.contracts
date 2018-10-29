@@ -56,8 +56,9 @@ void publication::create_message(account_name account, std::string permlink,
     require_auth(account);
 
     tables::reward_pools pools(_self, _self);
-    auto pool = pools.rbegin();
-    eosio_assert(pool != pools.rend(), "publication::create_message: [pools] is empty");
+    auto pool = pools.begin();   // TODO: Reverse iterators doesn't work correctly
+    eosio_assert(pool != pools.end(), "publication::create_message: [pools] is empty");
+    pool = --pools.end();
     check_account(account, pool->state.funds.symbol);
     
     std::map<account_name, int64_t> benefic_map;
