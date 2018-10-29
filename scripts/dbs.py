@@ -1,7 +1,7 @@
 from pymongo import MongoClient
 
-client = MongoClient('localhost', 27017)
+client = MongoClient('172.17.0.1', 27017)
 
 golos_db = client['Golos']
-cyberway_db = client['_CYBERWAY_']
+cyberway_db = client['_CYBERWAY_TEST_']
 

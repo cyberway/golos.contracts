@@ -1,16 +1,21 @@
 import dbs
 import bson
 
-def convert_accounts_and_keys():
+def convert_accounts_and_keys(argv = -1):
     golos_accounts = dbs.golos_db['account_object']
     cyberway_accounts = dbs.cyberway_db['account']
-
-    id_count = cyberway_accounts.find().sort('id', -1).limit(1)[0]['id'] + 1
+    
+    default_id_count = cyberway_accounts.find().sort('id', -1).limit(1)[0]['id']
+    id_count = default_id_count + 1
 
     for doc in golos_accounts.find({"name":{"$regex":"^[a-z]*([\.]|[a-z]|[1-5])*[a-o\.]$"}, 
         "$expr": { "$lte": [ { "$strLenCP": "$name" }, 12 ]}}):
         if cyberway_accounts.find({"name":doc["name"]}).count():
             continue
+
+        if id_count - 1 - default_id_count == int(argv):
+            break
+
         account = {
             "id" : bson.Int64(id_count),
             "name" : doc["name"],
@@ -81,7 +86,8 @@ def convert_accounts_and_keys():
     cyberway_permusage = dbs.cyberway_db['permusage']
     cyberway_permission = dbs.cyberway_db['permission']
 
-    id_count_permusage = cyberway_permusage.find().sort('id', -1).limit(1)[0]['id'] + 1
+    default_id_count_permusage = cyberway_permusage.find().sort('id', -1).limit(1)[0]['id']
+    id_count_permusage = default_id_count_permusage + 1
     id_count_permission = cyberway_permission.find().sort('id', -1).limit(1)[0]['id'] + 1
     id_count_parent =cyberway_permission.find().sort('parent', -1).limit(1)[0]['parent'] + 1
 
@@ -91,6 +97,10 @@ def convert_accounts_and_keys():
                 cyberway_permission.find({"owner":doc["account"], "name":"active"}).count() or 
                 cyberway_permission.find({"owner":doc["account"], "name":"posting"}).count()):
             continue
+
+        if id_count_permusage - 1 - default_id_count_permusage == int(argv):
+            break
+
         permusage = {
 	    "id" : bson.Int64(id_count_permusage),
 	    "last_used" : "",
