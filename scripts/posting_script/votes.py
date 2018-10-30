@@ -13,30 +13,28 @@ def convert_votes():
     id_count = 0
 
     for doc in golos_votes.find():
-        post = cyberway_messages.find_one({"permlink": doc["permlink"]})
-        
-        if not post:
-            continue
+        try:
+            post = cyberway_messages.find_one({"id": dbs.convert_hash(doc["permlink"])})
+            if not post:
+                continue
 
-        vote = {
-            "id" : id_count,
-            "post_id" : post["id"],
-            "voter" : doc["voter"],
-            "persent" : 0,
-            "weight" : doc["weight"],
-            "time" : doc["last_update"],
-            "rshares" : doc["rshares"],
-            "count" : 0,
-            "_SCOPE_" : post["_PAYER_"],
-            "_PAYER_" : doc["author"],
-            "_SIZE_" : 65
-        }
-        dbs.cyberway_db['votetable'].save(vote)
+            vote = {
+                "id" : id_count,
+                "message_id" : post["id"],
+                "voter" : doc["voter"],
+                "weight" : doc["weight"],
+                "time" : doc["last_update"],
+                "count" : 0,
+                "curatorsw": 0,
+                "_SCOPE_" : post["_SCOPE_"],
+                "_PAYER_" : doc["author"],
+                "_SIZE_" : 50
+            }
+            dbs.cyberway_db['votetable'].save(vote)
 
-        id_count += 1
-
-        sleep(0.1)
-        dbs.printProgressBar(id_count + 1, length, prefix = 'Progress:', suffix = 'Complete', length = 50)
-
+            id_count += 1
+            dbs.printProgressBar(id_count + 1, length, prefix = 'Progress:', suffix = 'Complete', length = 50)
+        except Exception:
+            print(post)
     return True
 

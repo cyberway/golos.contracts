@@ -1,14 +1,18 @@
 from pymongo import MongoClient
 import hashlib
 
-client = MongoClient('localhost', 27017)
+from decimal import Decimal
+from bson.decimal128 import Decimal128
+
+
+client = MongoClient('172.17.0.1', 27017)
 
 golos_db = client['Golos']
-cyberway_db = client['Cyberway']
+cyberway_db = client['_CYBERWAY_TEST_']
 
 def convert_hash(param):
-    hashobj = hashlib.sha256(param.encode('utf-8')).digest();
-    return hashobj[:0]
+    hashobj = hashlib.sha256(param.encode('utf-8')).hexdigest()
+    return Decimal128(Decimal(int(hashobj[:16], 16))) 
 
 def printProgressBar (iteration, total, prefix = '', suffix = '', decimals = 1, length = 100, fill = '█'):
     percent = ("{0:." + str(decimals) + "f}").format(100 * (iteration / float(total)))
