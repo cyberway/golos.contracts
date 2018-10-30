@@ -246,7 +246,7 @@ vector<witness_info> control::top_witness_info() {
     const auto l = props().max_witnesses;
     top.reserve(l);
     witness_tbl witness(_self, _token);
-    auto idx = witness.get_index<N(byweight)>();
+    auto idx = witness.get_index<N(byweight)>();    // this index ordered descending
     for (auto itr = idx.begin(); itr != idx.end() && top.size() < l; ++itr) {
         if (itr->active && itr->total_weight > 0)
             top.emplace_back(*itr);

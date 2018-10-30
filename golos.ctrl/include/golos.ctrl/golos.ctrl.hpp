@@ -78,7 +78,8 @@ struct [[eosio::table]] witness_info {
         return name;
     }
     uint64_t weight_key() const {
-        return std::numeric_limits<uint64_t>::max() - total_weight;     // TODO: resolve case where 2+ same weights exist (?extend key to 128bit)
+        // return std::numeric_limits<uint64_t>::max() - total_weight;     // TODO: resolve case where 2+ same weights exist (?extend key to 128bit)
+        return total_weight;     // TODO: resolve case where 2+ same weights exist (?extend key to 128bit)
     }
 };
 using witness_weight_idx = indexed_by<N(byweight), const_mem_fun<witness_info, uint64_t, &witness_info::weight_key>>;

@@ -1,5 +1,5 @@
 {
-  "version": "eosio::abi/1.0",
+  "version": "cyberway::abi/1.0",
   "types": [
     {
       "new_type_name": "account_name",
@@ -11,14 +11,8 @@
       "name": "balance_vesting",
       "base": "",
       "fields": [
-        {
-          "name": "supply",
-          "type": "asset"
-        },
- 	{
-          "name": "issuers",
-          "type": "account_name[]"
-        }
+        {"name": "supply", "type": "asset"},
+        {"name": "issuers", "type": "account_name[]"}
       ]
     },
     {
@@ -97,7 +91,7 @@
       "fields": [
         {
           "name": "sender",
-          "type": "account_name"
+          "type": "name"
         },
         {
           "name": "recipient",
@@ -316,57 +310,69 @@
     {
       "name": "vesting",
       "type": "balance_vesting",
-      "index_type": "i64",
-      "key_names": [
-        "currency"
-      ],
-      "key_types": [
-        "uint64"
-      ]
+      "indexes" : [{
+          "name": "primary",
+          "unique": true,
+          "orders": [{"field": "supply.sym", "order": "asc"}]
+      }]
     },
     {
       "name": "balances",
       "type": "user_balance",
-      "index_type": "i64",
-      "key_names": [
-        "currency"
-      ],
-      "key_types": [
-        "uint64"
-      ]
+      "indexes" : [{
+          "name": "primary",
+          "unique": true,
+          "orders": [{"field": "vesting.sym", "order": "asc"}]
+      }]
     },
     {
       "name": "delegate",
       "type": "delegate_record",
-      "index_type": "i64",
-      "key_names": [
-        "id"
-      ],
-      "key_types": [
-        "uint64"
-      ]
+      "indexes" : [{
+          "name": "primary",
+          "unique": true,
+          "orders": [{"field": "id", "order": "asc"}]
+      },{
+          "name": "sender",
+          "unique": false,
+          "orders": [{"field": "sender", "order": "asc"}]
+      },{
+          "name": "recipient",
+          "unique": false,
+          "orders": [{"field": "recipient", "order": "asc"}]
+      },{
+          "name": "unique",
+          "unique": false,
+          "orders": [
+            {"field": "recipient", "order": "asc"}
+            {"field": "sender", "order": "asc"}]
+      }]
     },
     {
       "name": "rdelegate",
       "type": "return_delegate",
-      "index_type": "i64",
-      "key_names": [
-        "id"
-      ],
-      "key_types": [
-        "uint64"
-      ]
+      "indexes" : [{
+          "name": "primary",
+          "unique": true,
+          "orders": [{"field": "id", "order": "asc"}]
+      },{
+          "name": "date",
+          "unique": false,
+          "orders": [{"field": "date", "order": "asc"}]
+      }]
     },
     {
       "name": "converttable",
       "type": "convert_of_tokens",
-      "index_type": "i64",
-      "key_names": [
-        "sender"
-      ],
-      "key_types": [
-        "account_name"
-      ]
+      "indexes" : [{
+          "name": "primary",
+          "unique": true,
+          "orders": [{"field": "sender", "order": "asc"}]
+      },{
+          "name": "payouttime",
+          "unique": false,
+          "orders": [{"field": "payout_time", "order": "asc"}]
+      }]
     }
   ],
   "ricardian_clauses": [],

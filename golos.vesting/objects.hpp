@@ -33,17 +33,17 @@ struct user_balance
     asset unlocked_limit;
 
     uint64_t primary_key() const {
-        return vesting.symbol.name();
+        return vesting.symbol;//.name();
     }
-    
+
     asset available_vesting() const {
         return vesting - delegate_vesting;
     }
-    
+
     asset effective_vesting() const {
-        return (vesting - delegate_vesting) + received_vesting; 
+        return (vesting - delegate_vesting) + received_vesting;
     }
-    
+
     asset unlocked_vesting() const {
         return std::min(available_vesting(), unlocked_limit);
     }
