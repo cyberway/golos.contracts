@@ -1,6 +1,5 @@
 {
-    "____comment": "This file was generated with eosio-abigen. DO NOT EDIT Sun Sep 23 11:20:59 2018",
-    "version": "eosio::abi/1.0",
+    "version": "cyberway::abi/1.0",
     "types": [{
         "new_type_name": "account_name",
         "type": "name"
@@ -27,7 +26,7 @@
             "name": "bw_user",
             "base": "",
             "fields": [
-                {"type": "account_name", "name": "name"},
+                {"type": "name", "name": "name"},
                 {"type": "bool", "name": "attached"}
             ]
         },
@@ -35,7 +34,7 @@
             "name": "ctrl_props",
             "base": "",
             "fields": [
-                {"type": "account_name", "name": "owner"},
+                {"type": "name", "name": "owner"},
                 {"type": "properties", "name": "props"}
             ]
         },
@@ -124,7 +123,7 @@
             "name": "witness_info",
             "base": "",
             "fields": [
-                {"type": "account_name", "name": "name"},
+                {"type": "name", "name": "name"},
                 {"type": "public_key", "name": "key"},
                 {"type": "string", "name": "url"},
                 {"type": "bool", "name": "active"},
@@ -135,7 +134,7 @@
             "name": "witness_voter_s",
             "base": "",
             "fields": [
-                {"type": "account_name", "name": "community"},
+                {"type": "name", "name": "community"},
                 {"type": "account_name[]", "name": "witnesses"}
             ]
         }
@@ -192,30 +191,42 @@
         {
             "name": "bwuser",
             "type": "bw_user",
-            "index_type": "i64",
-            "key_names": [],
-            "key_types": []
+            "indexes" : [{
+                "name": "primary",
+                "unique": true,
+                "orders": [{"field": "name", "order": "asc"}]
+            }]
         },
         {
             "name": "props",
             "type": "ctrl_props",
-            "index_type": "i64",
-            "key_names": [],
-            "key_types": []
+            "indexes" : [{
+                "name": "primary",
+                "unique": true,
+                "orders": [{"field": "owner", "order": "asc"}]
+            }]
         },
         {
             "name": "witness",
             "type": "witness_info",
-            "index_type": "i64",
-            "key_names": ["byweight"],
-            "key_types": ["uint64"]
+            "indexes" : [{
+                "name": "primary",
+                "unique": true,
+                "orders": [{"field": "name", "order": "asc"}]
+            },{
+                "name": "byweight",
+                "unique": false,
+                "orders": [{"field": "total_weight", "order": "desc"}]
+            }]
         },
         {
             "name": "witnessvote",
             "type": "witness_voter_s",
-            "index_type": "i64",
-            "key_names": [],
-            "key_types": []
+            "indexes" : [{
+                "name": "primary",
+                "unique": true,
+                "orders": [{"field": "community", "order": "asc"}]
+            }]
         }
     ],
     "ricardian_clauses": [],

@@ -1,6 +1,5 @@
 {
-    "____comment": "This file was generated with eosio-abigen. DO NOT EDIT Mon Oct 20 16:06:14 2018",
-    "version": "eosio::abi/1.0",
+    "version": "cyberway::abi/1.0",
     "types": [{
         "new_type_name": "account_name",
         "type": "name"
@@ -56,9 +55,11 @@
         {
             "name": "state",
             "type": "state",
-            "index_type": "i64",
-            "key_names": [],
-            "key_types": []
+            "indexes" : [{
+                "name": "primary",
+                "unique": true,
+                "orders": [{"field": "id", "order": "asc"}]
+            }]
         }
     ],
     "ricardian_clauses": [],

@@ -3,13 +3,15 @@
 #include "config.hpp"
 #include "objects.hpp"
 #include <common/calclib/atmsp_storable.h>
+
 using namespace golos::config;
+
 template<typename T, typename F>
-auto get_itr(T& tbl, uint64_t key, account_name payer, F&& insert_fn) {    
+auto get_itr(T& tbl, uint64_t key, account_name payer, F&& insert_fn) {
     auto itr = tbl.find(key);
     if(itr == tbl.end())
         itr = tbl.emplace(payer, insert_fn);
-    return itr;    
+    return itr;
 }
 
 fixp_t set_and_run(atmsp::machine<fixp_t>& machine, const atmsp::storable::bytecode& bc, const std::vector<fixp_t>& args, const std::vector<std::pair<fixp_t, fixp_t> >& domain = {}) {
@@ -31,13 +33,13 @@ fixp_t get_prop(int64_t arg) {
 }
 
 void check_positive_monotonic(atmsp::machine<fixp_t>& machine, fixp_t max_arg, const std::string& name, bool inc) {
-    
+
     fixp_t prev_res = machine.run({max_arg});
     if(!inc)
         eosio_assert(prev_res >= fixp_t(0), ("check positive failed for " + name).c_str());
     fixp_t cur_arg = max_arg;
     for(size_t i = 0; i < CHECK_MONOTONIC_STEPS; i++) {
-        cur_arg /= fixp_t(2);           
+        cur_arg /= fixp_t(2);
         fixp_t cur_res = machine.run({cur_arg});
         eosio_assert(inc ? (cur_res <= prev_res) : (cur_res >= prev_res), ("check monotonic failed for " + name).c_str());
         prev_res = cur_res;
