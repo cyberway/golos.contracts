@@ -7,8 +7,7 @@ using std::vector;
 using std::string;
 
 void golos_tester::install_contract(
-    account_name acc, const std::vector<uint8_t>& wasm, const std::vector<char>& abi,
-    abi_serializer& abi_ser, bool produce
+    account_name acc, const vector<uint8_t>& wasm, const vector<char>& abi, bool produce
 ) {
     set_code(acc, wasm);
     set_abi (acc, abi.data());
@@ -17,7 +16,8 @@ void golos_tester::install_contract(
     const auto& accnt = control->db().get<account_object,by_name>(acc);
     abi_def abi_d;
     BOOST_CHECK_EQUAL(abi_serializer::to_abi(accnt.abi, abi_d), true);
-    abi_ser.set_abi(abi_d, abi_serializer_max_time);
+    _abis[acc].set_abi(abi_d, abi_serializer_max_time);
+    _chaindb.add_abi(acc, abi_d);
 };
 
 vector<permission> golos_tester::get_account_permissions(account_name a) {
@@ -40,31 +40,31 @@ vector<permission> golos_tester::get_account_permissions(account_name a) {
 }
 
 base_tester::action_result golos_tester::push_action(
-    const abi_serializer* abi,
     account_name code,
     action_name name,
-    const variant_object& data,
-    account_name signer
+    account_name signer,
+    const variant_object& data
 ) {
+    auto& abi = _abis[code];
     action act;
     act.account = code;
     act.name    = name;
-    act.data    = abi->variant_to_binary(abi->get_action_type(name), data, abi_serializer_max_time);
+    act.data    = abi.variant_to_binary(abi.get_action_type(name), data, abi_serializer_max_time);
     return base_tester::push_action(std::move(act), uint64_t(signer));
 }
 
 base_tester::action_result golos_tester::push_action_msig_tx(
-    const abi_serializer* abi,
     account_name code,
     action_name name,
-    const variant_object& data,
     vector<permission_level> perms,
-    vector<account_name> signers
+    vector<account_name> signers,
+    const variant_object& data
 ) {
+    auto& abi = _abis[code];
     action act;
     act.account = code;
     act.name    = name;
-    act.data    = abi->variant_to_binary(abi->get_action_type(name), data, abi_serializer_max_time);
+    act.data    = abi.variant_to_binary(abi.get_action_type(name), data, abi_serializer_max_time);
     for (const auto& perm : perms) {
         act.authorization.emplace_back(perm);
     }
@@ -92,12 +92,12 @@ base_tester::action_result golos_tester::push_tx(signed_transaction&& tx) {
 }
 
 // table helpers
-const table_id_object* golos_tester::find_table(name code, name scope, name tbl) const {
+const table_id_object* golos_tester::find_table(name code, uint64_t scope, name tbl) const {
     auto tid = control->db().find<table_id_object, by_code_scope_table>(std::make_tuple(code, scope, tbl));
     return tid;
 }
 
-vector<char> golos_tester::get_tbl_row(name code, name scope, name tbl, uint64_t id) const {
+vector<char> golos_tester::get_tbl_row(name code, uint64_t scope, name tbl, uint64_t id) const {
     vector<char> data;
     const auto& tid = find_table(code, scope, tbl);
     if (tid) {
@@ -112,21 +112,34 @@ vector<char> golos_tester::get_tbl_row(name code, name scope, name tbl, uint64_t
     return data;
 }
 
-fc::variant golos_tester::get_tbl_struct(name code, name scope, name tbl, uint64_t id,
-    const string& n, const abi_serializer& abi
+variant golos_tester::get_chaindb_struct(name code, uint64_t scope, name tbl, uint64_t id,
+    const string& n
 ) const {
+    variant r;
+    try {
+        r = _chaindb.value_by_pk({code, scope, tbl}, id);
+        std::cout << "+++ result: " << r << std::endl;
+    } catch (...) {
+        // key not found
+        std::cout << "+++ not found; c:" << std::hex << code << " s:" << scope << " t:" << tbl << std::endl;
+    }
+    return r;
+}
+
+fc::variant golos_tester::get_tbl_struct(name code, uint64_t scope, name tbl, uint64_t id, const string& n) const {
     vector<char> data = get_tbl_row(code, scope, tbl, id);
+    const auto& abi = _abis.at(code);
     return data.empty() ? fc::variant() : abi.binary_to_variant(n, data, abi_serializer_max_time);
 }
 
-fc::variant golos_tester::get_tbl_struct_singleton(name code, name scope, name tbl, const string& n, const abi_serializer& abi) const {
-    vector<char> data = get_row_by_account( code, scope, tbl, tbl );
+fc::variant golos_tester::get_tbl_struct_singleton(name code, uint64_t scope, name tbl, const string& n) const {
+    vector<char> data = get_row_by_account(code, scope, tbl, tbl);
     if (data.empty())
         std::cout << "\nData is empty\n" << std::endl;
-    return data.empty() ? fc::variant() : abi.binary_to_variant( n, data, abi_serializer_max_time );
+    return data.empty() ? fc::variant() : _abis.at(code).binary_to_variant(n, data, abi_serializer_max_time);
 }
 
-vector<vector<char> > golos_tester::get_all_rows(uint64_t code, uint64_t scope, uint64_t table, bool strict)const {
+vector<vector<char> > golos_tester::get_all_rows(uint64_t code, uint64_t scope, uint64_t table, bool strict) const {
     vector<vector<char> > ret;
     const auto& db = control->db();
     const auto* t_id = db.find<chain::table_id_object, chain::by_code_scope_table>(boost::make_tuple(code, scope, table));

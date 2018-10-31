@@ -12,16 +12,16 @@ uint64_t hash64(const std::string& arg);
 #define CHECK_EQUAL_OBJECTS(left, right) { \
     auto a = fc::variant(left); \
     auto b = fc::variant(right); \
-    BOOST_CHECK_EQUAL(true, a.is_object()); \
-    BOOST_CHECK_EQUAL(true, b.is_object()); \
+    BOOST_TEST_CHECK(a.is_object()); \
+    BOOST_TEST_CHECK(b.is_object()); \
     if (a.is_object() && b.is_object()) { \
         BOOST_CHECK_EQUAL_COLLECTIONS(a.get_object().begin(), a.get_object().end(), b.get_object().begin(), b.get_object().end()); }}
 
-#define CHECK_MATCHING_OBJECT(left, right) { \
-    auto a = fc::variant(left); \
-    auto b = fc::variant(right); \
-    BOOST_CHECK_EQUAL(true, a.is_object()); \
-    BOOST_CHECK_EQUAL(true, b.is_object()); \
+#define CHECK_MATCHING_OBJECT(check, reference) { \
+    auto a = fc::variant(reference); \
+    auto b = fc::variant(check); \
+    BOOST_TEST_CHECK(a.is_object()); \
+    BOOST_TEST_CHECK(b.is_object()); \
     if (a.is_object() && b.is_object()) { \
         auto filtered = ::eosio::testing::filter_fields(a.get_object(), b.get_object()); \
         BOOST_CHECK_EQUAL_COLLECTIONS(a.get_object().begin(), a.get_object().end(), filtered.begin(), filtered.end()); }}
@@ -38,46 +38,70 @@ struct permission {
     authority   required_auth;
 };
 
+struct contract_error_messages {
+protected:
+    const string amsg(const string& x) { return base_tester::wasm_assert_msg(x); }
+};
+
 
 class golos_tester : public tester {
 protected:
-    const name _code;     // base values to make things simpler
-    const name _scope;
+    const name _code;     // base values to make things simpler. TODO: remove (better in tester_api_helper)
+    const uint64_t _scope = 0;
+
+    cyberway::chaindb::chaindb_controller& _chaindb;
+    std::map<account_name, abi_serializer> _abis;
 
 public:
-    golos_tester() {}
-    golos_tester(name code, name scope): tester(), _code(code), _scope(scope) {}
+    golos_tester(): _chaindb(control->chaindb()) {}
+    golos_tester(name code, uint64_t scope): tester(), _code(code), _scope(scope), _chaindb(control->chaindb()) {
+        std::cout << "golos_tester()" << std::endl;
+    }
+    ~golos_tester() {
+        std::cout << "~golos_tester()" << std::endl;
+    }
 
-    void install_contract(account_name acc, const std::vector<uint8_t>& wasm, const std::vector<char>& abi,
-        abi_serializer& abi_ser, bool produce = true);
+    void install_contract(account_name acc, const std::vector<uint8_t>& wasm, const std::vector<char>& abi, bool produce = true);
 
     std::vector<permission> get_account_permissions(account_name a);
 
-    action_result push_action(const abi_serializer* abi, account_name code, action_name name,
-        const variant_object& data, account_name signer);
-    action_result push_action_msig_tx(const abi_serializer* abi, account_name code, action_name name,
-        const variant_object& data, std::vector<permission_level> perms, std::vector<account_name>signers);
+    action_result push_action(account_name code, action_name name, account_name signer, const variant_object& data);
+    action_result push_action_msig_tx(account_name code, action_name name,
+        std::vector<permission_level> perms, std::vector<account_name> signers, const variant_object& data);
     action_result push_tx(signed_transaction&& tx);
 
     // table helpers
-    const table_id_object* find_table(name code, name scope, name tbl) const;
+    const table_id_object* find_table(name code,  uint64_t scope, name tbl) const;
     // Note: uses `lower_bound`, so caller must check id of returned value
-    std::vector<char> get_tbl_row(name code, name scope, name tbl, uint64_t id) const;
-    fc::variant get_tbl_struct(name code, name scope, name tbl, uint64_t id, const std::string& n, const abi_serializer& abi) const;
-    fc::variant get_tbl_struct_singleton(name code, name scope, name tbl, const string &n, const abi_serializer &abi) const;
+    std::vector<char> get_tbl_row(name code,  uint64_t scope, name tbl, uint64_t id) const;
+    std::vector<std::vector<char>> get_all_rows(uint64_t code, uint64_t scope, uint64_t table, bool strict = true) const;
+    fc::variant get_chaindb_struct(name code,  uint64_t scope, name tbl, uint64_t id, const std::string& n) const;
+    fc::variant get_tbl_struct(name code,  uint64_t scope, name tbl, uint64_t id, const std::string& n) const;
+    fc::variant get_tbl_struct_singleton(name code,  uint64_t scope, name tbl, const string &n) const;
 
-    // simplified versions
+    // simplified versions. TODO: remove
+    action_result push_action(action_name name, account_name signer, const variant_object& data) {
+        return push_action(_code, name, signer, data);
+    }
+    action_result push_action_msig_tx(action_name name, std::vector<permission_level> perms, std::vector<account_name> signers,
+        const variant_object& data
+    ) {
+        return push_action_msig_tx(_code, name, perms, signers, data);
+    }
+
+
     const table_id_object* find_table(name tbl) const {
         return find_table(_code, _scope, tbl);
     }
     std::vector<char> get_row(name tbl, uint64_t id) const {
         return get_tbl_row(_code, _scope, tbl, id);
     }
-    
-    vector<vector<char> > get_all_rows(uint64_t code, uint64_t scope, uint64_t table, bool strict = true) const;
-    
-    fc::variant get_struct(name tbl, uint64_t id, const std::string name, const abi_serializer& abi) const {
-        return get_tbl_struct(_code, _scope, tbl, id, name, abi);
+
+    fc::variant get_struct(name tbl, uint64_t id, const std::string name) const {
+        return get_tbl_struct(_code, _scope, tbl, id, name);
+    }
+    fc::variant get_chaindb_struct(name tbl, uint64_t id, const std::string name) const {
+        return get_chaindb_struct(_code, _scope, tbl, id, name);
     }
 };
 

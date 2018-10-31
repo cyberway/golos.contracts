@@ -178,7 +178,7 @@ void control::change_voter_vests(account_name voter, share_type diff) {
 
 void control::apply_vote_weight(account_name voter, account_name witness, bool add) {
     golos::vesting vc(config::vesting_name);
-    const auto power = vc.get_account_vesting(voter, _token).amount;    //get_balance accepts symbol_name
+    const auto power = vc.get_account_vesting(voter, _token.name()).amount;
     if (power > 0) {
         update_witnesses_weights({witness}, add ? power : -power);
     }
