@@ -1,8 +1,7 @@
 #include "golos.vesting.hpp"
 #include <eosiolib/transaction.hpp>
 #include <eosiolib/fixedpoint.hpp>
-
-#include "eosio.token/eosio.token.hpp"
+#include <eosio.token/eosio.token.hpp>
 
 using namespace eosio;
 
@@ -68,7 +67,7 @@ void vesting::on_transfer(account_name from, account_name  to, asset quantity, s
         table_vesting.modify(vesting, 0, [&](auto& item) { item.supply += converted; });
         require_recipient(from);
     }
-    
+
     if(!from_issuer)
         add_balance(from, converted, has_auth(to) ? to : from);
     else if(!memo.empty())
@@ -77,21 +76,19 @@ void vesting::on_transfer(account_name from, account_name  to, asset quantity, s
 
 void vesting::retire(account_name issuer, asset quantity, account_name user) {
     require_auth(issuer);
-    auto sym = quantity.symbol;
-    eosio_assert( sym.is_valid(), "invalid symbol name" );
     eosio_assert(quantity.is_valid(), "invalid quantity");
     eosio_assert(quantity.amount > 0, "must retire positive quantity");
-    
+
     tables::vesting_table table_vesting(_self, _self);
     auto vesting = table_vesting.find(quantity.symbol.name());
     eosio_assert(vesting != table_vesting.end(), "Vesting not found");
-    eosio_assert(quantity.symbol == vesting->supply.symbol, "symbol precision mismatch" );
+    eosio_assert(quantity.symbol == vesting->supply.symbol, "symbol precision mismatch");
     bool from_issuer = std::find(vesting->issuers.begin(), vesting->issuers.end(), issuer) != vesting->issuers.end();
     eosio_assert(from_issuer, "issuer mismatch");
     eosio_assert(quantity.amount <= vesting->supply.amount, "invalid amount");
-    
+
     sub_balance(user, quantity, true);
-    table_vesting.modify(vesting, 0, [&](auto &item) {
+    table_vesting.modify(vesting, 0, [&](auto& item) {
         item.supply -= quantity;
     });
 }
@@ -101,29 +98,27 @@ void vesting::convert_vesting(account_name from, account_name to, asset quantity
 
     tables::account_table account(_self, from);
     auto vest = account.find(quantity.symbol.name());
-    eosio_assert(vest->available_vesting().amount >= quantity.amount, "Insufficient funds.");
+    eosio_assert(vest->available_vesting().amount >= quantity.amount, "Insufficient funds");
     eosio_assert(MIN_AMOUNT_VESTING_CONCLUSION <= vest->vesting.amount, "Insufficient funds for converting");
-    eosio_assert(quantity.amount > 0, "no conversion allowed");
-
+    eosio_assert(quantity.amount > 0, "quantity must be positive");
 
     tables::convert_table table(_self, quantity.symbol.name());
     auto record = table.find(from);
+
+    auto fill_record = [&](auto& item) {
+        item.recipient = to;
+        item.number_of_payments = NUMBER_OF_CONVERSIONS;
+        item.payout_time = time_point_sec(now() + TOTAL_TERM_OF_CONCLUSION);
+        item.payout_part = quantity / NUMBER_OF_CONVERSIONS;
+        item.balance_amount = quantity;
+    };
+
     if (record != table.end()) {
-        table.modify(record, from, [&]( auto &item ) {
-            item.recipient = to;
-            item.number_of_payments = NUMBER_OF_CONVERSIONS;
-            item.payout_time = time_point_sec(now() + TOTAL_TERM_OF_CONCLUSION);
-            item.payout_part = quantity/NUMBER_OF_CONVERSIONS;
-            item.balance_amount = quantity;
-        });
+        table.modify(record, from, fill_record);
     } else {
-        table.emplace(from, [&]( auto &item ) {
+        table.emplace(from, [&](auto& item) {
             item.sender = from;
-            item.recipient = to;
-            item.number_of_payments = NUMBER_OF_CONVERSIONS;
-            item.payout_time = time_point_sec(now() + TOTAL_TERM_OF_CONCLUSION);
-            item.payout_part = quantity/NUMBER_OF_CONVERSIONS;
-            item.balance_amount = quantity;
+            fill_record(item);
         });
     }
 }
@@ -141,12 +136,11 @@ void vesting::cancel_convert_vesting(account_name sender, asset type) {
 void vesting::unlock_limit(account_name owner, asset quantity) {
     require_auth(owner);
     auto sym = quantity.symbol;
-    eosio_assert(sym.is_valid(), "invalid symbol name" );
     eosio_assert(quantity.is_valid(), "invalid quantity");
     eosio_assert(quantity.amount >= 0, "the number of tokens should not be less than 0");
     tables::account_table balances(_self, owner);
     const auto& b = balances.get(sym.name(), "no balance object found");
-    eosio_assert(b.unlocked_limit.symbol == sym, "symbol precision mismatch" );
+    eosio_assert(b.unlocked_limit.symbol == sym, "symbol precision mismatch");
 
     balances.modify(b, 0, [&](auto& item) {
         item.unlocked_limit = quantity;
@@ -175,7 +169,7 @@ void vesting::delegate_vesting(account_name sender, account_name recipient, asse
         eosio_assert(user_balance >= quantity, "insufficient funds for delegation");
     }
 
-    account_sender.modify(balance_sender, sender, [&](auto &item){
+    account_sender.modify(balance_sender, sender, [&](auto& item){
         item.delegate_vesting += quantity;
     });
 
@@ -187,11 +181,11 @@ void vesting::delegate_vesting(account_name sender, account_name recipient, asse
         eosio_assert(delegate_record->interest_rate == interest_rate, "interest_rate does not match");
         eosio_assert(delegate_record->payout_strategy == payout_strategy, "payout_strategy does not match");
 
-        index_table.modify(delegate_record, 0, [&](auto &item){
+        index_table.modify(delegate_record, 0, [&](auto& item){
             item.quantity += quantity;
         });
     } else {
-        table.emplace(sender, [&](structures::delegate_record &item){
+        table.emplace(sender, [&](auto& item){
             item.id = table.available_primary_key();
             item.sender = sender;
             item.recipient = recipient;
@@ -206,7 +200,7 @@ void vesting::delegate_vesting(account_name sender, account_name recipient, asse
     tables::account_table account_recipient(_self, recipient);
     auto balance_recipient = account_recipient.find(quantity.symbol.name());
     eosio_assert(balance_recipient != account_recipient.end(), "Not found balance token vesting");
-    account_recipient.modify(balance_recipient, sender, [&](auto &item){
+    account_recipient.modify(balance_recipient, sender, [&](auto& item){
         item.received_vesting += quantity;
     });
 
@@ -228,13 +222,13 @@ void vesting::undelegate_vesting(account_name sender, account_name recipient, as
     if (delegate_record->quantity == quantity) {
         index_table.erase(delegate_record);
     } else {
-        index_table.modify(delegate_record, sender, [&](auto &item){
+        index_table.modify(delegate_record, sender, [&](auto& item){
             item.quantity -= quantity;
         });
     }
 
     tables::return_delegate_table table_delegate_vesting(_self, _self);
-    table_delegate_vesting.emplace(sender, [&](structures::return_delegate &item){
+    table_delegate_vesting.emplace(sender, [&](auto& item){
         item.id = table_delegate_vesting.available_primary_key();
         item.recipient = sender;
         item.amount = quantity;
@@ -244,7 +238,7 @@ void vesting::undelegate_vesting(account_name sender, account_name recipient, as
     tables::account_table account_recipient(_self, recipient);
     auto balance = account_recipient.find(quantity.symbol.name());
     eosio_assert(balance != account_recipient.end(), "This token is not on the recipient balance sheet");
-    account_recipient.modify(balance, sender, [&](auto &item){
+    account_recipient.modify(balance, sender, [&](auto& item){
         item.received_vesting -= quantity;
     });
 
@@ -259,7 +253,7 @@ void vesting::create(account_name creator, symbol_type symbol, std::vector<accou
     auto vesting = table_vesting.find(symbol.name());
     eosio_assert(vesting == table_vesting.end(), "Vesting already exists");
 
-    table_vesting.emplace(_self, [&](auto &item){
+    table_vesting.emplace(_self, [&](auto& item){
         item.supply = asset(0, symbol);
         item.issuers = issuers;
     });
@@ -268,44 +262,39 @@ void vesting::create(account_name creator, symbol_type symbol, std::vector<accou
 void vesting::calculate_convert_vesting() {
     require_auth(_self);
     tables::vesting_table table_vesting(_self, _self);
-    for(auto vesting : table_vesting) {
+    for (auto vesting : table_vesting) {
         tables::convert_table table(_self, vesting.supply.symbol.name());
         auto index = table.get_index<N(payouttime)>();
         for (auto obj = index.cbegin(); obj != index.cend(); ) {
             if (obj->payout_time > time_point_sec(now()))
                 break;
 
-            if(obj->number_of_payments > 0) {
-                index.modify(obj, 0, [&](auto &item) {
+            if (obj->number_of_payments > 0) {
+                index.modify(obj, 0, [&](auto& item) {
                     item.payout_time = time_point_sec(now() + TOTAL_TERM_OF_CONCLUSION);
                     --item.number_of_payments;
 
                     tables::account_table account(_self, obj->sender);
                     auto balance = account.find(obj->payout_part.symbol.name());
-                    eosio_assert(balance != account.end(), "Not found vesting balance");
+                    eosio_assert(balance != account.end(), "Vesting balance not found");
 
-                    auto lambda_action_sender = [&](asset quantity) {
-                        sub_balance(obj->sender, quantity);
-
-                        auto vest = table_vesting.find(quantity.symbol.name());
-                        eosio_assert(vest != table_vesting.end(), "Vesting not found");
-
-                        table_vesting.modify(vest, 0, [&](auto &item) {
-                            item.supply -= quantity;
-                        });
-
-                        INLINE_ACTION_SENDER(eosio::token, transfer)( N(eosio.token), {_self, N(active)},
-                        { _self, obj->recipient, convert_to_token(quantity, *vest), "Translation into tokens" } );
-                    };
-
+                    auto quantity = balance->vesting;
                     if (balance->vesting < obj->payout_part) {
                         item.number_of_payments = 0;
-                        lambda_action_sender(balance->vesting);
                     } else if (!obj->number_of_payments) { // TODO obj->number_of_payments == 0
-                        lambda_action_sender(obj->balance_amount - (obj->payout_part * (NUMBER_OF_CONVERSIONS - 1)));
+                        quantity = obj->balance_amount - (obj->payout_part * (NUMBER_OF_CONVERSIONS - 1));
                     } else {
-                        lambda_action_sender(obj->payout_part);
+                        quantity = obj->payout_part;
                     }
+
+                    sub_balance(obj->sender, quantity);
+                    auto vest = table_vesting.find(quantity.symbol.name());
+                    eosio_assert(vest != table_vesting.end(), "Vesting not found");
+                    table_vesting.modify(vest, 0, [&](auto& item) {
+                        item.supply -= quantity;
+                    });
+                    INLINE_ACTION_SENDER(eosio::token, transfer)(N(eosio.token), {_self, N(active)},
+                        {_self, obj->recipient, convert_to_token(quantity, *vest), "Convert vesting"});
                 });
             }
 
@@ -338,27 +327,27 @@ void vesting::calculate_delegate_vesting() {
 }
 
 void vesting::open(account_name owner, symbol_type symbol, account_name ram_payer) {
-    require_auth( ram_payer );
-    tables::account_table accounts( _self, owner );
-    auto it = accounts.find( symbol.name() );
-    eosio_assert( it == accounts.end(), "Токен существует" );
-       accounts.emplace( ram_payer, [&]( auto& a ){
-           a.vesting.symbol = symbol;
-           a.delegate_vesting.symbol = symbol;
-           a.received_vesting.symbol = symbol;
-           a.unlocked_limit.symbol = symbol;
-       });
+    require_auth(ram_payer);
+    tables::account_table accounts(_self, owner);
+    auto it = accounts.find(symbol.name());
+    eosio_assert(it == accounts.end(), "already exists");
+    accounts.emplace(ram_payer, [&](auto& a) {
+        a.vesting.symbol = symbol;
+        a.delegate_vesting.symbol = symbol;
+        a.received_vesting.symbol = symbol;
+        a.unlocked_limit.symbol = symbol;
+    });
 }
 
 void vesting::close(account_name owner, symbol_type symbol) {
-    require_auth( owner );
-    tables::account_table account( _self, owner );
-    auto it = account.find( symbol.name() );
-    eosio_assert( it != account.end(), "Balance row already deleted or never existed. Action won't have any effect." );
-    eosio_assert( it->vesting.amount == 0, "Cannot close because the balance vesting is not zero." );
-    eosio_assert( it->delegate_vesting.amount == 0, "Cannot close because the balance delegate vesting is not zero." );
-    eosio_assert( it->received_vesting.amount == 0, "Cannot close because the balance received vesting not zero." );
-    account.erase( it );
+    require_auth(owner);
+    tables::account_table account(_self, owner);
+    auto it = account.find(symbol.name());
+    eosio_assert(it != account.end(), "Balance row already deleted or never existed. Action won't have any effect");
+    eosio_assert(it->vesting.amount == 0, "Cannot close because the balance vesting is not zero");
+    eosio_assert(it->delegate_vesting.amount == 0, "Cannot close because the balance delegate vesting is not zero");
+    eosio_assert(it->received_vesting.amount == 0, "Cannot close because the balance received vesting not zero");
+    account.erase(it);
 }
 
 void vesting::notify_balance_change(account_name owner, asset diff) {
@@ -372,18 +361,18 @@ void vesting::notify_balance_change(account_name owner, asset diff) {
 
 void vesting::sub_balance(account_name owner, asset value, bool retire_mode) {
     eosio_assert(value.amount >= 0, "sub_balance: value.amount < 0");
-    if(value.amount == 0)
+    if (value.amount == 0)
         return;
     tables::account_table account(_self, owner);
     const auto& from = account.get(value.symbol.name(), "no balance object found");
-    if(retire_mode)
+    if (retire_mode)
         eosio_assert(from.unlocked_vesting() >= value, "overdrawn unlocked balance");
     else
         eosio_assert(from.available_vesting() >= value, "overdrawn balance");
- 
+
     account.modify(from, 0, [&](auto& a) {
         a.vesting -= value;
-        if(retire_mode)
+        if (retire_mode)
             a.unlocked_limit -= value;
     });
     notify_balance_change(owner, -value);
@@ -391,12 +380,11 @@ void vesting::sub_balance(account_name owner, asset value, bool retire_mode) {
 
 void vesting::add_balance(account_name owner, asset value, account_name ram_payer) {
     eosio_assert(value.amount >= 0, "add_balance: value.amount < 0");
-    if(value.amount == 0)
+    if (value.amount == 0)
         return;
     tables::account_table account(_self, owner);
     auto to = account.find(value.symbol.name());
-//    eosio_assert(to != account.end(), "Not found balance token vesting");
-    if(to == account.end()) {
+    if (to == account.end()) {
         account.emplace(ram_payer, [&](auto& a) {
             a.vesting = value;
             a.delegate_vesting.symbol = value.symbol;
@@ -410,41 +398,33 @@ void vesting::add_balance(account_name owner, asset value, account_name ram_paye
     notify_balance_change(owner, value);
 }
 
-const bool vesting::bool_asset(const asset &obj) const {
-    return obj.amount;
+const asset vesting::convert_to_token(const asset& src, const structures::vesting_info& vinfo) const {
+    uint64_t amount;
+    symbol_type sym = src.symbol;
+    auto balance = token(N(eosio.token)).get_balance(_self, sym.name());
+    eosio_assert(sym == balance.symbol && sym == vinfo.supply.symbol, "The token type does not match");
+
+    if (!vinfo.supply.amount || !balance.amount)
+        amount = src.amount;
+    else {
+        amount = static_cast<int64_t>((static_cast<uint128_t>(src.amount) * balance.amount)
+            / (vinfo.supply.amount + src.amount));
+    }
+    return asset(amount, sym);
 }
 
-const asset vesting::convert_to_token(const asset &m_token, const structures::vesting_info & vinfo) const {
+const asset vesting::convert_to_vesting(const asset& src, const structures::vesting_info& vinfo) const {
     uint64_t amount;
-    symbol_type symbol = m_token.symbol;
+    symbol_type sym = src.symbol;
+    auto balance = token(N(eosio.token)).get_balance(_self, sym.name()) - src;
+    eosio_assert(sym == balance.symbol && sym == vinfo.supply.symbol, "The token type does not match");
 
-    auto this_balance = token(N(eosio.token)).get_balance(_self, symbol.name());
-    eosio_assert(symbol == this_balance.symbol, "The token type does not match.");
-
-    if (!vinfo.supply.amount || !this_balance.amount)
-        amount = m_token.amount;
+    if (!vinfo.supply.amount || !balance.amount)
+        amount = src.amount;
     else {
-        amount = static_cast<int64_t>((static_cast<uint128_t>(m_token.amount) * this_balance.amount)
-                                      / (vinfo.supply.amount + m_token.amount));
+        amount = static_cast<int64_t>((static_cast<uint128_t>(src.amount) * vinfo.supply.amount) / balance.amount);
     }
-
-    return asset(amount, symbol);
-}
-
-const asset vesting::convert_to_vesting(const asset &m_token, const structures::vesting_info & vinfo) const {
-    uint64_t amount;
-    symbol_type symbol = m_token.symbol;
-
-    auto this_balance = token(N(eosio.token)).get_balance(_self, symbol.name()) - m_token;
-    eosio_assert(m_token.symbol == vinfo.supply.symbol, "The token type does not match.");
-
-    if (!vinfo.supply.amount || !this_balance.amount)
-        amount = m_token.amount;
-    else {
-        amount = static_cast<int64_t>((static_cast<uint128_t>(m_token.amount) * static_cast<uint128_t>(vinfo.supply.amount)) / static_cast<uint128_t>(this_balance.amount));
-    }
-
-    return asset(amount, symbol);
+    return asset(amount, sym);
 }
 
 void vesting::timeout_delay_trx() {

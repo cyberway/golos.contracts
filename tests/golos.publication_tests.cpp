@@ -42,25 +42,25 @@ class golos_publication_tester : public golos_tester {
     std::vector<account_name> _users;
 public:
 
-    golos_publication_tester(): _users{N(jackiechan), N(brucelee), N(chucknorris), N(golos.pub)}{
+    golos_publication_tester(): _users{N(jackiechan), N(brucelee), N(chucknorris), N(golos.pub)} {
         produce_blocks(2);
         create_accounts(_users);
         create_accounts({N(eosio.token)});
         create_accounts({vesting_name});
         create_accounts({N(dan.larimer)});
-        
+
         produce_blocks(2);
 
-        install_contract(N(golos.pub), contracts::posting_wasm(), contracts::posting_abi(), _serializers[N(golos.pub)]);
-        install_contract(N(eosio.token), contracts::token_wasm(), contracts::token_abi(), _serializers[N(eosio.token)]);
-        install_contract(vesting_name, contracts::vesting_wasm(), contracts::vesting_abi(), _serializers[vesting_name]);
+        install_contract(N(golos.pub), contracts::posting_wasm(), contracts::posting_abi());
+        install_contract(N(eosio.token), contracts::token_wasm(), contracts::token_abi());
+        install_contract(vesting_name, contracts::vesting_wasm(), contracts::vesting_abi());
     }
 
     action_result push_action(const account_name& signer,
                               const action_name &name,
                               const variant_object &data, const account_name& code = N(golos.pub)) {
-       auto& abi_ser = _serializers[code]; 
-       string action_type_name = abi_ser.get_action_type(name);       
+       auto& abi_ser = _abis[code];
+       string action_type_name = abi_ser.get_action_type(name);
        action act;
        act.account = code;
        act.name = name;
@@ -68,17 +68,17 @@ public:
 
        return base_tester::push_action(std::move(act), uint64_t(signer));
     }
-    
+
     void init() {
         symbol sym(0, "DUMMY");
-        BOOST_REQUIRE_EQUAL(success(), push_action(N(golos.pub), N(open), 
+        BOOST_REQUIRE_EQUAL(success(), push_action(N(golos.pub), N(open),
             mvo()( "owner", account_name(N(golos.pub)))
             ( "symbol", sym)
-            ( "ram_payer", account_name(N(golos.pub))), 
-            N(eosio.token)));  
-        
+            ( "ram_payer", account_name(N(golos.pub))),
+            N(eosio.token)));
+
         limitsarg lims = {{"0"}, {{0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}}, {0, 0}, {0, 0, 0}};
-        BOOST_REQUIRE_EQUAL(success(), push_action(N(golos.pub), N(setrules), mvo()                
+        BOOST_REQUIRE_EQUAL(success(), push_action(N(golos.pub), N(setrules), mvo()
                 ("mainfunc", mvo()("str", "0")("maxarg", 1))
                 ("curationfunc", mvo()("str", "0")("maxarg", 1))
                 ("timepenalty", mvo()("str", "0")("maxarg", 1))
@@ -87,11 +87,11 @@ public:
                 ("tokensymbol", sym)
                 ("lims", lims)));
         for(auto& u : _users) {
-            BOOST_REQUIRE_EQUAL(success(), push_action( u, N(open), 
+            BOOST_REQUIRE_EQUAL(success(), push_action( u, N(open),
                 mvo()( "owner", u)
                 ( "symbol", sym)
-                ( "ram_payer", u), 
-                vesting_name));   
+                ( "ram_payer", u),
+                vesting_name));
         }
     }
 
@@ -120,15 +120,15 @@ public:
     }
 
     fc::variant get_messages( account_name acc, uint64_t id ) {
-        return get_tbl_struct(N(golos.pub), acc, N(messagetable), id, "message", _serializers[N(golos.pub)]);
+        return get_tbl_struct(N(golos.pub), acc, N(messagetable), id, "message");
     }
 
     fc::variant get_content( account_name acc, uint64_t id ) {
-        return get_tbl_struct(N(golos.pub), acc, N(contenttable), id, "content", _serializers[N(golos.pub)]);
+        return get_tbl_struct(N(golos.pub), acc, N(contenttable), id, "content");
     }
 
     fc::variant get_vote( account_name acc, uint64_t id ) {
-        return get_tbl_struct(N(golos.pub), acc, N(votetable), id, "voteinfo", _serializers[N(golos.pub)]);
+        return get_tbl_struct(N(golos.pub), acc, N(votetable), id, "voteinfo");
     }
 
     action_result update_message(account_name account, std::string permlink,
@@ -200,7 +200,6 @@ public:
         BOOST_CHECK_EQUAL(obj1.get_object()["jsonmetadata"].as<std::string>(), obj2.get_object()["jsonmetadata"].as<std::string>());
     }
 
-    std::map<account_name, abi_serializer> _serializers;
 };
 
 BOOST_AUTO_TEST_SUITE(golos_publication_tests)
@@ -211,7 +210,7 @@ BOOST_FIXTURE_TEST_CASE(create_message, golos_publication_tester) try {
     BOOST_CHECK_EQUAL(success(), golos_publication_tester::create_message(
                             N(brucelee),
                             "permlink"));
-                            
+
     BOOST_TEST_MESSAGE("Checking that another user can create a message with the same permlink.");
     BOOST_CHECK_EQUAL(success(), golos_publication_tester::create_message(
                             N(chucknorris),
@@ -276,7 +275,7 @@ BOOST_FIXTURE_TEST_CASE(create_message, golos_publication_tester) try {
     BOOST_CHECK_EQUAL(error("assertion failure with message: unregistered user: dan.larimer"), golos_publication_tester::create_message(
                             N(dan.larimer),
                             "Hi"));
-    
+
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE(update_message, golos_publication_tester) try {
@@ -352,7 +351,7 @@ BOOST_FIXTURE_TEST_CASE(delete_message, golos_publication_tester) try {
 BOOST_FIXTURE_TEST_CASE(upvote, golos_publication_tester) try {
     BOOST_TEST_MESSAGE("Upvote testing.");
     init();
-    
+
     BOOST_CHECK_EQUAL(success(), golos_publication_tester::create_message(
                             N(brucelee),
                             "permlink"));
@@ -466,7 +465,7 @@ BOOST_FIXTURE_TEST_CASE(upvote, golos_publication_tester) try {
 BOOST_FIXTURE_TEST_CASE(disable_upvote, golos_publication_tester) try {
     BOOST_TEST_MESSAGE("Disable upvote testing.");
     init();
-    
+
     BOOST_CHECK_EQUAL(success(), golos_publication_tester::create_message(
                             N(brucelee),
                             "permlink"));
@@ -700,7 +699,7 @@ BOOST_FIXTURE_TEST_CASE(erase_vote_test, golos_publication_tester) try {
     BOOST_CHECK_EQUAL(success(), golos_publication_tester::create_message(
                             N(brucelee),
                             "permlink"));
-    
+
     BOOST_CHECK_EQUAL(success(), golos_publication_tester::create_message(
                             N(brucelee),
                             "permlink1"));
@@ -718,19 +717,19 @@ BOOST_FIXTURE_TEST_CASE(erase_vote_test, golos_publication_tester) try {
                             "permlink1",
                             321));
     produce_blocks(VOTE_OPERATION_INTERVAL*2);
-    
+
     BOOST_CHECK_EQUAL(success(), golos_publication_tester::delete_message(
                             N(brucelee),
                             "permlink1"));
     produce_blocks(1);
-    
+
     BOOST_CHECK_EQUAL(error("assertion failure with message: Vote with the same weight has already existed."), golos_publication_tester::downvote(
                             N(brucelee),
                             N(brucelee),
                             "permlink",
                             123));
 
-    
+
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE(nesting_level_test, golos_publication_tester) try {
@@ -742,13 +741,13 @@ BOOST_FIXTURE_TEST_CASE(nesting_level_test, golos_publication_tester) try {
      BOOST_CHECK_EQUAL(success(), golos_publication_tester::create_message(
         N(brucelee), "permlink" + std::to_string(i + 1),
         N(brucelee), "permlink" + std::to_string(i)));
-    
-    BOOST_CHECK_EQUAL("assertion failure with message: publication::create_message: level > MAX_COMMENT_DEPTH", 
+
+    BOOST_CHECK_EQUAL("assertion failure with message: publication::create_message: level > MAX_COMMENT_DEPTH",
         golos_publication_tester::create_message(
             N(brucelee), "permlink" + std::to_string(i + 1),
             N(brucelee), "permlink" + std::to_string(i)));
-        
-    
+
+
 } FC_LOG_AND_RETHROW()
 
 BOOST_AUTO_TEST_SUITE_END()
