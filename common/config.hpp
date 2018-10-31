@@ -1,12 +1,12 @@
 #pragma once
-#include <eosiolib/eosio.hpp>
 
 namespace golos { namespace config {
 
 // contracts
-static const auto control_name = N(golos.ctrl);
-static const auto vesting_name = N(golos.vest);
-static const auto emission_name = N(golos.emit);
+static const auto control_name = N(gls.ctrl);
+static const auto vesting_name = N(gls.vesting);
+static const auto emission_name = N(gls.emit);
+static const auto publication_name = N(gls.publish);
 static const auto token_name = N(eosio.token);
 static const auto internal_name = N(eosio);
 

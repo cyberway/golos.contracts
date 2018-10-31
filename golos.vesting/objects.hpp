@@ -1,9 +1,9 @@
 #pragma once
-#include "config.hpp"
-
 #include <eosiolib/time.hpp>
 #include <eosiolib/eosio.hpp>
 #include <eosiolib/asset.hpp>
+
+#include "config.hpp"
 
 using namespace eosio;
 
