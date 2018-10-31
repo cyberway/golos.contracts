@@ -364,7 +364,7 @@ void vesting::close(account_name owner, symbol_type symbol) {
 void vesting::notify_balance_change(account_name owner, asset diff) {
     action(
         permission_level{_self, N(active)},
-        CTRL_CONTRACT,
+        golos::config::control_name,
         N(changevest),
         std::make_tuple(diff.symbol, owner, diff)   // TODO: asset is enough, but ctrl uses symbol (1st arg) to detect app
     ).send();

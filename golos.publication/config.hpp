@@ -1,4 +1,6 @@
 #pragma once
+#include <common/config.hpp>
+
 namespace golos { namespace config {
 #define VOTE_OPERATION_INTERVAL 3 //sec
 
@@ -7,7 +9,6 @@ namespace golos { namespace config {
 #define UPVOTE_DISABLE_PERIOD 5 // 60*60
 #define MAX_REVOTES 5
 
-constexpr auto vesting_name = N(golos.vest);
 constexpr size_t CHECK_MONOTONIC_STEPS = 10;
 constexpr int64_t ONE_HUNDRED_PERCENT = 10000;
 constexpr size_t MAX_BENEFICIARIES = 64;
