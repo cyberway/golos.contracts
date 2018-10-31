@@ -33,7 +33,7 @@ struct user_balance
     asset unlocked_limit;
 
     uint64_t primary_key() const {
-        return vesting.symbol;//.name();
+        return vesting.symbol.name();
     }
 
     asset available_vesting() const {
