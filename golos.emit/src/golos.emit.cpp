@@ -54,12 +54,12 @@ void emission::stop() {
 
 void emission::emit() {
     // eosio_assert(!_has_props, "this token already created");
-    require_auth(_owner);
+    require_auth(_self);
     auto s = _state.get();
     eosio_assert(s.active, "emit called in inactive state");    // impossible?
     auto now = current_time();
     auto elapsed = now - s.prev_emit;
-    if (elapsed != config::emit_period) {
+    if (elapsed != 1e6 * config::emit_period) {
         eosio_assert(elapsed > config::emit_period, "emit called too early");   // impossible?
         print("warning: emit call delayed. elapsed: ", elapsed);
     }
@@ -71,7 +71,7 @@ void emission::emit() {
 
     auto token = eosio::token(config::token_name);
     auto new_tokens =
-        token.get_supply(_token).amount * infrate * time_to_blocks(elapsed)
+        token.get_supply(_token.name()).amount * infrate * time_to_blocks(elapsed)
         / (int64_t(config::blocks_per_year) * config::_100percent);
     auto content_reward = new_tokens * p.content_reward / config::_100percent;
     auto vesting_reward = new_tokens * p.vesting_reward / config::_100percent;
@@ -84,13 +84,11 @@ void emission::emit() {
     INLINE_ACTION_SENDER(eosio::token, transfer)(config::token_name, {from, N(active)}, \
         {from, to, asset(amount, _token), "emission"}); \
 }
-        // INLINE_ACTION_SENDER(eosio::token, issue)(config::token_name, {{N(_owner), N(active)}},
-        //     {N(_owner), asset(new_tokens), "emission"});
         auto from = _self;
-        INLINE_ACTION_SENDER(eosio::token, issue)(config::token_name, {{from, N(active)}},
-            {from, asset(new_tokens), "emission"});
+        INLINE_ACTION_SENDER(eosio::token, issue)(config::token_name, {{_owner, N(active)}},
+            {from, asset(new_tokens, _token), "emission"});
         TRANSFER(_owner, content_reward);
-        TRANSFER(config::vesting_name, content_reward);
+        TRANSFER(config::vesting_name, vesting_reward);
         TRANSFER(p.workers_pool, workers_reward);
 
         witness_reward /= p.max_witnesses;  // if rounded to 0, it will stay in content pool

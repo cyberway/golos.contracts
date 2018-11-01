@@ -224,6 +224,7 @@ void control::update_auths() {
         bool is_active = config::active_name == perm;
         if (is_active) {
             auth.accounts.push_back({{_self, config::code_name}, thrs});    // add eosio.code
+            auth.accounts.push_back({{config::emission_name, config::code_name}, thrs});    // needed to create tokens
         }
         //permissions must be sorted
         std::sort(auth.accounts.begin(), auth.accounts.end(),
