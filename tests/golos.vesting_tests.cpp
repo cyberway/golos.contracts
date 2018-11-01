@@ -2,12 +2,13 @@
 #include "golos.vesting_test_api.hpp"
 #include "eosio.token_test_api.hpp"
 #include "contracts.hpp"
+#include "../golos.emit/include/golos.emit/config.hpp"
 
+
+namespace cfg = golos::config;
 using namespace eosio::testing;
-using namespace eosio;
 using namespace eosio::chain;
 using namespace fc;
-using namespace std;
 
 
 static const auto _symbol = symbol(4,"GOLOS");
@@ -15,31 +16,32 @@ static const auto _symbol = symbol(4,"GOLOS");
 class golos_vesting_tester : public golos_tester {
 protected:
     golos_vesting_api vest;
-    eosio_token_api etoken;
+    eosio_token_api token;
 
 public:
 
     golos_vesting_tester()
-        : golos_tester(N(golos.vest), _symbol.to_symbol_code().value)
-        , vest({this, N(golos.vest)})
-        , etoken({this, N(eosio.token)})
+        : golos_tester(cfg::vesting_name, _symbol.to_symbol_code().value)
+        , vest({this, cfg::vesting_name})
+        , token({this, cfg::token_name})
     {
         vest._symbol =
-        etoken._symbol = _symbol;
+        token._symbol = _symbol;
 
-        create_accounts({N(sania), N(pasha), N(tania), N(golos.vest), N(golos.ctrl), N(eosio.token), N(golos.emiss), N(golos.issuer)});
+        create_accounts({N(sania), N(pasha), N(tania),
+            cfg::vesting_name, cfg::control_name, cfg::token_name, cfg::emission_name, N(golos.issuer)});
         produce_blocks(2);
 
-        install_contract(N(eosio.token), contracts::token_wasm(), contracts::token_abi());
-        install_contract(N(golos.vest), contracts::vesting_wasm(), contracts::vesting_abi());
-        // install_contract(N(golos.ctrl), contracts::ctrl_wasm(), contracts::ctrl_abi());
+        install_contract(cfg::token_name, contracts::token_wasm(), contracts::token_abi());
+        install_contract(cfg::vesting_name, contracts::vesting_wasm(), contracts::vesting_abi());
+        // install_contract(cfg::control_name, contracts::ctrl_wasm(), contracts::ctrl_abi());
     }
 
 
     void prepare_balances() {
-        BOOST_CHECK_EQUAL(success(), etoken.create(N(golos.issuer), vest.make_asset(100000)));
-        BOOST_CHECK_EQUAL(success(), etoken.issue(N(golos.issuer), N(sania), vest.make_asset(500), "issue tokens sania"));
-        BOOST_CHECK_EQUAL(success(), etoken.issue(N(golos.issuer), N(pasha), vest.make_asset(500), "issue tokens pasha"));
+        BOOST_CHECK_EQUAL(success(), token.create(N(golos.issuer), vest.make_asset(100000)));
+        BOOST_CHECK_EQUAL(success(), token.issue(N(golos.issuer), N(sania), vest.make_asset(500), "issue tokens sania"));
+        BOOST_CHECK_EQUAL(success(), token.issue(N(golos.issuer), N(pasha), vest.make_asset(500), "issue tokens pasha"));
         produce_blocks(1);
 
         BOOST_CHECK_EQUAL(success(), vest.open(N(sania), _symbol, N(sania)));
@@ -47,12 +49,12 @@ public:
         produce_blocks(1);
 
         BOOST_CHECK_EQUAL(success(), vest.create_vesting(N(golos.issuer), _symbol));
-        BOOST_CHECK_EQUAL(success(), etoken.transfer(N(sania), N(golos.vest), vest.make_asset(100), "convert token to vesting"));
-        BOOST_CHECK_EQUAL(success(), etoken.transfer(N(pasha), N(golos.vest), vest.make_asset(100), "convert token to vesting"));
+        BOOST_CHECK_EQUAL(success(), token.transfer(N(sania), cfg::vesting_name, vest.make_asset(100), "convert token to vesting"));
+        BOOST_CHECK_EQUAL(success(), token.transfer(N(pasha), cfg::vesting_name, vest.make_asset(100), "convert token to vesting"));
         produce_blocks(1);
 
-        CHECK_MATCHING_OBJECT(etoken.get_account(N(sania)), mvo()("balance", vest.asset_str(400)));
-        CHECK_MATCHING_OBJECT(etoken.get_account(N(pasha)), mvo()("balance", vest.asset_str(400)));
+        CHECK_MATCHING_OBJECT(token.get_account(N(sania)), mvo()("balance", vest.asset_str(400)));
+        CHECK_MATCHING_OBJECT(token.get_account(N(pasha)), mvo()("balance", vest.asset_str(400)));
         CHECK_MATCHING_OBJECT(vest.get_balance(N(sania)), vest.make_balance(100));
         CHECK_MATCHING_OBJECT(vest.get_balance(N(pasha)), vest.make_balance(100));
     }
@@ -69,11 +71,11 @@ public:
 BOOST_AUTO_TEST_SUITE(golos_vesting_tests)
 
 BOOST_FIXTURE_TEST_CASE(test_create_tokens, golos_vesting_tester) try {
-    BOOST_CHECK_EQUAL(success(), etoken.create(N(eosio.token), vest.make_asset(100000)));
-    CHECK_MATCHING_OBJECT(etoken.get_stats(), mvo()
+    BOOST_CHECK_EQUAL(success(), token.create(cfg::token_name, vest.make_asset(100000)));
+    CHECK_MATCHING_OBJECT(token.get_stats(), mvo()
         ("supply", vest.asset_str(0))
         ("max_supply", vest.asset_str(100000))
-        ("issuer", "eosio.token")
+        ("issuer", name(cfg::token_name).to_string())
     );
 } FC_LOG_AND_RETHROW()
 
@@ -82,34 +84,34 @@ BOOST_FIXTURE_TEST_CASE(test_create_vesting_for_nonexistent_token, golos_vesting
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE(test_create_vesting_by_not_issuer, golos_vesting_tester) try {
-    BOOST_CHECK_EQUAL(success(), etoken.create(N(eosio.token), vest.make_asset(100000)));
+    BOOST_CHECK_EQUAL(success(), token.create(cfg::token_name, vest.make_asset(100000)));
     BOOST_CHECK_EQUAL("assertion failure with message: Only token issuer can create it", vest.create_vesting(N(golos.issuer), _symbol));
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE(test_create_vesting, golos_vesting_tester) try {
-    BOOST_CHECK_EQUAL(success(), etoken.create(N(golos.issuer), vest.make_asset(100000)));
+    BOOST_CHECK_EQUAL(success(), token.create(N(golos.issuer), vest.make_asset(100000)));
     BOOST_CHECK_EQUAL(success(), vest.create_vesting(N(golos.issuer), _symbol));
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE(test_issue_tokens_accounts, golos_vesting_tester) try {
-    BOOST_CHECK_EQUAL(success(), etoken.create(N(golos.issuer), vest.make_asset(100000)));
-    BOOST_CHECK_EQUAL(success(), etoken.issue(N(golos.issuer), N(sania), vest.make_asset(500), "issue tokens sania"));
-    BOOST_CHECK_EQUAL(success(), etoken.issue(N(golos.issuer), N(pasha), vest.make_asset(500), "issue tokens pasha"));
+    BOOST_CHECK_EQUAL(success(), token.create(N(golos.issuer), vest.make_asset(100000)));
+    BOOST_CHECK_EQUAL(success(), token.issue(N(golos.issuer), N(sania), vest.make_asset(500), "issue tokens sania"));
+    BOOST_CHECK_EQUAL(success(), token.issue(N(golos.issuer), N(pasha), vest.make_asset(500), "issue tokens pasha"));
     produce_blocks(1);
 
-    CHECK_MATCHING_OBJECT(etoken.get_stats(), mvo()
+    CHECK_MATCHING_OBJECT(token.get_stats(), mvo()
         ("supply", vest.asset_str(1000))
         ("max_supply", vest.asset_str(100000))
         ("issuer", "golos.issuer")
     );
-    CHECK_MATCHING_OBJECT(etoken.get_account(N(sania)), mvo()("balance", vest.asset_str(500)));
-    CHECK_MATCHING_OBJECT(etoken.get_account(N(pasha)), mvo()("balance", vest.asset_str(500)));
+    CHECK_MATCHING_OBJECT(token.get_account(N(sania)), mvo()("balance", vest.asset_str(500)));
+    CHECK_MATCHING_OBJECT(token.get_account(N(pasha)), mvo()("balance", vest.asset_str(500)));
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE(test_convert_token_to_vesting, golos_vesting_tester) try {
-    BOOST_CHECK_EQUAL(success(), etoken.create(N(golos.issuer), vest.make_asset(100000)));
-    BOOST_CHECK_EQUAL(success(), etoken.issue(N(golos.issuer), N(sania), vest.make_asset(500), "issue tokens sania"));
-    BOOST_CHECK_EQUAL(success(), etoken.issue(N(golos.issuer), N(pasha), vest.make_asset(500), "issue tokens pasha"));
+    BOOST_CHECK_EQUAL(success(), token.create(N(golos.issuer), vest.make_asset(100000)));
+    BOOST_CHECK_EQUAL(success(), token.issue(N(golos.issuer), N(sania), vest.make_asset(500), "issue tokens sania"));
+    BOOST_CHECK_EQUAL(success(), token.issue(N(golos.issuer), N(pasha), vest.make_asset(500), "issue tokens pasha"));
     produce_blocks(1);
 
     BOOST_CHECK_EQUAL(success(), vest.open(N(sania), _symbol, N(sania)));
@@ -117,20 +119,20 @@ BOOST_FIXTURE_TEST_CASE(test_convert_token_to_vesting, golos_vesting_tester) try
     produce_blocks(1);
 
     BOOST_CHECK_EQUAL(success(), vest.create_vesting(N(golos.issuer), _symbol));
-    BOOST_CHECK_EQUAL(success(), etoken.transfer(N(sania), N(golos.vest), vest.make_asset(100), "convert token to vesting"));
-    BOOST_CHECK_EQUAL(success(), etoken.transfer(N(pasha), N(golos.vest), vest.make_asset(100), "convert token to vesting"));
+    BOOST_CHECK_EQUAL(success(), token.transfer(N(sania), cfg::vesting_name, vest.make_asset(100), "convert token to vesting"));
+    BOOST_CHECK_EQUAL(success(), token.transfer(N(pasha), cfg::vesting_name, vest.make_asset(100), "convert token to vesting"));
     produce_blocks(1);
 
-    CHECK_MATCHING_OBJECT(etoken.get_account(N(sania)), mvo()("balance", vest.asset_str(400)));
-    CHECK_MATCHING_OBJECT(etoken.get_account(N(pasha)), mvo()("balance", vest.asset_str(400)));
+    CHECK_MATCHING_OBJECT(token.get_account(N(sania)), mvo()("balance", vest.asset_str(400)));
+    CHECK_MATCHING_OBJECT(token.get_account(N(pasha)), mvo()("balance", vest.asset_str(400)));
     CHECK_MATCHING_OBJECT(vest.get_balance(N(sania)), vest.make_balance(100));
     CHECK_MATCHING_OBJECT(vest.get_balance(N(pasha)), vest.make_balance(100));
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE(test_convert_vesting_to_token, golos_vesting_tester) try {
-    BOOST_CHECK_EQUAL(success(), etoken.create(N(golos.issuer), vest.make_asset(100000)));
-    BOOST_CHECK_EQUAL(success(), etoken.issue(N(golos.issuer), N(sania), vest.make_asset(500), "issue tokens sania"));
-    BOOST_CHECK_EQUAL(success(), etoken.issue(N(golos.issuer), N(pasha), vest.make_asset(500), "issue tokens pasha"));
+    BOOST_CHECK_EQUAL(success(), token.create(N(golos.issuer), vest.make_asset(100000)));
+    BOOST_CHECK_EQUAL(success(), token.issue(N(golos.issuer), N(sania), vest.make_asset(500), "issue tokens sania"));
+    BOOST_CHECK_EQUAL(success(), token.issue(N(golos.issuer), N(pasha), vest.make_asset(500), "issue tokens pasha"));
     produce_blocks(1);
 
     BOOST_CHECK_EQUAL(success(), vest.open(N(sania), _symbol, N(sania)));
@@ -138,34 +140,34 @@ BOOST_FIXTURE_TEST_CASE(test_convert_vesting_to_token, golos_vesting_tester) try
     produce_blocks(1);
 
     BOOST_CHECK_EQUAL(success(), vest.create_vesting(N(golos.issuer), _symbol));
-    BOOST_CHECK_EQUAL(success(), etoken.transfer(N(sania), N(golos.vest), vest.make_asset(100), "convert token to vesting"));
-    BOOST_CHECK_EQUAL(success(), etoken.transfer(N(pasha), N(golos.vest), vest.make_asset(100), "convert token to vesting"));
+    BOOST_CHECK_EQUAL(success(), token.transfer(N(sania), cfg::vesting_name, vest.make_asset(100), "buy vesting"));
+    BOOST_CHECK_EQUAL(success(), token.transfer(N(pasha), cfg::vesting_name, vest.make_asset(100), "buy vesting"));
     produce_blocks(1);
 
-    CHECK_MATCHING_OBJECT(etoken.get_account(N(sania)), mvo()("balance", vest.asset_str(400)));
-    CHECK_MATCHING_OBJECT(etoken.get_account(N(pasha)), mvo()("balance", vest.asset_str(400)));
+    CHECK_MATCHING_OBJECT(token.get_account(N(sania)), mvo()("balance", vest.asset_str(400)));
+    CHECK_MATCHING_OBJECT(token.get_account(N(pasha)), mvo()("balance", vest.asset_str(400)));
     CHECK_MATCHING_OBJECT(vest.get_balance(N(sania)), vest.make_balance(100));
     CHECK_MATCHING_OBJECT(vest.get_balance(N(pasha)), vest.make_balance(100));
 
     BOOST_CHECK_EQUAL(success(), vest.convert_vesting(N(sania), N(sania), vest.make_asset(13)));
-    BOOST_CHECK_EQUAL(success(), vest.timeout(N(golos.vest)));
+    BOOST_CHECK_EQUAL(success(), vest.timeout(cfg::vesting_name));
     auto delegated_auth = authority(1, {}, {
-        {.permission = {N(golos.vest), config::eosio_code_name}, .weight = 1}
+        {.permission = {cfg::vesting_name, cfg::code_name}, .weight = 1}
     });
-    set_authority(N(golos.vest), config::active_name, delegated_auth);
+    set_authority(cfg::vesting_name, cfg::active_name, delegated_auth);
     produce_blocks(31);
 
     CHECK_MATCHING_OBJECT(vest.get_balance(N(sania)), vest.make_balance(99));
-    CHECK_MATCHING_OBJECT(etoken.get_account(N(sania)), mvo()("balance", vest.asset_str(401)));
+    CHECK_MATCHING_OBJECT(token.get_account(N(sania)), mvo()("balance", vest.asset_str(401)));
     produce_blocks(270);
     CHECK_MATCHING_OBJECT(vest.get_balance(N(sania)), vest.make_balance(90));
-    CHECK_MATCHING_OBJECT(etoken.get_account(N(sania)), mvo()("balance", vest.asset_str(410)));
+    CHECK_MATCHING_OBJECT(token.get_account(N(sania)), mvo()("balance", vest.asset_str(410)));
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE(test_cancel_convert_vesting_to_token, golos_vesting_tester) try {
-    BOOST_CHECK_EQUAL(success(), etoken.create(N(golos.issuer), vest.make_asset(100000)));
-    BOOST_CHECK_EQUAL(success(), etoken.issue(N(golos.issuer), N(sania), vest.make_asset(500), "issue tokens sania"));
-    BOOST_CHECK_EQUAL(success(), etoken.issue(N(golos.issuer), N(pasha), vest.make_asset(500), "issue tokens pasha"));
+    BOOST_CHECK_EQUAL(success(), token.create(N(golos.issuer), vest.make_asset(100000)));
+    BOOST_CHECK_EQUAL(success(), token.issue(N(golos.issuer), N(sania), vest.make_asset(500), "issue tokens sania"));
+    BOOST_CHECK_EQUAL(success(), token.issue(N(golos.issuer), N(pasha), vest.make_asset(500), "issue tokens pasha"));
     produce_blocks(1);
 
     BOOST_CHECK_EQUAL(success(), vest.open(N(sania), _symbol, N(sania)));
@@ -173,33 +175,33 @@ BOOST_FIXTURE_TEST_CASE(test_cancel_convert_vesting_to_token, golos_vesting_test
     produce_blocks(1);
 
     BOOST_CHECK_EQUAL(success(), vest.create_vesting(N(golos.issuer), _symbol));
-    BOOST_CHECK_EQUAL(success(), etoken.transfer(N(sania), N(golos.vest), vest.make_asset(100), "convert token to vesting"));
-    BOOST_CHECK_EQUAL(success(), etoken.transfer(N(pasha), N(golos.vest), vest.make_asset(100), "convert token to vesting"));
+    BOOST_CHECK_EQUAL(success(), token.transfer(N(sania), cfg::vesting_name, vest.make_asset(100), "convert token to vesting"));
+    BOOST_CHECK_EQUAL(success(), token.transfer(N(pasha), cfg::vesting_name, vest.make_asset(100), "convert token to vesting"));
     produce_blocks(1);
 
-    CHECK_MATCHING_OBJECT(etoken.get_account(N(sania)), mvo()("balance", vest.asset_str(400)));
-    CHECK_MATCHING_OBJECT(etoken.get_account(N(pasha)), mvo()("balance", vest.asset_str(400)));
+    CHECK_MATCHING_OBJECT(token.get_account(N(sania)), mvo()("balance", vest.asset_str(400)));
+    CHECK_MATCHING_OBJECT(token.get_account(N(pasha)), mvo()("balance", vest.asset_str(400)));
     CHECK_MATCHING_OBJECT(vest.get_balance(N(sania)), vest.make_balance(100));
     CHECK_MATCHING_OBJECT(vest.get_balance(N(pasha)), vest.make_balance(100));
 
     BOOST_CHECK_EQUAL(success(), vest.convert_vesting(N(sania), N(sania), vest.make_asset(13)));
-    BOOST_CHECK_EQUAL(success(), vest.timeout(N(golos.vest)));
+    BOOST_CHECK_EQUAL(success(), vest.timeout(cfg::vesting_name));
     auto delegated_auth = authority(1, {}, {
-        {.permission = {N(golos.vest), config::eosio_code_name}, .weight = 1}
+        {.permission = {cfg::vesting_name, cfg::code_name}, .weight = 1}
     });
-    set_authority(N(golos.vest), config::active_name, delegated_auth);
+    set_authority(cfg::vesting_name, cfg::active_name, delegated_auth);
     produce_blocks(31);
 
     CHECK_MATCHING_OBJECT(vest.get_balance(N(sania)), vest.make_balance(99));
-    CHECK_MATCHING_OBJECT(etoken.get_account(N(sania)), mvo()("balance", vest.asset_str(401)));
+    CHECK_MATCHING_OBJECT(token.get_account(N(sania)), mvo()("balance", vest.asset_str(401)));
     produce_blocks(120);
     CHECK_MATCHING_OBJECT(vest.get_balance(N(sania)), vest.make_balance(95));
-    CHECK_MATCHING_OBJECT(etoken.get_account(N(sania)), mvo()("balance", vest.asset_str(405)));
+    CHECK_MATCHING_OBJECT(token.get_account(N(sania)), mvo()("balance", vest.asset_str(405)));
 
     BOOST_CHECK_EQUAL(success(), vest.cancel_convert_vesting(N(sania), vest.make_asset(0)));
     produce_blocks(120);
     CHECK_MATCHING_OBJECT(vest.get_balance(N(sania)), vest.make_balance(95));
-    CHECK_MATCHING_OBJECT(etoken.get_account(N(sania)), mvo()("balance", vest.asset_str(405)));
+    CHECK_MATCHING_OBJECT(token.get_account(N(sania)), mvo()("balance", vest.asset_str(405)));
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE(error_sender_equals_test_delegate_vesting, golos_vesting_tester) try {
@@ -280,11 +282,11 @@ BOOST_FIXTURE_TEST_CASE(test_undelegate_vesting, golos_vesting_tester) try {
     CHECK_MATCHING_OBJECT(vest.get_balance(N(pasha)), vest.make_balance(100, 0, 15));
     CHECK_MATCHING_OBJECT(vest.get_balance(N(sania)), vest.make_balance(100, 20));
 
-    vest.timeout(N(golos.vest));
+    vest.timeout(cfg::vesting_name);
     auto delegated_auth = authority(1, {}, {
-        {.permission = {N(golos.vest), config::eosio_code_name}, .weight = 1}
+        {.permission = {cfg::vesting_name, cfg::code_name}, .weight = 1}
     });
-    set_authority(N(golos.vest),  config::active_name,  delegated_auth);
+    set_authority(cfg::vesting_name, cfg::active_name, delegated_auth);
     produce_blocks(31);
     CHECK_MATCHING_OBJECT(vest.get_balance(N(sania)), vest.make_balance(100, 15));
     CHECK_MATCHING_OBJECT(vest.get_balance(N(pasha)), vest.make_balance(100, 0, 15));

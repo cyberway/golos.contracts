@@ -2,7 +2,6 @@
 #include "golos.ctrl/config.hpp"
 #include <golos.vesting/golos.vesting.hpp>
 #include <eosio.system/native.hpp>
-#include <eosiolib/transaction.hpp>
 
 #define DOMAIN_TYPE symbol_type
 #include <common/dispatcher.hpp>
@@ -12,8 +11,6 @@ namespace golos {
 using namespace eosio;
 using std::vector;
 using std::string;
-
-#define MAX_WITNESS_URL_SIZE 256
 
 
 /// properties
@@ -82,9 +79,8 @@ void control::detachacc(account_name user) {
 }
 
 void control::regwitness(account_name witness, eosio::public_key key, string url) {
-    eosio_assert(url.length() <= MAX_WITNESS_URL_SIZE, "url too long");
+    eosio_assert(url.length() <= config::witness_max_url_size, "url too long");
     eosio_assert(key != eosio::public_key(), "public key should not be the default value");
-    // TODO: check if key unique? Actually, key became unused now, can be removed
     require_auth(witness);
 
     upsert_tbl<witness_tbl>(_token, witness, witness, [&](bool exists) {
@@ -212,7 +208,7 @@ void control::update_auths() {
         auth.accounts.push_back({{i,config::active_name},1});
     }
 
-    std::vector<std::pair<uint64_t,uint16_t>> auths = {
+    vector<std::pair<uint64_t,uint16_t>> auths = {
         {config::minority_name, props().minority_threshold()},
         {config::majority_name, props().majority_threshold()},
         {config::active_name, props().active_threshold()}         // active must be the last because it adds eosio.code

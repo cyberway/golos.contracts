@@ -24,6 +24,14 @@ struct eosio_token_api: base_contract_api {
         );
     }
 
+    action_result open(account_name owner, symbol symbol, account_name payer) {
+        return push(N(open), owner, args()
+            ("owner", owner)
+            ("symbol", symbol)
+            ("ram_payer", payer)
+        );
+    }
+
     action_result transfer(account_name from, account_name to, asset quantity, string memo) {
         return push(N(transfer), from, args()
             ("from", from)

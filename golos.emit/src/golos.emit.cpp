@@ -29,14 +29,14 @@ void emission::start() {
         .post_name = _owner,
         // .work_name = p.workers_pool,
         .start_time = current_time(),
-        .prev_emit = current_time() - config::emit_period*1000'000   // instant emit. TODO: maybe delay on first start?
+        .prev_emit = current_time() - config::emit_interval*1000'000   // instant emit. TODO: maybe delay on first start?
     };
     s = _state.get_or_create(_owner, s);
     eosio_assert(!s.active, "already active");
     s.active = true;
 
     uint32_t elapsed = (current_time() - s.prev_emit) / 1e6;
-    auto delay = elapsed < config::emit_period ? config::emit_period - elapsed : 0;
+    auto delay = elapsed < config::emit_interval ? config::emit_interval - elapsed : 0;
     schedule_next(s, delay);
 }
 
@@ -59,8 +59,8 @@ void emission::emit() {
     eosio_assert(s.active, "emit called in inactive state");    // impossible?
     auto now = current_time();
     auto elapsed = now - s.prev_emit;
-    if (elapsed != 1e6 * config::emit_period) {
-        eosio_assert(elapsed > config::emit_period, "emit called too early");   // impossible?
+    if (elapsed != 1e6 * config::emit_interval) {
+        eosio_assert(elapsed > config::emit_interval, "emit called too early");   // impossible?
         print("warning: emit call delayed. elapsed: ", elapsed);
     }
     // TODO: maybe limit elapsed to avoid instant high value emission
@@ -110,7 +110,7 @@ void emission::emit() {
     }
 
     s.prev_emit = current_time();
-    schedule_next(s, config::emit_period);
+    schedule_next(s, config::emit_interval);
 }
 
 void emission::schedule_next(state& s, uint32_t delay) {
