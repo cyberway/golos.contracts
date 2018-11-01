@@ -80,9 +80,9 @@ void emission::emit() {
     eosio_assert(witness_reward >= 0, "bad reward percents params");    // impossible, TODO: remove after tests
 
     if (new_tokens > 0) {
-#define TRANSFER(to, amount) if (amount > 0) { \
+#define TRANSFER(to, amount, memo) if (amount > 0) { \
     INLINE_ACTION_SENDER(eosio::token, transfer)(config::token_name, {from, N(active)}, \
-        {from, to, asset(amount, _token), "emission"}); \
+        {from, to, asset(amount, _token), memo}); \
 }
         auto from = _self;
         INLINE_ACTION_SENDER(eosio::token, issue)(config::token_name, {{_owner, N(active)}},
@@ -97,14 +97,14 @@ void emission::emit() {
             auto top = ctrl.get_top_witnesses();
             for (const auto& w: top) {
                 // TODO: maybe reimplement as claim to avoid missing balance asserts (or skip witnesses without balances)
-                TRANSFER(w, witness_reward);
+                TRANSFER(w, witness_reward, "emission");
                 content_reward -= witness_reward;
             }
         }
 
-        TRANSFER(_owner, content_reward);
-        TRANSFER(config::vesting_name, vesting_reward);
-        TRANSFER(p.workers_pool, workers_reward);
+        TRANSFER(_owner, content_reward, "emission");
+        TRANSFER(config::vesting_name, vesting_reward, ""); // memo must be empty to add to supply
+        TRANSFER(p.workers_pool, workers_reward, "emission");
 
 #undef TRANSFER
     }
