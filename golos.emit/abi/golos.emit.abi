@@ -21,17 +21,23 @@
         {
             "name": "emit",
             "base": "",
-            "fields": []
+            "fields": [
+                {"type": "symbol", "name": "domain"}
+            ]
         },
         {
             "name": "start",
             "base": "",
-            "fields": []
+            "fields": [
+                {"type": "symbol", "name": "domain"}
+            ]
         },
         {
             "name": "stop",
             "base": "",
-            "fields": []
+            "fields": [
+                {"type": "symbol", "name": "domain"}
+            ]
         }
     ],
     "types": [],
