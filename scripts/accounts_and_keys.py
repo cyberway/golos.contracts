@@ -14,12 +14,11 @@ def save_authority(doc):
     default_id_count_permusage = cyberway_permusage.find().sort('id', -1).limit(1)[0]['id']
     id_count_permusage = default_id_count_permusage + 1
     id_count_permission = cyberway_permission.find().sort('id', -1).limit(1)[0]['id'] + 1
-    id_count_parent = cyberway_permission.find().sort('parent', -1).limit(1)[0]['parent'] + 1
 
     owner_permusage = {
 	"id" : bson.Int64(id_count_permusage),
-	"last_used" : "",
-	"_SCOPE_" : "_CYBERWAY_",
+	"last_used" : doc["last_owner_update"].isoformat(),
+	"_SCOPE_" : "",
 	"_PAYER_" : "",
 	"_SIZE_" : bson.Int64(16)
     }
@@ -29,22 +28,22 @@ def save_authority(doc):
     owner_permission = {
 	"id" : bson.Int64(id_count_permission),
 	"usage_id" : owner_permusage["id"],
-	"parent" : bson.Int64(id_count_parent),
+	"parent" : bson.Int64(0),
 	"owner" : doc["account"],
 	"name" : "owner",
-	"last_updated" : doc["last_owner_update"],
+	"last_updated" : doc["last_owner_update"].isoformat(),
 	"auth" : {
 	    "threshold" : bson.Int64(1),
 	    "keys" : [
 		{
-		    "key" : doc["owner"],
+		    "key" : doc["owner"][0],
 		    "weight" : bson.Int64(1)
 		}
 	    ],
 	    "accounts" : [ ],
 	    "waits" : [ ]
 	},
-	"_SCOPE_" : "_CYBERWAY_",
+	"_SCOPE_" : "",
 	"_PAYER_" : "",
 	"_SIZE_" : bson.Int64(91)
     }
@@ -53,8 +52,8 @@ def save_authority(doc):
 
     active_permusage = {
 	"id" : bson.Int64(id_count_permusage),
-	"last_used" : "",
-	"_SCOPE_" : "_CYBERWAY_",
+	"last_used" : doc["last_owner_update"].isoformat(),
+	"_SCOPE_" : "",
 	"_PAYER_" : "",
 	"_SIZE_" : bson.Int64(16)
     }
@@ -64,22 +63,22 @@ def save_authority(doc):
     active_permission = {
 	"id" : bson.Int64(id_count_permission),
 	"usage_id" : active_permusage["id"],
-	"parent" : bson.Int64(id_count_parent),
+	"parent" : bson.Int64(id_count_permission-1),
 	"owner" : doc["account"],
 	"name" : "active",
-	"last_updated" : "",
+	"last_updated" : doc["last_owner_update"].isoformat(),
 	"auth" : {
 	    "threshold" : bson.Int64(1),
 	    "keys" : [
 		{
-		    "key" : doc["active"],
+		    "key" : doc["active"][0],
 		    "weight" : bson.Int64(1)
 		}
 	    ],
 	    "accounts" : [ ],
 	    "waits" : [ ]
 	},
-	"_SCOPE_" : "_CYBERWAY_",
+	"_SCOPE_" : "",
 	"_PAYER_" : "",
 	"_SIZE_" : bson.Int64(91)
     }
@@ -88,8 +87,8 @@ def save_authority(doc):
 
     posting_permusage = {
 	"id" : bson.Int64(id_count_permusage),
-	"last_used" : "",
-	"_SCOPE_" : "_CYBERWAY_",
+	"last_used" : doc["last_owner_update"].isoformat(),
+	"_SCOPE_" : "",
 	"_PAYER_" : "",
 	"_SIZE_" : bson.Int64(16)
     }
@@ -99,29 +98,28 @@ def save_authority(doc):
     posting_permission = {
 	"id" : bson.Int64(id_count_permission),
 	"usage_id" : posting_permusage["id"],
-	"parent" : bson.Int64(id_count_parent),
+	"parent" : bson.Int64(id_count_permission-1),
 	"owner" : doc["account"],
 	"name" : "posting",
-	"last_updated" : "",
+	"last_updated" : doc["last_owner_update"].isoformat(),
 	"auth" : {
 	    "threshold" : bson.Int64(1),
 	    "keys" : [
 		{
-		    "key" : doc["posting"],
+		    "key" : doc["posting"][0],
 		    "weight" : bson.Int64(1)
 		}
 	    ],
 	    "accounts" : [ ],
 	    "waits" : [ ]
 	},
-	"_SCOPE_" : "_CYBERWAY_",
+	"_SCOPE_" : "",
 	"_PAYER_" : "",
 	"_SIZE_" : bson.Int64(91)
     }
     dbs.cyberway_db['permission'].save(posting_permission)
     id_count_permission += 1
 
-    id_count_parent += 1
 
 def convert_accounts_and_keys(argv = -1):
     golos_accounts = dbs.golos_db['account_object']
@@ -148,10 +146,10 @@ def convert_accounts_and_keys(argv = -1):
             "privileged" : False,
             "last_code_update" : "1970-01-01T00:00:00.000",
             "code_version" : "0000000000000000000000000000000000000000000000000000000000000000",
-            "creation_date" : doc["created"],
+            "creation_date" : doc["created"].isoformat(),
             "code" : "",
             "abi" : "",
-            "_SCOPE_" : "_CYBERWAY_",
+            "_SCOPE_" : "",
             "_PAYER_" : "",
             "_SIZE_" : bson.Int64(65)
         }
@@ -166,7 +164,7 @@ def convert_accounts_and_keys(argv = -1):
             "auth_sequence" : bson.Int64(0),
             "code_sequence" : bson.Int64(0),
             "abi_sequence" : bson.Int64(0),
-            "_SCOPE_" : "_CYBERWAY_",
+            "_SCOPE_" : "",
             "_PAYER_" : "",
             "_SIZE_" : bson.Int64(48)
         }
@@ -179,7 +177,7 @@ def convert_accounts_and_keys(argv = -1):
             "net_weight" : bson.Int64(-1),
             "cpu_weight" : bson.Int64(-1),
             "ram_bytes" : bson.Int64(-1),
-            "_SCOPE_" : "_CYBERWAY_",
+            "_SCOPE_" : "",
             "_PAYER_" : "",
             "_SIZE_" : bson.Int64(41)
         }
@@ -199,7 +197,7 @@ def convert_accounts_and_keys(argv = -1):
     	        "consumed" : bson.Int64(0)
             },
             "ram_usage" : bson.Int64(2724),
-            "_SCOPE_" : "_CYBERWAY_",
+            "_SCOPE_" : "",
             "_PAYER_" : "",
             "_SIZE_" : bson.Int64(64)
         }
