@@ -87,20 +87,25 @@ void emission::emit() {
         auto from = _self;
         INLINE_ACTION_SENDER(eosio::token, issue)(config::token_name, {{_owner, N(active)}},
             {from, asset(new_tokens, _token), "emission"});
+
+        // 1. witness reward can have remainder after division, it stay in content pool
+        // 2. if there less than max witnesses, their reward stay in content pool
+        content_reward += witness_reward;
+        witness_reward /= p.max_witnesses;
+        if (witness_reward > 0) {
+            auto ctrl = control(config::control_name, _token);  // TODO: reuse existing control object
+            auto top = ctrl.get_top_witnesses();
+            for (const auto& w: top) {
+                // TODO: maybe reimplement as claim to avoid missing balance asserts (or skip witnesses without balances)
+                TRANSFER(w, witness_reward);
+                content_reward -= witness_reward;
+            }
+        }
+
         TRANSFER(_owner, content_reward);
         TRANSFER(config::vesting_name, vesting_reward);
         TRANSFER(p.workers_pool, workers_reward);
 
-        witness_reward /= p.max_witnesses;  // if rounded to 0, it will stay in content pool
-        if (witness_reward > 0) {
-            // if there less than max witnesses, they reward will stay in content pool
-            auto ctrl = control(config::control_name, _token);  // TODO: reuse existing control object
-            auto top = ctrl.get_top_witnesses();
-            for (const auto& w: top) {
-                TRANSFER(w, witness_reward);
-                // TODO: maybe reimplement as claim to avoid missing balance asserts (or skip witnesses without balances)
-            }
-        }
 #undef TRANSFER
     }
 
