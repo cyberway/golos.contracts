@@ -43,14 +43,14 @@ void vesting::apply(uint64_t code, uint64_t action) {
         timeout_delay_trx();
 }
 
-void vesting::on_transfer(account_name from, account_name  to, asset quantity, std::string memo) {
-    if(_self != from) // TODO account golos.vesting can not buy vesting
-        require_auth(from);
-    else return;
+void vesting::on_transfer(account_name from, account_name to, asset quantity, std::string memo) {
+    if (_self == from) // contract can not buy vesting itself
+        return;
 
-    eosio_assert(from != to, "cannot transfer to self");
+    require_auth(from);                                         // checked in eosio.token, looks unneded here
+    eosio_assert(from != to, "cannot transfer to self");        // this 2 asserts already checked in eosio.token. chack again for sure
     eosio_assert(is_account(to), "to account does not exist");
-    eosio_assert(quantity.is_valid(), "invalid quantity");
+    eosio_assert(quantity.is_valid(), "invalid quantity");      // this 2 asserts checked in eosio.token after require_recipient. TODO: find, are they different
     eosio_assert(quantity.amount > 0, "must transfer positive quantity");
 
     tables::vesting_table table_vesting(_self, _self);
@@ -58,20 +58,16 @@ void vesting::on_transfer(account_name from, account_name  to, asset quantity, s
     eosio_assert(vesting != table_vesting.end(), "Token not found");
 
     bool from_issuer = std::find(vesting->issuers.begin(), vesting->issuers.end(), from) != vesting->issuers.end();
-
-    asset converted(0, quantity.symbol);
-
-    if(!from_issuer || !memo.empty())
-    {
-        converted = convert_to_vesting(quantity, *vesting);
-        table_vesting.modify(vesting, 0, [&](auto& item) { item.supply += converted; });
-        require_recipient(from);
+    if (from_issuer && memo.empty()) {
+        return;     // just increase token supply
     }
 
-    if(!from_issuer)
-        add_balance(from, converted, has_auth(to) ? to : from);
-    else if(!memo.empty())
-        add_balance(string_to_name(memo.c_str()), converted, from);
+    asset converted = convert_to_vesting(quantity, *vesting);
+    table_vesting.modify(vesting, 0, [&](auto& item) {
+        item.supply += converted;
+    });
+    auto receiver = from_issuer ? string_to_name(memo.c_str()) : from;
+    add_balance(receiver, converted, has_auth(to) ? to : from);
 }
 
 void vesting::retire(account_name issuer, asset quantity, account_name user) {
