@@ -52,16 +52,21 @@ def convert_posts():
             dbs.cyberway_db['posttable'].save(message)
 
             tags = []
-            #print(type(doc["json_metadata"]))
             if (isinstance(doc["json_metadata"], dict)):
                 if ("tags" in doc["json_metadata"]):
                     tags = create_tags(doc["json_metadata"]["tags"])
 
-#            if(isinstance(doc["json_metadata"], str)):
-#                if (doc["json_metadata"]):
-#                    dict_metadata = json.loads(doc["json_metadata"])                    
-#                    if (dict_metadata["tags"]):
-#                        tags = create_tags(dict_metadata["tags"])
+            if(isinstance(doc["json_metadata"], str)):                
+                try:
+                    if (doc["json_metadata"]):
+                        json_str = doc["json_metadata"]
+                        if ((json_str.find("\"") == 0) and (json_str.rfind("\"") == len(json_str)-1)):
+                            json_str = json_str[1: len(json_str)-1]
+                        dict_metadata = json.loads(json_str)                    
+                        if (dict_metadata["tags"]):
+                            tags = create_tags(dict_metadata["tags"])
+                except Exception:
+                    tags= []
 
             content = {
                 "id": dbs.convert_hash(doc["permlink"]),
