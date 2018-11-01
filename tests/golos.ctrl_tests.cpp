@@ -3,9 +3,10 @@
 #include "golos.vesting_test_api.hpp"
 #include "eosio.token_test_api.hpp"
 #include "contracts.hpp"
+#include "../golos.emit/include/golos.emit/config.hpp"
 
 
-using namespace eosio;
+namespace cfg = golos::config;
 using namespace eosio::testing;
 using namespace eosio::chain;
 using namespace fc;
@@ -18,30 +19,31 @@ class golos_ctrl_tester : public golos_tester {
 protected:
     golos_ctrl_api ctrl;
     golos_vesting_api vest;
-    eosio_token_api etoken;
+    eosio_token_api token;
 
 public:
     golos_ctrl_tester()
-        : golos_tester(N(golos.ctrl), _domain.value())
+        : golos_tester(cfg::control_name, _domain.value())
         , ctrl({this, _code, _domain})
-        , vest({this, N(golos.vest)})
-        , etoken({this, N(eosio.token)})
+        , vest({this, cfg::vesting_name})
+        , token({this, cfg::token_name})
     {
         vest._symbol =
-        etoken._symbol = _domain;//.to_symbol_code().value;
+        token._symbol = _domain;
 
         create_accounts({_code, BLOG, N(witn1), N(witn2), N(witn3), N(witn4), N(witn5), _alice, _bob, _carol,
-            _vesting_name, N(eosio.token), N(worker)});
+            cfg::vesting_name, cfg::token_name, cfg::workers_name});
         produce_block();
 
         install_contract(_code, contracts::ctrl_wasm(), contracts::ctrl_abi());
-        install_contract(N(eosio.token), contracts::token_wasm(), contracts::token_abi());
-        install_contract(_vesting_name, contracts::vesting_wasm(), contracts::vesting_abi());
+        install_contract(cfg::token_name, contracts::token_wasm(), contracts::token_abi());
+        install_contract(cfg::vesting_name, contracts::vesting_wasm(), contracts::vesting_abi());
+
+        _test_props = ctrl.default_params(_max_witnesses, 4, cfg::workers_name);
     }
 
 
     asset dasset(double val = 0) const {
-        // return asset(val * _token.precision(), _token);
         return vest.make_asset(val);
     }
     const symbol_type _token = symbol(_scope);
@@ -61,7 +63,6 @@ public:
     const account_name _carol = N(carol);
     const uint64_t _w[5] = {N(witn1), N(witn2), N(witn3), N(witn4), N(witn5)};
     const size_t _n_w = sizeof(_w) / sizeof(_w[0]);
-    const account_name _vesting_name = N(golos.vest);
 
     vector<account_name> witness_vect(size_t n) const {
         vector<account_name> r;
@@ -73,20 +74,7 @@ public:
         return r;
     }
 
-    const mvo _test_props = mvo()
-        ("max_witnesses",_max_witnesses)
-        ("max_witness_votes",_max_witness_votes)
-        ("witness_supermajority",0)
-        ("witness_majority",0)
-        ("witness_minority",0)
-        ("infrate_start", 1500)
-        ("infrate_stop", 95)
-        ("infrate_narrowing", 250000*6)
-        ("content_reward", 6667-667)
-        ("vesting_reward", 2667-267)
-        ("workers_reward", 1000)
-        ("workers_pool", "worker");
-
+    mvo _test_props;
     const string _test_key = string(fc::crypto::config::public_key_legacy_prefix)
         + "6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV";
 
@@ -146,17 +134,17 @@ public:
     }
 
     void prepare_balances() {
-        BOOST_CHECK_EQUAL(success(), etoken.create(_bob, dasset(100500)));
+        BOOST_CHECK_EQUAL(success(), token.create(_bob, dasset(100500)));
         BOOST_CHECK_EQUAL(success(), vest.create_vesting(_bob, _token));
-        BOOST_CHECK_EQUAL(success(), vest.open(_vesting_name, _token, _vesting_name));
+        BOOST_CHECK_EQUAL(success(), vest.open(cfg::vesting_name, _token, cfg::vesting_name));
         vector<std::pair<uint64_t,double>> amounts = {
             {BLOG, 1000}, {_alice, 800}, {_bob, 700}, {_carol, 600},
             {_w[0], 100}, {_w[1], 200}, {_w[2], 300}, {_w[3], 400}, {_w[4], 500}
         };
         for (const auto& p : amounts) {
             BOOST_CHECK_EQUAL(success(), vest.open(p.first, _token, p.first));
-            BOOST_CHECK_EQUAL(success(), etoken.issue(_bob, p.first, dasset(p.second), "issue"));
-            BOOST_CHECK_EQUAL(success(), etoken.transfer(p.first, _vesting_name, dasset(p.second), "buy vesting"));
+            BOOST_CHECK_EQUAL(success(), token.issue(_bob, p.first, dasset(p.second), "issue"));
+            BOOST_CHECK_EQUAL(success(), token.transfer(p.first, cfg::vesting_name, dasset(p.second), "buy vesting"));
         };
 
         BOOST_CHECK_EQUAL(dasset(123), asset::from_string("123.000000 TST"));
@@ -380,8 +368,8 @@ BOOST_FIXTURE_TEST_CASE(change_vesting_test, golos_ctrl_tester) try {
     auto wp = mvo()("name","witn1")("key",_test_key)("url","localhost")("active",true);
     CHECK_MATCHING_OBJECT(ctrl.get_witness(_w[0]), wp("total_weight",(800+700+100)*1e6));
     CHECK_MATCHING_OBJECT(ctrl.get_witness(_w[1]), wp("total_weight",(800)*1e6)("name","witn2"));
-    BOOST_CHECK_EQUAL(success(), etoken.issue(_bob, _alice, dasset(100), "issue"));
-    BOOST_CHECK_EQUAL(success(), etoken.transfer(_alice, _vesting_name, dasset(100), "buy vesting"));
+    BOOST_CHECK_EQUAL(success(), token.issue(_bob, _alice, dasset(100), "issue"));
+    BOOST_CHECK_EQUAL(success(), token.transfer(_alice, cfg::vesting_name, dasset(100), "buy vesting"));
     CHECK_MATCHING_OBJECT(ctrl.get_witness(_w[0]), wp("total_weight",(800+700+100+100)*1e6)("name","witn1"));
     CHECK_MATCHING_OBJECT(ctrl.get_witness(_w[1]), wp("total_weight",(800+100)*1e6)("name","witn2"));
     produce_block();

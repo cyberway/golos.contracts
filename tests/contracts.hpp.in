@@ -9,6 +9,8 @@ namespace eosio { namespace testing {
 struct contracts {
     static std::vector<uint8_t> ctrl_wasm() { return read_wasm(GOLOS_CONTRACTS "golos.ctrl/golos.ctrl.wasm"); }
     static std::vector<char>    ctrl_abi()  { return read_abi (GOLOS_CONTRACTS "golos.ctrl/golos.ctrl.abi"); }
+    static std::vector<uint8_t> emit_wasm() { return read_wasm(GOLOS_CONTRACTS "golos.emit/golos.emit.wasm"); }
+    static std::vector<char>    emit_abi()  { return read_abi (GOLOS_CONTRACTS "golos.emit/golos.emit.abi"); }
     static std::vector<uint8_t> vesting_wasm() { return read_wasm(GOLOS_CONTRACTS "golos.vesting/golos.vesting.wasm"); }
     static std::vector<char>    vesting_abi()  { return read_abi (GOLOS_CONTRACTS "golos.vesting/golos.vesting.abi"); }
     static std::vector<uint8_t> posting_wasm() { return read_wasm(GOLOS_CONTRACTS "golos.publication/golos.publication.wasm"); }

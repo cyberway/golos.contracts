@@ -24,7 +24,7 @@ struct [[eosio::table]] properties {
     // emission
     uint16_t infrate_start = 1500;          // INFLATION_RATE_START_PERCENT
     uint16_t infrate_stop = 95;             // INFLATION_RATE_STOP_PERCENT
-    uint32_t infrate_narrowing = 250000*6;  // INFLATION_NARROWING_PERIOD
+    uint32_t infrate_narrowing = 250000;    // INFLATION_NARROWING_PERIOD
     uint16_t content_reward = 6667-667;     // CONTENT_REWARD_PERCENT
     uint16_t vesting_reward = 2667-267;     // VESTING_FUND_PERCENT
     uint16_t workers_reward = 1000;         // 10%
@@ -78,7 +78,6 @@ struct [[eosio::table]] witness_info {
         return name;
     }
     uint64_t weight_key() const {
-        // return std::numeric_limits<uint64_t>::max() - total_weight;     // TODO: resolve case where 2+ same weights exist (?extend key to 128bit)
         return total_weight;     // TODO: resolve case where 2+ same weights exist (?extend key to 128bit)
     }
 };
@@ -94,28 +93,11 @@ struct [[eosio::table]] witness_voter_s {
         return community;
     }
 };
-
-// weighted version
-// struct [[eosio::table]] witness_vote {
-//     account_name witness;
-//     uint64_t weight;
-// };
-
-// struct [[eosio::table]] witness_voter_w {
-//     account_name community;
-//     std::vector<witness_vote> votes;
-
-//     uint64_t primary_key() const {
-//         return community;
-//     }
-// };
-// using witness_voter = witness_voter_s;
 using witness_vote_tbl = eosio::multi_index<N(witnessvote), witness_voter_s>;
 
 
 struct [[eosio::table]] bw_user {   // ?needed or simple names vector will be enough?
     account_name name;
-    // time_point_sec when;    // TODO: auto-expire can be added
     bool attached;          // can delete whole record on detach
 
     uint64_t primary_key() const {

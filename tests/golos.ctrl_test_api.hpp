@@ -92,6 +92,22 @@ struct golos_ctrl_api: domain_contract_api<symbol> {
     }
 
     //// helpers
+    static mvo default_params(uint16_t witnesses, uint16_t witness_votes, account_name worker) {
+        return mvo()
+            ("max_witnesses", witnesses)
+            ("max_witness_votes", witness_votes)
+            ("witness_supermajority", 0)
+            ("witness_majority", 0)
+            ("witness_minority", 0)
+            ("infrate_start", 1500)
+            ("infrate_stop", 95)
+            ("infrate_narrowing", 250000)
+            ("content_reward", 6667-667)
+            ("vesting_reward", 2667-267)
+            ("workers_reward", 1000)
+            ("workers_pool", worker.to_string());
+    }
+
     void prepare_owner(account_name owner) {
         // witn.major/minor
         auto auth = authority(1, {}, {
@@ -103,14 +119,15 @@ struct golos_ctrl_api: domain_contract_api<symbol> {
         _tester->link_authority(owner, _code, _minority_name, N(attachacc));
         _tester->link_authority(owner, _code, _minority_name, N(detachacc));
 
-        //eosio.code
+        // eosio.code
         auto code_auth = authority(1, {}, {
             {.permission = {_code, config::eosio_code_name}, .weight = 1}
         });
         _tester->set_authority(owner, config::owner_name, code_auth, 0);
         code_auth.keys = {{_tester->get_public_key(owner, "active"), 1}};
         _tester->set_authority(owner, config::active_name, code_auth, "owner",
-            {permission_level{owner, config::active_name}}, {_tester->get_private_key("blog", "active")});
+            {permission_level{owner, config::active_name}},
+            {_tester->get_private_key(owner.to_string(), "active")});
     }
 
 };
