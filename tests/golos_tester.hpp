@@ -29,8 +29,6 @@ uint64_t hash64(const std::string& arg);
 namespace eosio { namespace testing {
 
 
-// using namespace eosio::testing;
-
 // TODO: maybe use native db struct
 struct permission {
     name        perm_name;
@@ -75,9 +73,10 @@ public:
     std::vector<char> get_tbl_row(name code, uint64_t scope, name tbl, uint64_t id) const;
     std::vector<std::vector<char>> get_all_rows(name code, uint64_t scope, name table, bool strict = true) const;
     fc::variant get_tbl_struct(name code, uint64_t scope, name tbl, uint64_t id, const std::string& n) const;
-    fc::variant get_tbl_struct_singleton(name code, uint64_t scope, name tbl, const string &n) const;
+    fc::variant get_tbl_singleton(name code, uint64_t scope, name tbl, const string &n) const;
 
     fc::variant get_chaindb_struct(name code, uint64_t scope, name tbl, uint64_t id, const std::string& n) const;
+    fc::variant get_chaindb_singleton(name code, uint64_t scope, name tbl, const std::string& n) const;
     std::vector<fc::variant> get_all_chaindb_rows(name code, uint64_t scope, name tbl, bool strict) const;
 };
 

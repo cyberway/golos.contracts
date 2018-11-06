@@ -67,6 +67,10 @@ struct eosio_token_api: base_contract_api {
         return v;
     }
 
+    std::vector<variant> get_accounts(account_name user) {
+        return _tester->get_all_chaindb_rows(_code, user, N(accounts), false);
+    }
+
     //// helpers
 
 };

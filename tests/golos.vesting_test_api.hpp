@@ -102,6 +102,10 @@ struct golos_vesting_api: base_contract_api {
         return get_struct(acc, N(balances), _symbol.to_symbol_code().value, "user_balance");
     }
 
+    std::vector<variant> get_balances(account_name user) {
+        return _tester->get_all_chaindb_rows(_code, user, N(balances), false);
+    }
+
     //// helpers
     asset make_asset(double x = 0, symbol sym = symbol(0)) const {
         if (sym == symbol(0)) sym = _symbol;

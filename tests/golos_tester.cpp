@@ -112,31 +112,14 @@ vector<char> golos_tester::get_tbl_row(name code, uint64_t scope, name tbl, uint
     return data;
 }
 
-variant golos_tester::get_chaindb_struct(name code, uint64_t scope, name tbl, uint64_t id,
-    const string& n
-) const {
-    variant r;
-    try {
-        r = _chaindb.value_by_pk({code, scope, tbl}, id);
-        std::cout << "+++ result: " << r << std::endl;
-    } catch (...) {
-        // key not found
-        std::cout << "+++ not found; c:" << std::hex << code << " s:" << scope << " t:" << tbl << std::endl;
-    }
-    return r;
-}
-
-fc::variant golos_tester::get_tbl_struct(name code, uint64_t scope, name tbl, uint64_t id, const string& n) const {
+variant golos_tester::get_tbl_struct(name code, uint64_t scope, name tbl, uint64_t id, const string& n) const {
     vector<char> data = get_tbl_row(code, scope, tbl, id);
     const auto& abi = _abis.at(code);
-    return data.empty() ? fc::variant() : abi.binary_to_variant(n, data, abi_serializer_max_time);
+    return data.empty() ? variant() : abi.binary_to_variant(n, data, abi_serializer_max_time);
 }
 
-fc::variant golos_tester::get_tbl_struct_singleton(name code, uint64_t scope, name tbl, const string& n) const {
-    vector<char> data = get_row_by_account(code, scope, tbl, tbl);
-    if (data.empty())
-        std::cout << "\nData is empty\n" << std::endl;
-    return data.empty() ? fc::variant() : _abis.at(code).binary_to_variant(n, data, abi_serializer_max_time);
+variant golos_tester::get_tbl_singleton(name code, uint64_t scope, name tbl, const string& n) const {
+    return get_tbl_struct(code, scope, tbl, tbl, n);
 }
 
 vector<vector<char>> golos_tester::get_all_rows(name code, uint64_t scope, name table, bool strict) const {
@@ -155,6 +138,24 @@ vector<vector<char>> golos_tester::get_all_rows(name code, uint64_t scope, name 
         memcpy(data.data(), itr->value.data(), data.size());
     }
     return ret;
+}
+
+variant golos_tester::get_chaindb_struct(name code, uint64_t scope, name tbl, uint64_t id,
+    const string& n
+) const {
+    variant r;
+    try {
+        r = _chaindb.value_by_pk({code, scope, tbl}, id);
+    } catch (...) {
+        // key not found
+    }
+    return r;
+}
+
+variant golos_tester::get_chaindb_singleton(name code, uint64_t scope, name tbl,
+    const string& n
+) const {
+    return get_chaindb_struct(code, scope, tbl, tbl, n);
 }
 
 vector<variant> golos_tester::get_all_chaindb_rows(name code, uint64_t scope, name tbl, bool strict) const {
