@@ -209,8 +209,8 @@ def createDelegatorAccounts():
     for i in range(firstDelegator, firstDelegator + numDelegator):
         a = accounts[i]
         createAccount('eosio', a['name'], a['pub'])
-        transfer('gls.publish', a['name'], '1000.0000 G')
-        transfer(a['name'], 'gls.vesting', '100.0000 G')   # buy vesting
+        transfer('gls.publish', a['name'], '1000.0000 %s'%args.symbol)
+        transfer(a['name'], 'gls.vesting', '100.0000 %s'%args.symbol)   # buy vesting
         registerWitness('gls.ctrl', a['name'], a['pub'], args.symbol)
         voteWitness('gls.ctrl', a['name'], a['name'], 10000, args.symbol)
         
@@ -221,7 +221,7 @@ def initCommunity():
         "timepenalty":{"str":"0","maxarg":1},
         "curatorsprop":0,
         "maxtokenprop":0,
-        "tokensymbol":"4,G",
+        "tokensymbol":"4,%s"%args.symbol,
         "lims":{
             "restorers":["1"],
             "limitedacts":[
