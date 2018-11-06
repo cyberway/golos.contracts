@@ -4,8 +4,8 @@ import bson
 golos_accounts = dbs.golos_db['account_object']
 
 def save_balances(doc):
-    cyberway_accounts = dbs.cyberway_db['accounts']
-    cyberway_balances = dbs.cyberway_db['balances']
+    cyberway_accounts = dbs.cyberway_eosio_token_db['accounts']
+    cyberway_balances = dbs.cyberway_gls_vesting_db['balances']
 
     if (cyberway_accounts.find({"_SCOPE_":doc["name"]}).count() or
             cyberway_balances.find({"_SCOPE_":doc["name"]}).count()):
@@ -21,7 +21,7 @@ def save_balances(doc):
 	"_PAYER_": doc["name"],
 	"_SIZE_": bson.Int64(16)
     }
-    dbs.cyberway_eosio_token['accounts'].save(balance)
+    dbs.cyberway_eosio_token_db['accounts'].save(balance)
 
     vesting = {
 	"vesting": {
