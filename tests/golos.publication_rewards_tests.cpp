@@ -126,8 +126,9 @@ public:
 
     action_result add_funds_to(account_name user, int64_t amount) {
         auto ret = token.transfer(_issuer, user, asset(amount, _token_symbol));
-        if (ret == success())
+        if (ret == success()) {
             _state.balances[user].tokenamount  += amount;
+        }
         return ret;
     }
 
@@ -151,14 +152,15 @@ public:
     void fill_depleted_pool(int64_t amount, size_t excluded) {
         size_t choice = 0;
         auto min_ratio = std::numeric_limits<double>::max();
-        for(size_t i = 0; i < _state.pools.size(); i++)
-            if(i != excluded) {
+        for (size_t i = 0; i < _state.pools.size(); i++) {
+            if (i != excluded) {
                 double cur_ratio = _state.pools[i].get_ratio();
-                if(cur_ratio <= min_ratio) {
+                if (cur_ratio <= min_ratio) {
                     min_ratio = cur_ratio;
                     choice = i;
                 }
             }
+        }
         _state.pools[choice].funds += amount;
     }
 
@@ -197,8 +199,8 @@ public:
                 }
             }
             _state.pools.erase(std::remove_if(_state.pools.begin(), _state.pools.end(),
-                    [](const rewardpool& p){return !p.messages.size();}),
-                    _state.pools.end());
+                [](const rewardpool& p){return !p.messages.size();}),
+                _state.pools.end());
 
             auto pools = post.get_reward_pools();
             auto created = (*pools.rbegin())["created"].as<uint64_t>();
@@ -244,23 +246,24 @@ public:
 
     void fill_from_state(statemap& s) const {
         s.clear();
-        for(auto& b : _state.balances)
+        for (auto& b : _state.balances) {
             s.set_balance(b.first, {b.second.tokenamount, b.second.vestamount});
-
-        for(auto& p : _state.pools) {
+        }
+        for (auto& p : _state.pools) {
             double pool_rshares_sum = 0.0;
             double pool_rsharesfn_sum = 0.0;
 
-            for(auto& m : p.messages) {
+            for (auto& m : p.messages) {
                 double absshares = 0.0;
                 double netshares = 0.0;
                 double voteshares = 0.0;
-                for(auto& v : m.votes) {
+                for (auto& v : m.votes) {
                     absshares +=  std::abs(v.weight) * v.vesting;
                     double currshares = v.weight * v.vesting;
                     netshares += currshares;
-                    if(v.weight > 0.0)
+                    if (v.weight > 0.0) {
                         voteshares += currshares;
+                    }
                 }
                 absshares  = std::min(MAX_ARG, absshares);
                 netshares  = std::min(MAX_ARG, netshares);
@@ -275,13 +278,10 @@ public:
 
     void fill_from_tables(statemap& s) {
         s.clear();
-
-        for(auto& user : _users) {
+        for (auto& user : _users) {
             set_token_balance_from_table(user, s);
             set_vesting_balance_from_table(user, s);
-
         }
-
         //pools
         {
             auto pools = post.get_reward_pools();
@@ -295,20 +295,20 @@ public:
                 });
             }
         }
-
         //messages
         {
             for (auto& user : _users) {
                 auto msgs = post.get_messages(user);
                 for (auto itr = msgs.begin(); itr != msgs.end(); ++itr) {
                     auto cur = *itr;
-                    if (!cur["closed"].as<bool>())
+                    if (!cur["closed"].as<bool>()) {
                         s.set_message(message_key{user, cur["id"].as<uint64_t>()}, {
                             static_cast<double>(FP(cur["state"]["absshares"].as<base_t>())),
                             static_cast<double>(FP(cur["state"]["netshares"].as<base_t>())),
                             static_cast<double>(FP(cur["state"]["voteshares"].as<base_t>())),
                             static_cast<double>(FP(cur["state"]["sumcuratorsw"].as<base_t>()))
                         });
+                    }
                 }
             }
         }
@@ -316,21 +316,21 @@ public:
 
     void show(bool req = true, bool res = true) {
 #ifdef SHOW_ENABLE
-        if(req) {
+        if (req) {
             fill_from_state(_req);
             BOOST_TEST_MESSAGE("_req:\n" << _req);
         }
-        if(res) {
+        if (res) {
              fill_from_tables(_res);
              BOOST_TEST_MESSAGE("_res :\n" << _res);
         }
 #endif
     }
     void pay_rewards_in_state() {
-        for(auto itr_p = _state.pools.begin(); itr_p != _state.pools.end(); itr_p++) {
+        for (auto itr_p = _state.pools.begin(); itr_p != _state.pools.end(); itr_p++) {
             auto& p = *itr_p;
-            for(auto itr_m = p.messages.begin(); itr_m != p.messages.end();) {
-                if((cur_time().to_seconds() - itr_m->created) > CLOSE_MESSAGE_PERIOD) {
+            for (auto itr_m = p.messages.begin(); itr_m != p.messages.end();) {
+                if ((cur_time().to_seconds() - itr_m->created) > CLOSE_MESSAGE_PERIOD) {
                     auto m = *itr_m;
                     double pool_rsharesfn_sum = p.get_rsharesfn_sum();
 
@@ -347,27 +347,29 @@ public:
                     std::list<std::pair<account_name, double>> cur_rewards;
                     double curators_fn_sum = 0.0;
                     double rshares_sum = 0.0;
-                    for(auto& v : m.votes) {
-                        if(v.weight > 0.0)
-                          rshares_sum += v.weight * v.vesting;
+                    for (auto& v : m.votes) {
+                        if (v.weight > 0.0) {
+                            rshares_sum += v.weight * v.vesting;
+                        }
                         double new_cur_fn = p.rules.curationfunc(rshares_sum);
                         cur_rewards.emplace_back(std::make_pair(v.voter, (new_cur_fn - curators_fn_sum) *
                             std::min(p.rules.timepenalty(v.created - m.created), 1.0)
                         ));
                         curators_fn_sum = new_cur_fn;
                     }
-                    if(curators_fn_sum > 1.e-20)
-                        for(auto& r : cur_rewards)
+                    if (curators_fn_sum > 1.e-20) {
+                        for (auto& r : cur_rewards) {
                             r.second *= (curation_payout / curators_fn_sum);
-
-                    for(auto& r : cur_rewards) {
-                        _state.balances[r.first].vestamount += convert_to_vesting(r.second);
+                        }
+                    }
+                    for (auto& r : cur_rewards) {
+                        _state.balances[r.first].vestamount += get_converted_to_vesting(r.second);
                         unclaimed_funds -= r.second;
                     }
 
                     auto author_payout =  payout - curation_payout;
                     double ben_payout_sum = 0.0;
-                    for(auto& ben : m.beneficiaries) {
+                    for (auto& ben : m.beneficiaries) {
                         double ben_payout = author_payout * get_prop(ben.deductprcnt);
                         _state.balances[ben.account].vestamount += get_converted_to_vesting(ben_payout);
                         ben_payout_sum += ben_payout;
@@ -380,9 +382,9 @@ public:
                     p.messages.erase(itr_m++);
                     p.funds -= (payout - unclaimed_funds);
 
-                    if(p.messages.size() == 0) {
+                    if (p.messages.size() == 0) {
                         auto itr_p_next = itr_p;
-                        if((++itr_p_next) != _state.pools.end()) {
+                        if ((++itr_p_next) != _state.pools.end()) {
                            fill_depleted_pool(p.funds, std::distance(_state.pools.begin(), itr_p));
                            itr_p->id = 0;
                         }
@@ -401,18 +403,17 @@ public:
 
     void check(const std::string& s = std::string()) {
         pay_rewards_in_state();
-
-        if(!s.empty())
+        if (!s.empty())
             BOOST_TEST_MESSAGE(s);
         step();
         fill_from_tables(_res);
         fill_from_state(_req);
 
         _res.remove_same(_req);
-        if(!_res.empty()){
-            BOOST_TEST_MESSAGE( "_res != _req\n diff: " );
+        if (!_res.empty()){
+            BOOST_TEST_MESSAGE("_res != _req\n diff: ");
             BOOST_TEST_MESSAGE(_res);
-            BOOST_TEST_MESSAGE( "_req:" );
+            BOOST_TEST_MESSAGE("_req:");
             BOOST_TEST_MESSAGE(_req);
             BOOST_REQUIRE(false);
         }
@@ -432,19 +433,19 @@ public:
 
         auto reward_weight = 0.0;
         std::string ret_str = ret;
-        if((ret == success()) || (ret_str.find("forum::apply_limits:") != std::string::npos)) {
+        if ((ret == success()) || (ret_str.find("forum::apply_limits:") != std::string::npos)) {
             reward_weight = _state.pools.back().lims.apply(
-                    parentacc ? limits::COMM : limits::POST,
-                    _state.pools.back().charges[key.author],
-                    _state.balances[key.author].vestamount,
-                    cur_time().count(),
-                    vestpayment);
+                parentacc ? limits::COMM : limits::POST,
+                _state.pools.back().charges[key.author],
+                _state.balances[key.author].vestamount,
+                cur_time().count(),
+                vestpayment);
             BOOST_REQUIRE_MESSAGE(((ret == success()) == (reward_weight >= 0.0)), "wrong ret_str: " + ret_str
                 + "; vesting = " + std::to_string(_state.balances[key.author].vestamount)
                 + "; reward_weight = " + std::to_string(reward_weight));
         }
 
-        if(ret == success()) {
+        if (ret == success()) {
             _state.pools.back().messages.emplace_back(message(
                 key,
                 static_cast<double>(std::min(tokenprop, MAXTOKENPROB)) / static_cast<double>(cfg::_100percent),
@@ -461,19 +462,19 @@ public:
         message_key msg_key{author, hash64(permlink)};
 
         std::string ret_str = ret;
-        if((ret == success()) || (ret_str.find("forum::apply_limits:") != std::string::npos)) {
+        if ((ret == success()) || (ret_str.find("forum::apply_limits:") != std::string::npos)) {
             auto apply_ret = _state.pools.back().lims.apply(
-                    limits::VOTE, _state.pools.back().charges[voter],
-                    _state.balances[voter].vestamount, cur_time().count(), get_prop(std::abs(weight)));
+                limits::VOTE, _state.pools.back().charges[voter],
+                _state.balances[voter].vestamount, cur_time().count(), get_prop(std::abs(weight)));
             BOOST_REQUIRE_MESSAGE(((ret == success()) == (apply_ret >= 0.0)), "wrong ret_str: " + ret_str
                 + "; vesting = " + std::to_string(_state.balances[voter].vestamount)
                 + "; apply_ret = " + std::to_string(apply_ret));
         }
 
-        if(ret == success()) {
-            for(auto& p : _state.pools)
-                for(auto& m : p.messages)
-                    if(m.key == msg_key) {
+        if (ret == success()) {
+            for (auto& p : _state.pools) {
+                for (auto& m : p.messages) {
+                    if (m.key == msg_key) {
                         m.votes.emplace_back(vote{
                             voter,
                             std::min(static_cast<double>(weight) / static_cast<double>(cfg::_100percent), 1.0),
@@ -482,6 +483,8 @@ public:
                         });
                         return ret;
                     }
+                }
+            }
             BOOST_REQUIRE_MESSAGE(false, "addvote: ret == success(), but message not found in state");
         }
         return ret;
@@ -597,22 +600,22 @@ BOOST_FIXTURE_TEST_CASE(limits_test, reward_calcs_tester) try {
     init(bignum, 500000);
 
     BOOST_CHECK_EQUAL(success(), setrules({"x", bignum}, {"sqrt(x)", bignum}, {"x / 1800", 1800},
-    0, //curatorsprop
-    [](double x){ return x; }, [](double x){ return sqrt(x); }, [](double x){ return x / 1800.0; },
-    {
-        .restorers = {"sqrt(v / 500000) * (t / 150)", "t / 250"},
-        .limitedacts = {
-            {.chargenum = 0, .restorernum = 0,                 .cutoffval = 20000, .chargeprice = 9900}, //POST
-            {.chargenum = 0, .restorernum = 0,                 .cutoffval = 30000, .chargeprice = 1000}, //COMMENT
-            {.chargenum = 1, .restorernum = 1,                 .cutoffval = 10000, .chargeprice = 1000}, //VOTE
-            {.chargenum = 0, .restorernum = disabled_restorer, .cutoffval = 10000, .chargeprice = 0}},   //POST BW
-        .vestingprices = {150000, -1},
-        .minvestings = {300000, 100000, 100000}
-    },
-    {
-        [](double p, double v, double t){ return sqrt(v / 500000.0) * (t / 150.0); },
-        [](double p, double v, double t){ return t / 250.0; }
-    }));
+        0, //curatorsprop
+        [](double x){ return x; }, [](double x){ return sqrt(x); }, [](double x){ return x / 1800.0; },
+        {
+            .restorers = {"sqrt(v / 500000) * (t / 150)", "t / 250"},
+            .limitedacts = {
+                {.chargenum = 0, .restorernum = 0,                 .cutoffval = 20000, .chargeprice = 9900}, //POST
+                {.chargenum = 0, .restorernum = 0,                 .cutoffval = 30000, .chargeprice = 1000}, //COMMENT
+                {.chargenum = 1, .restorernum = 1,                 .cutoffval = 10000, .chargeprice = 1000}, //VOTE
+                {.chargenum = 0, .restorernum = disabled_restorer, .cutoffval = 10000, .chargeprice = 0}},   //POST BW
+            .vestingprices = {150000, -1},
+            .minvestings = {300000, 100000, 100000}
+        }, {
+            [](double p, double v, double t){ return sqrt(v / 500000.0) * (t / 150.0); },
+            [](double p, double v, double t){ return t / 250.0; }
+        })
+    );
 
     BOOST_TEST_MESSAGE("--- add_funds_to_forum");
     BOOST_CHECK_EQUAL(success(), add_funds_to_forum(100000));
