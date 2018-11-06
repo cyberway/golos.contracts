@@ -14,7 +14,6 @@ args = None
 logFile = None
 
 unlockTimeout = 999999999
-fastUnstakeSystem = './fast.refund/eosio.system/eosio.system.wasm'
 
 golosAccounts = [
     'gls.ctrl',
@@ -205,8 +204,8 @@ def createCommunity():
         }
     }) + '-p ' + owner)
 
-def createDelegatorAccounts():
-    for i in range(firstDelegator, firstDelegator + numDelegator):
+def createWitnessAccounts():
+    for i in range(firstWitness, firstWitness + numWitness):
         a = accounts[i]
         createAccount('eosio', a['name'], a['pub'])
         transfer('gls.publish', a['name'], '1000.0000 %s'%args.symbol)
@@ -236,7 +235,7 @@ def initCommunity():
     }) + '-p gls.publish')
 
 def addUsers():
-    for i in range(0, firstDelegator-1):
+    for i in range(0, firstWitness-1):
         a = accounts[i]
         createAccount('eosio', a['name'], a['pub'])
         retry(args.cleos + 'push action gls.vesting open' +
@@ -254,7 +253,7 @@ commands = [
     ('c', 'contracts',      stepInstallContracts,       True,    "Install contracts (ctrl, emit, vesting, publish)"),
     ('t', 'tokens',         stepCreateTokens,           True,    "Create tokens"),
     ('C', 'community',      createCommunity,            True,    "Create community"),
-    ('d', 'delegators',     createDelegatorAccounts,    True,    "Create delegators accounts"),
+    ('d', 'witnesses',      createWitnessAccounts,      True,    "Create witnesses accounts"),
     ('i', 'init',           initCommunity,              True,    "Init community"),
     ('u', 'users',          addUsers,                   True,    "Add users"),
 ]
@@ -271,7 +270,7 @@ parser.add_argument('--log-path', metavar='', help="Path to log file", default='
 parser.add_argument('--symbol', metavar='', help="The Golos community symbol", default='GLS')
 parser.add_argument('--user-limit', metavar='', help="Max number of users. (0 = no limit)", type=int, default=3000)
 parser.add_argument('--max-user-keys', metavar='', help="Maximum user keys to import into wallet", type=int, default=100)
-parser.add_argument('--delegator-limit', metavar='', help="Maximum number of delegators. (0 = no limit)", type=int, default=0)
+parser.add_argument('--witness-limit', metavar='', help="Maximum number of witnesses. (0 = no limit)", type=int, default=0)
 parser.add_argument('-a', '--all', action='store_true', help="Do everything marked with (*)")
 parser.add_argument('-H', '--http-port', type=int, default=8000, metavar='', help='HTTP port for cleos')
 
@@ -302,11 +301,11 @@ with open('accounts.json') as f:
     a = json.load(f)
     if args.user_limit:
         del a['users'][args.user_limit:]
-    if args.delegator_limit:
-        del a['delegators'][args.delegator_lilmit:]
-    firstDelegator = len(a['users'])
-    numDelegator = len(a['delegators'])
-    accounts = a['users'] + a['delegators']
+    if args.witness_limit:
+        del a['witnesses'][args.witness_limit:]
+    firstWitness = len(a['users'])
+    numWitness = len(a['witnesses'])
+    accounts = a['users'] + a['witnesses']
 
 haveCommand = False
 for (flag, command, function, inAll, help) in commands:
