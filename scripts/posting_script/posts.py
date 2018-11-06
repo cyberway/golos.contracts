@@ -23,8 +23,23 @@ def level_post(parent_id):
 
     return 0
 
+def create_trx(author, id_message):
+    trx = ""
+    command = "/home/deploy/cyberway/build/programs/cleos/cleos push action gls.publish closemssg '{\"account\":\""+author+"\", \"permlink\":\""+str(id_message)+"\"}' -p gls.publish -d --return-packed"
+    result = os.popen(command)
+
+    try:
+        json_trx = json.loads(result.read())
+        trx = json["packed_trx"]
+    except Exception: 
+        trx = ""
+
+    return trx;
+
+
 def convert_posts():
     golos_posts = dbs.golos_db['comment_object']
+    cw_accounts = dbs.cyberway_db['account']
 
     length = golos_posts.count()
     dbs.printProgressBar(0, length, prefix = 'Progress:', suffix = 'Complete', length = 50)
@@ -34,6 +49,10 @@ def convert_posts():
        
         try:
             if (doc["removed"]):
+                continue
+
+            account = cw_accounts.find_one({"name": doc["author"]})
+            if not account:
                 continue
         
             messagestate = {
@@ -60,6 +79,22 @@ def convert_posts():
                 "_SIZE_": 50
             }
             dbs.cyberway_db['posttable'].save(message)
+
+            date_close = datetime.strptime("2106-02-07T06:28:15", '%Y-%m-%dT%H:%M:%S')
+            if (doc["cashout_time"] != date_close):
+                delay_trx = {
+                    "trx_id": "",
+                    "sender": doc["author"],
+                    "sender_id": dbs.convert_hash(doc["permlink"]) << 64 | doc["author"],
+                    "delay_until" : doc["cashout_time"], 
+                    "expiration" : doc["cashout_time"], 
+                    "published" : doc["created"], 
+                    "packed_trx" : create_trx(doc["author"], dbs.convert_hash(doc["permlink"])), 
+                    "_SCOPE_" : "",
+                    "_PAYER_" : "",
+                    "_SIZE_" : NumberLong(156) 
+                }
+
 
             tags = []
             if (isinstance(doc["json_metadata"], dict)):
