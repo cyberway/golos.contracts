@@ -139,22 +139,45 @@ fc::variant golos_tester::get_tbl_struct_singleton(name code, uint64_t scope, na
     return data.empty() ? fc::variant() : _abis.at(code).binary_to_variant(n, data, abi_serializer_max_time);
 }
 
-vector<vector<char> > golos_tester::get_all_rows(uint64_t code, uint64_t scope, uint64_t table, bool strict) const {
-    vector<vector<char> > ret;
+vector<vector<char>> golos_tester::get_all_rows(name code, uint64_t scope, name table, bool strict) const {
+    vector<vector<char>> ret;
     const auto& db = control->db();
-    const auto* t_id = db.find<chain::table_id_object, chain::by_code_scope_table>(boost::make_tuple(code, scope, table));
-    if(strict)
+    const auto* t_id = db.find<chain::table_id_object, chain::by_code_scope_table>(std::make_tuple(code, scope, table));
+    if (strict)
         BOOST_REQUIRE_EQUAL(true, static_cast<bool>(t_id));
-    else if(!static_cast<bool>(t_id))
+    else if (!static_cast<bool>(t_id))
         return ret;
     const auto& idx = db.get_index<chain::key_value_index, chain::by_scope_primary>();
-    for(auto itr = idx.lower_bound(boost::make_tuple(t_id->id, 0)); (itr != idx.end()) && (itr->t_id == t_id->id); ++itr) {
+    for (auto itr = idx.lower_bound(std::make_tuple(t_id->id, 0)); itr != idx.end() && itr->t_id == t_id->id; ++itr) {
         ret.push_back(vector<char>());
         auto& data = ret.back();
         data.resize(itr->value.size());
         memcpy(data.data(), itr->value.data(), data.size());
     }
     return ret;
+}
+
+vector<variant> golos_tester::get_all_chaindb_rows(name code, uint64_t scope, name tbl, bool strict) const {
+    vector<variant> all;
+    auto cursor_ = _chaindb.lower_bound({code, scope, tbl, N(primary)}, nullptr, 0);
+    cyberway::chaindb::cursor_request cursor = {code, cursor_};
+    auto v = _chaindb.value_at_cursor(cursor);
+    if (strict)
+        BOOST_TEST_REQUIRE(!v.is_null());
+    else if (v.is_null())
+        return all;
+
+    auto prev = _chaindb.current(cursor);
+    do {
+        all.push_back(v);
+        auto pk = _chaindb.next(cursor);
+        if (pk == prev || pk == 0xFFFFFFFFFFFFFFFF) {   // TODO: magic is bad, update `value_at_cursor` to return `null` as end
+            break;
+        }
+        prev = pk;
+        v = _chaindb.value_at_cursor(cursor);
+    } while (!v.is_null());
+    return all;
 }
 
 }} // eosio::tesing

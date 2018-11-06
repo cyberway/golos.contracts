@@ -21,13 +21,10 @@ protected:
 public:
 
     golos_vesting_tester()
-        : golos_tester(cfg::vesting_name, _symbol.to_symbol_code().value)
-        , vest({this, cfg::vesting_name})
-        , token({this, cfg::token_name})
+        : golos_tester(cfg::vesting_name)
+        , vest({this, cfg::vesting_name, _symbol})
+        , token({this, cfg::token_name, _symbol})
     {
-        vest._symbol =
-        token._symbol = _symbol;
-
         create_accounts({N(sania), N(pasha), N(tania),
             cfg::vesting_name, cfg::control_name, cfg::token_name, cfg::emission_name, N(golos.issuer)});
         produce_blocks(2);

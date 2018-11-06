@@ -46,15 +46,14 @@ protected:
 
 class golos_tester : public tester {
 protected:
-    const name _code;     // base values to make things simpler. TODO: remove (better in tester_api_helper)
-    const uint64_t _scope = 0;
+    const name _code;     // shortcut to main tested contract account name
 
     cyberway::chaindb::chaindb_controller& _chaindb;
     std::map<account_name, abi_serializer> _abis;
 
 public:
-    golos_tester(): _chaindb(control->chaindb()) {}
-    golos_tester(name code, uint64_t scope): tester(), _code(code), _scope(scope), _chaindb(control->chaindb()) {
+    golos_tester(): tester(), _chaindb(control->chaindb()) {}
+    golos_tester(name code): tester(), _code(code), _chaindb(control->chaindb()) {
         std::cout << "golos_tester()" << std::endl;
     }
     ~golos_tester() {
@@ -71,38 +70,15 @@ public:
     action_result push_tx(signed_transaction&& tx);
 
     // table helpers
-    const table_id_object* find_table(name code,  uint64_t scope, name tbl) const;
+    const table_id_object* find_table(name code, uint64_t scope, name tbl) const;
     // Note: uses `lower_bound`, so caller must check id of returned value
-    std::vector<char> get_tbl_row(name code,  uint64_t scope, name tbl, uint64_t id) const;
-    std::vector<std::vector<char>> get_all_rows(uint64_t code, uint64_t scope, uint64_t table, bool strict = true) const;
-    fc::variant get_chaindb_struct(name code,  uint64_t scope, name tbl, uint64_t id, const std::string& n) const;
-    fc::variant get_tbl_struct(name code,  uint64_t scope, name tbl, uint64_t id, const std::string& n) const;
-    fc::variant get_tbl_struct_singleton(name code,  uint64_t scope, name tbl, const string &n) const;
+    std::vector<char> get_tbl_row(name code, uint64_t scope, name tbl, uint64_t id) const;
+    std::vector<std::vector<char>> get_all_rows(name code, uint64_t scope, name table, bool strict = true) const;
+    fc::variant get_tbl_struct(name code, uint64_t scope, name tbl, uint64_t id, const std::string& n) const;
+    fc::variant get_tbl_struct_singleton(name code, uint64_t scope, name tbl, const string &n) const;
 
-    // simplified versions. TODO: remove
-    action_result push_action(action_name name, account_name signer, const variant_object& data) {
-        return push_action(_code, name, signer, data);
-    }
-    action_result push_action_msig_tx(action_name name, std::vector<permission_level> perms, std::vector<account_name> signers,
-        const variant_object& data
-    ) {
-        return push_action_msig_tx(_code, name, perms, signers, data);
-    }
-
-
-    const table_id_object* find_table(name tbl) const {
-        return find_table(_code, _scope, tbl);
-    }
-    std::vector<char> get_row(name tbl, uint64_t id) const {
-        return get_tbl_row(_code, _scope, tbl, id);
-    }
-
-    fc::variant get_struct(name tbl, uint64_t id, const std::string name) const {
-        return get_tbl_struct(_code, _scope, tbl, id, name);
-    }
-    fc::variant get_chaindb_struct(name tbl, uint64_t id, const std::string name) const {
-        return get_chaindb_struct(_code, _scope, tbl, id, name);
-    }
+    fc::variant get_chaindb_struct(name code, uint64_t scope, name tbl, uint64_t id, const std::string& n) const;
+    std::vector<fc::variant> get_all_chaindb_rows(name code, uint64_t scope, name tbl, bool strict) const;
 };
 
 

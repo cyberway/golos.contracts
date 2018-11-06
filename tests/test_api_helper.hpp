@@ -26,9 +26,6 @@ struct base_contract_api {
     variant get_struct(uint64_t scope, name tbl, uint64_t id, const string& name) const {
         return _tester->get_chaindb_struct(_code, scope, tbl, id, name);
     }
-    variant get_struct(name tbl, uint64_t id, const string& name) const {
-        return _tester->get_chaindb_struct(tbl, id, name);
-    }
 
     virtual mvo args() {
         return mvo();
@@ -36,15 +33,28 @@ struct base_contract_api {
 
 };
 
-template<typename D>
+template<typename DomainType>
 struct domain_contract_api: base_contract_api {
-    D _domain;
-    domain_contract_api(golos_tester* tester, name code, D domain): base_contract_api(tester, code), _domain(domain) {}
+    DomainType _domain;
+    domain_contract_api(golos_tester* tester, name code, DomainType domain)
+    : base_contract_api(tester, code)
+    , _domain(domain) {}
+
+    uint64_t domain_to_scope() const;
+
+    variant get_struct(name tbl, uint64_t id, const string& name) const {
+        return base_contract_api::get_struct(domain_to_scope(), tbl, id, name);
+    }
 
     //base args
     mvo args() override {
         return mvo()("domain", _domain);
     }
 };
+
+template<>
+inline uint64_t domain_contract_api<symbol>::domain_to_scope() const {
+    return _domain.value();
+}
 
 } }

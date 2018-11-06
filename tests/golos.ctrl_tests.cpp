@@ -13,7 +13,7 @@ using namespace fc;
 
 using symbol_type = symbol;
 
-static const symbol _domain = symbol(6,"TST");
+static const symbol _token = symbol(6,"TST");
 
 class golos_ctrl_tester : public golos_tester {
 protected:
@@ -23,14 +23,11 @@ protected:
 
 public:
     golos_ctrl_tester()
-        : golos_tester(cfg::control_name, _domain.value())
-        , ctrl({this, _code, _domain})
-        , vest({this, cfg::vesting_name})
-        , token({this, cfg::token_name})
+        : golos_tester(cfg::control_name)
+        , ctrl({this, _code, _token})
+        , vest({this, cfg::vesting_name, _token})
+        , token({this, cfg::token_name, _token})
     {
-        vest._symbol =
-        token._symbol = _domain;
-
         create_accounts({_code, BLOG, N(witn1), N(witn2), N(witn3), N(witn4), N(witn5), _alice, _bob, _carol,
             cfg::vesting_name, cfg::token_name, cfg::workers_name});
         produce_block();
@@ -46,7 +43,6 @@ public:
     asset dasset(double val = 0) const {
         return vest.make_asset(val);
     }
-    const symbol_type _token = symbol(_scope);
 
     // constants
     const uint16_t _max_witnesses = 2;
