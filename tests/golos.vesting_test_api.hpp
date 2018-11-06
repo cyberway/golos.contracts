@@ -5,7 +5,9 @@ namespace eosio { namespace testing {
 
 
 struct golos_vesting_api: base_contract_api {
-    using base_contract_api::base_contract_api;
+    golos_vesting_api(golos_tester* tester, name code, symbol sym)
+    :   base_contract_api(tester, code)
+    ,   _symbol(sym) {}
     symbol _symbol;
 
     //// vesting actions
@@ -22,6 +24,13 @@ struct golos_vesting_api: base_contract_api {
             ("owner", owner)
             ("symbol", sym)
             ("ram_payer", ram_payer)
+        );
+    }
+
+    action_result unlock_limit(account_name owner, asset quantity) {
+        return push(N(unlocklimit), owner, args()
+            ("owner", owner)
+            ("quantity", quantity)
         );
     }
 
@@ -63,6 +72,17 @@ struct golos_vesting_api: base_contract_api {
     }
 
     //// vesting tables
+    variant get_vesting() {
+        // converts assets to strings; TODO: generalize
+        auto v = get_struct(_code, N(vesting), _symbol.to_symbol_code().value, "balance_vesting");
+        if (v.is_object()) {
+            auto o = mvo(v);
+            o["supply"] = o["supply"].as<asset>().to_string();
+            v = o;
+        }
+        return v;
+    }
+
     variant get_balance(account_name acc) {
         // converts assets to strings; TODO: generalize
         auto v = get_struct(acc, N(balances), _symbol.to_symbol_code().value, "user_balance");
@@ -80,6 +100,10 @@ struct golos_vesting_api: base_contract_api {
     variant get_balance_raw(account_name acc) {
         // base_api_helper knows code
         return get_struct(acc, N(balances), _symbol.to_symbol_code().value, "user_balance");
+    }
+
+    std::vector<variant> get_balances(account_name user) {
+        return _tester->get_all_chaindb_rows(_code, user, N(balances), false);
     }
 
     //// helpers

@@ -25,15 +25,12 @@ protected:
 
 public:
     golos_emit_tester()
-        : golos_tester(cfg::emission_name, _token.value())
+        : golos_tester(cfg::emission_name)
         , emit({this, _code, _token})
         , ctrl({this, cfg::control_name, _token})
-        , vest({this, cfg::vesting_name})
-        , token({this, cfg::token_name})
+        , vest({this, cfg::vesting_name, _token})
+        , token({this, cfg::token_name, _token})
     {
-        vest._symbol =
-        token._symbol = _token;
-
         create_accounts({_code, BLOG, N(witn1), N(witn2), N(witn3), N(witn4), N(witn5), _alice, _bob, _carol,
             cfg::control_name, cfg::vesting_name, cfg::token_name, cfg::workers_name});
         produce_block();

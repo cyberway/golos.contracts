@@ -5,7 +5,10 @@ namespace eosio { namespace testing {
 
 
 struct eosio_token_api: base_contract_api {
-    using base_contract_api::base_contract_api;
+    eosio_token_api(golos_tester* tester, name code, symbol sym)
+    :   base_contract_api(tester, code)
+    ,   _symbol(sym) {}
+
     symbol _symbol;
 
     //// token actions
@@ -32,7 +35,7 @@ struct eosio_token_api: base_contract_api {
         );
     }
 
-    action_result transfer(account_name from, account_name to, asset quantity, string memo) {
+    action_result transfer(account_name from, account_name to, asset quantity, string memo = "") {
         return push(N(transfer), from, args()
             ("from", from)
             ("to", to)
@@ -62,6 +65,10 @@ struct eosio_token_api: base_contract_api {
             v = o;
         }
         return v;
+    }
+
+    std::vector<variant> get_accounts(account_name user) {
+        return _tester->get_all_chaindb_rows(_code, user, N(accounts), false);
     }
 
     //// helpers
