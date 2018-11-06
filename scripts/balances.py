@@ -21,7 +21,7 @@ def save_balances(doc):
 	"_PAYER_": doc["name"],
 	"_SIZE_": bson.Int64(16)
     }
-    dbs.cyberway_db['accounts'].save(balance)
+    dbs.cyberway_eosio_token['accounts'].save(balance)
 
     vesting = {
 	"vesting": {
@@ -48,7 +48,7 @@ def save_balances(doc):
 	"_PAYER_": doc["name"],
 	"_SIZE_": bson.Int64(64)
     }
-    dbs.cyberway_db['balances'].save(vesting)
+    dbs.cyberway_gls_vesting_db['balances'].save(vesting)
 
 
 def convert_balances(accounts_list):
