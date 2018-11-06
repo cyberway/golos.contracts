@@ -166,6 +166,7 @@ def createGolosAccounts():
     updateAuth('gls.publish', 'witn.minor', 'active', [args.public_key], [])
     updateAuth('gls.publish', 'active', 'owner', [args.public_key], ['gls.ctrl@eosio.code'])
     updateAuth('gls.vesting', 'active', 'owner', [args.public_key], ['gls.vesting@eosio.code'])
+    updateAuth('gls.emit',    'active', 'owner', [args.public_key], ['gls.emit@eosio.code'])
 
 def stepInstallContracts():
     retry(args.cleos + 'set contract gls.ctrl ' + args.contracts_dir + 'golos.ctrl/')
@@ -214,6 +215,7 @@ def createWitnessAccounts():
         voteWitness('gls.ctrl', a['name'], a['name'], 10000, args.symbol)
         
 def initCommunity():
+    retry(args.cleos + 'push action gls.emit start ' + jsonArg(['4,%s'%args.symbol]) + '-p gls.publish')
     retry(args.cleos + 'push action gls.publish setrules ' + jsonArg({
         "mainfunc":{"str":"0","maxarg":1},
         "curationfunc":{"str":"0","maxarg":1},
