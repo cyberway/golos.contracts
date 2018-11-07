@@ -267,20 +267,24 @@ void publication::close_message(account_name account, uint64_t id) {
         state.rsharesfn = 0;
     } 
     else {
-        auto total_rsharesfn = FP(state.rsharesfn);
+        auto total_rsharesfn = WP(state.rsharesfn);
         
         if(sharesfn > fixp_t(0)) {
-            eosio_assert(total_rsharesfn > fixp_t(0), "LOGIC ERROR! publication::payrewards: total_rshares_fn <= 0"); 
-            payout = int_cast(ELF(mssg_itr->rewardweight) * elai_t(elai_t(state.funds.amount) * static_cast<elaf_t>(sharesfn / total_rsharesfn)));
+            eosio_assert(total_rsharesfn > 0, "LOGIC ERROR! publication::payrewards: total_rshares_fn <= 0");
+            
+            auto numer = sharesfn;
+            auto denom = total_rsharesfn;
+            narrow_down(numer, denom);
+            payout = int_cast(ELF(mssg_itr->rewardweight) * elai_t(elai_t(state.funds.amount) * static_cast<elaf_t>(elap_t(numer) / elap_t(denom))));
             state.funds.amount -= payout;
             eosio_assert(state.funds.amount >= 0, "LOGIC ERROR! publication::payrewards: state.funds < 0"); 
         }
         
-        auto new_rshares = FP(state.rshares) - FP(mssg_itr->state.netshares);
-        auto new_rsharesfn = FP(state.rsharesfn) - sharesfn;
+        auto new_rshares = WP(state.rshares) - wdfp_t(FP(mssg_itr->state.netshares));
+        auto new_rsharesfn = WP(state.rsharesfn) - wdfp_t(sharesfn);
         
-        eosio_assert(new_rshares >= fixp_t(0), "LOGIC ERROR! publication::payrewards: new_rshares < 0"); 
-        eosio_assert(new_rsharesfn >= fixp_t(0), "LOGIC ERROR! publication::payrewards: new_rsharesfn < 0"); 
+        eosio_assert(new_rshares >= 0, "LOGIC ERROR! publication::payrewards: new_rshares < 0"); 
+        eosio_assert(new_rsharesfn >= 0, "LOGIC ERROR! publication::payrewards: new_rsharesfn < 0"); 
         
         state.rshares = new_rshares.data();
         state.rsharesfn = new_rsharesfn.data();            
@@ -396,11 +400,13 @@ void publication::set_vote(account_name voter, account_name author, uint64_t id,
     };
     
     auto rsharesfn_delta = get_delta(machine, FP(mssg_itr->state.netshares), FP(msg_new_state.netshares), pool->rules.mainfunc);
-   
+
     pools.modify(*pool, _self, [&](auto &item) {
-         item.state.rshares = add_cut(FP(item.state.rshares), rshares).data();
-         item.state.rsharesfn =  (FP(item.state.rsharesfn) + rsharesfn_delta).data();
-    });   
+         item.state.rshares = (WP(item.state.rshares) + wdfp_t(rshares)).data();
+         item.state.rsharesfn = (WP(item.state.rsharesfn) + wdfp_t(rsharesfn_delta)).data();
+    });
+    eosio_assert(WP(pool->state.rshares) >= 0, "pool state rshares overflow");
+    eosio_assert(WP(pool->state.rsharesfn) >= 0, "pool state rsharesfn overflow"); 
     
     auto sumcuratorsw_delta = get_delta(machine, FP(mssg_itr->state.voteshares), FP(msg_new_state.voteshares), pool->rules.curationfunc);
     msg_new_state.sumcuratorsw = (FP(mssg_itr->state.sumcuratorsw) + sumcuratorsw_delta).data();        
@@ -518,8 +524,8 @@ void publication::set_rules(const funcparams& mainfunc, const funcparams& curati
         item.lims = lims;
         item.state.msgs = 0; 
         item.state.funds = unclaimed_funds;
-        item.state.rshares = (fixp_t(0)).data();
-        item.state.rsharesfn = (fixp_t(0)).data(); 
+        item.state.rshares = (wdfp_t(0)).data();
+        item.state.rsharesfn = (wdfp_t(0)).data(); 
     });
 }
 

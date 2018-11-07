@@ -71,11 +71,12 @@ protected:
     } err;
 
     void init(int64_t issuer_funds, int64_t user_vesting_funds) {
+        auto total_funds = issuer_funds + _users.size() * user_vesting_funds;
         BOOST_CHECK_EQUAL(success(),
-            token.create(_issuer, asset(issuer_funds + _users.size() * user_vesting_funds, _token_symbol)));
+        token.create(_issuer, asset(total_funds, _token_symbol)));
         step();
 
-        BOOST_CHECK_EQUAL(success(), token.issue(_issuer, _issuer, asset(issuer_funds, _token_symbol), "HERE COULD BE YOUR ADVERTISEMENT"));
+        BOOST_CHECK_EQUAL(success(), token.issue(_issuer, _issuer, asset(total_funds, _token_symbol), "HERE COULD BE YOUR ADVERTISEMENT"));
         step();
 
         BOOST_CHECK_EQUAL(success(), token.open(_forum_name, _token_symbol, _forum_name));
@@ -113,7 +114,7 @@ public:
         , _stranger(N(dan.larimer)) {
 
         step(2);
-        create_accounts({_forum_name, _issuer, cfg::vesting_name, cfg::token_name, _stranger});
+        create_accounts({_forum_name, _issuer, cfg::vesting_name, cfg::token_name, cfg::control_name, _stranger});
         create_accounts(_users);
         step(2);
 
@@ -142,6 +143,7 @@ public:
         if (ret == success()) {
             _state.balances[user].tokenamount -= amount;
             _state.balances[user].vestamount += get_converted_to_vesting(amount);
+            
             BOOST_CHECK_EQUAL(success(), vest.unlock_limit(user, asset(amount*10, _token_symbol)));
         }
         return ret;
@@ -263,7 +265,7 @@ public:
                 netshares  = std::min(MAX_ARG, netshares);
                 voteshares = std::min(MAX_ARG, voteshares);
                 s.set_message(m.key, {absshares, netshares, voteshares, p.rules.curationfunc(voteshares)});
-                pool_rshares_sum = std::min(MAX_ARG, netshares + pool_rshares_sum);
+                pool_rshares_sum = netshares + pool_rshares_sum;
                 pool_rsharesfn_sum += p.rules.mainfunc(netshares);
             }
             s.set_pool(p.id, {static_cast<double>(p.messages.size()), p.funds, pool_rshares_sum, pool_rsharesfn_sum});
@@ -284,8 +286,8 @@ public:
                 s.set_pool(cur["created"].as<uint64_t>(), {
                     static_cast<double>(cur["state"]["msgs"].as<uint64_t>()),
                     static_cast<double>(cur["state"]["funds"].as<eosio::chain::asset>().to_real()),
-                    static_cast<double>(FP(cur["state"]["rshares"].as<base_t>())),
-                    static_cast<double>(FP(cur["state"]["rsharesfn"].as<base_t>()))
+                    static_cast<double>(WP(cur["state"]["rshares"].as<wide_t>())),
+                    static_cast<double>(WP(cur["state"]["rsharesfn"].as<wide_t>()))
                 });
             }
         }
@@ -640,6 +642,36 @@ BOOST_FIXTURE_TEST_CASE(limits_test, reward_calcs_tester) try {
     BOOST_CHECK_EQUAL(success(), create_message(N(bob), ":)"));
     check();
     show();
+} FC_LOG_AND_RETHROW()
+
+BOOST_FIXTURE_TEST_CASE(rshares_sum_overflow_test, reward_calcs_tester) try {
+    BOOST_TEST_MESSAGE("rshares_sum_overflow_test");
+    auto bignum = 500000000000;
+    auto fixp_max = std::numeric_limits<fixp_t>::max();
+    init(bignum, fixp_max / 2);
+    step();
+    BOOST_TEST_MESSAGE("--- setrules");
+
+    BOOST_CHECK_EQUAL(success(), setrules({"x", fixp_max}, {"sqrt(x)", fixp_max}, {"1", fixp_max}, 2500,
+        [](double x){ return x; }, [](double x){ return sqrt(x); }, [](double x){ return 1.0; }));
+    check();
+
+    
+    BOOST_TEST_MESSAGE("--- add_funds_to_forum");
+    BOOST_CHECK_EQUAL(success(), add_funds_to_forum(50000));
+    check();
+    
+    for (size_t i = 0; i < 10; i++) {
+        BOOST_TEST_MESSAGE("--- create_message: " << name{_users[i]}.to_string());
+        BOOST_CHECK_EQUAL(success(), create_message(_users[i], "permlink"));
+        check();
+        BOOST_TEST_MESSAGE("--- " << name{_users[i]}.to_string() << " voted for self");
+        BOOST_CHECK_EQUAL(success(), addvote(_users[i], _users[i], "permlink", 10000));
+        check();
+    }
+    
+   
+
 } FC_LOG_AND_RETHROW()
 
 BOOST_AUTO_TEST_SUITE_END()
