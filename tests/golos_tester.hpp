@@ -10,12 +10,12 @@ uint64_t hash64(const std::string& arg);
 
 // Note: cannot check nested mvo
 #define CHECK_EQUAL_OBJECTS(left, right) { \
-    auto a = fc::variant(left); \
-    auto b = fc::variant(right); \
-    BOOST_TEST_CHECK(a.is_object()); \
-    BOOST_TEST_CHECK(b.is_object()); \
-    if (a.is_object() && b.is_object()) { \
-        BOOST_CHECK_EQUAL_COLLECTIONS(a.get_object().begin(), a.get_object().end(), b.get_object().begin(), b.get_object().end()); }}
+    auto l = fc::variant(left); \
+    auto r = fc::variant(right); \
+    BOOST_TEST_CHECK(l.is_object()); \
+    BOOST_TEST_CHECK(r.is_object()); \
+    if (l.is_object() && r.is_object()) { \
+        BOOST_CHECK_EQUAL_COLLECTIONS(l.get_object().begin(), l.get_object().end(), r.get_object().begin(), r.get_object().end()); }}
 
 #define CHECK_MATCHING_OBJECT(check, reference) { \
     auto a = fc::variant(reference); \
@@ -50,7 +50,6 @@ protected:
     std::map<account_name, abi_serializer> _abis;
 
 public:
-    golos_tester(): tester(), _chaindb(control->chaindb()) {}
     golos_tester(name code): tester(), _code(code), _chaindb(control->chaindb()) {
         std::cout << "golos_tester()" << std::endl;
     }
