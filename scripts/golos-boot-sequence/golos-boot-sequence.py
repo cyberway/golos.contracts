@@ -69,8 +69,15 @@ def sleep(t):
     time.sleep(t)
     print('resume')
 
-def intToCurrency(i):
-    return '%d.%04d %s' % (i // 10000, i % 10000, args.symbol)
+def intToCurrency(value, precision, symbol):
+    devider=10**precision
+    return '%d.%0*d %s' % (value // devider, precision, value % devider, symbol)
+
+def intToToken(value):
+    return intToCurrency(value, args.token_precision, args.symbol)
+
+def intToVesting(value):
+    return intToCurrency(value, args.vesting_precision, args.symbol)
 
 # --------------------- EOSIO functions ---------------------------------------
 
@@ -105,17 +112,21 @@ def createAuthority(keys, accounts):
 
 # --------------------- GOLOS functions ---------------------------------------
 
-def registerWitness(ctrl, witness, key, symbol):
+def buyVesting(account, amount):
+    transfer('gls.publish', account, amount)
+    transfer(account, 'gls.vesting', amount)   # buy vesting
+
+def registerWitness(ctrl, witness, key):
     retry(args.cleos + 'push action ' + ctrl + ' regwitness' + jsonArg({
-        'domain': '4,%s' % symbol,
+        'domain': args.token,
         'witness': witness,
         'key': key,
         'url': 'http://%s.witnesses.golos.io' % witness
     }) + '-p %s'%witness)
 
-def voteWitness(ctrl, voter, witness, weight, symbol):
+def voteWitness(ctrl, voter, witness, weight):
     retry(args.cleos + ' push action ' + ctrl + ' votewitness ' + 
-        jsonArg(['4,%s' % symbol, voter, witness, weight]) + '-p %s'%voter)
+        jsonArg([args.token, voter, witness, weight]) + '-p %s'%voter)
 
 def createPost(author, permlink, header, body):
     retry(args.cleos + 'push action gls.publish createmssg' + 
@@ -181,19 +192,18 @@ def stepInstallContracts():
     retry(args.cleos + 'set contract gls.publish ' + args.contracts_dir + 'golos.publication/')
 
 def stepCreateTokens():
-    retry(args.cleos + 'push action eosio.token create \'["gls.publish", "10000000000.0000 %s"]\' -p eosio.token' % (args.symbol))
+    retry(args.cleos + 'push action eosio.token create ' + jsonArg(["gls.publish", intToToken(10000000000*10000)]) + ' -p eosio.token')
     #totalAllocation = allocateFunds(0, len(accounts))
     totalAllocation = 10000000*10000 
-    retry(args.cleos + 'push action eosio.token issue \'["gls.publish", "%s", "memo"]\' -p gls.publish' % intToCurrency(totalAllocation))
-    retry(args.cleos + 'push action gls.vesting createvest ' + jsonArg(['gls.publish', '4,%s'%args.symbol,golosAccounts]) + '-p gls.publish')
+    retry(args.cleos + 'push action eosio.token issue ' + jsonArg(["gls.publish", intToToken(totalAllocation), "memo"]) + ' -p gls.publish')
+    retry(args.cleos + 'push action gls.vesting createvest ' + jsonArg(['gls.publish', args.vesting, golosAccounts]) + '-p gls.publish')
     sleep(1)
 
 def createCommunity():
     control = 'gls.ctrl'
     owner = 'gls.publish'
-    symbol = '4,%s' % args.symbol
     retry(args.cleos + 'push action ' + control + ' create ' + jsonArg({
-        'domain': symbol,
+        'domain': args.token,
         'owner': owner,
         'props': {
             'max_witnesses': 5,
@@ -215,20 +225,20 @@ def createWitnessAccounts():
     for i in range(firstWitness, firstWitness + numWitness):
         a = accounts[i]
         createAccount('eosio', a['name'], a['pub'])
-        transfer('gls.publish', a['name'], '1000.0000 %s'%args.symbol)
-        transfer(a['name'], 'gls.vesting', '100.0000 %s'%args.symbol)   # buy vesting
-        registerWitness('gls.ctrl', a['name'], a['pub'], args.symbol)
-        voteWitness('gls.ctrl', a['name'], a['name'], 10000, args.symbol)
+        transfer('gls.publish', a['name'], intToToken(1000*10000))
+        transfer(a['name'], 'gls.vesting', intToToken(100*10000))   # buy vesting
+        registerWitness('gls.ctrl', a['name'], a['pub'])
+        voteWitness('gls.ctrl', a['name'], a['name'], 10000)
         
 def initCommunity():
-    retry(args.cleos + 'push action gls.emit start ' + jsonArg(['4,%s'%args.symbol]) + '-p gls.publish')
+    retry(args.cleos + 'push action gls.emit start ' + jsonArg([args.token]) + '-p gls.publish')
     retry(args.cleos + 'push action gls.publish setrules ' + jsonArg({
         "mainfunc":{"str":"0","maxarg":1},
         "curationfunc":{"str":"0","maxarg":1},
         "timepenalty":{"str":"0","maxarg":1},
         "curatorsprop":0,
         "maxtokenprop":0,
-        "tokensymbol":"4,%s"%args.symbol,
+        "tokensymbol":args.token,
         "lims":{
             "restorers":["1"],
             "limitedacts":[
@@ -247,7 +257,8 @@ def addUsers():
         a = accounts[i]
         createAccount('eosio', a['name'], a['pub'])
         retry(args.cleos + 'push action gls.vesting open' +
-            jsonArg([a['name'], '4,%s'%args.symbol, a['name']]) + '-p %s'%a['name'])
+            jsonArg([a['name'], args.vesting, a['name']]) + '-p %s'%a['name'])
+        buyVesting(a['name'], intToToken(50000))
 
 # Command Line Arguments
 
@@ -276,10 +287,12 @@ parser.add_argument('--keosd', metavar='', help="Path to keosd binary (default i
 parser.add_argument('--contracts-dir', metavar='', help="Path to contracts directory", default='../../build/')
 parser.add_argument('--wallet-dir', metavar='', help="Path to wallet directory", default='./wallet/')
 parser.add_argument('--log-path', metavar='', help="Path to log file", default='./output.log')
-parser.add_argument('--symbol', metavar='', help="The Golos community symbol", default='GLS')
 parser.add_argument('--user-limit', metavar='', help="Max number of users. (0 = no limit)", type=int, default=3000)
 parser.add_argument('--max-user-keys', metavar='', help="Maximum user keys to import into wallet", type=int, default=100)
 parser.add_argument('--witness-limit', metavar='', help="Maximum number of witnesses. (0 = no limit)", type=int, default=0)
+parser.add_argument('--symbol', metavar='', help="The Golos community token symbol", default='GLS')
+parser.add_argument('--token-precision', metavar='', help="The Golos community token precision", type=int, default=3)
+parser.add_argument('--vesting-precision', metavar='', help="The Golos community vesting precision", type=int, default=6)
 parser.add_argument('--docker', action='store_true', help='Run actions only for Docker (used with -a)')
 parser.add_argument('-a', '--all', action='store_true', help="Do everything marked with (*)")
 parser.add_argument('-H', '--http-port', type=int, default=8000, metavar='', help='HTTP port for cleos')
@@ -301,6 +314,9 @@ if (parser.get_default('cleos') == args.cleos):
 
 if (parser.get_default('keosd') == args.keosd):
     args.keosd = args.programs_dir + '/' + args.keosd
+
+args.token = '%d,%s' % (args.token_precision, args.symbol)
+args.vesting = '%d,%s' % (args.vesting_precision, args.symbol)
 
 logFile = open(args.log_path, 'a')
 

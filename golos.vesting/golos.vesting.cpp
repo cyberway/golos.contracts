@@ -398,7 +398,7 @@ const asset vesting::convert_to_token(const asset& src, const structures::vestin
     uint64_t amount;
     symbol_type sym = src.symbol;
     auto balance = token(N(eosio.token)).get_balance(_self, sym.name());
-    eosio_assert(sym == balance.symbol && sym == vinfo.supply.symbol, "The token type does not match");
+    eosio_assert(sym.name() == balance.symbol.name() && sym == vinfo.supply.symbol, "The token type does not match");
 
     if (!vinfo.supply.amount || !balance.amount)
         amount = src.amount;
@@ -406,21 +406,21 @@ const asset vesting::convert_to_token(const asset& src, const structures::vestin
         amount = static_cast<int64_t>((static_cast<uint128_t>(src.amount) * balance.amount)
             / (vinfo.supply.amount + src.amount));
     }
-    return asset(amount, sym);
+    return asset(amount, balance.symbol);
 }
 
 const asset vesting::convert_to_vesting(const asset& src, const structures::vesting_info& vinfo) const {
     uint64_t amount;
     symbol_type sym = src.symbol;
     auto balance = token(N(eosio.token)).get_balance(_self, sym.name()) - src;
-    eosio_assert(sym == balance.symbol && sym == vinfo.supply.symbol, "The token type does not match");
+    eosio_assert(sym == balance.symbol && sym.name() == vinfo.supply.symbol.name(), "The token type does not match");
 
     if (!vinfo.supply.amount || !balance.amount)
         amount = src.amount;
     else {
         amount = static_cast<int64_t>((static_cast<uint128_t>(src.amount) * vinfo.supply.amount) / balance.amount);
     }
-    return asset(amount, sym);
+    return asset(amount, vinfo.supply.symbol);
 }
 
 void vesting::timeout_delay_trx() {
