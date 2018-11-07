@@ -61,6 +61,33 @@ struct golos_posting_api: base_contract_api {
         );
     }
 
+    action_result update_msg(
+        account_name author,
+        std::string permlink,
+        std::string title,
+        std::string body,
+        std::string language,
+        std::vector<tags> tags,
+        std::string json_metadata
+    ) {
+        return push(N(updatemssg), author, args()
+            ("account", author)
+            ("permlink", permlink)
+            ("headermssg", title)
+            ("bodymssg", body)
+            ("languagemssg", language)
+            ("tags",tags)
+            ("jsonmetadata", json_metadata)
+        );
+    }
+
+    action_result delete_msg(account_name author, std::string permlink) {
+        return push(N(deletemssg), author, args()
+            ("account", author)
+            ("permlink", permlink)
+        );
+    }
+
     action_result upvote(account_name voter, account_name author, std::string permlink, int32_t weight) {
         return vote(voter, author, permlink, weight);
     }
@@ -72,7 +99,7 @@ struct golos_posting_api: base_contract_api {
     }
 
     action_result vote(account_name voter, account_name author, std::string permlink, int32_t weight) {
-        BOOST_REQUIRE_MESSAGE(weight > -65536 && weight < 65536,
+        BOOST_REQUIRE_MESSAGE(weight >= -32768 && weight < 32768,
             "Test is broken, action cannot be serialized with such weight");
         auto act = N(upvote);
         uint16_t w = weight;
@@ -91,6 +118,18 @@ struct golos_posting_api: base_contract_api {
     }
 
     //// posting tables
+    variant get_message(account_name acc, uint64_t id) {
+        return _tester->get_chaindb_struct(_code, acc, N(messagetable), id, "message");
+    }
+
+    variant get_content(account_name acc, uint64_t id) {
+        return _tester->get_chaindb_struct(_code, acc, N(contenttable), id, "content");
+    }
+
+    variant get_vote(account_name acc, uint64_t id) {
+        return _tester->get_chaindb_struct(_code, acc, N(votetable), id, "voteinfo");
+    }
+
     std::vector<variant> get_reward_pools() {
         return _tester->get_all_chaindb_rows(_code, _code, N(rewardpools), false);
     }

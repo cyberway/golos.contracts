@@ -15,7 +15,7 @@ using namespace fixed_point_utils;
 using namespace eosio::testing;
 using mvo = fc::mutable_variant_object;
 
-#define PRECESION 0             // why 0?
+#define PRECESION 0
 #define TOKEN_NAME "GOLOS"
 constexpr int64_t MAXTOKENPROB = 5000;
 constexpr auto MAX_ARG = static_cast<double>(std::numeric_limits<fixp_t>::max());
@@ -62,7 +62,6 @@ protected:
     state _state;
 
     struct errors: contract_error_messages {
-        // const string no_symbol          = amsg("symbol not found");
         const string not_positive       = amsg("check positive failed for time penalty func");
         const string not_monotonic      = amsg("check monotonic failed for time penalty func");
         const string fp_cast_overflow   = amsg("fp_cast: overflow");
@@ -108,20 +107,19 @@ public:
         , _forum_name(_code)
         , _issuer(N(issuer.acc))
         , _users{
-                N(alice),  N(alice1),  N(alice2), N(alice3), N(alice4), N(alice5),
-                N(bob), N(bob1), N(bob2), N(bob3), N(bob4), N(bob5),
-                N(why), N(has), N(my), N(imagination), N(become), N(poor)}
+            N(alice),  N(alice1),  N(alice2), N(alice3), N(alice4), N(alice5),
+            N(bob), N(bob1), N(bob2), N(bob3), N(bob4), N(bob5),
+            N(why), N(has), N(my), N(imagination), N(become), N(poor)}
         , _stranger(N(dan.larimer)) {
 
         step(2);
-        create_accounts({_forum_name, _issuer, cfg::vesting_name, cfg::token_name, cfg::control_name, _stranger});
+        create_accounts({_forum_name, _issuer, cfg::vesting_name, cfg::token_name, _stranger});
         create_accounts(_users);
         step(2);
 
         install_contract(_forum_name, contracts::posting_wasm(), contracts::posting_abi());
         install_contract(cfg::token_name, contracts::token_wasm(), contracts::token_abi());
         install_contract(cfg::vesting_name, contracts::vesting_wasm(), contracts::vesting_abi());
-        // install_contract(cfg::control_name, contracts::ctrl_wasm(), contracts::ctrl_abi());
     }
 
     action_result add_funds_to(account_name user, int64_t amount) {
@@ -171,10 +169,6 @@ public:
             fill_depleted_pool(amount, _state.pools.size());
         }
         return ret;
-    }
-
-    action_result push_action(const account_name& signer, const action_name& name, const variant_object& data, const account_name& code) {
-        return golos_tester::push_action(code, name, signer, data);
     }
 
     action_result setrules(
@@ -330,7 +324,7 @@ public:
         for (auto itr_p = _state.pools.begin(); itr_p != _state.pools.end(); itr_p++) {
             auto& p = *itr_p;
             for (auto itr_m = p.messages.begin(); itr_m != p.messages.end();) {
-                if ((cur_time().to_seconds() - itr_m->created) > CLOSE_MESSAGE_PERIOD) {
+                if ((cur_time().to_seconds() - itr_m->created) > cfg::CLOSE_MESSAGE_PERIOD) {
                     auto m = *itr_m;
                     double pool_rsharesfn_sum = p.get_rsharesfn_sum();
 

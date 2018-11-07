@@ -43,7 +43,7 @@ constexpr double pool_rshares_delta = 0.01;
 constexpr double pool_rsharesfn_delta = 0.01;
 
 
-double get_prop(int64_t arg) {
+inline double get_prop(int64_t arg) {
     return static_cast<double>(arg) / static_cast<double>(golos::config::_100percent);
 }
 
@@ -78,7 +78,7 @@ struct aprox_val_t {
     aprox_val_t& operator +=(const double& arg) { val += arg; return *this; }
 };
 
-std::ostream& operator<< (std::ostream& os, const aprox_val_t& rhs) {
+inline std::ostream& operator<< (std::ostream& os, const aprox_val_t& rhs) {
     os << std::to_string(rhs.val) << " (" << std::to_string(double(rhs.delta)) << ") ";
     return os;
 }
@@ -148,12 +148,11 @@ struct statemap : public std::map<std::string, aprox_val_t> {
     }
 };
 
-std::ostream& operator<< (std::ostream& os, const statemap& rhs) {
+inline std::ostream& operator<< (std::ostream& os, const statemap& rhs) {
     for (auto itr = rhs.begin(); itr != rhs.end(); ++itr)
         os << itr->first << " = " << itr->second << "\n";
     return os;
 }
-
 
 
 struct vote {

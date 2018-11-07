@@ -2,12 +2,12 @@
 #include <common/config.hpp>
 
 namespace golos { namespace config {
-#define VOTE_OPERATION_INTERVAL 3 //sec
+const auto VOTE_OPERATION_INTERVAL = 3; //sec
+const auto MAX_REVOTES = 5;
 
 // closing post params
-#define CLOSE_MESSAGE_PERIOD 50 // 7*24*60*60
-#define UPVOTE_DISABLE_PERIOD 5 // 60*60
-#define MAX_REVOTES 5
+const auto CLOSE_MESSAGE_PERIOD = 120; // 7*24*60*60
+const auto UPVOTE_DISABLE_PERIOD = 6; // 60*60
 
 constexpr size_t CHECK_MONOTONIC_STEPS = 10;
 constexpr int64_t ONE_HUNDRED_PERCENT = 10000;
@@ -24,4 +24,3 @@ namespace limit_restorer_domain {//TODO: it will look better in a rule settings
 }
 
 }}
-
