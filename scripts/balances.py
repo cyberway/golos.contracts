@@ -1,6 +1,9 @@
 import dbs
 import bson
 
+BALANCE_PRECISION = 3
+VESTING_PRECISION = 6
+
 golos_accounts = dbs.golos_db['account_object']
 
 def save_balances(doc):
@@ -14,8 +17,8 @@ def save_balances(doc):
     balance = {
 	"balance": {
 	    "amount": doc["balance_value"],
-	    "decs": bson.Int64(4),
-	    "sym": "SYS"
+	    "decs": bson.Int64(BALANCE_PRECISION),
+	    "sym": "GLS"
 	},
 	"_SCOPE_": doc["name"],
 	"_PAYER_": doc["name"],
@@ -26,23 +29,23 @@ def save_balances(doc):
     vesting = {
 	"vesting": {
 	    "amount": doc["vesting_shares_value"],
-	    "decs": bson.Int64(4),
-	    "sym": "GESTS"
+	    "decs": bson.Int64(VESTING_PRECISION),
+	    "sym": "GLS"
 	},
 	"delegate_vesting": {
 	    "amount": doc["delegated_vesting_shares_value"],
-	    "decs": bson.Int64(4),
-	    "sym": "GESTS"
+	    "decs": bson.Int64(VESTING_PRECISION),
+	    "sym": "GLS"
 	},
 	"received_vesting": {
 	    "amount": doc["received_vesting_shares_value"],
-	    "decs": bson.Int64(4),
-	    "sym": "GESTS"
+	    "decs": bson.Int64(VESTING_PRECISION),
+	    "sym": "GLS"
 	},
 	"unlocked_limit": {
 	    "amount": bson.Int64(0),
-	    "decs": bson.Int64(4),
-	    "sym": "SYS"
+	    "decs": bson.Int64(VESTING_PRECISION),
+	    "sym": "GLS"
 	},
 	"_SCOPE_": doc["name"],
 	"_PAYER_": doc["name"],
