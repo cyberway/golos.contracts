@@ -27,36 +27,39 @@ def jsonArg(a):
     return " '" + json.dumps(a) + "' "
 
 def run(args):
-    print('golos-boot-tutorial.py:', args)
+    print('golos-boot-sequence.py:', args)
     logFile.write(args + '\n')
     if subprocess.call(args, shell=True):
-        print('golos-boot-tutorial.py: exiting because of error')
+        print('golos-boot-sequence.py: exiting because of error')
         sys.exit(1)
 
 def retry(args):
     count = 5
     while count:
         count = count-1
-        print('golos-boot-tutorial.py:', args)
+        print('golos-boot-sequence.py:', args)
         logFile.write(args + '\n')
         if subprocess.call(args, shell=True):
             print('*** Retry: ', count)
+            sleep(0.5)
         else:
-            break
+            return True
+    print('golos-boot-sequence.py: exiting because of error')
+    sys.exit(1)
 
 def background(args):
-    print('golos-boot-tutorial.py:', args)
+    print('golos-boot-sequence.py:', args)
     logFile.write(args + '\n')
     return subprocess.Popen(args, shell=True)
 
 def getOutput(args):
-    print('golos-boot-tutorial.py:', args)
+    print('golos-boot-sequence.py:', args)
     logFile.write(args + '\n')
     proc = subprocess.Popen(args, shell=True, stdout=subprocess.PIPE)
     return proc.communicate()[0].decode('utf-8')
 
 def getJsonOutput(args):
-    print('golos-boot-tutorial.py:', args)
+    print('golos-boot-sequence.py:', args)
     logFile.write(args + '\n')
     proc = subprocess.Popen(args, shell=True, stdout=subprocess.PIPE)
     return json.loads(proc.communicate()[0])
@@ -145,19 +148,22 @@ def startWallet():
     run('mkdir -p ' + os.path.abspath(args.wallet_dir))
     background(args.keosd + ' --unlock-timeout %d --http-server-address 127.0.0.1:6667 --unix-socket-path \'\' --wallet-dir %s' % (unlockTimeout, os.path.abspath(args.wallet_dir)))
     sleep(.4)
-    run(args.cleos + 'wallet create --to-console')
 
 def importKeys():
-    run(args.cleos + 'wallet import --private-key ' + args.eosio_private_key)
-    run(args.cleos + 'wallet import --private-key ' + args.private_key)
+    run(args.cleos + 'wallet create -n "golos" --to-console')
     keys = {}
+    run(args.cleos + 'wallet import -n "golos" --private-key ' + args.private_key)
+    keys[args.private_key] = True
+    if not args.eosio_private_key in keys:
+        run(args.cleos + 'wallet import -n "golos" --private-key ' + args.eosio_private_key)
+        keys[args.eosio_private_key] = True
     for a in accounts:
         key = a['pvt']
         if not key in keys:
             if len(keys) >= args.max_user_keys:
                 break
             keys[key] = True
-            run(args.cleos + 'wallet import --private-key ' + key)
+            run(args.cleos + 'wallet import -n "golos" --private-key ' + key)
 
 def createGolosAccounts():
     for a in golosAccounts:
@@ -248,21 +254,22 @@ def addUsers():
 parser = argparse.ArgumentParser()
 
 commands = [
-    ('k', 'kill',           stepKillAll,                True,    "Kill all nodeos and keosd processes"),
-    ('w', 'wallet',         startWallet,                True,    "Start keosd, create wallet"),
-    ('K', 'keys',           importKeys,                 True,    "Fill wallet with keys"),
-    ('A', 'accounts',       createGolosAccounts,        True,    "Create golos accounts (gls.*)"),
-    ('c', 'contracts',      stepInstallContracts,       True,    "Install contracts (ctrl, emit, vesting, publish)"),
-    ('t', 'tokens',         stepCreateTokens,           True,    "Create tokens"),
-    ('C', 'community',      createCommunity,            True,    "Create community"),
-    ('d', 'witnesses',      createWitnessAccounts,      True,    "Create witnesses accounts"),
-    ('i', 'init',           initCommunity,              True,    "Init community"),
-    ('u', 'users',          addUsers,                   True,    "Add users"),
+#    Short Command          Function                    inAll  inDocker Description
+    ('k', 'kill',           stepKillAll,                True,  False,   "Kill all nodeos and keosd processes"),
+    ('w', 'wallet',         startWallet,                True,  False,   "Start wallet (start keosd)"),
+    ('K', 'keys',           importKeys,                 True,  True,    "Create and fill wallet with keys"),
+    ('A', 'accounts',       createGolosAccounts,        True,  True,    "Create golos accounts (gls.*)"),
+    ('c', 'contracts',      stepInstallContracts,       True,  True,    "Install contracts (ctrl, emit, vesting, publish)"),
+    ('t', 'tokens',         stepCreateTokens,           True,  True,    "Create tokens"),
+    ('C', 'community',      createCommunity,            True,  True,    "Create community"),
+    ('U', 'witnesses',      createWitnessAccounts,      True,  True,    "Create witnesses accounts"),
+    ('i', 'init',           initCommunity,              True,  True,    "Init community"),
+    ('u', 'users',          addUsers,                   True,  True,    "Add users"),
 ]
 
 parser.add_argument('--public-key', metavar='', help="Golos Public Key", default='GLS6Tvw3apAGeHCUTWpf9DY4xvUoKwmuDatW7GV8ygkuZ8F6y4Yor', dest="public_key")
-parser.add_argument('--private-Key', metavar='', help="Golos Private Key", default='5KekbiEKS4bwNptEtSawUygRb5sQ33P6EUZ6c4k4rEyQg7sARqW', dest="private_key")
-parser.add_argument('--eosio-private-Key', metavar='', help="EOSIO Private Key", default='5K463ynhZoCDDa4RDcr63cUwWLTnKqmdcoTKTHBjqoKfv4u5V7p', dest="eosio_private_key")
+parser.add_argument('--private-key', metavar='', help="Golos Private Key", default='5KekbiEKS4bwNptEtSawUygRb5sQ33P6EUZ6c4k4rEyQg7sARqW', dest="private_key")
+parser.add_argument('--eosio-private-key', metavar='', help="EOSIO Private Key", default='5K463ynhZoCDDa4RDcr63cUwWLTnKqmdcoTKTHBjqoKfv4u5V7p', dest="eosio_private_key")
 parser.add_argument('--programs-dir', metavar='', help="Programs directory for cleos, nodeos, keosd", default='/mnt/working/eos-debug.git/build/programs');
 parser.add_argument('--cleos', metavar='', help="Cleos command (default in programs-dir)", default='cleos/cleos')
 parser.add_argument('--keosd', metavar='', help="Path to keosd binary (default in programs-dir", default='keosd/keosd')
@@ -273,12 +280,13 @@ parser.add_argument('--symbol', metavar='', help="The Golos community symbol", d
 parser.add_argument('--user-limit', metavar='', help="Max number of users. (0 = no limit)", type=int, default=3000)
 parser.add_argument('--max-user-keys', metavar='', help="Maximum user keys to import into wallet", type=int, default=100)
 parser.add_argument('--witness-limit', metavar='', help="Maximum number of witnesses. (0 = no limit)", type=int, default=0)
+parser.add_argument('--docker', action='store_true', help='Run actions only for Docker (used with -a)')
 parser.add_argument('-a', '--all', action='store_true', help="Do everything marked with (*)")
 parser.add_argument('-H', '--http-port', type=int, default=8000, metavar='', help='HTTP port for cleos')
 
-for (flag, command, function, inAll, help) in commands:
+for (flag, command, function, inAll, inDocker, help) in commands:
     prefix = ''
-    if inAll: prefix += '*'
+    if inAll or inDocker: prefix += ('*' if inAll else ' ') + ('D' if inDocker else ' ')
     if prefix: help = '(' + prefix + ') ' + help
     if flag:
         parser.add_argument('-' + flag, '--' + command, action='store_true', help=help, dest=command)
@@ -289,17 +297,17 @@ args = parser.parse_args()
 
 if (parser.get_default('cleos') == args.cleos):
     args.cleos = args.programs_dir + '/' + args.cleos
+    args.cleos += ' --wallet-url http://127.0.0.1:6667 --url http://127.0.0.1:%d ' % args.http_port
 
 if (parser.get_default('keosd') == args.keosd):
     args.keosd = args.programs_dir + '/' + args.keosd
-
-args.cleos += ' --wallet-url http://127.0.0.1:6667 --url http://127.0.0.1:%d ' % args.http_port
 
 logFile = open(args.log_path, 'a')
 
 logFile.write('\n\n' + '*' * 80 + '\n\n\n')
 
-with open('accounts.json') as f:
+accounts_filename = os.path.dirname(os.path.realpath(__file__)) + '/accounts.json'
+with open(accounts_filename) as f:
     a = json.load(f)
     if args.user_limit:
         del a['users'][args.user_limit:]
@@ -310,10 +318,10 @@ with open('accounts.json') as f:
     accounts = a['users'] + a['witnesses']
 
 haveCommand = False
-for (flag, command, function, inAll, help) in commands:
-    if getattr(args, command) or inAll and args.all:
+for (flag, command, function, inAll, inDocker, help) in commands:
+    if getattr(args, command) or (inDocker if args.docker else inAll) and args.all:
         if function:
             haveCommand = True
             function()
 if not haveCommand:
-    print('golos-boot-tutorial.py: Tell me what to do. -a does almost everything. -h shows options.')
+    print('golos-boot-sequence.py: Tell me what to do. -a does almost everything. -h shows options.')
