@@ -25,6 +25,7 @@ def level_post(parent_id):
 
 def convert_posts():
     golos_posts = dbs.golos_db['comment_object']
+    cw_accounts = dbs.cyberway_db['account']
 
     length = golos_posts.count()
     dbs.printProgressBar(0, length, prefix = 'Progress:', suffix = 'Complete', length = 50)
@@ -34,6 +35,10 @@ def convert_posts():
        
         try:
             if (doc["removed"]):
+                continue
+
+            account = cw_accounts.find_one({"name": doc["author"]})
+            if not account:
                 continue
         
             messagestate = {
