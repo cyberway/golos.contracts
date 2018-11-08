@@ -381,9 +381,9 @@ void publication::set_vote(account_name voter, account_name author, uint64_t id,
     elaf_t abs_w = get_limit_prop(abs(weight));
     atmsp::machine<fixp_t> machine;
     apply_limits(machine, voter, *pool, structures::limits::VOTE, cur_time, abs_w);
-    
-    int64_t sum_vesting = eosio::vesting(vesting_name).get_account_effective_vesting(voter, pool->state.funds.symbol.name()).amount;        
-    fixp_t abs_rshares = fp_cast<fixp_t>(sum_vesting, false) * abs_w;              
+
+    int64_t sum_vesting = golos::vesting(vesting_name).get_account_effective_vesting(voter, pool->state.funds.symbol.name()).amount;
+    fixp_t abs_rshares = fp_cast<fixp_t>(sum_vesting, false) * abs_w;
     fixp_t rshares = (weight < 0) ? -abs_rshares : abs_rshares;
     
     structures::messagestate msg_new_state = {
@@ -548,7 +548,7 @@ fixp_t publication::get_delta(atmsp::machine<fixp_t>& machine, fixp_t old_val, f
 }
 
 void publication::check_account(account_name user, eosio::symbol_type tokensymbol) {
-    eosio_assert(eosio::vesting(vesting_name).balance_exist(user, tokensymbol.name()), ("unregistered user: " + name{user}.to_string()).c_str());    
+    eosio_assert(golos::vesting(vesting_name).balance_exist(user, tokensymbol.name()), ("unregistered user: " + name{user}.to_string()).c_str());
 }
 
 elaf_t publication::apply_limits(atmsp::machine<fixp_t>& machine, account_name user, 
@@ -559,7 +559,7 @@ elaf_t publication::apply_limits(atmsp::machine<fixp_t>& machine, account_name u
     using namespace tables;
     using namespace structures;
     eosio_assert((kind == limits::POST) || (kind == limits::COMM) || (kind == limits::VOTE), "publication::apply_limits: wrong act type");
-    int64_t sum_vesting = eosio::vesting(vesting_name).get_account_effective_vesting(user, pool.state.funds.symbol.name()).amount;   
+    int64_t sum_vesting = golos::vesting(vesting_name).get_account_effective_vesting(user, pool.state.funds.symbol.name()).amount;
     if((kind == limits::VOTE) && (w != elaf_t(0))) {
         int64_t weighted_vesting = fp_cast<int64_t>(elai_t(sum_vesting) * w, false);
         eosio_assert(weighted_vesting >= pool.lims.get_min_vesting_for(kind), "publication::apply_limits: can't vote, not enough vesting");
@@ -588,11 +588,11 @@ elaf_t publication::apply_limits(atmsp::machine<fixp_t>& machine, account_name u
         if(power == 1)
             chgs.modify(chgs_itr, _self, [&](auto &item) { item = cur_chgs; });
         else if(w > elaf_t(0)) {//enable_vesting_payment
-            int64_t user_vesting = eosio::vesting(vesting_name).get_account_unlocked_vesting(user, pool.state.funds.symbol.name()).amount;
+            int64_t user_vesting = golos::vesting(vesting_name).get_account_unlocked_vesting(user, pool.state.funds.symbol.name()).amount;
             auto price = pool.lims.get_vesting_price(kind);
             eosio_assert(price > 0, "publication::apply_limits: can't post, not enough power, vesting payment is disabled");
             eosio_assert(user_vesting >= price, "publication::apply_limits: insufficient vesting amount");
-            INLINE_ACTION_SENDER(eosio::vesting, retire) (vesting_name, {_self, N(active)}, {_self, eosio::asset(price, pool.state.funds.symbol), user});
+            INLINE_ACTION_SENDER(golos::vesting, retire) (vesting_name, {_self, N(active)}, {_self, eosio::asset(price, pool.state.funds.symbol), user});
             cur_chgs = pre_chgs;
         }
         else

@@ -23,4 +23,4 @@ namespace limit_restorer_domain {//TODO: it will look better in a rule settings
     constexpr fixp_t max_res = fixp_t(100);
 }
 
-}}
+}} // golos::config

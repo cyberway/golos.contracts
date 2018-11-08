@@ -1,7 +1,6 @@
 #include "golos.emit/golos.emit.hpp"
 #include "golos.emit/config.hpp"
 #include <golos.ctrl/golos.ctrl.hpp>
-// #include <golos.vesting/golos.vesting.hpp>
 #include <eosio.token/eosio.token.hpp>
 #include <eosiolib/transaction.hpp>
 

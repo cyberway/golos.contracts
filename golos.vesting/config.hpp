@@ -1,22 +1,23 @@
 #pragma once
 #include <common/config.hpp>
 
-#define TIMEOUT 3
+namespace golos { namespace config {
 
-#define FRACTION (10000)
-#define FULL_PERSENT (1000000)
+const int vesting_delay_tx_timeout = 3;     // used to re-create deferred txs. TODO: do not create txs on each block
 
-#define NUMBER_OF_CONVERSIONS (13)
-#define TOTAL_TERM_OF_CONCLUSION 15
-//#define TOTAL_TERM_OF_CONCLUSION (604800)
-#define MIN_AMOUNT_VESTING_CONCLUSION (100000)
+const struct vesting_withdraw {
+    const int intervals = 13;                           // VESTING_WITHDRAW_INTERVALS
+    const int interval_seconds = 120;   // 60*60*24*7   // VESTING_WITHDRAW_INTERVAL_SECONDS
+    const int min_amount = 10 * 1e3;    // acc fee * 10
+} vesting_withdraw;
 
-#define MIN_AMOUNT_DELEGATION_VESTING (50000)
-#define MIN_DELEGATION (150000)
-#define MIN_PERIOD_DELEGATION (0)
-#define MAX_PERSENT_DELEGATION (0)
-#define TIME_LIMIT_FOR_RETURN_DELEGATE_VESTING 15
-//#define TIME_LIMIT_FOR_RETURN_DELEGATE_VESTING (604800)
 
-//------------------------------------------
-//TODO:? it seems like most of this stuff should be in vesting_info
+const struct delegation {
+    const int min_amount    = 50000;        // min step
+    const int min_remainder = 150000;
+    const int min_time      = 0;
+    const int max_interest  = 0;
+    const int return_time   = 120;      // 60*60*24*7 = cashout time
+} delegation;
+
+}} // golos::config

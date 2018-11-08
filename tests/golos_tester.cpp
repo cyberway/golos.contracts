@@ -39,7 +39,8 @@ vector<permission> golos_tester::get_account_permissions(account_name a) {
     return r;
 }
 
-base_tester::action_result golos_tester::push_action(
+// this method do produce_block() internaly and checks that chain_has_transaction()
+base_tester::action_result golos_tester::push_and_check_action(
     account_name code,
     action_name name,
     account_name signer,
@@ -51,6 +52,21 @@ base_tester::action_result golos_tester::push_action(
     act.name    = name;
     act.data    = abi.variant_to_binary(abi.get_action_type(name), data, abi_serializer_max_time);
     return base_tester::push_action(std::move(act), uint64_t(signer));
+}
+
+base_tester::action_result golos_tester::push_action(
+    account_name code,
+    action_name name,
+    account_name signer,
+    const variant_object& data
+) {
+    try {
+        base_tester::push_action(code, name, signer, data);
+    } catch (const fc::exception& ex) {
+        edump((ex.to_detail_string()));
+        return error(ex.top_message());
+    }
+    return success();
 }
 
 base_tester::action_result golos_tester::push_action_msig_tx(
