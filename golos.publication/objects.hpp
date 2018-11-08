@@ -111,15 +111,17 @@ struct rewardrules {
   
 struct poolstate {
     counter_t msgs;
-    eosio::asset funds;    
-    base_t rshares;
-    base_t rsharesfn;    
+    eosio::asset funds;
+    wide_t rshares;
+    wide_t rsharesfn;
     
-    using ratio_t = decltype(fixp_t(funds.amount) / FP(rshares));
+    using ratio_t = decltype(elap_t(1) / elap_t(1));
     ratio_t get_ratio() const {
         eosio_assert(funds.amount >= 0, "poolstate::get_ratio: funds < 0");
-        auto r = FP(rshares);     
-        return (r > 0) ? (fixp_t(funds.amount) / r) : std::numeric_limits<ratio_t>::max();
+        auto r = WP(rshares);
+        auto f = fixp_t(funds.amount);
+        narrow_down(f, r);
+        return r > 0 ? elap_t(f) / elap_t(r) : std::numeric_limits<ratio_t>::max();
     }    
 };
 

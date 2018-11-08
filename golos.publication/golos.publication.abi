@@ -7,6 +7,9 @@
       "new_type_name": "base_t",
       "type": "int64"
     },{
+      "new_type_name": "wide_t",
+      "type": "int128"
+    },{
       "new_type_name": "index_t",
       "type": "uint64"
     },{
@@ -536,11 +539,11 @@
         },
         {
             "name": "rshares",
-            "type": "base_t"
+            "type": "wide_t"
         },
         {
             "name": "rsharesfn",
-            "type": "base_t"
+            "type": "wide_t"
         }
     ]
   },

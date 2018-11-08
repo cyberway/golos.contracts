@@ -7,14 +7,12 @@
 #include "../golos.publication/config.hpp"
 #include "contracts.hpp"
 
-
 using namespace fixed_point_utils;
 using namespace eosio::chain;
 using namespace eosio::testing;
 using namespace fc;
 using mvo = fc::mutable_variant_object;
 namespace cfg = golos::config;
-
 
 namespace structures {
     struct beneficiaries {
