@@ -1,6 +1,7 @@
 import dbs
 import json
 from datetime import datetime
+from datetime import timedelta
 
 def create_tags(metadata_tags):
     tags = []
@@ -25,7 +26,6 @@ def level_post(parent_id):
 
 def create_trx(author, id_message):
     trx = ""
-    #./cleos push action gls.publish closemssg '{"account":"gls.publish", "permlink":""}' -p gls.publish -d --return-packed
     command = "/home/deploy/cyberway/build/programs/cleos/cleos push action gls.publish closemssg '{\"account\":\""+author+"\", \"permlink\":\""+str(id_message)+"\"}' -p gls.publish -d --return-packed"
     result = os.popen(command)
 
@@ -40,6 +40,7 @@ def create_trx(author, id_message):
 
 def convert_posts():
     golos_posts = dbs.golos_db['comment_object']
+    cw_accounts = dbs.cyberway_db['account']
 
     length = golos_posts.count()
     dbs.printProgressBar(0, length, prefix = 'Progress:', suffix = 'Complete', length = 50)
@@ -49,6 +50,10 @@ def convert_posts():
        
         try:
             if (doc["removed"]):
+                continue
+
+            account = cw_accounts.find_one({"name": doc["author"]})
+            if not account:
                 continue
         
             messagestate = {
@@ -76,14 +81,15 @@ def convert_posts():
             }
             dbs.cyberway_db['posttable'].save(message)
 
-            date_close = datetime.strptime("2106-02-07T06:28:15", '%Y-%m-%dT%H:%M:%S')
-            if (doc["cashout_time"] != date_close):
+            delay_untill = timedelta(minutes = 30)
+            date_close = datetime.strptime("2106-02-07T06:28:15", '%Y-%m-%dT%H:%M:%S').isoformat()
+            if (doc["cashout_time"].isoformat() != date_close and doc["cashout_time"].isoformat() < datetime.datetime.now().isoformat()):
                 delay_trx = {
                     "trx_id": "",
                     "sender": doc["author"],
                     "sender_id": dbs.convert_hash(doc["permlink"]) << 64 | doc["author"],
-                    "delay_until" : doc["cashout_time"], 
-                    "expiration" : doc["cashout_time"], 
+                    "delay_until" : doc["cashout_time"].isoformat() + delay_untill, 
+                    "expiration" : doc["cashout_time"].isoformat(), 
                     "published" : doc["created"], 
                     "packed_trx" : create_trx(doc["author"], dbs.convert_hash(doc["permlink"])), 
                     "_SCOPE_" : "",
