@@ -263,19 +263,19 @@ def initCommunity():
     retry(args.cleos + 'push action gls.publish setrules ' + jsonArg({
         "mainfunc":{"str":"x","maxarg":bignum},
         "curationfunc":{"str":"sqrt(x)","maxarg":bignum},
-        "timepenalty":{"str":"1","maxarg":bignum},
+        "timepenalty":{"str":"x/1800","maxarg":1800},
         "curatorsprop":2500,
         "maxtokenprop":5000,
         "tokensymbol":args.token,
         "lims":{
-            "restorers":["1"],
+            "restorers":["t / 3600"],
             "limitedacts":[
-                {"chargenum":0, "restorernum":0, "cutoffval":0, "chargeprice":0},
-                {"chargenum":0, "restorernum":0, "cutoffval":0, "chargeprice":0},
-                {"chargenum":0, "restorernum":0, "cutoffval":0, "chargeprice":0},
-                {"chargenum":0, "restorernum":0, "cutoffval":0, "chargeprice":0}
+                {"chargenum":0, "restorernum": 0, "cutoffval":20000, "chargeprice":9900},
+                {"chargenum":0, "restorernum": 0, "cutoffval":30000, "chargeprice":1000},
+                {"chargenum":1, "restorernum": 0, "cutoffval":10000, "chargeprice":1000},
+                {"chargenum":0, "restorernum":-1, "cutoffval":10000, "chargeprice":   0}
             ],
-            "vestingprices":[0, 0],
+            "vestingprices":[-1, -1],
             "minvestings":[0, 0, 0]
         }
     }) + '-p gls.publish')
