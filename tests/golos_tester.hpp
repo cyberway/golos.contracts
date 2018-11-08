@@ -61,6 +61,7 @@ public:
 
     std::vector<permission> get_account_permissions(account_name a);
 
+    action_result push_and_check_action(account_name, action_name, account_name, const variant_object&);
     action_result push_action(account_name code, action_name name, account_name signer, const variant_object& data);
     action_result push_action_msig_tx(account_name code, action_name name,
         std::vector<permission_level> perms, std::vector<account_name> signers, const variant_object& data);

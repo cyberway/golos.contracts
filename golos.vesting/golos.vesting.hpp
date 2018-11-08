@@ -1,9 +1,11 @@
 #pragma once
 #include "objects.hpp"
 
-namespace eosio {
+namespace golos {
 
-class vesting : public eosio::contract {
+using namespace eosio;
+
+class vesting : public contract {
 
   public:
     vesting(account_name self) : contract(self)  {}
@@ -72,4 +74,4 @@ bool vesting::balance_exist(account_name owner, symbol_name sym) const {
 }
 
 
-}
+} // golos

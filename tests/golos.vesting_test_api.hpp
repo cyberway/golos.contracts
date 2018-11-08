@@ -49,7 +49,9 @@ struct golos_vesting_api: base_contract_api {
         );
     }
 
-    action_result delegate_vesting(account_name sender, account_name recipient, asset quantity, uint16_t interest_rate, uint8_t payout_strategy) {
+    action_result delegate_vesting(account_name sender, account_name recipient, asset quantity,
+        uint16_t interest_rate = 0, uint8_t payout_strategy = 0
+    ) {
         return push(N(delegatevg), sender, args()
             ("sender", sender)
             ("recipient", recipient)
@@ -104,6 +106,10 @@ struct golos_vesting_api: base_contract_api {
 
     std::vector<variant> get_balances(account_name user) {
         return _tester->get_all_chaindb_rows(_code, user, N(balances), false);
+    }
+
+    variant get_convert_obj(account_name from) {
+        return get_struct(_symbol.to_symbol_code().value, N(converttable), from, "convert_of_tokens");
     }
 
     //// helpers

@@ -28,5 +28,8 @@ static constexpr int64_t blocks_per_year = int64_t(365)*24*60*60*1000/block_inte
 constexpr int64_t time_to_blocks(int64_t time) {
     return time / (1000 * config::block_interval_ms);
 }
+constexpr int64_t seconds_to_blocks(int64_t sec) {
+    return time_to_blocks(sec * 1e6);
+}
 
 } // golos::config
