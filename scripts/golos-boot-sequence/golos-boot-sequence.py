@@ -26,6 +26,14 @@ golosAccounts = [
 def jsonArg(a):
     return " '" + json.dumps(a) + "' "
 
+def cleos(arguments):
+    command=args.cleos + arguments
+    print('golos-boot-sequence.py:', command)
+    logFile.write(command + '\n')
+    if subprocess.call(command, shell=True):
+        return False
+    return True
+
 def run(args):
     print('golos-boot-sequence.py:', args)
     logFile.write(args + '\n')
@@ -96,6 +104,9 @@ def updateAuth(account, permission, parent, keys, accounts):
         'auth': createAuthority(keys, accounts)
     }) + '-p ' + account)
 
+def linkAuth(account, code, action, permission):
+    retry(args.cleos + 'set action permission %s %s %s %s -p %s'%(account, code, action, permission, account))
+
 def createAuthority(keys, accounts):
     keys.sort()
     accounts.sort()
@@ -112,8 +123,19 @@ def createAuthority(keys, accounts):
 
 # --------------------- GOLOS functions ---------------------------------------
 
+def openVestingBalance(account):
+    retry(args.cleos + 'push action gls.vesting open' +
+        jsonArg([account, args.vesting, account]) + '-p %s'%account)
+
+def openTokenBalance(account):
+    retry(args.cleos + 'push action eosio.token open' +
+        jsonArg([account, args.token, account]) + '-p %s'%account)
+
+def issueToken(account, amount):
+    retry(args.cleos + 'push action eosio.token issue ' + jsonArg([account, amount, "memo"]) + ' -p gls.publish')
+
 def buyVesting(account, amount):
-    transfer('gls.publish', account, amount)
+    issueToken(account, amount)
     transfer(account, 'gls.vesting', amount)   # buy vesting
 
 def registerWitness(ctrl, witness, key):
@@ -128,9 +150,14 @@ def voteWitness(ctrl, voter, witness, weight):
     retry(args.cleos + ' push action ' + ctrl + ' votewitness ' + 
         jsonArg([args.token, voter, witness, weight]) + '-p %s'%voter)
 
-def createPost(author, permlink, header, body):
+def createPost(author, permlink, header, body, *, beneficiaries=[]):
     retry(args.cleos + 'push action gls.publish createmssg' + 
-        jsonArg([author, permlink, "", "", [], 0, False, header, body, 'ru', [], '']) +
+        jsonArg([author, permlink, "", "", beneficiaries, 0, False, header, body, 'ru', [], '']) +
+        '-p %s'%author)
+
+def createComment(author, permlink, pauthor, ppermlink, header, body, *, beneficiaries=[]):
+    retry(args.cleos + 'push action gls.publish createmssg' + 
+        jsonArg([author, permlink, pauthor, ppermlink, beneficiaries, 0, False, header, body, 'ru', [], '']) +
         '-p %s'%author)
 
 def upvotePost(voter, author, permlink, weight):
@@ -179,6 +206,7 @@ def importKeys():
 def createGolosAccounts():
     for a in golosAccounts:
         createAccount('eosio', a, args.public_key)
+        openTokenBalance(a)
     updateAuth('gls.publish', 'witn.major', 'active', [args.public_key], [])
     updateAuth('gls.publish', 'witn.minor', 'active', [args.public_key], [])
     updateAuth('gls.publish', 'active', 'owner', [args.public_key], ['gls.ctrl@eosio.code'])
@@ -194,8 +222,8 @@ def stepInstallContracts():
 def stepCreateTokens():
     retry(args.cleos + 'push action eosio.token create ' + jsonArg(["gls.publish", intToToken(10000000000*10000)]) + ' -p eosio.token')
     #totalAllocation = allocateFunds(0, len(accounts))
-    totalAllocation = 10000000*10000 
-    retry(args.cleos + 'push action eosio.token issue ' + jsonArg(["gls.publish", intToToken(totalAllocation), "memo"]) + ' -p gls.publish')
+    #totalAllocation = 10000000*10000 
+    #retry(args.cleos + 'push action eosio.token issue ' + jsonArg(["gls.publish", intToToken(totalAllocation), "memo"]) + ' -p gls.publish')
     retry(args.cleos + 'push action gls.vesting createvest ' + jsonArg(['gls.publish', args.vesting, golosAccounts]) + '-p gls.publish')
     sleep(1)
 
@@ -225,19 +253,19 @@ def createWitnessAccounts():
     for i in range(firstWitness, firstWitness + numWitness):
         a = accounts[i]
         createAccount('eosio', a['name'], a['pub'])
-        transfer('gls.publish', a['name'], intToToken(1000*10000))
-        transfer(a['name'], 'gls.vesting', intToToken(100*10000))   # buy vesting
+        buyVesting(a['name'], intToToken(10000000*10000))
         registerWitness('gls.ctrl', a['name'], a['pub'])
         voteWitness('gls.ctrl', a['name'], a['name'], 10000)
         
 def initCommunity():
+    bignum=500*1000*1000*1000
     retry(args.cleos + 'push action gls.emit start ' + jsonArg([args.token]) + '-p gls.publish')
     retry(args.cleos + 'push action gls.publish setrules ' + jsonArg({
-        "mainfunc":{"str":"0","maxarg":1},
-        "curationfunc":{"str":"0","maxarg":1},
-        "timepenalty":{"str":"0","maxarg":1},
-        "curatorsprop":0,
-        "maxtokenprop":0,
+        "mainfunc":{"str":"x","maxarg":bignum},
+        "curationfunc":{"str":"sqrt(x)","maxarg":bignum},
+        "timepenalty":{"str":"1","maxarg":bignum},
+        "curatorsprop":2500,
+        "maxtokenprop":5000,
         "tokensymbol":args.token,
         "lims":{
             "restorers":["1"],
@@ -256,8 +284,7 @@ def addUsers():
     for i in range(0, firstWitness-1):
         a = accounts[i]
         createAccount('eosio', a['name'], a['pub'])
-        retry(args.cleos + 'push action gls.vesting open' +
-            jsonArg([a['name'], args.vesting, a['name']]) + '-p %s'%a['name'])
+        openVestingBalance(a['name'])
         buyVesting(a['name'], intToToken(50000))
 
 # Command Line Arguments

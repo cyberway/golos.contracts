@@ -221,6 +221,7 @@ void control::update_auths() {
         if (is_active) {
             auth.accounts.push_back({{_self, config::code_name}, thrs});    // add eosio.code
             auth.accounts.push_back({{config::emission_name, config::code_name}, thrs});    // needed to create tokens
+            auth.accounts.push_back({{config::publication_name, config::code_name}, thrs});    // needed to pay rewards
         }
         //permissions must be sorted
         std::sort(auth.accounts.begin(), auth.accounts.end(),

@@ -104,7 +104,7 @@
       },
       {
         "name": "permlink",
-        "type": "string"
+        "type": "uint64"
       }
     ]
   },
