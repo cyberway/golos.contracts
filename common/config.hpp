@@ -7,7 +7,6 @@ static const auto control_name = N(gls.ctrl);
 static const auto vesting_name = N(gls.vesting);
 static const auto emission_name = N(gls.emit);
 static const auto workers_name = N(gls.worker);
-static const auto publication_name = N(gls.publish);
 static const auto token_name = N(eosio.token);
 static const auto internal_name = N(eosio);
 
