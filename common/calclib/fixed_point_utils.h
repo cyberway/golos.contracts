@@ -54,17 +54,17 @@ int64_t int_cast(T&& arg) {
 
 template <typename U, typename T>
 void narrow_down(U& lhs, T& rhs) {
-    FIXED_POINT_ASSERT((lhs >= 0) && (rhs >= 0), "narrow_down: wrong args");
+    FIXED_POINT_ASSERT(lhs >= 0 && rhs >= 0, "narrow_down: wrong args");
     using narrow_t = typename std::conditional<(U::integer_digits < T::integer_digits), U, T>::type;
     using comp_t   = typename std::conditional<(U::integer_digits > T::integer_digits), U, T>::type;
     constexpr comp_t narrow_max = std::numeric_limits<narrow_t>::max();
     
     auto& lhs_data = const_cast<typename U::rep&>(lhs.data());
     auto& rhs_data = const_cast<typename T::rep&>(rhs.data());
-    while((static_cast<comp_t>(lhs) > narrow_max) || (static_cast<comp_t>(rhs) > narrow_max)) {
+    while ((static_cast<comp_t>(lhs) > narrow_max) || (static_cast<comp_t>(rhs) > narrow_max)) {
         lhs_data >>= 1;
         rhs_data >>= 1;
-    }  
+    }
 }
 
 }//fixed_point_utils

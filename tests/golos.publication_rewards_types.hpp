@@ -142,7 +142,7 @@ struct statemap : public std::map<std::string, aprox_val_t> {
     void remove_same(const statemap& rhs) {
         for (auto itr_rhs = rhs.begin(); itr_rhs != rhs.end(); itr_rhs++) {
             auto itr = find(itr_rhs->first);
-            if ((itr != end()) && (itr->second == itr_rhs->second))
+            if (itr != end() && itr->second == itr_rhs->second)
                 erase(itr);
         }
     }

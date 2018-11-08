@@ -73,7 +73,7 @@ protected:
     void init(int64_t issuer_funds, int64_t user_vesting_funds) {
         auto total_funds = issuer_funds + _users.size() * user_vesting_funds;
         BOOST_CHECK_EQUAL(success(),
-        token.create(_issuer, asset(total_funds, _token_symbol)));
+            token.create(_issuer, asset(total_funds, _token_symbol)));
         step();
 
         BOOST_CHECK_EQUAL(success(), token.issue(_issuer, _issuer, asset(total_funds, _token_symbol), "HERE COULD BE YOUR ADVERTISEMENT"));
@@ -670,8 +670,6 @@ BOOST_FIXTURE_TEST_CASE(rshares_sum_overflow_test, reward_calcs_tester) try {
         check();
     }
     
-   
-
 } FC_LOG_AND_RETHROW()
 
 BOOST_AUTO_TEST_SUITE_END()

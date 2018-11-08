@@ -121,7 +121,7 @@ struct poolstate {
         auto r = WP(rshares);
         auto f = fixp_t(funds.amount);
         narrow_down(f, r);
-        return (r > 0) ? (elap_t(f) / elap_t(r)) : std::numeric_limits<ratio_t>::max();
+        return r > 0 ? elap_t(f) / elap_t(r) : std::numeric_limits<ratio_t>::max();
     }    
 };
 
