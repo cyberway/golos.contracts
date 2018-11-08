@@ -214,5 +214,5 @@ def convert_accounts_and_keys(argv = -1):
             "$expr": { "$lte": [ { "$strLenCP": "$account" }, 12 ]}}):
             save_authority(doc)
 
-    return True
+    return accounts_list
 
