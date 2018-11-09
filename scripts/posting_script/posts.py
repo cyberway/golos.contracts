@@ -1,6 +1,7 @@
 import dbs
 import json
 from datetime import datetime
+from datetime import timedelta
 
 def create_tags(metadata_tags):
     tags = []
@@ -12,16 +13,19 @@ def create_tags(metadata_tags):
 
     return tags
 
-def level_post(parent_id):
-    if (parent_id):
-        cb_posts = dbs.cyberway_db["posttable"]
-        parent_post = cb_posts.find_one({"id": parent_id})
-        if not parent_post:
-              return 0
+def create_trx(author, id_message):
+    trx = ""
+    command = "/home/deploy/cyberway/build/programs/cleos/cleos push action gls.publish closemssg '{\"account\":\""+author+"\", \"permlink\":\""+str(id_message)+"\"}' -p gls.publish -d --return-packed"
+    result = os.popen(command)
 
-        return parent_post["level"] + 1
+    try:
+        json_trx = json.loads(result.read())
+        trx = json["packed_trx"]
+    except Exception: 
+        trx = ""
 
-    return 0
+    return trx;
+
 
 def convert_posts():
     golos_posts = dbs.golos_db['comment_object']
@@ -48,6 +52,24 @@ def convert_posts():
                 "sumcuratorsw": 0
             }
         
+            isClosedMessage = True
+            expiretion = timedelta(minutes = 30)
+            date_close = datetime.strptime("2106-02-07T06:28:15", '%Y-%m-%dT%H:%M:%S').isoformat()
+            if (doc["cashout_time"].isoformat() != date_close and doc["cashout_time"].isoformat() > datetime.datetime.now().isoformat()):
+                delay_trx = {
+                    "trx_id": "",
+                    "sender": doc["author"],
+                    "sender_id": dbs.convert_hash(doc["permlink"]) << 64 | doc["author"],
+                    "delay_until" : doc["cashout_time"].isoformat(), 
+                    "expiration" : doc["cashout_time"].isoformat() + expiretion, 
+                    "published" : doc["created"], 
+                    "packed_trx" : create_trx(doc["author"], dbs.convert_hash(doc["permlink"])), 
+                    "_SCOPE_" : "",
+                    "_PAYER_" : "",
+                    "_SIZE_" : NumberLong(156) 
+                }
+                isClosedMessage = False
+
             message = {
                 "id": dbs.convert_hash(doc["permlink"]),
                 "date": doc["last_update"],
@@ -58,8 +80,8 @@ def convert_posts():
                 "rewardweight": doc["reward_weight"],
                 "state": messagestate,
                 "childcount": doc["children"],
-                "closed": "false",
-                "level": level_post(dbs.convert_hash(doc["parent_permlink"])),
+                "closed": isClosedMessage,
+                "level": doc["depth"],
                 "_SCOPE_": doc["author"],
                 "_PAYER_": "gls.publish",
                 "_SIZE_": 50
