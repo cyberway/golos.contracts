@@ -13,7 +13,6 @@
 namespace cfg = golos::config;
 using namespace fixed_point_utils;
 using namespace eosio::testing;
-using mvo = fc::mutable_variant_object;
 
 #define PRECESION 0
 #define TOKEN_NAME "GOLOS"
@@ -40,7 +39,7 @@ public:
     }
 
     void run(const fc::microseconds& t) {
-        _produce_block(t);
+        _produce_block(t);  // it produces only 1 block. this can cause expired transactions. use step() to push current txs into blockchain
         update_cur_time();
     }
 };
@@ -55,7 +54,7 @@ class reward_calcs_tester : public extended_tester {
 protected:
     account_name _forum_name;
     account_name _issuer;
-    std::vector<account_name> _users;
+    vector<account_name> _users;
     account_name _stranger;
     statemap _req;
     statemap _res;
@@ -72,8 +71,7 @@ protected:
 
     void init(int64_t issuer_funds, int64_t user_vesting_funds) {
         auto total_funds = issuer_funds + _users.size() * user_vesting_funds;
-        BOOST_CHECK_EQUAL(success(),
-            token.create(_issuer, asset(total_funds, _token_symbol)));
+        BOOST_CHECK_EQUAL(success(), token.create(_issuer, asset(total_funds, _token_symbol)));
         step();
 
         BOOST_CHECK_EQUAL(success(), token.issue(_issuer, _issuer, asset(total_funds, _token_symbol), "HERE COULD BE YOUR ADVERTISEMENT"));
@@ -113,7 +111,7 @@ public:
             N(why), N(has), N(my), N(imagination), N(become), N(poor)}
         , _stranger(N(dan.larimer)) {
 
-        step(2);
+        step(2);    // why 2?
         create_accounts({_forum_name, _issuer, cfg::vesting_name, cfg::token_name, cfg::control_name, _stranger});
         create_accounts(_users);
         step(2);
@@ -143,7 +141,7 @@ public:
         if (ret == success()) {
             _state.balances[user].tokenamount -= amount;
             _state.balances[user].vestamount += get_converted_to_vesting(amount);
-            
+
             BOOST_CHECK_EQUAL(success(), vest.unlock_limit(user, asset(amount*10, _token_symbol)));
         }
         return ret;
@@ -182,7 +180,7 @@ public:
         std::function<double(double)>&& curationfunc_,
         std::function<double(double)>&& timepenalty_,
         const limitsarg& lims = {{"0"}, {{0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}}, {0, 0}, {0, 0, 0}},
-        std::vector<limits::func_t>&& func_restorers = {
+        vector<limits::func_t>&& func_restorers = {
             [](double, double, double){ return 0.0; }
         }
     ) {
@@ -397,7 +395,7 @@ public:
             _state.pools.end());
     }
 
-    void check(const std::string& s = std::string()) {
+    void check(const string& s = string()) {
         pay_rewards_in_state();
         if (!s.empty())
             BOOST_TEST_MESSAGE(s);
@@ -417,10 +415,10 @@ public:
 
     action_result create_message(
         account_name author,
-        std::string permlink,
+        string permlink,
         account_name parentacc = N(),
-        std::string parentprmlnk = "parentprmlnk",
-        std::vector<beneficiary> beneficiaries = {},
+        string parentprmlnk = "parentprmlnk",
+        vector<beneficiary> beneficiaries = {},
         int64_t tokenprop = 5000,
         bool vestpayment = false
     ) {
@@ -428,8 +426,8 @@ public:
         message_key key{author, hash64(permlink)};
 
         auto reward_weight = 0.0;
-        std::string ret_str = ret;
-        if ((ret == success()) || (ret_str.find("forum::apply_limits:") != std::string::npos)) {
+        string ret_str = ret;
+        if ((ret == success()) || (ret_str.find("forum::apply_limits:") != string::npos)) {
             reward_weight = _state.pools.back().lims.apply(
                 parentacc ? limits::COMM : limits::POST,
                 _state.pools.back().charges[key.author],
@@ -453,12 +451,12 @@ public:
         return ret;
     }
 
-    action_result addvote(account_name voter, account_name author, std::string permlink, int32_t weight) {
+    action_result addvote(account_name voter, account_name author, string permlink, int32_t weight) {
         auto ret = post.vote(voter, author, permlink, weight);
         message_key msg_key{author, hash64(permlink)};
 
-        std::string ret_str = ret;
-        if ((ret == success()) || (ret_str.find("forum::apply_limits:") != std::string::npos)) {
+        string ret_str = ret;
+        if ((ret == success()) || (ret_str.find("forum::apply_limits:") != string::npos)) {
             auto apply_ret = _state.pools.back().lims.apply(
                 limits::VOTE, _state.pools.back().charges[voter],
                 _state.balances[voter].vestamount, cur_time().count(), get_prop(std::abs(weight)));
@@ -543,9 +541,10 @@ BOOST_FIXTURE_TEST_CASE(basic_tests, reward_calcs_tester) try {
     check();
     BOOST_TEST_MESSAGE("--- add_funds_to_forum");
     BOOST_CHECK_EQUAL(success(), add_funds_to_forum(100000));
+    step();     // push transactions before run() call
     check();
     BOOST_TEST_MESSAGE("--- waiting");
-    run(seconds(100));
+    run(seconds(99));   // TODO: remove magic number
     check();
     BOOST_TEST_MESSAGE("--- create_message: why");
     BOOST_CHECK_EQUAL(success(), create_message(N(why), "why not", N(), "", {{N(alice5), 5000}, {N(bob5), 2500}}));
@@ -555,12 +554,12 @@ BOOST_FIXTURE_TEST_CASE(basic_tests, reward_calcs_tester) try {
     check();
     BOOST_TEST_MESSAGE("--- why voted (100%) for why");
     BOOST_CHECK_EQUAL(success(), addvote(N(why), N(why), "why not", 10000));
+    step();     // push transactions before run() call
     check();
-    run(seconds(100));
+    run(seconds(99));   // TODO: remove magic number
     BOOST_TEST_MESSAGE("--- rewards");
     check();
     show();
-
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE(timepenalty_test, reward_calcs_tester) try {
@@ -579,12 +578,12 @@ BOOST_FIXTURE_TEST_CASE(timepenalty_test, reward_calcs_tester) try {
     BOOST_CHECK_EQUAL(success(), create_message(N(bob), "permlink"));
     check();
     BOOST_TEST_MESSAGE("--- voting");
-    for (size_t i = 0; i < 6; i++) {
+    for (size_t i = 0; i < 6; i++) {    // TODO: remove magic number, 6 must be derived from some constant used in rules
         BOOST_CHECK_EQUAL(success(), addvote(_users[i], N(bob), "permlink", 10000));
         check();
-        run(seconds(2));
+        run(seconds(3));    // TODO: remove magic number
     }
-    run(seconds(100));
+    run(seconds(90));       // TODO: remove magic number
     BOOST_TEST_MESSAGE("--- rewards");
     check();
     show();
@@ -621,24 +620,26 @@ BOOST_FIXTURE_TEST_CASE(limits_test, reward_calcs_tester) try {
     BOOST_CHECK_EQUAL(success(), create_message(N(bob), "permlink1"));
     BOOST_CHECK_EQUAL(err.limit_no_power, create_message(N(bob), "permlink2"));
     BOOST_TEST_MESSAGE("--- comments");
-    for (size_t i = 0; i < 10; i++) {
+    for (size_t i = 0; i < 10; i++) {   // TODO: remove magic number, 10 must be derived from some constant used in rules
         BOOST_CHECK_EQUAL(success(), create_message(N(bob), "comment" + std::to_string(i), N(bob), "permlink"));
     }
     BOOST_CHECK_EQUAL(err.limit_no_power, create_message(N(bob), "oops", N(bob), "permlink"));
-    BOOST_CHECK_EQUAL(err.limit_no_power, create_message(N(bob), "oops", N(bob), "permlink"));
+    BOOST_CHECK_EQUAL(err.limit_no_power, create_message(N(bob), "oops", N(bob), "permlink"));  // Why duplicate?
     BOOST_CHECK_EQUAL(success(), create_message(N(bob), "I can pay for posting", N(), "", {}, 5000, true));
     BOOST_CHECK_EQUAL(err.limit_no_power_vest,
         create_message(N(bob), "only if it is not a comment", N(bob), "permlink", {}, 5000, true));
     BOOST_CHECK_EQUAL(success(), addvote(N(alice), N(bob), "I can pay for posting", 10000));
     BOOST_CHECK_EQUAL(success(), addvote(N(bob), N(bob), "I can pay for posting", 10000)); //He can also vote
     BOOST_CHECK_EQUAL(success(), create_message(N(bob1), "permlink"));
+    step();     // push transactions before run() call
+
     BOOST_TEST_MESSAGE("--- waiting");
-    run(seconds(170));
+    run(seconds(150));  // TODO: remove magic number
     check();
-    run(seconds(170));
+    run(seconds(150));  // TODO: remove magic number
     check();
     BOOST_CHECK_EQUAL(err.limit_no_power, create_message(N(bob), ":("));
-    run(seconds(20));
+    run(seconds(45));   // TODO: remove magic number
     BOOST_CHECK_EQUAL(success(), create_message(N(bob), ":)"));
     check();
     show();
@@ -650,18 +651,17 @@ BOOST_FIXTURE_TEST_CASE(rshares_sum_overflow_test, reward_calcs_tester) try {
     auto fixp_max = std::numeric_limits<fixp_t>::max();
     init(bignum, fixp_max / 2);
     step();
-    BOOST_TEST_MESSAGE("--- setrules");
 
+    BOOST_TEST_MESSAGE("--- setrules");
     BOOST_CHECK_EQUAL(success(), setrules({"x", fixp_max}, {"sqrt(x)", fixp_max}, {"1", fixp_max}, 2500,
         [](double x){ return x; }, [](double x){ return sqrt(x); }, [](double x){ return 1.0; }));
     check();
 
-    
     BOOST_TEST_MESSAGE("--- add_funds_to_forum");
     BOOST_CHECK_EQUAL(success(), add_funds_to_forum(50000));
     check();
-    
-    for (size_t i = 0; i < 10; i++) {
+
+    for (size_t i = 0; i < 10; i++) {   // TODO: remove magic number, 10 must be derived from some constant used in rules
         BOOST_TEST_MESSAGE("--- create_message: " << name{_users[i]}.to_string());
         BOOST_CHECK_EQUAL(success(), create_message(_users[i], "permlink"));
         check();
@@ -669,7 +669,6 @@ BOOST_FIXTURE_TEST_CASE(rshares_sum_overflow_test, reward_calcs_tester) try {
         BOOST_CHECK_EQUAL(success(), addvote(_users[i], _users[i], "permlink", 10000));
         check();
     }
-    
 } FC_LOG_AND_RETHROW()
 
 BOOST_AUTO_TEST_SUITE_END()
