@@ -4,7 +4,10 @@
 #include "config.hpp"
 #include <common/calclib/atmsp_storable.h>
 #include "utils.hpp"
-namespace structures {
+
+
+namespace golos { namespace structures {
+
 struct limits {
     enum kind_t: enum_t {POST, COMM, VOTE, POSTBW, UNDEF};
     std::vector<atmsp::storable::bytecode> restorers;//(funcs of: prev_charge (p), vesting (v), elapsed_seconds (t))
@@ -97,4 +100,6 @@ struct usercharges {
         return (charge > cutoff) ? elaf_t(cutoff / charge) : elaf_t(1);
     }
 };
-}
+
+
+}} // golos::structures

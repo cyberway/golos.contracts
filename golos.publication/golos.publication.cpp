@@ -5,8 +5,9 @@
 #include <eosio.token/eosio.token.hpp>
 #include <golos.vesting/golos.vesting.hpp>
 
+namespace golos {
+
 using namespace eosio;
-using namespace golos::config;
 using namespace atmsp::storable;
 
 extern "C" {
@@ -37,8 +38,6 @@ void publication::apply(uint64_t code, uint64_t action) {
         execute_action(this, &publication::unvote);
     if (N(closemssg) == action)
         execute_action(this, &publication::close_message);
-    if (N(createacc) == action)
-        execute_action(this, &publication::create_acc);
     if (N(setrules) == action)
         execute_action(this, &publication::set_rules);
 }
@@ -46,7 +45,7 @@ void publication::apply(uint64_t code, uint64_t action) {
 void publication::create_message(account_name account, std::string permlink,
                               account_name parentacc, std::string parentprmlnk,
                               std::vector<structures::beneficiary> beneficiaries,
-                            //actually, beneficiaries[i].prop _here_ should be interpreted as (share * ONE_HUNDRED_PERCENT)
+                            //actually, beneficiaries[i].prop _here_ should be interpreted as (share * _100percent)
                             //but not as a raw data for elaf_t, may be it's better to use another type (with uint16_t field for prop).
                               int64_t tokenprop, bool vestpayment,
                               std::string headermssg,
@@ -63,14 +62,14 @@ void publication::create_message(account_name account, std::string permlink,
 
     std::map<account_name, int64_t> benefic_map;
     int64_t prop_sum = 0;
-    for(auto& ben : beneficiaries) {
+    for (auto& ben : beneficiaries) {
         check_account(ben.account, pool->state.funds.symbol);
-        eosio_assert((0 <= ben.deductprcnt) && (ben.deductprcnt <= ONE_HUNDRED_PERCENT), "publication::create_message: wrong ben.prop value");
+        eosio_assert(0 < ben.deductprcnt && ben.deductprcnt <= config::_100percent, "publication::create_message: wrong ben.prop value");
         prop_sum += ben.deductprcnt;
-        eosio_assert(prop_sum <= ONE_HUNDRED_PERCENT, "publication::create_message: prop_sum > ONE_HUNDRED_PERCENT");
+        eosio_assert(prop_sum <= config::_100percent, "publication::create_message: prop_sum > 100%");
         benefic_map[ben.account] += ben.deductprcnt; //several entries for one user? ok.
     }
-    eosio_assert((benefic_map.size() <= MAX_BENEFICIARIES), "publication::create_message: benafic_map.size() > MAX_BENEFICIARIES");
+    eosio_assert((benefic_map.size() <= config::max_beneficiaries), "publication::create_message: benafic_map.size() > MAX_BENEFICIARIES");
 
     //reusing a vector
     beneficiaries.reserve(benefic_map.size());
@@ -101,7 +100,7 @@ void publication::create_message(account_name account, std::string permlink,
     uint8_t level = 0;
     if(parentacc)
         level = 1 + notify_parent(true, parentacc, parent_id);
-    eosio_assert(level <= MAX_COMMENT_DEPTH, "publication::create_message: level > MAX_COMMENT_DEPTH");
+    eosio_assert(level <= config::max_comment_depth, "publication::create_message: level > MAX_COMMENT_DEPTH");
 
     message_table.emplace(account, [&]( auto &item ) {
         item.id = message_id;
@@ -115,9 +114,6 @@ void publication::create_message(account_name account, std::string permlink,
         item.closed = false;
         item.level = level;
     });
-
-
-
     content_table.emplace(account, [&]( auto &item ) {
         item.id = message_id;
         item.headermssg = headermssg;
@@ -174,27 +170,20 @@ void publication::delete_message(account_name account, std::string permlink) {
         vote_itr = votetable_index.erase(vote_itr);
 }
 
-void publication::upvote(account_name voter, account_name author, std::string permlink, int16_t weight) {
-    require_auth(voter);
-    eosio_assert(weight > 0, "The weight must be positive.");
-    eosio_assert(weight <= ONE_HUNDRED_PERCENT, "The weight can't be more than 100%.");
-
-    set_vote(voter, author, fc::hash64(permlink), weight);
+void publication::upvote(account_name voter, account_name author, string permlink, uint16_t weight) {
+    eosio_assert(weight > 0, "weight can't be 0.");
+    eosio_assert(weight <= config::_100percent, "weight can't be more than 100%.");
+    set_vote(voter, author, permlink, weight);
 }
 
-void publication::downvote(account_name voter, account_name author, std::string permlink, int16_t weight) {
-    require_auth(voter);
-
-    eosio_assert(weight > 0, "The weight sign can't be negative.");
-    eosio_assert(weight <= ONE_HUNDRED_PERCENT, "The weight can't be more than 100%.");
-
-    set_vote(voter, author, fc::hash64(permlink), -weight);
+void publication::downvote(account_name voter, account_name author, string permlink, uint16_t weight) {
+    eosio_assert(weight > 0, "weight can't be 0.");
+    eosio_assert(weight <= config::_100percent, "weight can't be more than 100%.");
+    set_vote(voter, author, permlink, -weight);
 }
 
-void publication::unvote(account_name voter, account_name author, std::string permlink) {
-    require_auth(voter);
-
-    set_vote(voter, author, fc::hash64(permlink), 0);
+void publication::unvote(account_name voter, account_name author, string permlink) {
+    set_vote(voter, author, permlink, 0);
 }
 
 void publication::payto(account_name user, eosio::asset quantity, enum_t mode) {
@@ -206,7 +195,8 @@ void publication::payto(account_name user, eosio::asset quantity, enum_t mode) {
     if(static_cast<payment_t>(mode) == payment_t::TOKEN)
         INLINE_ACTION_SENDER(eosio::token, transfer) (N(eosio.token), {_self, N(active)}, {_self, user, quantity, ""});
     else if(static_cast<payment_t>(mode) == payment_t::VESTING)
-        INLINE_ACTION_SENDER(eosio::token, transfer) (N(eosio.token), {_self, N(active)}, {_self, vesting_name, quantity, name{user}.to_string()});
+        INLINE_ACTION_SENDER(eosio::token, transfer) (N(eosio.token), {_self, N(active)},
+            {_self, config::vesting_name, quantity, name{user}.to_string()});
     else
         eosio_assert(false, "publication::payto: unknown kind of payment");
 }
@@ -338,11 +328,14 @@ void publication::close_message(account_name account, uint64_t id) {
 void publication::close_message_timer(account_name account, uint64_t id) {
     transaction trx;
     trx.actions.emplace_back(action{permission_level(_self, N(active)), _self, N(closemssg), structures::accandvalue{account, id}});
-    trx.delay_sec = CLOSE_MESSAGE_PERIOD;
+    trx.delay_sec = config::cashout_window;
     trx.send((static_cast<uint128_t>(id) << 64) | account, _self);
 }
 
-void publication::set_vote(account_name voter, account_name author, uint64_t id, int16_t weight) {
+void publication::set_vote(account_name voter, account_name author, string permlink, int16_t weight) {
+    require_auth(voter);
+
+    uint64_t id = fc::hash64(permlink);
     tables::message_table message_table(_self, author);
     auto mssg_itr = message_table.find(id);
     eosio_assert(mssg_itr != message_table.end(), "Message doesn't exist.");
@@ -353,8 +346,8 @@ void publication::set_vote(account_name voter, account_name author, uint64_t id,
 
     auto cur_time = current_time();
 
-    eosio_assert((cur_time <= mssg_itr->date + ((CLOSE_MESSAGE_PERIOD - UPVOTE_DISABLE_PERIOD) * seconds(1).count())) ||
-                 (cur_time > mssg_itr->date + (CLOSE_MESSAGE_PERIOD * seconds(1).count())) ||
+    eosio_assert((cur_time <= mssg_itr->date + ((config::cashout_window - config::upvote_lockout) * seconds(1).count())) ||
+                 (cur_time > mssg_itr->date + (config::cashout_window * seconds(1).count())) ||
                  (weight <= 0),
                   "You can't upvote, because publication will be closed soon.");
 
@@ -371,7 +364,7 @@ void publication::set_vote(account_name voter, account_name author, uint64_t id,
             }
             //TODO: recalc: pool.rshares message.rshares; message.sumcuratorsw -= curatorw; curatorw := 0;
             eosio_assert(weight != vote_itr->weight, "Vote with the same weight has already existed.");
-            eosio_assert(vote_itr->count != MAX_REVOTES, "You can't revote anymore.");
+            eosio_assert(vote_itr->count != config::max_vote_changes, "You can't revote anymore.");
             votetable_index.modify(vote_itr, voter, [&]( auto &item ) {
                item.weight = weight;
                item.time = cur_time;
@@ -386,7 +379,7 @@ void publication::set_vote(account_name voter, account_name author, uint64_t id,
     atmsp::machine<fixp_t> machine;
     apply_limits(machine, voter, *pool, structures::limits::VOTE, cur_time, abs_w);
 
-    int64_t sum_vesting = golos::vesting(vesting_name).get_account_effective_vesting(voter, pool->state.funds.symbol.name()).amount;
+    int64_t sum_vesting = golos::vesting(config::vesting_name).get_account_effective_vesting(voter, pool->state.funds.symbol.name()).amount;
     fixp_t abs_rshares = fp_cast<fixp_t>(sum_vesting, false) * abs_w;
     fixp_t rshares = (weight < 0) ? -abs_rshares : abs_rshares;
 
@@ -554,7 +547,8 @@ fixp_t publication::get_delta(atmsp::machine<fixp_t>& machine, fixp_t old_val, f
 }
 
 void publication::check_account(account_name user, eosio::symbol_type tokensymbol) {
-    eosio_assert(golos::vesting(vesting_name).balance_exist(user, tokensymbol.name()), ("unregistered user: " + name{user}.to_string()).c_str());
+    eosio_assert(golos::vesting(config::vesting_name).balance_exist(user, tokensymbol.name()),
+        ("unregistered user: " + name{user}.to_string()).c_str());
 }
 
 elaf_t publication::apply_limits(atmsp::machine<fixp_t>& machine, account_name user,
@@ -565,7 +559,7 @@ elaf_t publication::apply_limits(atmsp::machine<fixp_t>& machine, account_name u
     using namespace tables;
     using namespace structures;
     eosio_assert((kind == limits::POST) || (kind == limits::COMM) || (kind == limits::VOTE), "publication::apply_limits: wrong act type");
-    int64_t sum_vesting = golos::vesting(vesting_name).get_account_effective_vesting(user, pool.state.funds.symbol.name()).amount;
+    int64_t sum_vesting = golos::vesting(config::vesting_name).get_account_effective_vesting(user, pool.state.funds.symbol.name()).amount;
     if((kind == limits::VOTE) && (w != elaf_t(0))) {
         int64_t weighted_vesting = fp_cast<int64_t>(elai_t(sum_vesting) * w, false);
         eosio_assert(weighted_vesting >= pool.lims.get_min_vesting_for(kind), "publication::apply_limits: can't vote, not enough vesting");
@@ -594,11 +588,12 @@ elaf_t publication::apply_limits(atmsp::machine<fixp_t>& machine, account_name u
         if(power == 1)
             chgs.modify(chgs_itr, _self, [&](auto &item) { item = cur_chgs; });
         else if(w > elaf_t(0)) {//enable_vesting_payment
-            int64_t user_vesting = golos::vesting(vesting_name).get_account_unlocked_vesting(user, pool.state.funds.symbol.name()).amount;
+            int64_t user_vesting = golos::vesting(config::vesting_name).get_account_unlocked_vesting(user, pool.state.funds.symbol.name()).amount;
             auto price = pool.lims.get_vesting_price(kind);
             eosio_assert(price > 0, "publication::apply_limits: can't post, not enough power, vesting payment is disabled");
             eosio_assert(user_vesting >= price, "publication::apply_limits: insufficient vesting amount");
-            INLINE_ACTION_SENDER(golos::vesting, retire) (vesting_name, {_self, N(active)}, {_self, eosio::asset(price, pool.state.funds.symbol), user});
+            INLINE_ACTION_SENDER(golos::vesting, retire) (config::vesting_name, {_self, N(active)},
+                {_self, eosio::asset(price, pool.state.funds.symbol), user});
             cur_chgs = pre_chgs;
         }
         else
@@ -607,13 +602,12 @@ elaf_t publication::apply_limits(atmsp::machine<fixp_t>& machine, account_name u
     }
 
     for(auto itr = chgs.begin(); itr != chgs.end();)
-        if((cur_time - itr->poolcreated) / seconds(1).count() > MAX_CASHOUT_TIME)
+        if((cur_time - itr->poolcreated) / seconds(1).count() > config::max_cashout_time)
             itr = chgs.erase(itr);
         else
             ++itr;
     return ret;
 }
 
-void publication::create_acc(account_name name) { //DUMMY
-}
 
+} // golos

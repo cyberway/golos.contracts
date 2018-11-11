@@ -9,9 +9,9 @@
 #include <eosiolib/crypto.h>
 #include "charges.hpp"
 
-using namespace eosio;
 
-namespace structures {
+namespace golos { namespace structures {
+
 
 struct accandvalue {
     account_name account;
@@ -135,19 +135,25 @@ struct rewardpool {
     EOSLIB_SERIALIZE(rewardpool, (created)(rules)(lims)(state))
 };
 
-}
+} // structures
 
 namespace tables {
-    using id_index = indexed_by<N(id), const_mem_fun<structures::message, uint64_t, &structures::message::primary_key>>;
-    using message_table = eosio::multi_index<N(messagetable), structures::message, id_index>;
 
-    using content_id_index = indexed_by<N(id), const_mem_fun<structures::content, uint64_t, &structures::content::primary_key>>;
-    using content_table = eosio::multi_index<N(contenttable), structures::content, content_id_index>;
+using namespace eosio;
 
-    using vote_id_index = indexed_by<N(id), const_mem_fun<structures::voteinfo, uint64_t, &structures::voteinfo::primary_key>>;
-    using vote_messageid_index = indexed_by<N(messageid), const_mem_fun<structures::voteinfo, uint64_t, &structures::voteinfo::by_message>>;
-    using vote_table = eosio::multi_index<N(votetable), structures::voteinfo, vote_id_index, vote_messageid_index>;
+using id_index = indexed_by<N(id), const_mem_fun<structures::message, uint64_t, &structures::message::primary_key>>;
+using message_table = multi_index<N(messagetable), structures::message, id_index>;
 
-    using reward_pools = eosio::multi_index<N(rewardpools), structures::rewardpool>;
-    using charges = eosio::multi_index<N(charges), structures::usercharges>;
+using content_id_index = indexed_by<N(id), const_mem_fun<structures::content, uint64_t, &structures::content::primary_key>>;
+using content_table = multi_index<N(contenttable), structures::content, content_id_index>;
+
+using vote_id_index = indexed_by<N(id), const_mem_fun<structures::voteinfo, uint64_t, &structures::voteinfo::primary_key>>;
+using vote_messageid_index = indexed_by<N(messageid), const_mem_fun<structures::voteinfo, uint64_t, &structures::voteinfo::by_message>>;
+using vote_table = multi_index<N(votetable), structures::voteinfo, vote_id_index, vote_messageid_index>;
+
+using reward_pools = multi_index<N(rewardpools), structures::rewardpool>;
+using charges = multi_index<N(charges), structures::usercharges>;
 }
+
+
+} // golos

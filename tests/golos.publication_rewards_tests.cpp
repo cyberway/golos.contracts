@@ -324,7 +324,7 @@ public:
         for (auto itr_p = _state.pools.begin(); itr_p != _state.pools.end(); itr_p++) {
             auto& p = *itr_p;
             for (auto itr_m = p.messages.begin(); itr_m != p.messages.end();) {
-                if ((cur_time().to_seconds() - itr_m->created) > cfg::CLOSE_MESSAGE_PERIOD) {
+                if ((cur_time().to_seconds() - itr_m->created) > cfg::cashout_window) {
                     auto m = *itr_m;
                     double pool_rsharesfn_sum = p.get_rsharesfn_sum();
 
@@ -452,7 +452,12 @@ public:
     }
 
     action_result addvote(account_name voter, account_name author, string permlink, int32_t weight) {
-        auto ret = post.vote(voter, author, permlink, weight);
+        auto ret = weight == 0
+            ? post.unvote(voter, author, permlink)
+            : weight > 0
+                ? post.upvote(voter, author, permlink, weight)
+                : post.downvote(voter, author, permlink, -weight);
+
         message_key msg_key{author, hash64(permlink)};
 
         string ret_str = ret;
