@@ -13,8 +13,8 @@ const struct vesting_withdraw {
 
 
 const struct delegation {
-    const int min_amount    = 50000;        // min step
-    const int min_remainder = 150000;
+    const int min_amount    = 5e6;        // min step. TODO: must somehow be derived from precision
+    const int min_remainder = 15e6;
     const int min_time      = 0;
     const int max_interest  = 0;
     const int return_time   = 120;      // 60*60*24*7 = cashout time

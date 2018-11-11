@@ -3,15 +3,16 @@
 
 namespace golos {
 
+
 using namespace eosio;
 
 class vesting : public contract {
 
-  public:
-    vesting(account_name self) : contract(self)  {}
+public:
+    vesting(account_name self) : contract(self) {}
     void apply(uint64_t code, uint64_t action);
 
-    void on_transfer(account_name from, account_name  to, asset quantity, std::string memo);
+    void on_transfer(account_name from, account_name to, asset quantity, std::string memo);
     void retire(account_name issuer, asset quantity, account_name user);
     void unlock_limit(account_name owner, asset quantity);
 
@@ -31,13 +32,13 @@ class vesting : public contract {
     inline asset get_account_unlocked_vesting(account_name account, symbol_name sym) const;
     inline bool balance_exist(account_name owner, symbol_name sym) const;
 
-  private:
+private:
     void notify_balance_change(account_name owner, asset diff);
     void sub_balance(account_name owner, asset value, bool retire_mode = false);
     void add_balance(account_name owner, asset value, account_name ram_payer);
 
-    const asset convert_to_token(const asset &m_token, const structures::vesting_info &vinfo) const;
-    const asset convert_to_vesting(const asset &m_token, const structures::vesting_info &vinfo) const;
+    const asset convert_to_token(const asset& vesting, const structures::vesting_info& vinfo) const;
+    const asset convert_to_vesting(const asset& token, const structures::vesting_info& vinfo) const;
 
     void timeout_delay_trx();
     void calculate_convert_vesting();
