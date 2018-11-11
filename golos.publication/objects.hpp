@@ -83,7 +83,7 @@ struct voteinfo {
     int16_t weight;
     uint64_t time;
     int64_t count;
-    
+
     base_t curatorsw;
 
     uint64_t primary_key() const {
@@ -102,19 +102,19 @@ struct funcinfo {
 
 struct rewardrules {
     funcinfo mainfunc;
-    funcinfo curationfunc; 
+    funcinfo curationfunc;
     funcinfo timepenalty;
     base_t curatorsprop; //elaf_t
     base_t maxtokenprop; //elaf_t
     //uint64_t cashout_time; //TODO:
 };
-  
+
 struct poolstate {
     counter_t msgs;
     eosio::asset funds;
     wide_t rshares;
     wide_t rsharesfn;
-    
+
     using ratio_t = decltype(elap_t(1) / elap_t(1));
     ratio_t get_ratio() const {
         eosio_assert(funds.amount >= 0, "poolstate::get_ratio: funds < 0");
@@ -122,7 +122,7 @@ struct poolstate {
         auto f = fixp_t(funds.amount);
         narrow_down(f, r);
         return r > 0 ? elap_t(f) / elap_t(r) : std::numeric_limits<ratio_t>::max();
-    }    
+    }
 };
 
 struct rewardpool {
@@ -130,9 +130,9 @@ struct rewardpool {
     rewardrules rules;
     limits lims;
     poolstate state;
-    
+
     uint64_t primary_key() const { return created; }
-    EOSLIB_SERIALIZE(rewardpool, (created)(rules)(lims)(state)) 
+    EOSLIB_SERIALIZE(rewardpool, (created)(rules)(lims)(state))
 };
 
 }

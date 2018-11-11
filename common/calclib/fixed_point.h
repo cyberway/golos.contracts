@@ -532,7 +532,7 @@ namespace sg14 {
         }
         constexpr int parse_dec(char C)
         {
-            
+
             return (C>='0' && C<='9')
                    ? C-'0'
                    : -1;
