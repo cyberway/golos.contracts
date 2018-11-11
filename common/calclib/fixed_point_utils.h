@@ -34,8 +34,8 @@ U fp_cast(T&& arg, bool restr = true) {
     using decay_t = typename std::remove_cv<typename std::remove_reference<T>::type>::type;
     static_assert((U(-1) < U(0)) == (decay_t(-1) < decay_t(0)), "fp_cast: T::is_signed != U::is_signed"); //is_signed doesn't work for fixed_point
     using comp_t = typename std::conditional<(_impl::int_digits<U>() > _impl::int_digits<decay_t>()), U, decay_t>::type;
-    
-    comp_t arg_comp(arg);        
+
+    comp_t arg_comp(arg);
     if(arg_comp < comp_t(-std::numeric_limits<U>::max())) {
         FIXED_POINT_ASSERT(!restr, "fp_cast: overflow");
         return -std::numeric_limits<U>::max();
@@ -43,8 +43,8 @@ U fp_cast(T&& arg, bool restr = true) {
     if(arg_comp > comp_t( std::numeric_limits<U>::max())) {
         FIXED_POINT_ASSERT(!restr, "fp_cast: overflow");
         return  std::numeric_limits<U>::max();
-    }    
-    return U(std::forward<T>(arg));    
+    }
+    return U(std::forward<T>(arg));
 }
 
 template <typename T>
@@ -58,7 +58,7 @@ void narrow_down(U& lhs, T& rhs) {
     using narrow_t = typename std::conditional<(U::integer_digits < T::integer_digits), U, T>::type;
     using comp_t   = typename std::conditional<(U::integer_digits > T::integer_digits), U, T>::type;
     constexpr comp_t narrow_max = std::numeric_limits<narrow_t>::max();
-    
+
     auto& lhs_data = const_cast<typename U::rep&>(lhs.data());
     auto& rhs_data = const_cast<typename T::rep&>(rhs.data());
     while ((static_cast<comp_t>(lhs) > narrow_max) || (static_cast<comp_t>(rhs) > narrow_max)) {

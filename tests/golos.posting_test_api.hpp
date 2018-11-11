@@ -88,32 +88,27 @@ struct golos_posting_api: base_contract_api {
         );
     }
 
-    action_result upvote(account_name voter, account_name author, std::string permlink, int32_t weight) {
-        return vote(voter, author, permlink, weight);
-    }
-    action_result downvote(account_name voter, account_name author, std::string permlink, int32_t weight) {
-        return vote(voter, author, permlink, -static_cast<int32_t>(weight));
-    }
-    action_result unvote(account_name voter, account_name author, std::string permlink) {
-        return vote(voter, author, permlink, 0);
-    }
-
-    action_result vote(account_name voter, account_name author, std::string permlink, int32_t weight) {
-        BOOST_REQUIRE_MESSAGE(weight >= -32768 && weight < 32768,
-            "Test is broken, action cannot be serialized with such weight");
-        auto act = N(upvote);
-        uint16_t w = weight;
-        if (weight == 0) {
-            act = N(unvote);
-        } else if (weight < 0) {
-            act = N(downvote);
-            w = -weight;
-        }
-        return push(act, voter, args()
+    action_result upvote(account_name voter, account_name author, std::string permlink, uint16_t weight) {
+        return push(N(upvote), voter, args()
             ("voter", voter)
             ("author", author)
             ("permlink", permlink)
-            ("weight", w)
+            ("weight", weight)
+        );
+    }
+    action_result downvote(account_name voter, account_name author, std::string permlink, uint16_t weight) {
+        return push(N(downvote), voter, args()
+            ("voter", voter)
+            ("author", author)
+            ("permlink", permlink)
+            ("weight", weight)
+        );
+    }
+    action_result unvote(account_name voter, account_name author, std::string permlink) {
+        return push(N(unvote), voter, args()
+            ("voter", voter)
+            ("author", author)
+            ("permlink", permlink)
         );
     }
 

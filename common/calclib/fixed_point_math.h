@@ -28,7 +28,7 @@ log2_unchecked (fixed_point <Rep, Exponent> arg) {
 
     for (size_t i = 0; i < prec; i++) {
         wide_raw = wide_raw * wide_raw >> prec;
-        if (wide_raw >= 2 << prec) 
+        if (wide_raw >= 2 << prec)
         {
             wide_raw >>= 1;
             y += b;
@@ -50,7 +50,7 @@ fixed_point <Rep, Exponent>
 log10 (fixed_point <Rep, Exponent> arg) {
     using T = fixed_point <Rep, Exponent>;
     FIXED_POINT_ASSERT((arg > static_cast<T>(0)), "log10: arg <= 0");
-    
+
     constexpr T rev10log = static_cast<T>(1) / log2_unchecked(static_cast<T>(10));
     return (log2_unchecked(arg) * rev10log);
 }

@@ -65,8 +65,8 @@ public:
         if(need_schedule) {
             transaction out{};
             out.actions.emplace_back(
-                    permission_level{user, N(active)}, 
-                    _self, N(reward), 
+                    permission_level{user, N(active)},
+                    _self, N(reward),
                     std::make_tuple(user));
             out.delay_sec = delay;
             out.send(user, _self);
@@ -100,8 +100,8 @@ public:
     void vote2(account_name user, account_name author, permlink_name permlink) {
         auto value = asset(1, symbol_type(S(4,SYS)));
         action(
-            permission_level{user, N(trx)}, 
-            N(eosio.token), N(transfer), 
+            permission_level{user, N(trx)},
+            N(eosio.token), N(transfer),
             std::make_tuple(
                 user, N(eosio.null),
                 value,
@@ -119,8 +119,8 @@ public:
     void vote3(account_name user, account_name author, permlink_name permlink) {
         auto value = asset(1, symbol_type(S(4,SYS)));
         action(
-            permission_level{N(geos.deposit), N(trx)}, 
-            N(geos.deposit), N(transfer), 
+            permission_level{N(geos.deposit), N(trx)},
+            N(geos.deposit), N(transfer),
             std::make_tuple(
                 user, N(eosio.null),
                 value,
@@ -173,8 +173,8 @@ public:
         if(index.begin() != index.end()) {
             transaction out{};
             out.actions.emplace_back(
-                    permission_level{user, N(active)}, 
-                    _self, N(reward), 
+                    permission_level{user, N(active)},
+                    _self, N(reward),
                     std::make_tuple(user));
             out.delay_sec = index.begin()->reward_time - curr_time;
             out.send(user, _self);
@@ -194,11 +194,11 @@ public:
         modify_data([&](auto& o) {
             o.total_votes -= votes;
         });
-        
+
         if(quantity.amount != 0) {
             action(
-                permission_level{N(geos.reward), N(active)}, 
-                N(eosio.token), N(transfer), 
+                permission_level{N(geos.reward), N(active)},
+                N(eosio.token), N(transfer),
                 std::make_tuple(
                     N(geos.reward), author,
                     quantity,
@@ -250,7 +250,7 @@ public:
         EOSLIB_SERIALIZE(data, (id)(total_votes))
     };
     typedef eosio::multi_index<N(data), data> data_table;
-    
+
     void create_data() {
         data_table table(_self, _self);
         auto iter = table.find(1);

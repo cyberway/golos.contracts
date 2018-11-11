@@ -26,7 +26,7 @@ namespace eosio {
                         account_name to,
                         asset        quantity,
                         string       memo );
-      
+
          inline asset get_balance (account_name owner, symbol_name sym) const;
 
          void on_transfer( account_name from,
