@@ -141,23 +141,6 @@ struct golos_posting_api: base_contract_api {
         return make_mvo_fn(fn.str, fn.maxarg);
     }
 
-
-    asset make_asset(double x = 0, symbol sym = symbol(0)) const {
-        if (sym == symbol(0)) sym = _symbol;
-        return asset(x * sym.precision(), sym);
-    }
-    string asset_str(double x = 0) {
-        return make_asset(x).to_string();
-    }
-
-    variant make_balance(double vesting, double delegated = 0, double received = 0, double unlocked = 0) {
-        return mvo()
-            ("vesting", asset_str(vesting))
-            ("delegate_vesting", asset_str(delegated))
-            ("received_vesting", asset_str(received))
-            ("unlocked_limit", asset_str(unlocked));
-    }
-
 };
 
 

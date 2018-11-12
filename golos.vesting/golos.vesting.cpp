@@ -25,12 +25,12 @@ void vesting::apply(uint64_t code, uint64_t action) {
         execute_action(this, &vesting::unlock_limit);
     else if (N(convertvg) == action)
         execute_action(this, &vesting::convert_vesting);
+    else if (N(cancelvg) == action)
+        execute_action(this, &vesting::cancel_convert_vesting);
     else if (N(delegatevg) == action)
         execute_action(this, &vesting::delegate_vesting);
     else if (N(undelegatevg) == action)
         execute_action(this, &vesting::undelegate_vesting);
-    else if (N(cancelvg) == action)
-        execute_action(this, &vesting::cancel_convert_vesting);
 
     else if (N(open) == action)
         execute_action(this, &vesting::open);
@@ -56,6 +56,7 @@ void vesting::on_transfer(account_name from, account_name to, asset quantity, st
     eosio_assert(is_account(to), "to account does not exist");
     eosio_assert(quantity.is_valid(), "invalid quantity");      // this 2 asserts checked in eosio.token after require_recipient. TODO: find, are they different
     eosio_assert(quantity.amount > 0, "must transfer positive quantity");
+    // it's notification, so there is no need to validate symbol, eosio.token already checked it
 
     tables::vesting_table table_vesting(_self, _self);
     auto vesting = table_vesting.find(quantity.symbol.name());
@@ -98,6 +99,8 @@ void vesting::convert_vesting(account_name from, account_name to, asset quantity
 
     tables::account_table account(_self, from);
     auto vest = account.find(quantity.symbol.name());
+    eosio_assert(vest != account.end(), "unknown asset");
+    eosio_assert(vest->vesting.symbol == quantity.symbol, "wrong asset precision");
     eosio_assert(vest->available_vesting().amount >= quantity.amount, "Insufficient funds");
     eosio_assert(config::vesting_withdraw.min_amount <= vest->vesting.amount, "Insufficient funds for converting");
     eosio_assert(quantity.amount > 0, "quantity must be positive");
@@ -279,7 +282,7 @@ void vesting::calculate_convert_vesting() {
 
                     tables::account_table account(_self, obj->sender);
                     auto balance = account.find(obj->payout_part.symbol.name());
-                    eosio_assert(balance != account.end(), "Vesting balance not found");
+                    eosio_assert(balance != account.end(), "Vesting balance not found");    // must not happen here, checked earlier
 
                     auto quantity = balance->vesting;
                     if (balance->vesting < obj->payout_part) {
@@ -292,20 +295,19 @@ void vesting::calculate_convert_vesting() {
 
                     sub_balance(obj->sender, quantity);
                     auto vest = table_vesting.find(quantity.symbol.name());
-                    eosio_assert(vest != table_vesting.end(), "Vesting not found");
+                    eosio_assert(vest != table_vesting.end(), "Vesting not found"); // must not happen at this point
                     table_vesting.modify(vest, 0, [&](auto& item) {
                         item.supply -= quantity;
                     });
                     INLINE_ACTION_SENDER(eosio::token, transfer)(N(eosio.token), {_self, N(active)},
                         {_self, obj->recipient, convert_to_token(quantity, *vest), "Convert vesting"});
                 });
-            }
 
-            if (obj->number_of_payments) {
                 ++obj;
             } else {
                 obj = index.erase(obj);
             }
+
         }
     }
 }
@@ -401,33 +403,45 @@ void vesting::add_balance(account_name owner, asset value, account_name ram_paye
     notify_balance_change(owner, value);
 }
 
-const asset vesting::convert_to_token(const asset& src, const structures::vesting_info& vinfo) const {
-    uint64_t amount;
-    symbol_type sym = src.symbol;
-    auto balance = token(N(eosio.token)).get_balance(_self, sym.name());
-    eosio_assert(sym == balance.symbol && sym == vinfo.supply.symbol, "The token type does not match");
-
-    if (!vinfo.supply.amount || !balance.amount)
-        amount = src.amount;
-    else {
-        amount = static_cast<int64_t>((static_cast<uint128_t>(src.amount) * balance.amount)
-            / (vinfo.supply.amount + src.amount));
+int64_t fix_precision(const asset from, const symbol_type to) {
+    int a = from.symbol.precision();
+    int b = to.precision();
+    if (a == b) {
+        return from.amount;
     }
-    return asset(amount, sym);
+    auto e10 = [](int x) {
+        int r = 1;
+        while (x-- > 0)
+            r *= 10;
+        return r;
+    };
+    int min = std::min(a, b);
+    auto div = e10(a - min);
+    auto mult = e10(b - min);
+    return static_cast<int128_t>(from.amount) * mult / div;
+}
+
+const asset vesting::convert_to_token(const asset& src, const structures::vesting_info& vinfo) const {
+    symbol_type sym = src.symbol;
+    auto token_supply = token(N(eosio.token)).get_balance(_self, sym.name());
+    // eosio_assert(sym.name() == token_supply.symbol.name() && sym == vinfo.supply.symbol, "The token type does not match");   // guaranteed to be valid here
+
+    int64_t amount = vinfo.supply.amount && token_supply.amount
+        ? static_cast<int64_t>((static_cast<int128_t>(src.amount) * token_supply.amount)
+            / (vinfo.supply.amount + src.amount))
+        : fix_precision(src, token_supply.symbol);
+    return asset(amount, token_supply.symbol);
 }
 
 const asset vesting::convert_to_vesting(const asset& src, const structures::vesting_info& vinfo) const {
-    uint64_t amount;
     symbol_type sym = src.symbol;
     auto balance = token(N(eosio.token)).get_balance(_self, sym.name()) - src;
-    eosio_assert(sym == balance.symbol && sym == vinfo.supply.symbol, "The token type does not match");
+    // eosio_assert(sym == balance.symbol && sym.name() == vinfo.supply.symbol.name(), "The token type does not match"); //
 
-    if (!vinfo.supply.amount || !balance.amount)
-        amount = src.amount;
-    else {
-        amount = static_cast<int64_t>((static_cast<uint128_t>(src.amount) * vinfo.supply.amount) / balance.amount);
-    }
-    return asset(amount, sym);
+    int64_t amount = vinfo.supply.amount && balance.amount
+        ? static_cast<int64_t>((static_cast<int128_t>(src.amount) * vinfo.supply.amount) / balance.amount)
+        : fix_precision(src, vinfo.supply.symbol);
+    return asset(amount, vinfo.supply.symbol);
 }
 
 void vesting::timeout_delay_trx() {

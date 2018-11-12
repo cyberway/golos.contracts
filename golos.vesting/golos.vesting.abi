@@ -342,10 +342,11 @@
           "orders": [{"field": "recipient", "order": "asc"}]
       },{
           "name": "unique",
-          "unique": false,
+          "unique": true,
           "orders": [
+            {"field": "sender", "order": "asc"},
             {"field": "recipient", "order": "asc"}
-            {"field": "sender", "order": "asc"}]
+          ]
       }]
     },
     {
