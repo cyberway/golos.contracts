@@ -12,13 +12,8 @@ struct golos_vesting_api: base_contract_api {
 
     //// vesting actions
     action_result create_vesting(account_name creator, std::vector<account_name> issuers = {}) {
-        return push(N(createvest), creator, args()
-            ("creator", creator)
-            ("symbol", _symbol)
-            ("issuers", issuers)
-        );
+        return create_vesting(creator, _symbol, issuers);
     }
-
     action_result create_vesting(account_name creator, symbol vesting_symbol, std::vector<account_name> issuers = {}) {
         return push(N(createvest), creator, args()
             ("creator", creator)
@@ -28,13 +23,8 @@ struct golos_vesting_api: base_contract_api {
     }
 
     action_result open(account_name owner) {
-        return push(N(open), owner, args()
-            ("owner", owner)
-            ("symbol", _symbol)
-            ("ram_payer", owner)
-        );
+        return open(owner, _symbol, owner);
     }
-
     action_result open(account_name owner, symbol sym, account_name ram_payer) {
         return push(N(open), ram_payer, args()
             ("owner", owner)

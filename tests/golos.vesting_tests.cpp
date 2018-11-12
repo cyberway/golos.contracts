@@ -11,10 +11,11 @@ using namespace eosio::chain;
 using namespace fc;
 
 
-static const auto _token_digits = 3;
-static const auto _vesting_digits = 6;
-static const auto _token_sym = symbol(_token_digits,"GOLOS");
-static const auto _vesting_sym = symbol(_vesting_digits,"GOLOS");
+static const auto _token_name = "GOLOS";
+static const auto _token_precision = 3;
+static const auto _vesting_precision = 6;
+static const auto _token_sym = symbol(_token_precision, _token_name);
+static const auto _vesting_sym = symbol(_vesting_precision, _token_name);
 
 class golos_vesting_tester : public golos_tester {
 protected:
@@ -144,9 +145,9 @@ BOOST_FIXTURE_TEST_CASE(convert, golos_vesting_tester) try {
     auto start_convert = [&](auto amount, auto precision, auto name) {
         return vest.convert_vesting(N(sania), N(sania), asset(amount, symbol(precision, name)));
     };
-    BOOST_CHECK_EQUAL(err.unknown_asset, start_convert(1e6, _vesting_digits, "GLS"));
-    BOOST_CHECK_EQUAL(err.wrong_precision, start_convert(1e5, _vesting_digits-1, "GOLOS"));
-    BOOST_CHECK_EQUAL(err.wrong_precision, start_convert(1e7, _vesting_digits+1, "GOLOS"));
+    BOOST_CHECK_EQUAL(err.unknown_asset, start_convert(1e6, _vesting_precision, "GLS"));
+    BOOST_CHECK_EQUAL(err.wrong_precision, start_convert(1e5, _vesting_precision-1, _token_name));
+    BOOST_CHECK_EQUAL(err.wrong_precision, start_convert(1e7, _vesting_precision+1, _token_name));
 
     BOOST_TEST_MESSAGE("--- succeed if start converting with correct asset");
     BOOST_CHECK_EQUAL(success(), vest.convert_vesting(N(sania), N(sania), _one_per_interval));
