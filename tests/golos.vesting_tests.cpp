@@ -258,7 +258,7 @@ BOOST_FIXTURE_TEST_CASE(undelegate_vesting, golos_vesting_tester) try {
     prepare_balances();
 
     // undelegation looks broken due composite index used in smart-contract
-/*
+
     const int divider = vest.make_asset(1).get_amount();
     const int min_step = cfg::delegation.min_amount / divider;
     const int min_remainder = cfg::delegation.min_remainder / divider;
@@ -266,10 +266,14 @@ BOOST_FIXTURE_TEST_CASE(undelegate_vesting, golos_vesting_tester) try {
     BOOST_CHECK_EQUAL(success(), vest.delegate_vesting(N(sania), N(pasha), vest.make_asset(amount)));
     CHECK_MATCHING_OBJECT(vest.get_balance(N(sania)), vest.make_balance(100, amount));
     CHECK_MATCHING_OBJECT(vest.get_balance(N(pasha)), vest.make_balance(100, 0, amount));
+    produce_block();
 
-    BOOST_TEST_MESSAGE("--- fail when undelegate earlier than min_time");
-    BOOST_CHECK_EQUAL(err.tokens_frozen, vest.undelegate_vesting(N(sania), N(pasha), vest.make_asset(min_step)));
-    produce_blocks(cfg::delegation.min_time + 1);
+    if (cfg::delegation.min_time > 0) {
+        // TODO: test it when config allowed to be changed with `ctrl`
+        BOOST_TEST_MESSAGE("--- fail when undelegate earlier than min_time");
+        BOOST_CHECK_EQUAL(err.tokens_frozen, vest.undelegate_vesting(N(sania), N(pasha), vest.make_asset(min_step)));
+        produce_blocks(golos::seconds_to_blocks(cfg::delegation.min_time));
+    }
 
     BOOST_TEST_MESSAGE("--- fail when undelegate more than delegated");
     BOOST_CHECK_EQUAL(err.not_enough_delegation, vest.undelegate_vesting(N(sania), N(pasha), vest.make_asset(amount + 1))); // TODO: boundary
@@ -283,14 +287,14 @@ BOOST_FIXTURE_TEST_CASE(undelegate_vesting, golos_vesting_tester) try {
 
     BOOST_TEST_MESSAGE("--- succed in normal conditions");
     BOOST_CHECK_EQUAL(success(), vest.undelegate_vesting(N(sania), N(pasha), vest.make_asset(min_step)));
-    CHECK_MATCHING_OBJECT(vest.get_balance(N(pasha)), vest.make_balance(100, 0, amount - min_step));
     CHECK_MATCHING_OBJECT(vest.get_balance(N(sania)), vest.make_balance(100, amount));
+    CHECK_MATCHING_OBJECT(vest.get_balance(N(pasha)), vest.make_balance(100, 0, amount - min_step));
 
     BOOST_TEST_MESSAGE("--- wait delegation return block and check that balance is the same");
     BOOST_CHECK_EQUAL(success(), vest.timeout(cfg::vesting_name));
-    produce_blocks(cfg::delegation.return_time);
-    CHECK_MATCHING_OBJECT(vest.get_balance(N(pasha)), vest.make_balance(100, 0, amount - min_step));
+    produce_blocks(golos::seconds_to_blocks(cfg::delegation.return_time - cfg::delegation.min_time));      // Note: it's return + 1 block here, check, why delayed
     CHECK_MATCHING_OBJECT(vest.get_balance(N(sania)), vest.make_balance(100, amount));
+    CHECK_MATCHING_OBJECT(vest.get_balance(N(pasha)), vest.make_balance(100, 0, amount - min_step));
 
     BOOST_TEST_MESSAGE("--- go next block and check return");
     produce_block();
@@ -299,7 +303,7 @@ BOOST_FIXTURE_TEST_CASE(undelegate_vesting, golos_vesting_tester) try {
     // TODO: check delegation and return objects
     // TODO: check step, remainder
     // TODO: check min time, return time
-*/
+
 } FC_LOG_AND_RETHROW()
 
 BOOST_AUTO_TEST_SUITE_END()

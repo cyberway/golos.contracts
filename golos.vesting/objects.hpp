@@ -58,7 +58,7 @@ struct delegate_record {
     asset quantity;
     asset deductions;
     uint16_t interest_rate;
-    uint16_t payout_strategy;
+    uint8_t payout_strategy;
     time_point_sec return_date;
 
     static uint128_t unique_key(account_name u_sender, account_name u_recipient) {
