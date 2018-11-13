@@ -16,7 +16,7 @@ def create_tags(metadata_tags):
     tags = []
     for tag in metadata_tags or []:
         tag_obj = {
-            "tag_name": tag
+            "tag": tag
         }
         tags.append(tag_obj)
 
@@ -90,18 +90,18 @@ class PublishConverter:
 
                 message = {
                     "id": cur_mssg_id,
-                    "date": doc["last_update"],
+                    "date": int(doc["last_update"].timestamp()) * 1000000,
                     "parentacc": doc["parent_author"],
-                    "parent_id": utils.convert_hash(doc["parent_permlink"]),
+                    "parent_id": len(doc["parent_permlink"]) if utils.convert_hash(doc["parent_permlink"]) else 0,
                     "tokenprop": utils.get_prop_raw(doc["percent_steem_dollars"] / 2),
-                    "beneficiaries": "",
+                    "beneficiaries": [],
                     "rewardweight": utils.get_prop_raw(doc["reward_weight"]),
                     "state": messagestate,
                     "childcount": doc["children"],
                     "closed": isClosedMessage,
                     "level": doc["depth"],
                     "_SCOPE_": doc["author"],
-                    "_PAYER_": "gls.publish",
+                    "_PAYER_": doc["author"],
                     "_SIZE_": 50
                 }
                 self.publish_tables.message.append(message)
@@ -131,7 +131,7 @@ class PublishConverter:
                     "tags": tags,
                     "jsonmetadata": doc["json_metadata"],
                     "_SCOPE_": doc["author"],
-                    "_PAYER_": "gls.publish",
+                    "_PAYER_": doc["author"],
                     "_SIZE_": 50
                 }
                 self.publish_tables.content.append(content)
@@ -186,7 +186,7 @@ class PublishConverter:
                     "count" : 0,
                     "curatorsw": doc["weight"] / 2,
                     "_SCOPE_" : doc["author"],
-                    "_PAYER_" : "gls.publish",
+                    "_PAYER_" : doc["author"],
                     "_SIZE_" : 50
                 }
 

@@ -31,9 +31,11 @@ def get_prop_raw(arg):
 def get_golos_asset_amount(arg):
     return get_checked_int64(arg * pow(10, golos_decs))
     
-def convert_hash(param): #TODO
-    hashobj = hashlib.sha256(param.encode('utf-8')).hexdigest()
-    return Decimal128(Decimal(int(hashobj[:16], 16))) 
+def convert_hash(param):
+    a=hashlib.sha256(param.encode('ascii')).hexdigest()[:16]
+    q=int(a[14:16] + a[12:14] + a[10:12] + a[8:10] + a[6:8] + a[4:6] + a[2:4] + a[0:2], 16)
+    return q if q < 2**63 else -(2**64-q)
+
 
 def printProgressBar (iteration, total, prefix = '', suffix = '', decimals = 1, length = 100, fill = '█'):
     percent = ("{0:." + str(decimals) + "f}").format(100 * (iteration / float(total)))
