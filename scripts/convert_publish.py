@@ -9,7 +9,6 @@ from datetime import datetime
 from datetime import timedelta
 from decimal import Decimal
 from bson.decimal128 import Decimal128
-from sshtunnel import SSHTunnelForwarder
 from pymongo import MongoClient
 
 def create_tags(metadata_tags):
@@ -38,8 +37,9 @@ class PublishConverter:
 
     def fill_exists_accs(self):
         cw_accounts = self.cyberway_db['account']
+        cw_accounts = cw_accounts.with_options(codec_options = bson.CodecOptions(unicode_decode_error_handler="ignore"))
         for doc in cw_accounts.find():
-            self.exists_accs.add(doc["name"])
+            self.exists_accs.add(doc["name"])    
         print("accs num = ", len(self.exists_accs))
         for a in self.exists_accs:
             print(a)
@@ -48,7 +48,8 @@ class PublishConverter:
         print("convert_posts")
         golos_gpo = self.golos_db['dynamic_global_property_object'].find()[0]
         golos_posts = self.golos_db['comment_object']
-        
+        print(golos_posts)
+
         reward_pools = self.publish_db['rewardpools']
         pool = reward_pools.find()[0] #we have to create it before converting
         pool["state"]["funds"]["amount"] = utils.get_golos_asset_amount(golos_gpo["total_reward_fund_steem_value"])
@@ -77,7 +78,7 @@ class PublishConverter:
                     "absshares": utils.get_fixp_raw(doc["abs_rshares"]),
                     "netshares": cur_rshares_raw,
                     "voteshares": utils.get_fixp_raw(doc["vote_rshares"]),
-                    "sumcuratorsw": self.mssgs_curatorsw[(doc["author"], cur_mssg_id.bid)]
+                    "sumcuratorsw": self.mssgs_curatorsw[(doc["author"], cur_mssg_id)]
                 }
             
                 isClosedMessage = True
@@ -92,7 +93,7 @@ class PublishConverter:
                     "id": cur_mssg_id,
                     "date": int(doc["last_update"].timestamp()) * 1000000,
                     "parentacc": doc["parent_author"],
-                    "parent_id": len(doc["parent_permlink"]) if utils.convert_hash(doc["parent_permlink"]) else 0,
+                    "parent_id": utils.convert_hash(doc["parent_permlink"]) if len(doc["parent_permlink"]) else 0,
                     "tokenprop": utils.get_prop_raw(doc["percent_steem_dollars"] / 2),
                     "beneficiaries": [],
                     "rewardweight": utils.get_prop_raw(doc["reward_weight"]),
@@ -182,8 +183,8 @@ class PublishConverter:
                     "message_id" : cur_mssg_id,
                     "voter" : doc["voter"],
                     "weight" : doc["vote_percent"],
-                    "time" : doc["last_update"],
-                    "count" : 0,
+                    "time" : int(doc["last_update"].timestamp()) * 1000000,
+                    "count" : doc["num_changes"],
                     "curatorsw": doc["weight"] / 2,
                     "_SCOPE_" : doc["author"],
                     "_PAYER_" : doc["author"],
@@ -192,7 +193,7 @@ class PublishConverter:
 
                 self.publish_tables.vote.append(vote)
 
-                self.mssgs_curatorsw[(doc["author"], cur_mssg_id.bid)] += vote["curatorsw"]
+                self.mssgs_curatorsw[(doc["author"], cur_mssg_id)] += vote["curatorsw"]
 
                 if added % self.cache_period == 0:
                     print("votes converted -- ", added)
@@ -215,41 +216,10 @@ class PublishConverter:
         self.convert_votes(query)
         self.convert_posts(query)
 
-#TODO: config
-MONGO_HOST = "123.123.123.123"
-MONGO_DB = "Golos"
-MONGO_USER = "Jane Doe"
-MONGO_PASS = "Converge2001"
-SSH_USERNAME = "Jane Doe"
-SSH_PASSWORD = "~/.ssh/id_rsa"
+client = MongoClient('172.17.0.1', 27017)
+  
+publish_db = client['_CYBERWAY_gls-publish']
+cyberway_db = client['_CYBERWAY_TEST_']
+golos_db = client['Golos']
 
-def convert(remote, query = {}):
-    client = MongoClient('127.0.0.1', 27017)
-    
-    publish_db = client['_CYBERWAY_gls-publish']
-    cyberway_db = client['_CYBERWAY_TEST_']
-        
-    if remote:
-        server = SSHTunnelForwarder(
-            MONGO_HOST,
-            ssh_username = SSH_USERNAME,
-            ssh_password = SSH_PASSWORD,
-            remote_bind_address=('172.17.0.1', 27017)
-        )
-        server.start()
-        print("server started")
-        remote_client = MongoClient('172.17.0.1', server.local_bind_port)
-        golos_db = remote_client[MONGO_DB]
-        golos_db.authenticate(MONGO_USER, MONGO_PASS)
-    else:
-        golos_db = client['Golos']
-
-    PublishConverter(golos_db, publish_db, cyberway_db).run(query)
-    
-    if remote:
-        server.stop()
-    
-#convert(True, {"author" : "goloscore"})
-convert(False)
-
-
+PublishConverter(golos_db, publish_db, cyberway_db).run()
