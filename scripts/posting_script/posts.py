@@ -68,7 +68,7 @@ def convert_posts():
                     "_PAYER_" : "",
                     "_SIZE_" : NumberLong(156) 
                 }
-		dbs.cyberway_db['gtransaction'].save(delay_trx)
+                dbs.cyberway_db['gtransaction'].save(delay_trx)
                 isClosedMessage = False
 
             message = {
