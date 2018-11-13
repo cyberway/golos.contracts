@@ -9,7 +9,6 @@ from datetime import datetime
 from datetime import timedelta
 from decimal import Decimal
 from bson.decimal128 import Decimal128
-from sshtunnel import SSHTunnelForwarder
 from pymongo import MongoClient
 from config import *
 
@@ -88,19 +87,23 @@ class PublishConverter:
                     rshares_sum += cur_rshares_raw
                     pool["state"]["msgs"] += 1
                     isClosedMessage = False
+                
+                orphan_comment = (len(doc["parent_author"]) > 0) and (not (doc["parent_author"] in self.exists_accs))
 
                 message = {
                     "id": cur_mssg_id,
                     "date": doc["last_update"],
-                    "parentacc": doc["parent_author"],
-                    "parent_id": utils.convert_hash(doc["parent_permlink"]),
+                    "parentacc": "" if orphan_comment else doc["parent_author"],
+                    "parent_id": 0  if orphan_comment else utils.convert_hash(doc["parent_permlink"]),
                     "tokenprop": utils.get_prop_raw(doc["percent_steem_dollars"] / 2),
                     "beneficiaries": "",
                     "rewardweight": utils.get_prop_raw(doc["reward_weight"]),
                     "state": messagestate,
                     "childcount": doc["children"],
                     "closed": isClosedMessage,
-                    "level": doc["depth"],
+                    "level": 0 if orphan_comment else doc["depth"], # this value will be incorrect for comment to orphan comment
+                                                                    # but we only use level for comments nesting limits, 
+                                                                    # so it seems that this is not a problem
                     "_SCOPE_": doc["author"],
                     "_PAYER_": "gls.publish",
                     "_SIZE_": 50
