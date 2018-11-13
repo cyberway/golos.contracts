@@ -11,6 +11,7 @@ from decimal import Decimal
 from bson.decimal128 import Decimal128
 from sshtunnel import SSHTunnelForwarder
 from pymongo import MongoClient
+from config import *
 
 def create_tags(metadata_tags):
     tags = []
@@ -52,8 +53,8 @@ class PublishConverter:
         reward_pools = self.publish_db['rewardpools']
         pool = reward_pools.find()[0] #we have to create it before converting
         pool["state"]["funds"]["amount"] = utils.get_golos_asset_amount(golos_gpo["total_reward_fund_steem_value"])
-        pool["state"]["funds"]["decs"] = utils.golos_decs
-        pool["state"]["funds"]["sym"] = "GOLOS"
+        pool["state"]["funds"]["decs"] = BALANCE_PRECISION
+        pool["state"]["funds"]["sym"] = BALANCE_SYMBOL
         
         pool["state"]["msgs"] = 0
         rshares_sum = 0
@@ -215,41 +216,9 @@ class PublishConverter:
         self.convert_votes(query)
         self.convert_posts(query)
 
-#TODO: config
-MONGO_HOST = "123.123.123.123"
-MONGO_DB = "Golos"
-MONGO_USER = "Jane Doe"
-MONGO_PASS = "Converge2001"
-SSH_USERNAME = "Jane Doe"
-SSH_PASSWORD = "~/.ssh/id_rsa"
+#PublishConverter(dbs.golos_db, dbs.cyberway_gls_publish_db, dbs.cyberway_db).run({"author" : "goloscore"})
+PublishConverter(dbs.golos_db, dbs.cyberway_gls_publish_db, dbs.cyberway_db).run()   
 
-def convert(remote, query = {}):
-    client = MongoClient('127.0.0.1', 27017)
-    
-    publish_db = client['_CYBERWAY_gls-publish']
-    cyberway_db = client['_CYBERWAY_TEST_']
-        
-    if remote:
-        server = SSHTunnelForwarder(
-            MONGO_HOST,
-            ssh_username = SSH_USERNAME,
-            ssh_password = SSH_PASSWORD,
-            remote_bind_address=('172.17.0.1', 27017)
-        )
-        server.start()
-        print("server started")
-        remote_client = MongoClient('172.17.0.1', server.local_bind_port)
-        golos_db = remote_client[MONGO_DB]
-        golos_db.authenticate(MONGO_USER, MONGO_PASS)
-    else:
-        golos_db = client['Golos']
 
-    PublishConverter(golos_db, publish_db, cyberway_db).run(query)
-    
-    if remote:
-        server.stop()
-    
-#convert(True, {"author" : "goloscore"})
-convert(False)
 
 

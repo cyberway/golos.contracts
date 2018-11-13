@@ -2,16 +2,12 @@ import dbs
 import bson
 import re
 import pymongo
+from config import *
 
 name_regex = "^[a-z1-5\.]{1,12}$|^[a-z1-5\.]{12}[a-j1-5\.]$"
 name_re = re.compile(name_regex)
 def check_name(name):
     return name_re.match(name)
-
-BALANCE_PRECISION = 4
-BALANCE_SYMBOL = 'GLS'
-VESTING_PRECISION = 4
-VESTING_SYMBOL = 'GLS'
 
 golos = dbs.Tables([
         ('accounts', dbs.golos_db['account_object'],           None, [('name',True)]),

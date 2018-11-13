@@ -1,16 +1,16 @@
 from pymongo import MongoClient
 import pymongo
+from config import *
 
 golos_client = MongoClient('172.17.0.1', 27017)
 cyberway_client = MongoClient('127.0.0.1', 27018)
-
-CYBERWAY_PREFIX='_CYBERWAY_'
 
 golos_db = golos_client['Golos']
 cyberway_db = cyberway_client[CYBERWAY_PREFIX]
 cyberway_eosio_token_db = cyberway_client[CYBERWAY_PREFIX+'eosio-token']
 cyberway_gls_vesting_db = cyberway_client[CYBERWAY_PREFIX+'gls-vesting']
 cyberway_gls_ctrl_db = cyberway_client[CYBERWAY_PREFIX+'gls-ctrl']
+cyberway_gls_publish_db = cyberway_client[CYBERWAY_PREFIX+'gls-publish']
 
 def createIndexes(collection, indexes):
     db_indexes = collection.index_information()
