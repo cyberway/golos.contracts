@@ -48,7 +48,6 @@ class PublishConverter:
         print("convert_posts")
         golos_gpo = self.golos_db['dynamic_global_property_object'].find()[0]
         golos_posts = self.golos_db['comment_object']
-        print(golos_posts)
 
         reward_pools = self.publish_db['rewardpools']
         pool = reward_pools.find()[0] #we have to create it before converting
