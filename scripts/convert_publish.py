@@ -94,7 +94,7 @@ class PublishConverter:
                     "id": cur_mssg_id,
                     "date": int(doc["last_update"].timestamp()) * 1000000,
                     "parentacc": "" if orphan_comment else doc["parent_author"],
-                    "parent_id": 0  if (orphan_comment and len(doc["parent_permlink"]) > 0) else utils.convert_hash(doc["parent_permlink"]),
+                    "parent_id": 0  if (orphan_comment or (not len(doc["parent_permlink"]) > 0)) else utils.convert_hash(doc["parent_permlink"]),
                     "tokenprop": utils.get_prop_raw(doc["percent_steem_dollars"] / 2),
                     "beneficiaries": [],
                     "rewardweight": utils.get_prop_raw(doc["reward_weight"]),
