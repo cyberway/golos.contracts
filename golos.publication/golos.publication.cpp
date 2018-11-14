@@ -122,8 +122,19 @@ void publication::create_message(account_name account, std::string permlink,
         item.tags = tags;
         item.jsonmetadata = jsonmetadata;
     });
-
-    close_message_timer(account, message_id);
+    
+    structures::accandvalue parent {parentacc, parent_id};
+    uint64_t date_diff = 0;
+    while (parent.account) {
+        tables::message_table parent_message_table(_self, parent.account);
+        auto parent_itr = parent_message_table.find(parent.value);
+        eosio_assert(cur_time >= parent_itr->date, "publication::create_message: cur_time < parent_itr->date");
+        date_diff = cur_time - parent_itr->date;
+        parent.account = parent_itr->parentacc;
+        parent.value = parent_itr->parent_id;
+    }
+    
+    close_message_timer(account, message_id, date_diff / eosio::seconds(1).count());
 }
 
 void publication::update_message(account_name account, std::string permlink,
@@ -325,10 +336,10 @@ void publication::close_message(account_name account, uint64_t id) {
         pools.modify(pool, _self, [&](auto &item) { item.state = state; });
 }
 
-void publication::close_message_timer(account_name account, uint64_t id) {
+void publication::close_message_timer(account_name account, uint64_t id, uint64_t seconds_diff) {
     transaction trx;
     trx.actions.emplace_back(action{permission_level(_self, N(active)), _self, N(closemssg), structures::accandvalue{account, id}});
-    trx.delay_sec = config::cashout_window;
+    trx.delay_sec = config::cashout_window > seconds_diff ? config::cashout_window - seconds_diff : 0;
     trx.send((static_cast<uint128_t>(id) << 64) | account, _self);
 }
 

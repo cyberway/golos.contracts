@@ -370,4 +370,29 @@ BOOST_FIXTURE_TEST_CASE(nesting_level_test, golos_publication_tester) try {
         N(brucelee), "permlink" + std::to_string(i)));
 } FC_LOG_AND_RETHROW()
 
+BOOST_FIXTURE_TEST_CASE(comments_cashout_time_test, golos_publication_tester) try {
+    BOOST_TEST_MESSAGE("comments_cashout_time_test.");
+    init();
+    BOOST_CHECK_EQUAL(success(), post.create_msg(N(brucelee), "permlink"));
+    auto need_blocks = seconds_to_blocks(cfg::cashout_window);
+    auto wait_blocks = 5;
+    produce_blocks(wait_blocks);
+    need_blocks -= wait_blocks;
+    BOOST_CHECK_EQUAL(success(), post.create_msg(N(chucknorris), "comment_permlink", N(brucelee), "permlink"));
+        
+    BOOST_TEST_MESSAGE("--- creating " << need_blocks << " blocks");    
+    produce_blocks(need_blocks);
+    
+    BOOST_TEST_MESSAGE("--- checking that messages wasn't closed.");
+    BOOST_CHECK_EQUAL(post.get_message(N(brucelee), hash64("permlink"))["closed"].as<bool>(), false);
+    BOOST_CHECK_EQUAL(post.get_message(N(chucknorris), hash64("comment_permlink"))["closed"].as<bool>(), false);
+    
+    produce_block();
+    
+    BOOST_TEST_MESSAGE("--- checking that message was closed.");
+    BOOST_CHECK_EQUAL(post.get_message(N(brucelee), hash64("permlink"))["closed"].as<bool>(), true);
+    BOOST_CHECK_EQUAL(post.get_message(N(chucknorris), hash64("comment_permlink"))["closed"].as<bool>(), true);
+
+} FC_LOG_AND_RETHROW()
+
 BOOST_AUTO_TEST_SUITE_END()

@@ -27,7 +27,7 @@ private:
     void unvote(account_name voter, account_name author, std::string permlink);
 
     void close_message(account_name account, uint64_t id);
-    void close_message_timer(account_name account, uint64_t id);
+    void close_message_timer(account_name account, uint64_t id, uint64_t seconds_diff);
     void set_vote(account_name voter, account_name author, std::string permlink, int16_t weight);
     uint16_t notify_parent(bool increase, account_name parentacc, uint64_t parent_id);
     void fill_depleted_pool(tables::reward_pools& pools, asset quantity,
