@@ -6,11 +6,11 @@ fract_digits = {
     'fixp': 12,
     'elaf': 62
 }
-golos_decs = 3
 
 import hashlib
 from decimal import Decimal
 from bson.decimal128 import Decimal128
+from config import BALANCE_PRECISION
 
 def get_checked_int64(arg):
     if arg > int64_max:
@@ -29,7 +29,7 @@ def get_prop_raw(arg):
     return get_checked_int64((arg * pow(2, fract_digits['elaf'])) / _100percent)
     
 def get_golos_asset_amount(arg):
-    return get_checked_int64(arg * pow(10, golos_decs))
+    return get_checked_int64(arg * pow(10, BALANCE_PRECISION))
     
 def convert_hash(param):
     a=hashlib.sha256(param.encode('ascii')).hexdigest()[:16]
@@ -44,3 +44,7 @@ def printProgressBar (iteration, total, prefix = '', suffix = '', decimals = 1, 
     print('\r%s |%s| %s%% %s' % (prefix, bar, percent, suffix), end = '\r')
     if iteration == total:
         print()
+
+def uint_to_hex_str(val, n):
+    return '0x' + hex(val)[2:].zfill(n)
+     

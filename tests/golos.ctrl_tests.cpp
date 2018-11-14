@@ -41,7 +41,7 @@ public:
 
 
     asset dasset(double val = 0) const {
-        return vest.make_asset(val);
+        return token.make_asset(val);
     }
 
     // constants
@@ -340,8 +340,8 @@ BOOST_FIXTURE_TEST_CASE(change_vesting_test, golos_ctrl_tester) try {
     prepare(step_vote_witnesses);
 
     BOOST_TEST_MESSAGE("--- fail on direct action call");
-    BOOST_CHECK_NE(success(), ctrl.change_vests(BLOG, dasset(5)));
-    BOOST_CHECK_NE(success(), ctrl.change_vests(_bob, dasset(-5)));
+    BOOST_CHECK_NE(success(), ctrl.change_vests(BLOG, vest.make_asset(5)));
+    BOOST_CHECK_NE(success(), ctrl.change_vests(_bob, vest.make_asset(-5)));
     produce_block();
 
     BOOST_TEST_MESSAGE("--- witness weight change when adding vesting");

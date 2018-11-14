@@ -10,6 +10,7 @@ from datetime import timedelta
 from decimal import Decimal
 from bson.decimal128 import Decimal128
 from pymongo import MongoClient
+from config import *
 
 def create_tags(metadata_tags):
     tags = []
@@ -39,7 +40,7 @@ class PublishConverter:
         cw_accounts = self.cyberway_db['account']
         cw_accounts = cw_accounts.with_options(codec_options = bson.CodecOptions(unicode_decode_error_handler="ignore"))
         for doc in cw_accounts.find():
-            self.exists_accs.add(doc["name"])    
+            self.exists_accs.add(doc["name"])
         print("accs num = ", len(self.exists_accs))
         for a in self.exists_accs:
             print(a)
@@ -48,12 +49,12 @@ class PublishConverter:
         print("convert_posts")
         golos_gpo = self.golos_db['dynamic_global_property_object'].find()[0]
         golos_posts = self.golos_db['comment_object']
-
+        
         reward_pools = self.publish_db['rewardpools']
         pool = reward_pools.find()[0] #we have to create it before converting
         pool["state"]["funds"]["amount"] = utils.get_golos_asset_amount(golos_gpo["total_reward_fund_steem_value"])
-        pool["state"]["funds"]["decs"] = utils.golos_decs
-        pool["state"]["funds"]["sym"] = "GOLOS"
+        pool["state"]["funds"]["decs"] = BALANCE_PRECISION
+        pool["state"]["funds"]["sym"] = BALANCE_SYMBOL
         
         pool["state"]["msgs"] = 0
         rshares_sum = 0
@@ -87,19 +88,23 @@ class PublishConverter:
                     rshares_sum += cur_rshares_raw
                     pool["state"]["msgs"] += 1
                     isClosedMessage = False
+                
+                orphan_comment = (len(doc["parent_author"]) > 0) and (not (doc["parent_author"] in self.exists_accs))
 
                 message = {
                     "id": cur_mssg_id,
                     "date": int(doc["last_update"].timestamp()) * 1000000,
-                    "parentacc": doc["parent_author"],
-                    "parent_id": utils.convert_hash(doc["parent_permlink"]) if len(doc["parent_permlink"]) else 0,
+                    "parentacc": "" if orphan_comment else doc["parent_author"],
+                    "parent_id": 0  if orphan_comment else utils.convert_hash(doc["parent_permlink"]),
                     "tokenprop": utils.get_prop_raw(doc["percent_steem_dollars"] / 2),
                     "beneficiaries": [],
                     "rewardweight": utils.get_prop_raw(doc["reward_weight"]),
                     "state": messagestate,
                     "childcount": doc["children"],
                     "closed": isClosedMessage,
-                    "level": doc["depth"],
+                    "level": 0 if orphan_comment else doc["depth"], # this value will be incorrect for comment to orphan comment
+                                                                    # but we only use level for comments nesting limits, 
+                                                                    # so it seems that this is not a problem
                     "_SCOPE_": doc["author"],
                     "_PAYER_": doc["author"],
                     "_SIZE_": 50
@@ -151,8 +156,9 @@ class PublishConverter:
             print(e.args)
             print(traceback.format_exc())
         
-        pool["state"]["rshares"] = Decimal128(Decimal(rshares_sum))  # TODO: how should we store int128_t?
-        pool["state"]["rsharesfn"] = Decimal128(Decimal(rshares_sum))# TODO: --//--//--//--//--//--//--//--
+        shares_sum_str = utils.uint_to_hex_str(max(rshares_sum, 0), 32) #negative sum is almost impossible here
+        pool["state"]["rshares"] = shares_sum_str
+        pool["state"]["rsharesfn"] = shares_sum_str
         reward_pools.save(pool)
         print("...done")
         
@@ -215,10 +221,8 @@ class PublishConverter:
         self.convert_votes(query)
         self.convert_posts(query)
 
-client = MongoClient('172.17.0.1', 27017)
-  
-publish_db = client['_CYBERWAY_gls-publish']
-cyberway_db = client['_CYBERWAY_TEST_']
-golos_db = client['Golos']
+#PublishConverter(dbs.golos_db, dbs.cyberway_gls_publish_db, dbs.cyberway_db).run({"author" : "goloscore"})
+PublishConverter(dbs.golos_db, dbs.cyberway_gls_publish_db, dbs.cyberway_db).run()   
 
-PublishConverter(golos_db, publish_db, cyberway_db).run()
+
+
