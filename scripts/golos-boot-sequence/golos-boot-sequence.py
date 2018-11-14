@@ -10,6 +10,10 @@ import subprocess
 import sys
 import time
 
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+from config import golos_curation_func_str
+from utils import fixp_max
+
 args = None
 logFile = None
 
@@ -258,11 +262,10 @@ def createWitnessAccounts():
         voteWitness('gls.ctrl', a['name'], a['name'], 10000)
         
 def initCommunity():
-    bignum=500*1000*1000*1000
     retry(args.cleos + 'push action gls.emit start ' + jsonArg([args.token]) + '-p gls.publish')
     retry(args.cleos + 'push action gls.publish setrules ' + jsonArg({
-        "mainfunc":{"str":"x","maxarg":bignum},
-        "curationfunc":{"str":"sqrt(x)","maxarg":bignum},
+        "mainfunc":{"str":"x","maxarg":fixp_max},
+        "curationfunc":{"str":golos_curation_func_str,"maxarg":fixp_max},
         "timepenalty":{"str":"x/1800","maxarg":1800},
         "curatorsprop":2500,
         "maxtokenprop":5000,
