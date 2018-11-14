@@ -38,8 +38,7 @@ class PublishConverter:
 
     def fill_exists_accs(self):
         cw_accounts = self.cyberway_db['account']
-        cw_accounts = cw_accounts.with_options(codec_options = bson.CodecOptions(unicode_decode_error_handler="ignore"))
-        for doc in cw_accounts.find():
+        for doc in cw_accounts.find({},{'name':1}):
             self.exists_accs.add(doc["name"])
         print("accs num = ", len(self.exists_accs))
         for a in self.exists_accs:
@@ -95,7 +94,7 @@ class PublishConverter:
                     "id": cur_mssg_id,
                     "date": int(doc["last_update"].timestamp()) * 1000000,
                     "parentacc": "" if orphan_comment else doc["parent_author"],
-                    "parent_id": 0  if orphan_comment else utils.convert_hash(doc["parent_permlink"]),
+                    "parent_id": 0  if (orphan_comment and len(doc["parent_permlink"]) > 0) else utils.convert_hash(doc["parent_permlink"]),
                     "tokenprop": utils.get_prop_raw(doc["percent_steem_dollars"] / 2),
                     "beneficiaries": [],
                     "rewardweight": utils.get_prop_raw(doc["reward_weight"]),
