@@ -42,3 +42,7 @@ def printProgressBar (iteration, total, prefix = '', suffix = '', decimals = 1, 
     print('\r%s |%s| %s%% %s' % (prefix, bar, percent, suffix), end = '\r')
     if iteration == total:
         print()
+
+def uint_to_hex_str(val, n):
+    return '0x' + hex(val)[2:].zfill(n)
+     

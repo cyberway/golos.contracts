@@ -155,8 +155,9 @@ class PublishConverter:
             print(e.args)
             print(traceback.format_exc())
         
-        pool["state"]["rshares"] = Decimal128(Decimal(rshares_sum))  # TODO: how should we store int128_t?
-        pool["state"]["rsharesfn"] = Decimal128(Decimal(rshares_sum))# TODO: --//--//--//--//--//--//--//--
+        shares_sum_str = utils.uint_to_hex_str(max(rshares_sum, 0), 32) #negative sum is almost impossible here
+        pool["state"]["rshares"] = shares_sum_str
+        pool["state"]["rsharesfn"] = shares_sum_str
         reward_pools.save(pool)
         print("...done")
         
@@ -221,7 +222,6 @@ class PublishConverter:
 
 #PublishConverter(dbs.golos_db, dbs.cyberway_gls_publish_db, dbs.cyberway_db).run({"author" : "goloscore"})
 PublishConverter(dbs.golos_db, dbs.cyberway_gls_publish_db, dbs.cyberway_db).run()   
-
 
 
 
