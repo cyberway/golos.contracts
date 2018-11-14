@@ -16,7 +16,7 @@ def create_tags(metadata_tags):
     tags = []
     for tag in metadata_tags or []:
         tag_obj = {
-            "tag_name": tag
+            "tag": tag
         }
         tags.append(tag_obj)
 
@@ -38,7 +38,7 @@ class PublishConverter:
 
     def fill_exists_accs(self):
         cw_accounts = self.cyberway_db['account']
-        for doc in cw_accounts.find():
+        for doc in cw_accounts.find({},{'name':1}):
             self.exists_accs.add(doc["name"])
         print("accs num = ", len(self.exists_accs))
         for a in self.exists_accs:
@@ -77,7 +77,7 @@ class PublishConverter:
                     "absshares": utils.get_fixp_raw(doc["abs_rshares"]),
                     "netshares": cur_rshares_raw,
                     "voteshares": utils.get_fixp_raw(doc["vote_rshares"]),
-                    "sumcuratorsw": self.mssgs_curatorsw[(doc["author"], cur_mssg_id.bid)]
+                    "sumcuratorsw": self.mssgs_curatorsw[(doc["author"], cur_mssg_id)]
                 }
             
                 isClosedMessage = True
@@ -92,11 +92,11 @@ class PublishConverter:
 
                 message = {
                     "id": cur_mssg_id,
-                    "date": doc["last_update"],
+                    "date": int(doc["last_update"].timestamp()) * 1000000,
                     "parentacc": "" if orphan_comment else doc["parent_author"],
-                    "parent_id": 0  if orphan_comment else utils.convert_hash(doc["parent_permlink"]),
+                    "parent_id": 0  if (orphan_comment or (not len(doc["parent_permlink"]) > 0)) else utils.convert_hash(doc["parent_permlink"]),
                     "tokenprop": utils.get_prop_raw(doc["percent_steem_dollars"] / 2),
-                    "beneficiaries": "",
+                    "beneficiaries": [],
                     "rewardweight": utils.get_prop_raw(doc["reward_weight"]),
                     "state": messagestate,
                     "childcount": doc["children"],
@@ -105,7 +105,7 @@ class PublishConverter:
                                                                     # but we only use level for comments nesting limits, 
                                                                     # so it seems that this is not a problem
                     "_SCOPE_": doc["author"],
-                    "_PAYER_": "gls.publish",
+                    "_PAYER_": doc["author"],
                     "_SIZE_": 50
                 }
                 self.publish_tables.message.append(message)
@@ -135,7 +135,7 @@ class PublishConverter:
                     "tags": tags,
                     "jsonmetadata": doc["json_metadata"],
                     "_SCOPE_": doc["author"],
-                    "_PAYER_": "gls.publish",
+                    "_PAYER_": doc["author"],
                     "_SIZE_": 50
                 }
                 self.publish_tables.content.append(content)
@@ -187,17 +187,17 @@ class PublishConverter:
                     "message_id" : cur_mssg_id,
                     "voter" : doc["voter"],
                     "weight" : doc["vote_percent"],
-                    "time" : doc["last_update"],
-                    "count" : 0,
+                    "time" : int(doc["last_update"].timestamp()) * 1000000,
+                    "count" : doc["num_changes"],
                     "curatorsw": doc["weight"] / 2,
                     "_SCOPE_" : doc["author"],
-                    "_PAYER_" : "gls.publish",
+                    "_PAYER_" : doc["author"],
                     "_SIZE_" : 50
                 }
 
                 self.publish_tables.vote.append(vote)
 
-                self.mssgs_curatorsw[(doc["author"], cur_mssg_id.bid)] += vote["curatorsw"]
+                self.mssgs_curatorsw[(doc["author"], cur_mssg_id)] += vote["curatorsw"]
 
                 if added % self.cache_period == 0:
                     print("votes converted -- ", added)
