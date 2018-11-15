@@ -22,7 +22,8 @@ def create_witness(doc, exist_accounts):
             continue
         if not vote["account"] in exist_accounts:
             continue
-        
+        if vote["account"] in acc_list:
+            continue
         acc_list.append(vote["account"])
     for acc in acc_list:
         total_weight += cyberway.vesting.table.find_one({"_SCOPE_":acc})["vesting"]["amount"]
@@ -63,6 +64,8 @@ def convert_witnesses():
             if "removed" in vote.keys():
                 continue
             if not vote["witness"] in exist_accounts:
+                continue
+            if vote["witness"] in witnesses_list:
                 continue
             witnesses_list.append(vote["witness"])
         if len(witnesses_list):
