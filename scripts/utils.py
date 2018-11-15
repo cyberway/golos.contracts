@@ -6,6 +6,7 @@ fract_digits = {
     'fixp': 12,
     'elaf': 62
 }
+fixp_max = 2**(63 - fract_digits['fixp']) - 1
 
 import hashlib
 from decimal import Decimal

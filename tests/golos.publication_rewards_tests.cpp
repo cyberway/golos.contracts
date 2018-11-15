@@ -23,6 +23,12 @@ double log2(double arg) {
     return log(arg) / log(2.0);
 }
 
+namespace golos_curation {
+constexpr int64_t _2s = 2 * 2000000000000;
+constexpr int64_t _m = std::numeric_limits<fixp_t>::max();
+std::string func_str = std::to_string(_m) + " / ((" + std::to_string(_2s) + " / max(x, 0.1)) + 1)";
+auto func = [](double x){ return static_cast<double>(_m) / ((static_cast<double>(_2s) / std::max(x, 0.000000000001)) + 1.0); };
+}
 
 class extended_tester : public golos_tester {
     using golos_tester::golos_tester;
@@ -629,7 +635,6 @@ BOOST_FIXTURE_TEST_CASE(limits_test, reward_calcs_tester) try {
         BOOST_CHECK_EQUAL(success(), create_message(N(bob), "comment" + std::to_string(i), N(bob), "permlink"));
     }
     BOOST_CHECK_EQUAL(err.limit_no_power, create_message(N(bob), "oops", N(bob), "permlink"));
-    BOOST_CHECK_EQUAL(err.limit_no_power, create_message(N(bob), "oops", N(bob), "permlink"));  // Why duplicate?
     BOOST_CHECK_EQUAL(success(), create_message(N(bob), "I can pay for posting", N(), "", {}, 5000, true));
     BOOST_CHECK_EQUAL(err.limit_no_power_vest,
         create_message(N(bob), "only if it is not a comment", N(bob), "permlink", {}, 5000, true));
@@ -674,6 +679,36 @@ BOOST_FIXTURE_TEST_CASE(rshares_sum_overflow_test, reward_calcs_tester) try {
         BOOST_CHECK_EQUAL(success(), addvote(_users[i], _users[i], "permlink", 10000));
         check();
     }
+} FC_LOG_AND_RETHROW()
+
+BOOST_FIXTURE_TEST_CASE(golos_curation_test, reward_calcs_tester) try {
+    BOOST_TEST_MESSAGE("golos_curation_test");
+    int64_t maxfp = std::numeric_limits<fixp_t>::max();
+    auto bignum = 500000000000;
+    init(bignum, 500000);
+    step();
+    BOOST_TEST_MESSAGE("--- setrules");
+    using namespace golos_curation;
+    BOOST_CHECK_EQUAL(success(), setrules({"x", maxfp}, {golos_curation::func_str, maxfp}, {"1", bignum}, 2500,
+        [](double x){ return x; }, golos_curation::func, [](double x){ return 1.0; }));
+    check();
+
+    BOOST_TEST_MESSAGE("--- add_funds_to_forum");
+    BOOST_CHECK_EQUAL(success(), add_funds_to_forum(50000));
+    check();
+    
+    BOOST_TEST_MESSAGE("--- create_message: " << name{_users[0]}.to_string());
+    BOOST_CHECK_EQUAL(success(), create_message(_users[0], "permlink"));
+    check();
+    
+    for (size_t i = 0; i < 10; i++) {
+        BOOST_TEST_MESSAGE("--- " << name{_users[i]}.to_string() << " voted");
+        BOOST_CHECK_EQUAL(success(), addvote(_users[i], _users[0], "permlink", 10000));
+        check();
+    }
+    run(seconds(170));
+    check();
+    
 } FC_LOG_AND_RETHROW()
 
 BOOST_AUTO_TEST_SUITE_END()
