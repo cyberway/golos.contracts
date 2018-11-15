@@ -7,6 +7,7 @@
 #include "../golos.publication/config.hpp"
 #include "contracts.hpp"
 
+using namespace golos;
 using namespace fixed_point_utils;
 using namespace eosio::chain;
 using namespace eosio::testing;
@@ -103,7 +104,7 @@ public:
 protected:
     const mvo _test_msg = mvo()
         ("id", hash64("permlink"))
-        ("date", 1577836836000000ull)
+        ("date", 1577836818000000ull)
         ("parentacc", "")
         ("parent_id", 0)
         ("tokenprop", 0)
@@ -134,11 +135,10 @@ protected:
         const string delete_children    = amsg("You can't delete comment with child comments.");
         const string no_message         = amsg("Message doesn't exist.");
         const string vote_same_weight   = amsg("Vote with the same weight has already existed.");
-        const string vote_weight_le0    = amsg("The weight must be positive.");
-        const string vote_weight_gt100  = amsg("The weight can't be more than 100%.");
+        const string vote_weight_0      = amsg("weight can't be 0.");
+        const string vote_weight_gt100  = amsg("weight can't be more than 100%.");
         const string no_revote          = amsg("You can't revote anymore.");
         const string upvote_near_close  = amsg("You can't upvote, because publication will be closed soon.");
-        const string vote_weight_sign   = amsg("The weight sign can't be negative.");
         const string max_comment_depth  = amsg("publication::create_message: level > MAX_COMMENT_DEPTH");
     } err;
 };
@@ -151,19 +151,19 @@ BOOST_FIXTURE_TEST_CASE(create_message, golos_publication_tester) try {
     init();
     BOOST_CHECK_EQUAL(success(), post.create_msg(N(brucelee), "permlink"));
 
-    BOOST_TEST_MESSAGE("Checking that another user can create a message with the same permlink.");
+    BOOST_TEST_MESSAGE("--- checking that another user can create a message with the same permlink.");
     BOOST_CHECK_EQUAL(success(), post.create_msg(N(chucknorris), "permlink"));
 
     auto id = hash64("permlink");
     check_equal_post(post.get_message(N(brucelee), id), _test_msg);
     check_equal_content(post.get_content(N(brucelee), id), _test_content);
 
-    BOOST_TEST_MESSAGE("Checking that message wasn't closed.");
-    produce_blocks(cfg::CLOSE_MESSAGE_PERIOD*2-2);   // TODO: time to blocks
+    BOOST_TEST_MESSAGE("--- checking that message wasn't closed.");
+    produce_blocks(seconds_to_blocks(cfg::cashout_window));
     auto msg = post.get_message(N(brucelee), id);
     BOOST_CHECK_EQUAL(msg["closed"].as<bool>(), false);
 
-    BOOST_TEST_MESSAGE("Checking that message was closed.");
+    BOOST_TEST_MESSAGE("--- checking that message was closed.");
     produce_block();
     msg = post.get_message(N(brucelee), id);
     BOOST_CHECK_EQUAL(msg["closed"].as<bool>(), true);
@@ -216,123 +216,127 @@ BOOST_FIXTURE_TEST_CASE(upvote, golos_publication_tester) try {
     BOOST_TEST_MESSAGE("Upvote testing.");
     init();
 
-    BOOST_CHECK_EQUAL(success(), post.create_msg(N(brucelee), "permlink"));
-    BOOST_CHECK_EQUAL(success(), post.upvote(N(brucelee), N(brucelee), "permlink", 123));
-    produce_blocks(cfg::VOTE_OPERATION_INTERVAL*2);
-    BOOST_CHECK_EQUAL(err.vote_same_weight, post.upvote(N(brucelee), N(brucelee), "permlink", 123));
-    BOOST_CHECK_EQUAL(err.no_message, post.upvote(N(brucelee), N(jackiechan), "permlink", 111));
-    BOOST_CHECK_EQUAL(err.vote_weight_le0, post.upvote(N(brucelee), N(brucelee), "permlink", -333));    // why we need int instead of uint?
-    BOOST_CHECK_EQUAL(err.vote_weight_sign, post.upvote(N(brucelee), N(brucelee), "permlink", 0));
-    BOOST_CHECK_EQUAL(success(), post.upvote(N(brucelee), N(brucelee), "permlink", cfg::_100percent));
-    produce_blocks(cfg::VOTE_OPERATION_INTERVAL*2);
-    BOOST_CHECK_EQUAL(err.vote_weight_gt100, post.upvote(N(brucelee), N(brucelee), "permlink", cfg::_100percent+1));
+    auto permlink = "permlink";
+    auto vote_brucelee = [&](auto weight){ return post.upvote(N(brucelee), N(brucelee), permlink, weight); };
+    auto vote_jackie = [&](auto weight){ return post.upvote(N(jackiechan), N(brucelee), permlink, weight); };
 
-    BOOST_CHECK_EQUAL(success(), post.upvote(N(jackiechan), N(brucelee), "permlink", 111));
-    produce_blocks(cfg::VOTE_OPERATION_INTERVAL*2);
-    BOOST_CHECK_EQUAL(success(), post.upvote(N(jackiechan), N(brucelee), "permlink", 222));
-    produce_blocks(cfg::VOTE_OPERATION_INTERVAL*2);
-    BOOST_CHECK_EQUAL(success(), post.upvote(N(jackiechan), N(brucelee), "permlink", 333));
-    produce_blocks(cfg::VOTE_OPERATION_INTERVAL*2);
-    BOOST_CHECK_EQUAL(success(), post.upvote(N(jackiechan), N(brucelee), "permlink", 444));
-    produce_blocks(cfg::VOTE_OPERATION_INTERVAL*2);
-    BOOST_CHECK_EQUAL(success(), post.upvote(N(jackiechan), N(brucelee), "permlink", 555));
-    produce_blocks(cfg::VOTE_OPERATION_INTERVAL*2);
+    BOOST_TEST_MESSAGE("--- fail on non-existing message");
+    BOOST_CHECK_EQUAL(err.no_message, vote_brucelee(123));
+    BOOST_TEST_CHECK(post.get_vote(N(brucelee), 1).is_null());
 
-    auto vote = post.get_vote(N(brucelee), 1);
-    BOOST_CHECK_EQUAL(vote["count"].as<int64_t>(), 5);
-
-    BOOST_CHECK_EQUAL(err.no_revote, post.upvote(N(jackiechan), N(brucelee), "permlink", 777));
-    produce_blocks(cfg::CLOSE_MESSAGE_PERIOD*2 - cfg::VOTE_OPERATION_INTERVAL*2*12-6);
-
-    BOOST_CHECK_EQUAL(success(), post.upvote(N(jackiechan), N(brucelee), "permlink", 777));
-    vote = post.get_vote(N(brucelee), 1);
-    BOOST_CHECK_EQUAL(vote["count"].as<int64_t>(), -1);
-} FC_LOG_AND_RETHROW()
-
-BOOST_FIXTURE_TEST_CASE(disable_upvote, golos_publication_tester) try {
-    BOOST_TEST_MESSAGE("Disable upvote testing.");
-    init();
-
-    BOOST_CHECK_EQUAL(success(), post.create_msg(N(brucelee), "permlink"));
-    produce_blocks((cfg::CLOSE_MESSAGE_PERIOD - cfg::UPVOTE_DISABLE_PERIOD)*2-1);
-
-    BOOST_CHECK_EQUAL(success(), post.upvote(N(brucelee), N(brucelee), "permlink", 888));
-    produce_blocks(2);
-    BOOST_CHECK_EQUAL(err.upvote_near_close, post.upvote(N(jackiechan), N(brucelee), "permlink", 777));
-    produce_blocks(cfg::UPVOTE_DISABLE_PERIOD*2-3);
-    BOOST_CHECK_EQUAL(err.upvote_near_close, post.upvote(N(brucelee), N(brucelee), "permlink", 777));
+    BOOST_TEST_MESSAGE("--- succeed on initial upvote");
+    BOOST_CHECK_EQUAL(success(), post.create_msg(N(brucelee), permlink));
+    BOOST_CHECK_EQUAL(success(), vote_brucelee(123));
+    auto _vote = mvo()("id",0)("message_id",hash64(permlink))("voter","brucelee")("count",1);   // TODO: time
+    CHECK_MATCHING_OBJECT(post.get_vote(N(brucelee), 0), _vote);
     produce_block();
-    BOOST_CHECK_EQUAL(success(), post.upvote(N(jackiechan), N(brucelee), "permlink", 888));
+
+    BOOST_TEST_MESSAGE("--- fail on same or wrong weight");
+    BOOST_CHECK_EQUAL(err.vote_same_weight, vote_brucelee(123));
+    BOOST_CHECK_EQUAL(err.vote_weight_0, vote_brucelee(0));
+    BOOST_CHECK_EQUAL(err.vote_weight_gt100, vote_brucelee(cfg::_100percent+1));
+
+    BOOST_TEST_MESSAGE("--- succeed on revote with different weight");
+    BOOST_CHECK_EQUAL(success(), vote_brucelee(cfg::_100percent));
+
+    BOOST_TEST_MESSAGE("--- succeed max_vote_changes revotes and fail on next vote");
+    for (auto i = 0; i < cfg::max_vote_changes; i++) {
+        BOOST_CHECK_EQUAL(success(), vote_jackie(i+1));
+        produce_block();
+    }
+    _vote = mvo(_vote)("id", 1)("voter", "jackiechan");
+    CHECK_MATCHING_OBJECT(post.get_vote(N(brucelee), 1), mvo(_vote)("count", cfg::max_vote_changes));
+    BOOST_CHECK_EQUAL(err.no_revote, vote_jackie(cfg::_100percent));
+    produce_blocks(seconds_to_blocks(cfg::cashout_window - cfg::upvote_lockout) - cfg::max_vote_changes - 1);
+    BOOST_CHECK_EQUAL(err.no_revote, vote_jackie(cfg::_100percent));
+
+    BOOST_TEST_MESSAGE("--- fail while upvote lockout");
+    produce_block();
+    BOOST_CHECK_EQUAL(err.upvote_near_close, vote_jackie(cfg::_100percent));
+    produce_blocks(seconds_to_blocks(cfg::upvote_lockout) - 1);
+    BOOST_CHECK_EQUAL(err.upvote_near_close, vote_jackie(cfg::_100percent));
+
+    BOOST_TEST_MESSAGE("--- succeed vote after cashout");
+    produce_block();
+    BOOST_CHECK_EQUAL(success(), vote_jackie(cfg::_100percent));
+    CHECK_MATCHING_OBJECT(post.get_vote(N(brucelee), 1), mvo(_vote)("count", -1));
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE(downvote, golos_publication_tester) try {
     BOOST_TEST_MESSAGE("Downvote testing.");
     init();
+    auto permlink = "permlink";
+    auto vote_brucelee = [&](auto weight){ return post.downvote(N(brucelee), N(brucelee), permlink, weight); };
+    auto vote_jackie = [&](auto weight){ return post.downvote(N(jackiechan), N(brucelee), permlink, weight); };
 
-    BOOST_CHECK_EQUAL(success(), post.create_msg(N(brucelee), "permlink"));
-    BOOST_CHECK_EQUAL(success(), post.downvote(N(brucelee), N(brucelee), "permlink", 123));
-    produce_blocks(cfg::VOTE_OPERATION_INTERVAL*2);
+    BOOST_TEST_MESSAGE("--- fail on non-existing message");
+    BOOST_CHECK_EQUAL(err.no_message, vote_brucelee(123));
+    BOOST_TEST_CHECK(post.get_vote(N(brucelee), 1).is_null());
 
-    BOOST_CHECK_EQUAL(err.vote_same_weight, post.downvote(N(brucelee), N(brucelee), "permlink", 123));
-    BOOST_CHECK_EQUAL(err.no_message, post.downvote(N(brucelee), N(jackiechan), "permlink", 111));
-    BOOST_CHECK_EQUAL(err.vote_weight_le0, post.downvote(N(brucelee), N(brucelee), "permlink", -333));
-    BOOST_CHECK_EQUAL(err.vote_weight_sign, post.downvote(N(brucelee), N(brucelee), "permlink", 0));
-    BOOST_CHECK_EQUAL(success(), post.downvote(N(brucelee), N(brucelee), "permlink", cfg::_100percent));
-    produce_blocks(cfg::VOTE_OPERATION_INTERVAL*2);
+    BOOST_TEST_MESSAGE("--- succeed on initial downvote");
+    BOOST_CHECK_EQUAL(success(), post.create_msg(N(brucelee), permlink));
+    BOOST_CHECK_EQUAL(success(), vote_brucelee(123));
+    auto _vote = mvo()("id",0)("message_id",hash64(permlink))("voter","brucelee")("count",1);   // TODO: time
+    CHECK_MATCHING_OBJECT(post.get_vote(N(brucelee), 0), _vote);
+    produce_block();
 
-    BOOST_CHECK_EQUAL(err.vote_weight_gt100, post.downvote(N(brucelee), N(brucelee), "permlink", cfg::_100percent+1));
-    BOOST_CHECK_EQUAL(success(), post.downvote(N(jackiechan), N(brucelee), "permlink", 111));
-    produce_blocks(cfg::VOTE_OPERATION_INTERVAL*2);
-    BOOST_CHECK_EQUAL(success(), post.downvote(N(jackiechan), N(brucelee), "permlink", 222));
-    produce_blocks(cfg::VOTE_OPERATION_INTERVAL*2);
-    BOOST_CHECK_EQUAL(success(), post.downvote(N(jackiechan), N(brucelee), "permlink", 333));
-    produce_blocks(cfg::VOTE_OPERATION_INTERVAL*2);
-    BOOST_CHECK_EQUAL(success(), post.downvote(N(jackiechan), N(brucelee), "permlink", 444));
-    produce_blocks(cfg::VOTE_OPERATION_INTERVAL*2);
-    BOOST_CHECK_EQUAL(success(), post.downvote(N(jackiechan), N(brucelee), "permlink", 555));
-    produce_blocks(cfg::VOTE_OPERATION_INTERVAL*2);
+    BOOST_TEST_MESSAGE("--- fail on same or wrong weight");
+    BOOST_CHECK_EQUAL(err.vote_same_weight, vote_brucelee(123));
+    BOOST_CHECK_EQUAL(err.vote_weight_0, vote_brucelee(0));
+    BOOST_CHECK_EQUAL(err.vote_weight_gt100, vote_brucelee(cfg::_100percent+1));
 
-    auto vote = post.get_vote(N(brucelee), 1);
-    BOOST_CHECK_EQUAL(vote["count"].as<int64_t>(), 5);
-    BOOST_CHECK_EQUAL(err.no_revote, post.downvote(N(jackiechan), N(brucelee), "permlink", 777));
+    BOOST_TEST_MESSAGE("--- succeed on revote with different weight");
+    BOOST_CHECK_EQUAL(success(), vote_brucelee(cfg::_100percent));
 
-    produce_blocks(cfg::CLOSE_MESSAGE_PERIOD*2);
-    BOOST_CHECK_EQUAL(success(), post.downvote(N(jackiechan), N(brucelee), "permlink", 777));
-    vote = post.get_vote(N(brucelee), 1);
-    BOOST_CHECK_EQUAL(vote["count"].as<int64_t>(), -1);
+    BOOST_TEST_MESSAGE("--- succeed max_vote_changes revotes and fail on next vote");
+    for (auto i = 0; i < cfg::max_vote_changes; i++) {
+        BOOST_CHECK_EQUAL(success(), vote_jackie(i+1));
+        produce_block();
+    }
+    _vote = mvo(_vote)("id", 1)("voter", "jackiechan");
+    CHECK_MATCHING_OBJECT(post.get_vote(N(brucelee), 1), mvo(_vote)("count", cfg::max_vote_changes));
+    BOOST_CHECK_EQUAL(err.no_revote, vote_jackie(cfg::_100percent));
+
+    BOOST_TEST_MESSAGE("--- succeed vote after cashout");
+    produce_blocks(seconds_to_blocks(cfg::cashout_window) - cfg::max_vote_changes - 1);
+    BOOST_CHECK_EQUAL(err.no_revote, vote_jackie(cfg::_100percent));
+    produce_block();
+    BOOST_CHECK_EQUAL(success(), vote_jackie(cfg::_100percent));
+    CHECK_MATCHING_OBJECT(post.get_vote(N(brucelee), 1), mvo(_vote)("count", -1));
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE(unvote, golos_publication_tester) try {
     BOOST_TEST_MESSAGE("Unvote testing.");
     init();
 
+    BOOST_CHECK_EQUAL(err.no_message, post.unvote(N(brucelee), N(brucelee), "permlink"));
+
     // TODO: test fail on initial unvote
     BOOST_CHECK_EQUAL(success(), post.create_msg(N(brucelee), "permlink"));
     BOOST_CHECK_EQUAL(success(), post.upvote(N(brucelee), N(brucelee), "permlink", 123));
-    produce_blocks(cfg::VOTE_OPERATION_INTERVAL*2);
+    produce_block();
     BOOST_CHECK_EQUAL(success(), post.unvote(N(brucelee), N(brucelee), "permlink"));
-
+    produce_block();
     BOOST_CHECK_EQUAL(success(), post.downvote(N(brucelee), N(brucelee), "permlink", 333));
-    produce_blocks(cfg::VOTE_OPERATION_INTERVAL*2);
+    produce_block();
     BOOST_CHECK_EQUAL(success(), post.unvote(N(brucelee), N(brucelee), "permlink"));
+    produce_block();
 
-    produce_blocks(cfg::VOTE_OPERATION_INTERVAL*2);
     BOOST_CHECK_EQUAL(err.vote_same_weight, post.unvote(N(brucelee), N(brucelee), "permlink"));
-    BOOST_CHECK_EQUAL(err.no_message, post.unvote(N(brucelee), N(jackiechan), "permlink1"));
-    produce_blocks(cfg::VOTE_OPERATION_INTERVAL*2);
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE(mixed_vote_test, golos_publication_tester) try {
     BOOST_TEST_MESSAGE("Mixed vote testing.");
     init();
 
+    BOOST_TEST_MESSAGE("--- test that each vote type increases votes count");
     BOOST_CHECK_EQUAL(success(), post.create_msg(N(brucelee), "permlink"));
     BOOST_CHECK_EQUAL(success(), post.downvote(N(brucelee), N(brucelee), "permlink", 123));
-    produce_blocks(cfg::VOTE_OPERATION_INTERVAL*2);
+    produce_block();
+    BOOST_CHECK_EQUAL(success(), post.unvote(N(brucelee), N(brucelee), "permlink"));
+    produce_block();
     BOOST_CHECK_EQUAL(success(), post.upvote(N(brucelee), N(brucelee), "permlink", 321));
-    produce_blocks(cfg::VOTE_OPERATION_INTERVAL*2);
-    BOOST_CHECK_EQUAL(success(), post.downvote(N(brucelee), N(brucelee), "permlink", 333));
-    produce_blocks(cfg::VOTE_OPERATION_INTERVAL*2);
+    produce_block();
 
     auto vote = post.get_vote(N(brucelee), 0);
     BOOST_CHECK_EQUAL(vote["count"].as<uint64_t>(), 3);
@@ -356,11 +360,10 @@ BOOST_FIXTURE_TEST_CASE(nesting_level_test, golos_publication_tester) try {
     init();
     BOOST_CHECK_EQUAL(success(), post.create_msg(N(brucelee), "permlink0"));
     size_t i = 0;
-    for (; i < cfg::MAX_COMMENT_DEPTH; i++) {
+    for (; i < cfg::max_comment_depth; i++) {
         BOOST_CHECK_EQUAL(success(), post.create_msg(
             N(brucelee), "permlink" + std::to_string(i+1),
             N(brucelee), "permlink" + std::to_string(i)));
-        // produce_blocks(7);
     }
     BOOST_CHECK_EQUAL(err.max_comment_depth, post.create_msg(
         N(brucelee), "permlink" + std::to_string(i+1),

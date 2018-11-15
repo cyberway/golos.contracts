@@ -88,32 +88,27 @@ struct golos_posting_api: base_contract_api {
         );
     }
 
-    action_result upvote(account_name voter, account_name author, std::string permlink, int32_t weight) {
-        return vote(voter, author, permlink, weight);
-    }
-    action_result downvote(account_name voter, account_name author, std::string permlink, int32_t weight) {
-        return vote(voter, author, permlink, -static_cast<int32_t>(weight));
-    }
-    action_result unvote(account_name voter, account_name author, std::string permlink) {
-        return vote(voter, author, permlink, 0);
-    }
-
-    action_result vote(account_name voter, account_name author, std::string permlink, int32_t weight) {
-        BOOST_REQUIRE_MESSAGE(weight >= -32768 && weight < 32768,
-            "Test is broken, action cannot be serialized with such weight");
-        auto act = N(upvote);
-        uint16_t w = weight;
-        if (weight == 0) {
-            act = N(unvote);
-        } else if (weight < 0) {
-            act = N(downvote);
-            w = -weight;
-        }
-        return push(act, voter, args()
+    action_result upvote(account_name voter, account_name author, std::string permlink, uint16_t weight) {
+        return push(N(upvote), voter, args()
             ("voter", voter)
             ("author", author)
             ("permlink", permlink)
-            ("weight", w)
+            ("weight", weight)
+        );
+    }
+    action_result downvote(account_name voter, account_name author, std::string permlink, uint16_t weight) {
+        return push(N(downvote), voter, args()
+            ("voter", voter)
+            ("author", author)
+            ("permlink", permlink)
+            ("weight", weight)
+        );
+    }
+    action_result unvote(account_name voter, account_name author, std::string permlink) {
+        return push(N(unvote), voter, args()
+            ("voter", voter)
+            ("author", author)
+            ("permlink", permlink)
         );
     }
 
@@ -144,23 +139,6 @@ struct golos_posting_api: base_contract_api {
     }
     mvo fn_to_mvo(const funcparams& fn) {
         return make_mvo_fn(fn.str, fn.maxarg);
-    }
-
-
-    asset make_asset(double x = 0, symbol sym = symbol(0)) const {
-        if (sym == symbol(0)) sym = _symbol;
-        return asset(x * sym.precision(), sym);
-    }
-    string asset_str(double x = 0) {
-        return make_asset(x).to_string();
-    }
-
-    variant make_balance(double vesting, double delegated = 0, double received = 0, double unlocked = 0) {
-        return mvo()
-            ("vesting", asset_str(vesting))
-            ("delegate_vesting", asset_str(delegated))
-            ("received_vesting", asset_str(received))
-            ("unlocked_limit", asset_str(unlocked));
     }
 
 };

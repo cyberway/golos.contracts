@@ -24,7 +24,7 @@
  ** *********************************************************************** **/
 namespace atmsp
 {
-    
+
 struct memory_info
 {
     size_t operations;
@@ -32,7 +32,7 @@ struct memory_info
     size_t nums;
     size_t vars;
     size_t cons;
-};    
+};
 
 constexpr memory_info SIZE { 64, 64, 16, 8, 4 };
 
@@ -79,12 +79,12 @@ struct machine {
 
     void pmax()const   { T t(_stk.pop()); if (t > _stk.top()) _stk.set_top(t); }
     void pmin()const   { T t(_stk.pop()); if (t < _stk.top()) _stk.set_top(t); }
-    void psig()const   { 
-        _stk.top() > 0 ? 
-                _stk.set_top(static_cast<T>(1)) : 
-                _stk.top() < static_cast<T>(0) ? 
+    void psig()const   {
+        _stk.top() > 0 ?
+                _stk.set_top(static_cast<T>(1)) :
+                _stk.top() < static_cast<T>(0) ?
                         _stk.set_top(static_cast<T>(-1)) :
-                         _stk.set_top(static_cast<T>(0)); 
+                         _stk.set_top(static_cast<T>(0));
     }
 
     void pfloor()const { eosio_assert(false, "atmsp::machine: nsupported operator pfloor"); }
@@ -99,63 +99,63 @@ struct machine {
             &machine<T>::ppow,   &machine<T>::ppow2,  &machine<T>::ppow3, &machine<T>::ppow4,
             &machine<T>::psin,   &machine<T>::pcos,   &machine<T>::ptan,  &machine<T>::psinh,
             &machine<T>::ptanh,  &machine<T>::pcosh,  &machine<T>::pexp,  &machine<T>::plog,
-            &machine<T>::plog10, &machine<T>::plog2,  &machine<T>::pasin, &machine<T>::pacos, 
-            &machine<T>::patan,  &machine<T>::patan2, &machine<T>::pmax,  &machine<T>::pmin,  
+            &machine<T>::plog10, &machine<T>::plog2,  &machine<T>::pasin, &machine<T>::pacos,
+            &machine<T>::patan,  &machine<T>::patan2, &machine<T>::pmax,  &machine<T>::pmin,
             &machine<T>::psig,   &machine<T>::pfloor, &machine<T>::pround
     }};
-    
+
 private:
 
-    template <size_t maxSize>   
+    template <size_t maxSize>
     class flat_stack {
-                
+
         std::array<T, maxSize> _data;
-        size_t _sp; 
-               
-    public:    
+        size_t _sp;
+
+    public:
         flat_stack() : _sp(0) {}
         void clear() { _sp = 0; }
 
         void push( T const &elem ) {
             eosio_assert(_sp < (maxSize - 1), "atmsp::machine: stack overflow");
-            _data[(++_sp) - 1] = elem; 
+            _data[(++_sp) - 1] = elem;
         }
-        
+
         T pop() {
             eosio_assert(_sp > 0, "atmsp::machine::Stack::pop(): empty stack");
-            return _data[(_sp--) - 1]; 
+            return _data[(_sp--) - 1];
         }
 
         T top()const {
             eosio_assert(_sp > 0, "atmsp::machine::Stack::top(): empty stack");
-            return _data[_sp - 1]; 
+            return _data[_sp - 1];
         }
-        
+
         void set_top(T const &elem) {
             eosio_assert(_sp > 0, "atmsp::machine::Stack::set_top(): empty stack");
-            _data[_sp - 1] = elem; 
+            _data[_sp - 1] = elem;
         }
     };
-    
+
     mutable flat_stack<SIZE.operations> _stk;
     mutable size_t _val_idx;
-    
-public:  
+
+public:
 
     std::array<basic_operator, SIZE.operations> fun;
     memory_info used_mem;
     /// All num, var and con values are consecutively mapped into the val-array.
     /// So in run() the bytecode operators work on the val-array only
-    std::array<T*, SIZE.values> val;        
+    std::array<T*, SIZE.values> val;
     std::array<T, SIZE.nums> num;
     std::array<T, SIZE.vars> var;
     std::array<T, SIZE.cons> con;
-       
+
     /// Bytecode execution
     T run()const {
-        _stk.clear(); 
+        _stk.clear();
         _val_idx = 0;
-        for (size_t i = 0; i < used_mem.operations; i++) 
+        for (size_t i = 0; i < used_mem.operations; i++)
             (*this.*fun[i])();
         return _stk.top();
     }
@@ -193,7 +193,7 @@ class parser {
         bool operator == (const const_t &ct)const { return name == ct.name; }
     };
 
-    /// Recursive bytecode generation   
+    /// Recursive bytecode generation
     void expression(machine<T> &bc)const;    // Handle expression as 1.st recursion level
     void term(machine<T> &bc)const;          // Handle terms as 2.nd recursion level
     void factor(machine<T> &bc)const;        // Handle factors as last recursion level
@@ -201,26 +201,26 @@ class parser {
     /// Little helper functions
     static bool is_var(const char* cp);  // Variable detection
     std::string skip_alpha_num()const;   // Variable/constant extraction
- 
+
     template <typename V, size_t maxSize>
     struct flat_list {
         size_t _count;
         std::array<V, maxSize> _data;
-        
+
         const V &operator [] (const size_t idx)const {
-            eosio_assert(idx < _count, "atmsp::parser:list wrong index"); 
-            return _data[idx]; 
+            eosio_assert(idx < _count, "atmsp::parser:list wrong index");
+            return _data[idx];
         }
-        
+
         V &operator [] (const size_t idx) {
-            eosio_assert(idx < _count, "atmsp::parser:list wrong index"); 
-            return _data[idx]; 
+            eosio_assert(idx < _count, "atmsp::parser:list wrong index");
+            return _data[idx];
         }
-        
+
         void clear() { _count = 0; }
-        
+
         size_t size()const { return _count; }
-             
+
         void push(V const &elem) {
             eosio_assert(_count < maxSize, "atmsp::parser: list overflow");
             _data[_count++] = elem;
@@ -232,21 +232,21 @@ class parser {
             return false;
         }
     };
- 
+
     static size_t constexpr STD_FUNCS_NUM = 21;
     static constexpr flat_list<std::string_view, STD_FUNCS_NUM> FUNC_LIST { STD_FUNCS_NUM, {{
             std::string_view("abs", 3),   std::string_view("cos", 3),   std::string_view("cosh", 4),
             std::string_view("exp", 3),   std::string_view("log", 3),   std::string_view("log10", 5),
             std::string_view("log2", 4),  std::string_view("sin", 3),   std::string_view("sinh", 4),
-            std::string_view("sqrt", 4),  std::string_view("tan", 3),   std::string_view("tanh", 4),            
+            std::string_view("sqrt", 4),  std::string_view("tan", 3),   std::string_view("tanh", 4),
             std::string_view("asin", 4),  std::string_view("acos", 4),  std::string_view("atan", 4),
             std::string_view("atan2", 5), std::string_view("max", 3),   std::string_view("min", 3),
             std::string_view("sig", 3),   std::string_view("floor", 5), std::string_view("round", 5)}
     }};
-    
-    mutable const char* _cp;                                        // Character-pointer for parsing            
+
+    mutable const char* _cp;                                        // Character-pointer for parsing
     mutable flat_list<std::string, SIZE.vars> _var_list {0, {}};    // Extracted variables from varString "x,y,.."
-    
+
     flat_list<const_t, SIZE.cons> _con_list {0, {}};
 
 public:
@@ -284,7 +284,7 @@ void parser<T>::operator()(machine<T> &bc, const std::string& exps, const std::s
     std::string es(exps), vs(vars);
     es.erase(std::remove(es.begin(), es.end(), ' '), es.end());
     vs.erase(std::remove(vs.begin(), vs.end(), ' '), vs.end());
-    if (es.empty()) 
+    if (es.empty())
         eosio_assert(false, "atmsp::parser: string is empty");
     _cp = es.c_str();
 
@@ -306,32 +306,32 @@ void parser<T>::operator()(machine<T> &bc, const std::string& exps, const std::s
             cls++;
             eosio_assert(cls <= opn, "atmsp::parser: cls > opn");
         }
-        
+
     eosio_assert(opn == cls, "atmsp::parser: cls != opn");
-    
+
     bc.used_mem = {
         .operations = 0,
         .values = 0,
         .nums = 0,
         .vars = 0,
-        .cons = _con_list.size()        
-    };   
+        .cons = _con_list.size()
+    };
 
     // Run it once for parsing and generating the bytecode
     expression(bc);
-    
+
     // No vars in expression? Evaluate at compile time then
     if (!bc.used_mem.vars) {
         bc.num[0] = bc.run();
         bc.val[0] = &bc.num[0];
         bc.fun[0] = &machine<T>::ppush;
-        
+
         bc.used_mem = {
             .operations = 1,
             .values = 1,
             .nums = 1,
             .vars = 0,
-            .cons = 0       
+            .cons = 0
         };
     }
 }
@@ -377,17 +377,17 @@ void parser<T>::factor(machine<T> &bc)const {
 
     /// Handle open parenthesis and unary operators first
     if (*_cp == '(') {
-        ++_cp; 
+        ++_cp;
         expression(bc);
         if (*_cp++ != ')')
             eosio_assert(false, "atmsp::parser: unclosed parenthesis");
     }
     else if (*_cp == '+') {
-        ++_cp; 
+        ++_cp;
         factor(bc);
     }
     else if (*_cp == '-') {
-        ++_cp; 
+        ++_cp;
         factor(bc);
         bc.fun[bc.used_mem.operations++] = &machine<T>::pchs;
     }
@@ -406,7 +406,7 @@ void parser<T>::factor(machine<T> &bc)const {
                     b *= 10;
                 a = a * 10 + d;
             }
-            _cp++;      
+            _cp++;
         }
         bc.num[bc.used_mem.nums] = (T(a) / T(b));
         bc.val[bc.used_mem.values++] = &bc.num[bc.used_mem.nums++];
@@ -426,9 +426,9 @@ void parser<T>::factor(machine<T> &bc)const {
     /// Extract variables
     else if (is_var(_cp)) {
         size_t idx;
-        if (_var_list.find(skip_alpha_num(), idx)) 
+        if (_var_list.find(skip_alpha_num(), idx))
             bc.used_mem.vars = std::max(bc.used_mem.vars, idx + 1); //sic
-        else 
+        else
             eosio_assert(false, "atmsp::parser: unknown var");
         bc.val[bc.used_mem.values++] = &bc.var[idx];
         bc.fun[bc.used_mem.operations++] = &machine<T>::ppush;
@@ -438,9 +438,9 @@ void parser<T>::factor(machine<T> &bc)const {
     else {
         size_t idx;
         // Search function and advance cp behind open parenthesis
-        if (FUNC_LIST.find(skip_alpha_num(), idx)) 
+        if (FUNC_LIST.find(skip_alpha_num(), idx))
             ++_cp;
-        else 
+        else
             eosio_assert(false, "atmsp::parser: unknown func");
 
         // Set operator function and advance cp
@@ -481,9 +481,9 @@ void parser<T>::factor(machine<T> &bc)const {
             if ( *bc.val[bc.used_mem.values-1] == (T)2.0 ) {
                 --bc.used_mem.values;
                 --bc.used_mem.nums;
-                bc.fun[bc.used_mem.operations-1] = &machine<T>::ppow2;                
+                bc.fun[bc.used_mem.operations-1] = &machine<T>::ppow2;
             }
-            else if ( *bc.val[bc.used_mem.values-1] == (T)3.0 ) {                
+            else if ( *bc.val[bc.used_mem.values-1] == (T)3.0 ) {
                 --bc.used_mem.values;
                 --bc.used_mem.nums;
                 bc.fun[bc.used_mem.operations-1] = &machine<T>::ppow3;

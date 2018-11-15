@@ -46,7 +46,7 @@ void deposit::on_transfer(account_name from,
 void deposit::sub_balance( account_name owner, asset value ) {
     balance_table table(_self, owner);
     auto iter = table.find(value.symbol.name());
-    
+
     eosio_assert(iter != table.end(), "no balance object found");
     eosio_assert(iter->quantity >= value, "overdrawn balance");
 

@@ -29,7 +29,7 @@ public:
         , token({this, cfg::token_name, _token})
     {
         create_accounts({_code, BLOG, N(witn1), N(witn2), N(witn3), N(witn4), N(witn5), _alice, _bob, _carol,
-            cfg::vesting_name, cfg::token_name, cfg::workers_name});
+            cfg::vesting_name, cfg::token_name, cfg::workers_name, cfg::emission_name});
         produce_block();
 
         install_contract(_code, contracts::ctrl_wasm(), contracts::ctrl_abi());
@@ -41,7 +41,7 @@ public:
 
 
     asset dasset(double val = 0) const {
-        return vest.make_asset(val);
+        return token.make_asset(val);
     }
 
     // constants
@@ -193,7 +193,6 @@ BOOST_FIXTURE_TEST_CASE(create_community_test, golos_ctrl_tester) try {
     BOOST_CHECK_EQUAL(err.already_created, ctrl.create(_alice, _test_props));
     auto w30 = mvo(_test_props)("max_witnesses",100);
     BOOST_CHECK_EQUAL(err.already_created, ctrl.create(BLOG, w30));
-
 } FC_LOG_AND_RETHROW()
 
 
@@ -205,12 +204,12 @@ BOOST_FIXTURE_TEST_CASE(register_witness_test, golos_ctrl_tester) try {
     BOOST_TEST_MESSAGE("--- check registration success");
     BOOST_CHECK_EQUAL(success(), ctrl.reg_witness(_w[0], _test_key, "localhost"));
     auto w = mvo()("name","witn1")("key",_test_key)("url","localhost")("active",true)("total_weight",0);
-    CHECK_EQUAL_OBJECTS(ctrl.get_witness(_w[0]), w);
+    CHECK_MATCHING_OBJECT(ctrl.get_witness(_w[0]), w);
 
     BOOST_TEST_MESSAGE("--- check properties update");
     BOOST_CHECK_EQUAL(success(), ctrl.reg_witness(_w[0], _test_key, "-"));
     BOOST_CHECK_EQUAL(err.same_reg_props, ctrl.reg_witness(_w[0], _test_key, "-"));
-    BOOST_CHECK_EQUAL(err.bad_pub_key, ctrl.reg_witness(_w[0], "", "-"));
+    // BOOST_CHECK_EQUAL(err.bad_pub_key, ctrl.reg_witness(_w[0], "", "-"));        // not needed, key will be removed
     string maxurl =
         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
@@ -223,7 +222,6 @@ BOOST_FIXTURE_TEST_CASE(register_witness_test, golos_ctrl_tester) try {
     BOOST_CHECK_EQUAL(success(), ctrl.unreg_witness(_w[0]));
     BOOST_CHECK_EQUAL(err.already_unreg, ctrl.unreg_witness(_w[0]));
     BOOST_CHECK_EQUAL(err.no_witness, ctrl.unreg_witness(_w[1]));
-
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE(vote_witness_test, golos_ctrl_tester) try {
@@ -267,7 +265,6 @@ BOOST_FIXTURE_TEST_CASE(vote_witness_test, golos_ctrl_tester) try {
     BOOST_CHECK_EQUAL(success(), ctrl.vote_witness(_alice, _w[4]));
     produce_block();
     BOOST_CHECK_EQUAL(err.no_votes, ctrl.unvote_witness(_carol, _bob));
-
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE(attach_detach_account_test, golos_ctrl_tester) try {
@@ -285,18 +282,6 @@ BOOST_FIXTURE_TEST_CASE(attach_detach_account_test, golos_ctrl_tester) try {
     produce_block();
     auto expect = mvo()("name", "alice")("attached", true);
     CHECK_MATCHING_OBJECT(ctrl.get_attached(_alice), expect);
-    std::cout << "REF: " << variant(expect) << std::endl;
-    auto qq = expect["attached"];
-    BOOST_TEST_CHECK(qq.is_object());
-    BOOST_TEST_CHECK(qq.is_null());
-    BOOST_TEST_CHECK(qq.is_bool());
-    BOOST_TEST_CHECK(qq.is_string());
-    BOOST_TEST_CHECK(qq.is_array());
-    BOOST_TEST_CHECK(qq.is_blob());
-    attached = ctrl.get_attached(_alice);
-    BOOST_CHECK_EQUAL(qq.get_type(), attached["attached"].get_type());
-    BOOST_CHECK_EQUAL(qq, attached["attached"]);
-    BOOST_CHECK_EQUAL(qq.as_uint64(), attached["attached"].as_uint64());
     BOOST_CHECK_EQUAL(err.already_attached, ctrl.attach_acc(BLOG, w, _alice));
 
     BOOST_TEST_MESSAGE("--- check detaching");
@@ -347,7 +332,6 @@ BOOST_FIXTURE_TEST_CASE(update_params_test, golos_ctrl_tester) try {
     BOOST_CHECK_NE(success(), ctrl.set_props(BLOG, top, mvo(p)("witness_supermajority",0)));
     top.erase(top.end() - 1);   // remove w1
     BOOST_CHECK_EQUAL(success(), ctrl.set_props(BLOG, top, mvo(p)("witness_supermajority",0)));
-
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE(change_vesting_test, golos_ctrl_tester) try {
@@ -356,8 +340,8 @@ BOOST_FIXTURE_TEST_CASE(change_vesting_test, golos_ctrl_tester) try {
     prepare(step_vote_witnesses);
 
     BOOST_TEST_MESSAGE("--- fail on direct action call");
-    BOOST_CHECK_NE(success(), ctrl.change_vests(BLOG, dasset(5)));
-    BOOST_CHECK_NE(success(), ctrl.change_vests(_bob, dasset(-5)));
+    BOOST_CHECK_NE(success(), ctrl.change_vests(BLOG, vest.make_asset(5)));
+    BOOST_CHECK_NE(success(), ctrl.change_vests(_bob, vest.make_asset(-5)));
     produce_block();
 
     BOOST_TEST_MESSAGE("--- witness weight change when adding vesting");
@@ -371,7 +355,6 @@ BOOST_FIXTURE_TEST_CASE(change_vesting_test, golos_ctrl_tester) try {
     produce_block();
 
     // TODO: check decreasing vesting and paths, other than `issue`+`transfer`
-
 } FC_LOG_AND_RETHROW()
 
 

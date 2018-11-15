@@ -43,7 +43,7 @@ public:
 
 
     asset dasset(double val = 0) const {
-        return vest.make_asset(val);
+        return token.make_asset(val);
     }
 
     // constants
