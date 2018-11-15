@@ -389,9 +389,15 @@ BOOST_FIXTURE_TEST_CASE(comments_cashout_time_test, golos_publication_tester) tr
     
     produce_block();
     
-    BOOST_TEST_MESSAGE("--- checking that message was closed.");
+    BOOST_TEST_MESSAGE("--- checking that messages was closed.");
     BOOST_CHECK_EQUAL(post.get_message(N(brucelee), hash64("permlink"))["closed"].as<bool>(), true);
     BOOST_CHECK_EQUAL(post.get_message(N(chucknorris), hash64("comment_permlink"))["closed"].as<bool>(), true);
+    
+    BOOST_CHECK_EQUAL(success(), post.create_msg(N(jackiechan), "sorry guys i'm late", N(brucelee), "permlink"));
+    produce_block();
+    
+    BOOST_TEST_MESSAGE("--- checking that closed message comment was closed.");
+    BOOST_CHECK_EQUAL(post.get_message(N(jackiechan), hash64("sorry guys i'm late"))["closed"].as<bool>(), true);
 
 } FC_LOG_AND_RETHROW()
 
