@@ -2,6 +2,7 @@
 
 import sys
 import accounts
+import witnesses
 
 def print_success():
     print('SUCCESS!')
@@ -17,4 +18,5 @@ else:
     print('You can\'t set more than 1 argument.')
 
 accounts.convert_accounts(count)
+witnesses.convert_witnesses()
 print_success()
