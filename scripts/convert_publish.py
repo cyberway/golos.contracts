@@ -14,12 +14,13 @@ from config import *
 
 def create_tags(metadata_tags):
     tags = []
-    for tag in metadata_tags or []:
-        tag_obj = {
-            "tag": tag
-        }
+    if (isinstance(metadata_tags, int)):
+        tag_obj = { "tag": str(metadata_tags) }
         tags.append(tag_obj)
-
+    if(isinstance(metadata_tags, list)):
+        for tag in metadata_tags or []:
+            tag_obj = { "tag": tag }
+            tags.append(tag_obj)
     return tags
 
 class PublishConverter:
