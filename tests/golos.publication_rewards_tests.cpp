@@ -24,7 +24,7 @@ double log2(double arg) {
 }
 
 namespace golos_curation {
-constexpr int64_t _2s = 2 * 12000000000000;
+constexpr int64_t _2s = 2 * 2000000000000;
 constexpr int64_t _m = std::numeric_limits<fixp_t>::max();
 std::string func_str = std::to_string(_m) + " / ((" + std::to_string(_2s) + " / max(x, 0.1)) + 1)";
 auto func = [](double x){ return static_cast<double>(_m) / ((static_cast<double>(_2s) / std::max(x, 0.000000000001)) + 1.0); };
