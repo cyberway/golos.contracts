@@ -321,7 +321,7 @@ parser.add_argument('--user-limit', metavar='', help="Max number of users. (0 = 
 parser.add_argument('--max-user-keys', metavar='', help="Maximum user keys to import into wallet", type=int, default=100)
 parser.add_argument('--witness-limit', metavar='', help="Maximum number of witnesses. (0 = no limit)", type=int, default=0)
 parser.add_argument('--symbol', metavar='', help="The Golos community token symbol", default='GLS')
-parser.add_argument('--token-precision', metavar='', help="The Golos community token precision", type=int, default=6)
+parser.add_argument('--token-precision', metavar='', help="The Golos community token precision", type=int, default=3)
 parser.add_argument('--vesting-precision', metavar='', help="The Golos community vesting precision", type=int, default=6)
 parser.add_argument('--docker', action='store_true', help='Run actions only for Docker (used with -a)')
 parser.add_argument('-a', '--all', action='store_true', help="Do everything marked with (*)")
