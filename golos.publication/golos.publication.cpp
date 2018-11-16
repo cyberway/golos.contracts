@@ -102,7 +102,7 @@ void publication::create_message(account_name account, std::string permlink,
         level = 1 + notify_parent(true, parentacc, parent_id);
     eosio_assert(level <= config::max_comment_depth, "publication::create_message: level > MAX_COMMENT_DEPTH");
 
-    message_table.emplace(account, [&]( auto &item ) {
+    auto mssg_itr = message_table.emplace(account, [&]( auto &item ) {
         item.id = message_id;
         item.date = cur_time;
         item.parentacc = parentacc;
@@ -122,8 +122,25 @@ void publication::create_message(account_name account, std::string permlink,
         item.tags = tags;
         item.jsonmetadata = jsonmetadata;
     });
-
-    close_message_timer(account, message_id);
+    
+    structures::accandvalue parent {parentacc, parent_id};
+    uint64_t seconds_diff = 0;
+    bool closed = false;
+    while (parent.account) {
+        tables::message_table parent_message_table(_self, parent.account);
+        auto parent_itr = parent_message_table.find(parent.value);
+        eosio_assert(cur_time >= parent_itr->date, "publication::create_message: cur_time < parent_itr->date");
+        seconds_diff = cur_time - parent_itr->date;
+        parent.account = parent_itr->parentacc;
+        parent.value = parent_itr->parent_id;
+        closed = parent_itr->closed;
+    }
+    seconds_diff /= eosio::seconds(1).count();
+    uint64_t delay_sec = config::cashout_window > seconds_diff ? config::cashout_window - seconds_diff : 0;
+    if (!closed && delay_sec)
+        close_message_timer(account, message_id, delay_sec);
+    else //parent is already closed or is about to
+        message_table.modify(mssg_itr, _self, [&]( auto &item) { item.closed = true; });
 }
 
 void publication::update_message(account_name account, std::string permlink,
@@ -325,10 +342,10 @@ void publication::close_message(account_name account, uint64_t id) {
         pools.modify(pool, _self, [&](auto &item) { item.state = state; });
 }
 
-void publication::close_message_timer(account_name account, uint64_t id) {
+void publication::close_message_timer(account_name account, uint64_t id, uint64_t delay_sec) {
     transaction trx;
     trx.actions.emplace_back(action{permission_level(_self, N(active)), _self, N(closemssg), structures::accandvalue{account, id}});
-    trx.delay_sec = config::cashout_window;
+    trx.delay_sec = delay_sec;
     trx.send((static_cast<uint128_t>(id) << 64) | account, _self);
 }
 
