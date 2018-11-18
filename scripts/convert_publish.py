@@ -74,7 +74,6 @@ class PublishConverter:
                 cur_mssg_id = utils.convert_hash(doc["permlink"])
                 cur_rshares_raw = utils.get_fixp_raw(doc["net_rshares"])
                 messagestate = {
-                    "absshares": utils.get_fixp_raw(doc["abs_rshares"]),
                     "netshares": cur_rshares_raw,
                     "voteshares": utils.get_fixp_raw(doc["vote_rshares"]),
                     "sumcuratorsw": self.mssgs_curatorsw[(doc["author"], cur_mssg_id)]
@@ -190,6 +189,7 @@ class PublishConverter:
                     "time" : int(doc["last_update"].timestamp()) * 1000000,
                     "count" : doc["num_changes"],
                     "curatorsw": doc["weight"] / 2,
+                    "rshares": utils.get_fixp_raw(doc["rshares"]),
                     "_SCOPE_" : doc["author"],
                     "_PAYER_" : doc["author"],
                     "_SIZE_" : 50
