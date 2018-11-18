@@ -48,7 +48,7 @@ struct content {
 };
 
 struct messagestate {
-    base_t absshares = 0;
+    //TODO: absshares -- script
     base_t netshares = 0;
     base_t voteshares = 0;
     base_t sumcuratorsw = 0;
@@ -85,6 +85,7 @@ struct voteinfo {
     int64_t count;
 
     base_t curatorsw;
+    base_t rshares;//TODO: script
 
     uint64_t primary_key() const {
         return id;

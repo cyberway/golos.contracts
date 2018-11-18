@@ -170,10 +170,6 @@
     "base": "",
     "fields": [
         {
-            "name": "absshares",
-            "type": "base_t"
-        },
-        {
             "name": "netshares",
             "type": "base_t"
         },
@@ -409,6 +405,10 @@
       },
       {
         "name": "curatorsw",
+        "type": "base_t"
+      },
+      {
+        "name": "rshares",
         "type": "base_t"
       }
     ]
