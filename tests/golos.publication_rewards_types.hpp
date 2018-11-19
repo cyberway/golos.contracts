@@ -25,7 +25,6 @@ struct pool_data {
 };
 
 struct message_data {
-    double absshares = 0.0;
     double netshares = 0.0;
     double voteshares = 0.0;
     double sumcuratorsw = 0.0;
@@ -34,7 +33,7 @@ struct message_data {
 constexpr struct {
     balance_data balance {10.0, 20.0};
     pool_data pool {0.001, 15, -0.01, -0.01};
-    message_data message {-0.01, -0.01, -0.01, -0.01};
+    message_data message {-0.01, -0.01, -0.01};
 } delta;
 
 constexpr double balance_delta = 0.01;
@@ -123,7 +122,6 @@ struct statemap : public std::map<std::string, aprox_val_t> {
     void set_message(const message_key& msg, const message_data& data = {}) {
 
         auto prefix = get_message_str(msg);
-        operator[](prefix + "absshares") = { data.absshares, delta.message.absshares };
         operator[](prefix + "netshares") = { data.netshares, delta.message.netshares };
         operator[](prefix + "voteshares") = { data.voteshares, delta.message.voteshares };
         operator[](prefix + "sumcuratorsw") = { data.sumcuratorsw, delta.message.sumcuratorsw };
@@ -160,6 +158,11 @@ struct vote {
     double weight;
     double vesting;
     double created;         // time
+    double revote_diff = 0.0;
+    double revote_vesting = 0.0;
+    double revote_weight() const { return weight + revote_diff; };
+    double rshares() const { return revote_diff ? revote_weight() * revote_vesting : weight * vesting; };
+    double voteshares() const { return weight > 0.0 ? weight * vesting : 0.0; };
 };
 
 struct beneficiary {
@@ -184,9 +187,10 @@ struct message {
     double get_rshares_sum() const {
         double ret = 0.0;
         for (auto& v : votes)
-            ret += v.weight * v.vesting;
+            ret += v.rshares();
         return ret;
     };
+    
     message(message_key k, double tokenprop_, double created_, const std::vector<beneficiary>& beneficiaries_, double reward_weight_) :
         key(k), tokenprop(tokenprop_), created(created_), beneficiaries(beneficiaries_), reward_weight(reward_weight_) {};
 };
@@ -326,13 +330,13 @@ struct limits {
 struct rewardpool {
     uint64_t id;
     double funds;
+    double stolen;
     rewardrules rules;
     limits lims;
     std::list<message> messages;
     std::map<account_name, usercharges> charges;
-
     rewardpool(uint64_t id_, rewardrules&& rules_, limits&& lims_)
-    :   id(id_), funds(0.0), rules(std::move(rules_)), lims(std::move(lims_)) {};
+    :   id(id_), funds(0.0), stolen(0.0), rules(std::move(rules_)), lims(std::move(lims_)) {};
 
     double get_rshares_sum()const {
         double ret = 0.0;
