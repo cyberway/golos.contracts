@@ -67,6 +67,8 @@ protected:
 
         const string limit_no_power     = amsg("publication::apply_limits: can't post, not enough power");
         const string limit_no_power_vest= amsg("publication::apply_limits: can't post, not enough power, vesting payment is disabled");
+    
+        const string delete_upvoted     = amsg("Cannot delete a comment with net positive votes.");
     } err;
 
     void init(int64_t issuer_funds, int64_t user_vesting_funds) {
@@ -468,6 +470,10 @@ public:
         }
         return ret;
     }
+    
+    action_result delete_message(account_name author, string permlink) {
+        return post.delete_msg(author, permlink);
+    }
 
     action_result addvote(account_name voter, account_name author, string permlink, int32_t weight) {
         auto ret = weight == 0
@@ -556,6 +562,8 @@ BOOST_FIXTURE_TEST_CASE(basic_tests, reward_calcs_tester) try {
     BOOST_TEST_MESSAGE("--- alice1 voted for alice");
     BOOST_CHECK_EQUAL(success(), addvote(N(alice1), N(alice), "permlink", 100));
     check();
+    BOOST_TEST_MESSAGE("--- trying to delete alice's message");
+    BOOST_CHECK_EQUAL(err.delete_upvoted, delete_message(N(alice), "permlink"));
     BOOST_TEST_MESSAGE("--- bob1 voted (1%) for bob");
     BOOST_CHECK_EQUAL(success(), addvote(N(bob1), N(bob), "permlink1", 100));
     check();

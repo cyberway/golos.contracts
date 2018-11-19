@@ -172,6 +172,7 @@ void publication::delete_message(account_name account, std::string permlink) {
     auto mssg_itr = message_table.find(message_id);
     eosio_assert(mssg_itr != message_table.end(), "Message doesn't exist.");
     eosio_assert((mssg_itr->childcount) == 0, "You can't delete comment with child comments.");
+    eosio_assert(FP(mssg_itr->state.netshares) <= 0, "Cannot delete a comment with net positive votes.");
     auto cont_itr = content_table.find(message_id);
     eosio_assert(cont_itr != content_table.end(), "Content doesn't exist.");
 
