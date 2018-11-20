@@ -29,11 +29,12 @@ class PublishConverter:
         self.publish_db = publish_db
         self.cyberway_db = cyberway_db
         self.exists_accs = set()
+        self.parent_id_list = []
         self.mssgs_curatorsw = defaultdict(int)
         self.publish_tables = dbs.Tables([
-            ('vote',    self.publish_db['votetable'],    None, None),
-            ('message', self.publish_db['messagetable'], None, None),
-            ('content', self.publish_db['contenttable'], None, None)
+            ('vote',    self.publish_db['vote'],    None, None),
+            ('message', self.publish_db['message'], None, None),
+            ('content', self.publish_db['content'], None, None)
         ])
         self.cache_period = cache_period
 
@@ -94,7 +95,7 @@ class PublishConverter:
                 message = {
                     "id": cur_mssg_id,
                     "date": int(doc["last_update"].timestamp()) * 1000000,
-                    "parentacc": "" if orphan_comment else doc["parent_author"],
+                    "parentacc": "" if orphan_comment or doc["parent_author"] == "" else doc["parent_author"],
                     "parent_id": 0  if (orphan_comment or (not len(doc["parent_permlink"]) > 0)) else utils.convert_hash(doc["parent_permlink"]),
                     "tokenprop": utils.get_prop_raw(doc["percent_steem_dollars"] / 2),
                     "beneficiaries": [],
@@ -109,6 +110,8 @@ class PublishConverter:
                     "_PAYER_": doc["author"],
                     "_SIZE_": 50
                 }
+                if orphan_comment:
+                    self.parent_id_list.append(utils.convert_hash(doc["parent_permlink"]))
                 self.publish_tables.message.append(message)
                 
                 tags = []
@@ -165,7 +168,7 @@ class PublishConverter:
     def convert_votes(self, query = {}):
         print("convert_votes")
         golos_votes = self.golos_db['comment_vote_object']
-        cyberway_messages = self.publish_db['messagetable']
+        cyberway_messages = self.publish_db['message']
 
         cursor = golos_votes.find(query)
         length = cursor.count()
@@ -215,14 +218,20 @@ class PublishConverter:
             print(e.args)
             print(traceback.format_exc())
         print('...done')
+
+    def correct_childcount(self):
+        messages = dbs.cyberway_gls_publish_db['message']
+        for parent_id in self.parent_id_list:
+            messages.updateOne(
+                { "parent_id" : parent_id },
+                { "$set": { "childcount" : messages.find_one({"parent_id":parent_id})["childcount"] - 1 } }
+            )       
     
     def run(self, query = {}):
         self.fill_exists_accs()
         self.convert_votes(query)
         self.convert_posts(query)
+        self.correct_childcount()
 
 #PublishConverter(dbs.golos_db, dbs.cyberway_gls_publish_db, dbs.cyberway_db).run({"author" : "goloscore"})
-PublishConverter(dbs.golos_db, dbs.cyberway_gls_publish_db, dbs.cyberway_db).run()   
-
-
-
+PublishConverter(dbs.golos_db, dbs.cyberway_gls_publish_db, dbs.cyberway_db).run()
