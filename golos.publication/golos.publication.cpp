@@ -364,10 +364,9 @@ void publication::close_message_timer(account_name account, uint64_t id, uint64_
     trx.send((static_cast<uint128_t>(id) << 64) | account, _self);
 }
 
-void publication::check_vote_time(uint64_t cur_time, uint64_t mssg_date, int16_t weight_delta) {
+void publication::check_upvote_time(uint64_t cur_time, uint64_t mssg_date) {
     eosio_assert((cur_time <= mssg_date + ((config::cashout_window - config::upvote_lockout) * seconds(1).count())) ||
-                 (cur_time > mssg_date + (config::cashout_window * seconds(1).count())) ||
-                 (weight_delta <= 0),
+                 (cur_time > mssg_date + (config::cashout_window * seconds(1).count())),
                   "You can't upvote, because publication will be closed soon.");
 }
 
@@ -407,11 +406,13 @@ void publication::set_vote(account_name voter, account_name author, string perml
             }
 
             eosio_assert(weight != vote_itr->weight, "Vote with the same weight has already existed.");
-            check_vote_time(cur_time, mssg_itr->date, weight - vote_itr->weight);
             eosio_assert(vote_itr->count != config::max_vote_changes, "You can't revote anymore.");
             
             atmsp::machine<fixp_t> machine;
             fixp_t rshares = calc_rshares(voter, weight, cur_time, *pool, machine);
+            if(rshares > FP(vote_itr->rshares))
+                check_upvote_time(cur_time, mssg_itr->date);
+            
             fixp_t new_mssg_rshares = (FP(mssg_itr->state.netshares) - FP(vote_itr->rshares)) + rshares;
             auto rsharesfn_delta = get_delta(machine, FP(mssg_itr->state.netshares), new_mssg_rshares, pool->rules.mainfunc);
             
@@ -437,10 +438,10 @@ void publication::set_vote(account_name voter, account_name author, string perml
         }
         ++vote_itr;
     }
-    
-    check_vote_time(cur_time, mssg_itr->date, weight);
     atmsp::machine<fixp_t> machine;
     fixp_t rshares = calc_rshares(voter, weight, cur_time, *pool, machine);
+    if(rshares > 0)
+        check_upvote_time(cur_time, mssg_itr->date);
 
     structures::messagestate msg_new_state = {
         .netshares = add_cut(FP(mssg_itr->state.netshares), rshares).data(),
