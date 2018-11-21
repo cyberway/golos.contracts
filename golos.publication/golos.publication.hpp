@@ -32,7 +32,6 @@ private:
     uint16_t notify_parent(bool increase, account_name parentacc, uint64_t parent_id);
     void fill_depleted_pool(tables::reward_pools& pools, asset quantity,
         tables::reward_pools::const_iterator excluded);
-    void fix_balances(tables::reward_pools& pools, symbol_type tokensymbol);
     auto get_pool(tables::reward_pools& pools, uint64_t time);
     int64_t pay_curators(account_name author, uint64_t msgid, int64_t max_rewards, fixp_t weights_sum,
         symbol_type tokensymbol);

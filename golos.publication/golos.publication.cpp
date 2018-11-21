@@ -249,19 +249,6 @@ auto publication::get_pool(tables::reward_pools& pools, uint64_t time) {
     return (--pool);
 }
 
-void publication::fix_balances(tables::reward_pools& pools, symbol_type tokensymbol) {
-    int64_t shortage = -token(N(eosio.token)).get_balance(_self, tokensymbol.name()).amount;
-    for (auto pool = pools.begin(); pool != pools.end(); ++pool) {
-        if(pool->state.funds.symbol == tokensymbol)
-            shortage += pool->state.funds.amount;
-    }
-    for (auto pool = pools.begin(); shortage && pool != pools.end(); ++pool) {
-        int64_t corr = std::min(shortage, pool->state.funds.amount); //we don't suggest here that it's always positive
-        shortage -= corr;
-        pools.modify(pool, _self, [&](auto &item) { item.state.funds.amount -= corr; });
-    }
-}
-
 void publication::close_message(account_name account, uint64_t id) {
     require_auth(_self);
     tables::message_table message_table(_self, account);
@@ -271,7 +258,6 @@ void publication::close_message(account_name account, uint64_t id) {
 
     tables::reward_pools pools(_self, _self);
     auto pool = get_pool(pools, mssg_itr->date);
-    fix_balances(pools, pool->state.funds.symbol);
 
     eosio_assert(pool->state.msgs != 0, "LOGIC ERROR! publication::payrewards: pool.msgs is equal to zero");
     atmsp::machine<fixp_t> machine;

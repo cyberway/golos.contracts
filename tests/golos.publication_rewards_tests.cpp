@@ -172,24 +172,6 @@ public:
         }
         return ret;
     }
-    
-    action_result steal_funds(account_name user, int64_t amount) {
-        auto ret = token.transfer(_forum_name, user, asset(amount, _token_symbol));
-        for (size_t i = 0; (amount > 0) && (i < _state.pools.size()); i++) {
-            int64_t cur_amount = std::min(amount, static_cast<int64_t>(_state.pools[i].funds + 0.5));
-            _state.pools[i].stolen += static_cast<double>(cur_amount);
-            amount -= cur_amount;
-        }
-        BOOST_REQUIRE_MESSAGE(ret != success() || amount == 0, "steal_funds: amount != 0");
-        return ret;
-    }
-    
-    void fix_pool_balances() {
-        for (size_t i = 0; i < _state.pools.size(); i++) {
-            _state.pools[i].funds -= _state.pools[i].stolen;
-            _state.pools[i].stolen = 0.0;
-        }
-    }
 
     action_result setrules(
         const funcparams& mainfunc,
@@ -590,12 +572,9 @@ BOOST_FIXTURE_TEST_CASE(basic_tests, reward_calcs_tester) try {
     BOOST_CHECK_EQUAL(success(), add_funds_to_forum(100000));
     step();     // push transactions before run() call
     check();
-    BOOST_CHECK_EQUAL(success(), steal_funds(_stranger, 10000));
-    step();
     
     BOOST_TEST_MESSAGE("--- waiting");
     run(seconds(99));   // TODO: remove magic number
-    fix_pool_balances();
     check();
     BOOST_TEST_MESSAGE("--- create_message: why");
     BOOST_CHECK_EQUAL(success(), create_message(N(why), "why not", N(), "", {{N(alice5), 5000}, {N(bob5), 2500}}));

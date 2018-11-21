@@ -330,13 +330,12 @@ struct limits {
 struct rewardpool {
     uint64_t id;
     double funds;
-    double stolen;
     rewardrules rules;
     limits lims;
     std::list<message> messages;
     std::map<account_name, usercharges> charges;
     rewardpool(uint64_t id_, rewardrules&& rules_, limits&& lims_)
-    :   id(id_), funds(0.0), stolen(0.0), rules(std::move(rules_)), lims(std::move(lims_)) {};
+    :   id(id_), funds(0.0), rules(std::move(rules_)), lims(std::move(lims_)) {};
 
     double get_rshares_sum()const {
         double ret = 0.0;
