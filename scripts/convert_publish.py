@@ -93,6 +93,7 @@ class PublishConverter:
 
                 message = {
                     "id": cur_mssg_id,
+                    "permlink": doc["permlink"],
                     "date": int(doc["last_update"].timestamp()) * 1000000,
                     "parentacc": "" if orphan_comment else doc["parent_author"],
                     "parent_id": 0  if (orphan_comment or (not len(doc["parent_permlink"]) > 0)) else utils.convert_hash(doc["parent_permlink"]),
