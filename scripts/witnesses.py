@@ -1,5 +1,6 @@
 import dbs
 import bson
+from config import *
 
 golos = dbs.Tables([
     ('witnesses', dbs.golos_db['witness_object'],      None, [('owner',True)]),
@@ -34,7 +35,7 @@ def create_witness(doc, exist_accounts):
         "url" : doc["url"],
         "active" : True,
         "total_weight" : total_weight,
-        "_SCOPE_" : doc["owner"], 
+        "_SCOPE_" : BALANCE_SYMBOL_FOR_SCOPE,
         "_PAYER_" : doc["owner"], 
         "_SIZE_" : bson.Int64(61) 
     }
