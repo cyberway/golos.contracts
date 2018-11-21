@@ -73,6 +73,8 @@ protected:
 
         const string limit_no_power     = amsg("publication::apply_limits: can't post, not enough power");
         const string limit_no_power_vest= amsg("publication::apply_limits: can't post, not enough power, vesting payment is disabled");
+    
+        const string delete_upvoted     = amsg("Cannot delete a comment with net positive votes.");
     } err;
 
     void init(int64_t issuer_funds, int64_t user_vesting_funds) {
@@ -254,21 +256,21 @@ public:
             double pool_rsharesfn_sum = 0.0;
 
             for (auto& m : p.messages) {
-                double absshares = 0.0;
                 double netshares = 0.0;
                 double voteshares = 0.0;
+                double curators_fn_sum = 0.0;
+                double prev_curation_fn_val = p.rules.curationfunc(voteshares);
                 for (auto& v : m.votes) {
-                    absshares +=  std::abs(v.weight) * v.vesting;
-                    double currshares = v.weight * v.vesting;
-                    netshares += currshares;
-                    if (v.weight > 0.0) {
-                        voteshares += currshares;
-                    }
+                    netshares += v.rshares();
+                    voteshares += v.voteshares();
+                    double curation_fn_val = p.rules.curationfunc(voteshares);
+                    if(!v.revote_diff)
+                        curators_fn_sum += curation_fn_val - prev_curation_fn_val;
+                    prev_curation_fn_val = curation_fn_val;
                 }
-                absshares  = std::min(MAX_ARG, absshares);
                 netshares  = std::min(MAX_ARG, netshares);
                 voteshares = std::min(MAX_ARG, voteshares);
-                s.set_message(m.key, {absshares, netshares, voteshares, p.rules.curationfunc(voteshares)});
+                s.set_message(m.key, {netshares, voteshares, curators_fn_sum});
                 pool_rshares_sum = netshares + pool_rshares_sum;
                 pool_rsharesfn_sum += p.rules.mainfunc(netshares);
             }
@@ -303,7 +305,6 @@ public:
                     auto cur = *itr;
                     if (!cur["closed"].as<bool>()) {
                         s.set_message(message_key{user, cur["id"].as<uint64_t>()}, {
-                            static_cast<double>(FP(cur["state"]["absshares"].as<base_t>())),
                             static_cast<double>(FP(cur["state"]["netshares"].as<base_t>())),
                             static_cast<double>(FP(cur["state"]["voteshares"].as<base_t>())),
                             static_cast<double>(FP(cur["state"]["sumcuratorsw"].as<base_t>()))
@@ -344,18 +345,19 @@ public:
 
                     auto curation_payout = p.rules.curatorsprop * payout;
                     double unclaimed_funds = curation_payout;
-                    std::list<std::pair<account_name, double>> cur_rewards;
+                    std::list<std::pair<account_name, double>> cur_rewards;                    
+                    double voteshares = 0.0;
                     double curators_fn_sum = 0.0;
-                    double rshares_sum = 0.0;
+                    double prev_curation_fn_val = p.rules.curationfunc(voteshares);
                     for (auto& v : m.votes) {
-                        if (v.weight > 0.0) {
-                            rshares_sum += v.weight * v.vesting;
-                        }
-                        double new_cur_fn = p.rules.curationfunc(rshares_sum);
-                        cur_rewards.emplace_back(std::make_pair(v.voter, (new_cur_fn - curators_fn_sum) *
+                        voteshares += v.voteshares();                        
+                        double curation_fn_val = p.rules.curationfunc(voteshares);
+                        double curation_fn_add = v.revote_diff ? 0.0 : curation_fn_val - prev_curation_fn_val;
+                        cur_rewards.emplace_back(std::make_pair(v.voter, curation_fn_add *
                             std::min(p.rules.timepenalty(v.created - m.created), 1.0)
                         ));
-                        curators_fn_sum = new_cur_fn;
+                        curators_fn_sum += curation_fn_add;
+                        prev_curation_fn_val = curation_fn_val;
                     }
                     if (curators_fn_sum > 1.e-20) {
                         for (auto& r : cur_rewards) {
@@ -456,6 +458,10 @@ public:
         }
         return ret;
     }
+    
+    action_result delete_message(account_name author, string permlink) {
+        return post.delete_msg(author, permlink);
+    }
 
     action_result addvote(account_name voter, account_name author, string permlink, int32_t weight) {
         auto ret = weight == 0
@@ -480,12 +486,18 @@ public:
             for (auto& p : _state.pools) {
                 for (auto& m : p.messages) {
                     if (m.key == msg_key) {
-                        m.votes.emplace_back(vote{
-                            voter,
-                            std::min(static_cast<double>(weight) / static_cast<double>(cfg::_100percent), 1.0),
-                            _state.balances[voter].vestamount,
-                            static_cast<double>(cur_time().to_seconds())
-                        });
+                        auto vote_itr = std::find_if(m.votes.begin(), m.votes.end(), [voter](const vote& v) {return v.voter == voter;});
+                        if (vote_itr == m.votes.end())
+                            m.votes.emplace_back(vote{
+                                voter,
+                                std::min(get_prop(weight), 1.0),
+                                _state.balances[voter].vestamount,
+                                static_cast<double>(cur_time().to_seconds())
+                            });
+                        else {
+                            vote_itr->revote_diff = std::min(get_prop(weight), 1.0) - vote_itr->weight;
+                            vote_itr->revote_vesting = _state.balances[voter].vestamount;
+                        }
                         return ret;
                     }
                 }
@@ -538,8 +550,13 @@ BOOST_FIXTURE_TEST_CASE(basic_tests, reward_calcs_tester) try {
     BOOST_TEST_MESSAGE("--- alice1 voted for alice");
     BOOST_CHECK_EQUAL(success(), addvote(N(alice1), N(alice), "permlink", 100));
     check();
-    BOOST_TEST_MESSAGE("--- bob1 voted (10%) for bob");
+    BOOST_TEST_MESSAGE("--- trying to delete alice's message");
+    BOOST_CHECK_EQUAL(err.delete_upvoted, delete_message(N(alice), "permlink"));
+    BOOST_TEST_MESSAGE("--- bob1 voted (1%) for bob");
     BOOST_CHECK_EQUAL(success(), addvote(N(bob1), N(bob), "permlink1", 100));
+    check();
+    BOOST_TEST_MESSAGE("--- bob1 revoted (-50%) against bob");
+    BOOST_CHECK_EQUAL(success(), addvote(N(bob1), N(bob), "permlink1", -5000));
     check();
     BOOST_TEST_MESSAGE("--- bob2 voted (100%) for bob");
     BOOST_CHECK_EQUAL(success(), addvote(N(bob2), N(bob), "permlink1", 10000));
@@ -550,10 +567,18 @@ BOOST_FIXTURE_TEST_CASE(basic_tests, reward_calcs_tester) try {
     BOOST_TEST_MESSAGE("--- alice3 flagged (80%) against bob");
     BOOST_CHECK_EQUAL(success(), addvote(N(alice3), N(bob), "permlink1", -8000));
     check();
+    BOOST_TEST_MESSAGE("--- alice4 voted (30%) for alice (1)");
+    BOOST_CHECK_EQUAL(success(), addvote(N(alice4), N(alice), "permlink1", 3000));
+    check();
+    BOOST_TEST_MESSAGE("--- alice4 revoted (100%) for alice (1)");
+    BOOST_CHECK_EQUAL(success(), addvote(N(alice4), N(alice), "permlink1", 10000));
+    check();
+
     BOOST_TEST_MESSAGE("--- add_funds_to_forum");
     BOOST_CHECK_EQUAL(success(), add_funds_to_forum(100000));
     step();     // push transactions before run() call
     check();
+    
     BOOST_TEST_MESSAGE("--- waiting");
     run(seconds(99));   // TODO: remove magic number
     check();

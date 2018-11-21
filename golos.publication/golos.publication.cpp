@@ -173,6 +173,7 @@ void publication::delete_message(account_name account, std::string permlink) {
     auto mssg_itr = message_table.find(message_id);
     eosio_assert(mssg_itr != message_table.end(), "Message doesn't exist.");
     eosio_assert((mssg_itr->childcount) == 0, "You can't delete comment with child comments.");
+    eosio_assert(FP(mssg_itr->state.netshares) <= 0, "Cannot delete a comment with net positive votes.");
     auto cont_itr = content_table.find(message_id);
     eosio_assert(cont_itr != content_table.end(), "Content doesn't exist.");
 
@@ -350,6 +351,21 @@ void publication::close_message_timer(account_name account, uint64_t id, uint64_
     trx.send((static_cast<uint128_t>(id) << 64) | account, _self);
 }
 
+void publication::check_upvote_time(uint64_t cur_time, uint64_t mssg_date) {
+    eosio_assert((cur_time <= mssg_date + ((config::cashout_window - config::upvote_lockout) * seconds(1).count())) ||
+                 (cur_time > mssg_date + (config::cashout_window * seconds(1).count())),
+                  "You can't upvote, because publication will be closed soon.");
+}
+
+fixp_t publication::calc_rshares(account_name voter, int16_t weight, uint64_t cur_time, const structures::rewardpool& pool, atmsp::machine<fixp_t>& machine) {
+    elaf_t abs_w = get_limit_prop(abs(weight));
+    apply_limits(machine, voter, pool, structures::limits::VOTE, cur_time, abs_w);
+
+    int64_t sum_vesting = golos::vesting(config::vesting_name).get_account_effective_vesting(voter, pool.state.funds.symbol.name()).amount;
+    fixp_t abs_rshares = fp_cast<fixp_t>(sum_vesting, false) * abs_w;
+    return (weight < 0) ? -abs_rshares : abs_rshares;
+}
+
 void publication::set_vote(account_name voter, account_name author, string permlink, int16_t weight) {
     require_auth(voter);
 
@@ -364,11 +380,6 @@ void publication::set_vote(account_name voter, account_name author, string perml
 
     auto cur_time = current_time();
 
-    eosio_assert((cur_time <= mssg_itr->date + ((config::cashout_window - config::upvote_lockout) * seconds(1).count())) ||
-                 (cur_time > mssg_itr->date + (config::cashout_window * seconds(1).count())) ||
-                 (weight <= 0),
-                  "You can't upvote, because publication will be closed soon.");
-
     auto votetable_index = vote_table.get_index<N(messageid)>();
     auto vote_itr = votetable_index.lower_bound(id);
     while ((vote_itr != votetable_index.end()) && (vote_itr->message_id == id)) {
@@ -380,29 +391,46 @@ void publication::set_vote(account_name voter, account_name author, string perml
                 });
                 return;
             }
-            //TODO: recalc: pool.rshares message.rshares; message.sumcuratorsw -= curatorw; curatorw := 0;
+
             eosio_assert(weight != vote_itr->weight, "Vote with the same weight has already existed.");
             eosio_assert(vote_itr->count != config::max_vote_changes, "You can't revote anymore.");
+            
+            atmsp::machine<fixp_t> machine;
+            fixp_t rshares = calc_rshares(voter, weight, cur_time, *pool, machine);
+            if(rshares > FP(vote_itr->rshares))
+                check_upvote_time(cur_time, mssg_itr->date);
+            
+            fixp_t new_mssg_rshares = (FP(mssg_itr->state.netshares) - FP(vote_itr->rshares)) + rshares;
+            auto rsharesfn_delta = get_delta(machine, FP(mssg_itr->state.netshares), new_mssg_rshares, pool->rules.mainfunc);
+            
+            pools.modify(*pool, _self, [&](auto &item) {
+                item.state.rshares = ((WP(item.state.rshares) - wdfp_t(FP(vote_itr->rshares))) + wdfp_t(rshares)).data();
+                item.state.rsharesfn = (WP(item.state.rsharesfn) + wdfp_t(rsharesfn_delta)).data();
+            });
+            
+            message_table.modify(mssg_itr, 0, [&]( auto &item ) {
+                item.state.netshares = new_mssg_rshares.data();
+                item.state.sumcuratorsw = (FP(item.state.sumcuratorsw) - FP(vote_itr->curatorsw)).data();
+            });
+            
             votetable_index.modify(vote_itr, voter, [&]( auto &item ) {
                item.weight = weight;
                item.time = cur_time;
+               item.curatorsw = fixp_t(0).data();
+               item.rshares = rshares.data();
                ++item.count;
             });
+            
             return;
         }
         ++vote_itr;
     }
-
-    elaf_t abs_w = get_limit_prop(abs(weight));
     atmsp::machine<fixp_t> machine;
-    apply_limits(machine, voter, *pool, structures::limits::VOTE, cur_time, abs_w);
-
-    int64_t sum_vesting = golos::vesting(config::vesting_name).get_account_effective_vesting(voter, pool->state.funds.symbol.name()).amount;
-    fixp_t abs_rshares = fp_cast<fixp_t>(sum_vesting, false) * abs_w;
-    fixp_t rshares = (weight < 0) ? -abs_rshares : abs_rshares;
+    fixp_t rshares = calc_rshares(voter, weight, cur_time, *pool, machine);
+    if(rshares > 0)
+        check_upvote_time(cur_time, mssg_itr->date);
 
     structures::messagestate msg_new_state = {
-        .absshares = add_cut(FP(mssg_itr->state.absshares), abs_rshares).data(),
         .netshares = add_cut(FP(mssg_itr->state.netshares), rshares).data(),
         .voteshares = ((rshares > fixp_t(0)) ?
             add_cut(FP(mssg_itr->state.voteshares), rshares) :
@@ -437,6 +465,7 @@ void publication::set_vote(account_name voter, account_name author, string perml
         item.time = cur_time;
         item.count = mssg_itr->closed ? -1 : (item.count + 1);
         item.curatorsw = (fixp_t(sumcuratorsw_delta * curatorsw_factor)).data();
+        item.rshares = rshares.data();
     });
 }
 
