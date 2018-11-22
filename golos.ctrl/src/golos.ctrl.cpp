@@ -113,6 +113,10 @@ void control::unregwitness(account_name witness) {
 void control::votewitness(account_name voter, account_name witness, uint16_t weight/* = 10000*/) {
     // TODO: check witness existance (can work without it)
     require_auth(voter);
+
+    witness_tbl witness_table(_self, _token);
+    eosio_assert(witness_table.find(witness) != witness_table.end(), "witness not found");
+
     witness_vote_tbl tbl(_self, voter);     // TODO: decide, is this scope better than others
     auto itr = tbl.find(_owner);
     bool exists = itr != tbl.end();
@@ -136,6 +140,10 @@ void control::votewitness(account_name voter, account_name witness, uint16_t wei
 
 void control::unvotewitn(account_name voter, account_name witness) {
     require_auth(voter);
+
+    witness_tbl witness_table(_self, _token);
+    eosio_assert(witness_table.find(witness) != witness_table.end(), "witness not found");
+
     witness_vote_tbl tbl(_self, voter);
     auto itr = tbl.find(_owner);
     bool exists = itr != tbl.end();
