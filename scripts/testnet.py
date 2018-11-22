@@ -44,6 +44,9 @@ def removeRootKeys():
 def pushAction(code, action, actor, args):
     return cleos('push action %s %s %s -p %s' % (code, action, jsonArg(args), actor))
 
+def unlockWallet():
+    cleos('wallet unlock --password %s' % args.wallet_password)
+
 # --------------------- EOSIO functions ---------------------------------------
 
 def createAuthority(keys, accounts):
@@ -95,12 +98,14 @@ def buyVesting(account, amount):
     issueToken(account, amount)
     transfer(account, 'gls.vesting', amount)   # buy vesting
 
-def registerWitness(witness, key):
+def registerWitness(witness, key, url=None):
+    if url == None:
+        url = 'http://%s.witnesses.golos.io' % witness
     pushAction('gls.ctrl', 'regwitness', witness, {
         'domain': args.token,
         'witness': witness,
         'key': key,
-        'url': 'http://%s.witnesses.golos.io' % witness
+        'url': url
     })
 
 def voteWitness(voter, witness, weight):
