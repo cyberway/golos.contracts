@@ -11,6 +11,7 @@ from decimal import Decimal
 from bson.decimal128 import Decimal128
 from pymongo import MongoClient
 from config import *
+from pymongo import UpdateOne
 
 def create_tags(metadata_tags):
     tags = []
@@ -70,7 +71,10 @@ class PublishConverter:
         for doc in cursor:
             passed += 1
             try:
-                if doc["removed"] or (not (doc["author"] in self.exists_accs)):
+                if doc["removed"]:
+                    continue
+                if (not (doc["author"] in self.exists_accs)):
+                    self.parent_id_list.append(utils.convert_hash(doc["parent_permlink"]))
                     continue
                 
                 cur_mssg_id = utils.convert_hash(doc["permlink"])
@@ -110,8 +114,6 @@ class PublishConverter:
                     "_PAYER_": doc["author"],
                     "_SIZE_": 50
                 }
-                if orphan_comment:
-                    self.parent_id_list.append(utils.convert_hash(doc["parent_permlink"]))
                 self.publish_tables.message.append(message)
                 
                 tags = []
@@ -221,12 +223,11 @@ class PublishConverter:
 
     def correct_childcount(self):
         messages = dbs.cyberway_gls_publish_db['message']
-        for parent_id in self.parent_id_list:
-            messages.updateOne(
-                { "parent_id" : parent_id },
-                { "$set": { "childcount" : messages.find_one({"parent_id":parent_id})["childcount"] - 1 } }
-            )       
-    
+        messages.bulk_write([
+            UpdateOne(filter={"parent_id":parent_id},
+                      update={"$inc":{"childcount":-1}})
+            for parent_id in self.parent_id_list])
+
     def run(self, query = {}):
         self.fill_exists_accs()
         self.convert_votes(query)
