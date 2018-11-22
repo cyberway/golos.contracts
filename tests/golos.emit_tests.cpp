@@ -47,7 +47,7 @@ public:
     }
 
     // constants
-    const uint16_t _max_witnesses = 2;
+    const uint16_t _max_witnesses = 3;
     const uint16_t _smajor_witn_count = _max_witnesses * 2 / 3 + 1;
 
     const account_name BLOG = N(blog);
@@ -156,6 +156,52 @@ BOOST_FIXTURE_TEST_CASE(start_emission_test, golos_emit_tester) try {
     BOOST_TEST_MESSAGE("--- next block, check emission");
     produce_block();
     BOOST_CHECK_NE(tx, emit.get_state()["tx_id"]);
+
+} FC_LOG_AND_RETHROW()
+
+BOOST_FIXTURE_TEST_CASE(set_params, golos_emit_tester) try {
+    BOOST_TEST_MESSAGE("Test emission parameters");
+    BOOST_TEST_MESSAGE("--- prepare control");
+    prepare_ctrl(step_vote_witnesses);
+    produce_blocks(10);
+
+    BOOST_TEST_MESSAGE("--- check global params");
+    auto t = emit.get_params();
+    BOOST_TEST_MESSAGE("--- " + fc::json::to_string(t));
+
+    struct err: contract_error_messages {
+        const string bad_variant_order = amsg("parameters must be ordered by variant index");
+        const string no_pool_account   = amsg("pool account must exist");
+    } err;
+
+    string pool0 = "{\"name\":\"zero\",\"percent\":0}";
+    string pool1 = "{\"name\":\"test\",\"percent\":5000}";
+    string pool2 = "{\"name\":\"less\",\"percent\":4999}";
+    string pool3 = "{\"name\":\"more\",\"percent\":5001}";
+    const auto pools = "{\"pools\":[" + pool2 + "," + pool1 + "," + pool0 + "]}";
+    const string infrate = "{\"start\":1,\"stop\":1,\"narrowing\":0}";
+    auto params = "[[\"reward_pools\"," + pools + "], [\"inflation_rate\"," + infrate + "]]";
+    BOOST_CHECK_EQUAL(err.bad_variant_order, emit.set_params(_bob, params));
+
+    params = "[[\"inflation_rate\"," + infrate + "], [\"reward_pools\"," + pools + "]]";
+    BOOST_CHECK_EQUAL(err.no_pool_account, emit.set_params(_bob, params));
+    create_accounts({N(test), N(less), N(zero)});
+    produce_block();
+
+    BOOST_CHECK_EQUAL(success(), emit.set_params(_w[0], params));
+    t = emit.get_params();
+    BOOST_TEST_MESSAGE("--- " + fc::json::to_string(t));
+    BOOST_CHECK_EQUAL(success(), emit.set_params(_w[1],
+        "[[\"inflation_rate\"," + infrate + "], [\"reward_pools\",{\"pools\":[" +pool0+ "]}]]"
+    ));
+    t = emit.get_params();
+    BOOST_TEST_MESSAGE("--- " + fc::json::to_string(t));
+
+    BOOST_CHECK_EQUAL(success(), emit.set_params(_w[2],
+        "[[\"inflation_rate\",{\"start\":5,\"stop\":5,\"narrowing\":0}], [\"reward_pools\"," + pools + "]]"
+    ));
+    t = emit.get_params();
+    BOOST_TEST_MESSAGE("--- " + fc::json::to_string(t));
 
 } FC_LOG_AND_RETHROW()
 

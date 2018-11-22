@@ -109,7 +109,7 @@ using bw_user_tbl = eosio::multi_index<N(bwuser), bw_user>;
 
 class control: public contract {
 public:
-    control(account_name self, symbol_type token, uint64_t action = 0)
+    control(account_name self, symbol_type token = symbol_type(), uint64_t action = 0)
         : contract(self)
         , _token(token)
         , _props_tbl(_self, token)
