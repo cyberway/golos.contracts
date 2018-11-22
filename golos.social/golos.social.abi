@@ -1,0 +1,92 @@
+{
+  "version": "cyberway::abi/1.0",
+  "types": [{
+      "new_type_name": "account_name",
+      "type": "name"
+    }
+  ],
+  "structs": [
+  {
+    "name": "pinblock_record",
+    "base": "",
+    "fields": [
+      {
+        "name": "account",
+        "type": "account_name"
+      },
+      {
+        "name": "pinning",
+        "type": "bool"
+      },
+      {
+        "name": "blocking",
+        "type": "bool"
+      }
+    ]
+  },
+  {
+    "name": "pin",
+    "base": "",
+    "fields": [
+      {
+        "name": "pinner",
+        "type": "account_name"
+      },
+      {
+        "name": "pinning",
+        "type": "account_name"
+      }
+    ]
+  },
+  {
+    "name": "block",
+    "base": "",
+    "fields": [
+      {
+        "name": "blocker",
+        "type": "account_name"
+      },
+      {
+        "name": "blocking",
+        "type": "account_name"
+      }
+    ]
+  }
+  ],
+  "actions": [
+  {
+    "name": "pin",
+    "type": "pin"
+  },
+  {
+    "name": "unpin",
+    "type": "pin"
+  },
+  {
+    "name": "block",
+    "type": "block"
+  },
+  {
+    "name": "unblock",
+    "type": "block"
+  }
+  ],
+  "tables": [
+  {
+    "name": "pinblock",
+    "type": "pinblock_record",
+    "indexes": [
+      {
+        "name": "primary",
+        "unique": "true",
+        "orders": [
+          {"field": "account", "order": "asc"}
+        ]
+      }
+    ]
+  }
+  ],
+  "ricardian_clauses": [],
+  "error_messages": [],
+  "abi_extensions": []
+}

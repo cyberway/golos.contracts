@@ -4,6 +4,7 @@ namespace golos { namespace config {
 
 // contracts
 static const auto control_name = N(gls.ctrl);
+static const auto social_name = N(gls.social);
 static const auto vesting_name = N(gls.vesting);
 static const auto emission_name = N(gls.emit);
 static const auto workers_name = N(gls.worker);
