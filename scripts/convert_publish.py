@@ -11,7 +11,6 @@ from decimal import Decimal
 from bson.decimal128 import Decimal128
 from pymongo import MongoClient
 from config import *
-from pymongo import UpdateOne
 
 def create_tags(metadata_tags):
     tags = []
@@ -30,12 +29,11 @@ class PublishConverter:
         self.publish_db = publish_db
         self.cyberway_db = cyberway_db
         self.exists_accs = set()
-        self.parent_id_list = []
         self.mssgs_curatorsw = defaultdict(int)
         self.publish_tables = dbs.Tables([
-            ('vote',    self.publish_db['vote'],    None, None),
-            ('message', self.publish_db['message'], None, None),
-            ('content', self.publish_db['content'], None, None)
+            ('vote',    self.publish_db['votetable'],    None, None),
+            ('message', self.publish_db['messagetable'], None, None),
+            ('content', self.publish_db['contenttable'], None, None)
         ])
         self.cache_period = cache_period
 
@@ -69,12 +67,11 @@ class PublishConverter:
         added = 0
         passed = -1        
         for doc in cursor:
+            if added == 1000:
+                break
             passed += 1
             try:
-                if doc["removed"]:
-                    continue
-                if (not (doc["author"] in self.exists_accs)):
-                    self.parent_id_list.append(utils.convert_hash(doc["parent_permlink"]))
+                if doc["removed"] or (not (doc["author"] in self.exists_accs)):
                     continue
                 
                 cur_mssg_id = utils.convert_hash(doc["permlink"])
@@ -105,7 +102,7 @@ class PublishConverter:
                     "beneficiaries": [],
                     "rewardweight": utils.get_prop_raw(doc["reward_weight"]),
                     "state": messagestate,
-                    "childcount": doc["children"],
+                    "childcount": 0,
                     "closed": isClosedMessage,
                     "level": 0 if orphan_comment else doc["depth"], # this value will be incorrect for comment to orphan comment
                                                                     # but we only use level for comments nesting limits, 
@@ -115,6 +112,15 @@ class PublishConverter:
                     "_SIZE_": 50
                 }
                 self.publish_tables.message.append(message)
+
+                if not orphan_comment:
+                    match = next((
+                            msg for msg in self.publish_tables.getCache() 
+                            if msg["id"] == utils.convert_hash(doc["parent_permlink"]) and 
+                            msg["_SCOPE_"] == doc["author"]), None
+                    )
+                    if match is not None:
+                        match["childcount"] += 1 
                 
                 tags = []
                 if (isinstance(doc["json_metadata"], dict)):
@@ -170,7 +176,7 @@ class PublishConverter:
     def convert_votes(self, query = {}):
         print("convert_votes")
         golos_votes = self.golos_db['comment_vote_object']
-        cyberway_messages = self.publish_db['message']
+        cyberway_messages = self.publish_db['messagetable']
 
         cursor = golos_votes.find(query)
         length = cursor.count()
@@ -221,16 +227,9 @@ class PublishConverter:
             print(traceback.format_exc())
         print('...done')
 
-    def correct_childcount(self):
-        messages = dbs.cyberway_gls_publish_db['message']
-        messages.bulk_write([
-            UpdateOne(filter={"parent_id":parent_id},
-                      update={"$inc":{"childcount":-1}})
-            for parent_id in self.parent_id_list])
-
     def run(self, query = {}):
         self.fill_exists_accs()
-        self.convert_votes(query)
+        #self.convert_votes(query)
         self.convert_posts(query)
         self.correct_childcount()
 

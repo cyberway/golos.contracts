@@ -40,6 +40,9 @@ class Table:
     def append(self, item):
         self.cache.append(item)
 
+    def getCache(self):
+        return self.cache
+
     def writeCache(self):
         if len(self.cache):
             self.table.insert_many(self.cache)
