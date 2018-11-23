@@ -67,8 +67,6 @@ class PublishConverter:
         added = 0
         passed = -1        
         for doc in cursor:
-            if added == 1000:
-                break
             passed += 1
             try:
                 if doc["removed"] or (not (doc["author"] in self.exists_accs)):
@@ -229,7 +227,7 @@ class PublishConverter:
 
     def run(self, query = {}):
         self.fill_exists_accs()
-        #self.convert_votes(query)
+        self.convert_votes(query)
         self.convert_posts(query)
         self.correct_childcount()
 
