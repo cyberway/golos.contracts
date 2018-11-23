@@ -1,4 +1,5 @@
 #pragma once
+#include "util.hpp"
 #include <eosiolib/eosio.hpp>
 #include <variant>
 
@@ -69,7 +70,6 @@ struct param_helper {
         }
     }
 
-    // TODO: helper to get values from top witnesses
     template<typename T>
     static T get_median(std::vector<T>& params) {
         auto l = params.size();
@@ -84,14 +84,14 @@ struct param_helper {
     }
 
     template<typename T>
-    static bool have_majority(const std::vector<T>& params, size_t min_count, T& major) {
+    static bool have_majority(const std::vector<T>& params, size_t req_count, T& major) {
         auto l = params.size();
         eosio_assert(l > 0, "empty params not allowed");
-        // eosio_assert(l >= min_count, "min_count is too large to reach");
-        if (l < min_count) {
-            return false; //min_count is too large to reach
+        // eosio_assert(l >= req_count, "req_count is too large to reach");
+        if (l < req_count) {
+            return false; //req_count is too large to reach
         }
-        eosio_assert(l/2 + 1 <= min_count, "min_count is too small, it must be at least 50%+1");
+        eosio_assert(l/2 + 1 <= req_count, "req_count is too small, it must be at least 50%+1");
         std::map<T,int> same;
         int max_count = -1;
         T max_value;
@@ -102,26 +102,27 @@ struct param_helper {
             if (count > max_count) {
                 max_count = count;
                 max_value = p;
-                if (count >= min_count) {
+                if (count >= req_count) {
                     major = max_value;
                     return true;
                 }
             }
-            if (l + max_count < min_count) {
-                return false;   // no chance to reach min_count
+            if (l + max_count < req_count) {
+                return false;   // no chance to reach req_count
             }
             l--;
         }
         return false;
     }
 
-    template<typename P, typename T, typename S, typename F>
+    template<typename T, typename S, typename F>
     static bool update_state(T& top, S& state, F field, int threshold) {
-        std::vector<P> param_top(top.size());
+        using ParamType = typename member_pointer_info<F>::value_type;
+        std::vector<ParamType> param_top(top.size());
         std::transform(top.begin(), top.end(), param_top.begin(), [&](const auto& p) {
             return p.*field;
         });
-        P major;
+        ParamType major;
         bool majority = param_helper::have_majority(param_top, threshold, major);
         if (majority && major != state.*field) {
             state.*field = major;
@@ -130,6 +131,72 @@ struct param_helper {
         return false;
     }
 
+    /**
+     * Get contract parameters, individually set by top witnesses
+     *
+     * @brief helper to obtain top parameters to calculate median or majority value
+     * @tparam Tbl - multi-index table, where parameters stored. Must be singleton
+     * @tparam Item - type of parameters struct
+     * @param code - contract to get parameters for
+     * @param top - top witnesses
+     */
+    template<typename Tbl, typename Item>   // TODO: Item can be derived from Tbl
+    static std::vector<Item> get_top_params(account_name code, const std::vector<account_name>& top) {
+        std::vector<Item> r;
+        for (const auto& w: top) {
+            Tbl p{code, w};                 // NOTE: convention to store parameters in account scope
+            if (p.exists())
+                r.emplace_back(p.get());
+        }
+        return r;
+    }
+
+};
+
+/**
+ * Base for visitors to set witness local parameters struct
+ *
+ * @brief add operator() for each parameter type
+ * @tparam T - parameters struct type
+ */
+template<typename T>
+struct set_params_visitor {
+    T& state;
+    bool update;
+
+    set_params_visitor(bool up, T& s): update(up), state(s) {}
+
+    template<typename P, typename F>
+    void set_param(const P& value, F field) {
+        if (update) {
+            eosio_assert(state.*field != value, "can't set same parameter value");   // TODO: add parameter name to assert message
+        }
+        state.*field = value;
+    }
+};
+
+// TODO: combine both visitors to reduce boilerplate required to write in contract
+/**
+ * Base for visitors to update global state parameters of contract
+ *
+ * @brief add operator() for each parameter type
+ * @tparam T - global storage type
+ */
+template<typename T>
+struct state_params_update_visitor {
+    T& state;
+    const std::vector<T>& top;
+    bool changed = false;
+
+    state_params_update_visitor(T& s, const std::vector<T>& t): state(s), top(t) {}
+
+    template<typename F>
+    void update_state(F field, int threshold) {
+        bool ch = param_helper::update_state(top, state, field, threshold);
+        if (ch) {
+            changed = true;
+        }
+    }
 };
 
 
