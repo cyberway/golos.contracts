@@ -1,0 +1,212 @@
+{
+  "version": "cyberway::abi/1.0",
+  "types": [{
+      "new_type_name": "account_name",
+      "type": "name"
+    },{
+      "new_type_name": "base_t",
+      "type": "int64"
+    },{
+      "new_type_name": "wide_t",
+      "type": "int128"
+    },{
+      "new_type_name": "index_t",
+      "type": "uint64"
+    },{
+      "new_type_name": "enum_t",
+      "type": "uint8"
+    },{
+      "new_type_name": "counter_t",
+      "type": "uint64"
+    },{
+      "new_type_name": "symbol_name",
+      "type": "uint64"
+    },{
+      "new_type_name": "uchar",
+      "type": "uint8"
+    }
+  ],
+  "structs": [
+  {
+    "name": "value",
+    "base": "",
+    "fields": [
+        {
+            "name": "kind",
+            "type": "enum_t"
+        },
+        {
+            "name": "idx",
+            "type": "index_t"
+        }
+    ]
+  },
+  {
+    "name": "bytecode",
+    "base": "",
+    "fields": [
+        {
+            "name": "varssize",
+            "type": "index_t"
+        },
+        {
+            "name": "operators",
+            "type": "index_t[]"
+        },
+        {
+            "name": "values",
+            "type": "value[]"
+        },
+        {
+            "name": "nums",
+            "type": "base_t[]"
+        },
+        {
+            "name": "consts",
+            "type": "base_t[]"
+        }
+    ]
+  },
+  {
+    "name": "setrestorer",
+    "base": "",
+    "fields": [
+        {
+            "name": "token_name",
+            "type": "symbol_name"
+        },
+        {
+            "name": "suffix",
+            "type": "uchar"
+        },
+        {
+            "name": "func_str",
+            "type": "string"
+        },
+        {
+            "name": "max_prev",
+            "type": "uint64"
+        },
+        {
+            "name": "max_vesting",
+            "type": "uint64"
+        },
+        {
+            "name": "max_elapsed",
+            "type": "uint64"
+        }
+    ]
+  },
+  {
+    "name": "use",
+    "base": "",
+    "fields": [
+        {
+            "name": "user",
+            "type": "account_name"
+        },
+        {
+            "name": "token_name",
+            "type": "symbol_name"
+        },
+        {
+            "name": "suffix",
+            "type": "uchar"
+        },
+        {
+            "name": "price",
+            "type": "uint64"
+        },
+        {
+            "name": "cutoff",
+            "type": "uint64"
+        }
+    ]
+  },
+  {
+    "name": "balance",
+    "base": "",
+    "fields": [
+        {
+            "name": "charge_name",
+            "type": "symbol_name"
+        },
+        {
+            "name": "last_update",
+            "type": "uint64"
+        },
+        {
+            "name": "value",
+            "type": "base_t"
+        }
+    ]
+  },
+  {
+    "name": "restorer",
+    "base": "",
+    "fields": [
+        {
+            "name": "charge_name",
+            "type": "symbol_name"
+        },
+        {
+            "name": "func",
+            "type": "bytecode"
+        },
+        {
+            "name": "max_prev",
+            "type": "base_t"
+        },
+        {
+            "name": "max_vesting",
+            "type": "base_t"
+        },
+        {
+            "name": "max_elapsed",
+            "type": "base_t"
+        }
+    ]
+  },
+  ],
+  "actions": [
+  {
+    "name": "setrestorer",
+    "type": "setrestorer"
+  },
+  {
+    "name": "use",
+    "type": "use"
+  }
+  ],
+  "tables": [
+  {
+    "name": "balances",
+    "type": "balance",
+    "indexes": [
+       {
+          "name": "primary",
+          "unique": "true",
+          "orders": [
+              {"field": "charge_name", "order": "asc"}
+          ]
+       }
+    ]
+  },
+  {
+    "name": "restorers",
+    "type": "restorer",
+    "indexes": [
+       {
+          "name": "primary",
+          "unique": "true",
+          "orders": [
+              {"field": "charge_name", "order": "asc"}
+          ]
+       }
+    ]
+  },
+  ],
+  "ricardian_clauses": [],
+  "error_messages": [],
+  "abi_extensions": []
+}
