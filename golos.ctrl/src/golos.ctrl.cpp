@@ -111,7 +111,6 @@ void control::unregwitness(account_name witness) {
 
 // Note: if not weighted, it's possible to pass all witnesses in vector like in BP actions
 void control::votewitness(account_name voter, account_name witness, uint16_t weight/* = 10000*/) {
-    // TODO: check witness existance (can work without it)
     require_auth(voter);
 
     witness_tbl witness_table(_self, _token);
