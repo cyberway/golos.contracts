@@ -67,7 +67,7 @@ struct aprox_val_t {
         if (delta < 0.0) {
             double a = std::min(std::abs(rhs.val), std::abs(val));
             double b = std::max(std::abs(rhs.val), std::abs(val));
-            return b < 1.e-20 || (a / b) > (1.0 - d);
+            return b < 1.e-5 || (a / b) > (1.0 - d);
         } else {
             return (val - d) <= rhs.val && rhs.val <= (val + d);
         }

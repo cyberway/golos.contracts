@@ -6,6 +6,7 @@ fract_digits = {
     'fixp': 12,
     'elaf': 62
 }
+fixp_max = 2**(63 - fract_digits['fixp']) - 1
 
 import hashlib
 from decimal import Decimal
@@ -48,3 +49,32 @@ def printProgressBar (iteration, total, prefix = '', suffix = '', decimals = 1, 
 def uint_to_hex_str(val, n):
     return '0x' + hex(val)[2:].zfill(n)
      
+def char_to_symbol(c):
+  if (c >= ord('a') and c <= ord('z')):
+    return (c - ord('a')) + 6
+  if (c >= ord('1') and c <= ord('5')):
+    return (c - ord('1')) + 1;
+  return 0;
+     
+def string_to_name(s):
+  len_str = len(s)
+  sbytes = str.encode(s)
+  value = 0
+  
+  i = 0
+  while (i <= 12):
+    c = 0
+    
+    if (i < len_str and i <= 12):
+      c = char_to_symbol(sbytes[i])
+    
+    if (i < 12):
+      c = c & 0x1f
+      c = c << 64-5*(i+1)
+    else:
+      c = c & 0x0f
+      
+    value = value | c
+    i += 1
+
+  return value

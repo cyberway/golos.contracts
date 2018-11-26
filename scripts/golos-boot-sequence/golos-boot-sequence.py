@@ -10,6 +10,10 @@ import subprocess
 import sys
 import time
 
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+from config import golos_curation_func_str
+from utils import fixp_max
+
 args = None
 logFile = None
 
@@ -20,6 +24,7 @@ golosAccounts = [
     'gls.emit',
     'gls.vesting',
     'gls.publish',
+    'gls.social',
     'gls.worker',
 ]
 
@@ -211,6 +216,7 @@ def createGolosAccounts():
     updateAuth('gls.publish', 'witn.minor', 'active', [args.public_key], [])
     updateAuth('gls.publish', 'active', 'owner', [args.public_key], ['gls.ctrl@eosio.code'])
     updateAuth('gls.vesting', 'active', 'owner', [args.public_key], ['gls.vesting@eosio.code'])
+    updateAuth('gls.social',  'active', 'owner', [args.public_key], ['gls.social@eosio.code'])
     updateAuth('gls.emit',    'active', 'owner', [args.public_key], ['gls.emit@eosio.code'])
 
 def stepInstallContracts():
@@ -218,6 +224,7 @@ def stepInstallContracts():
     retry(args.cleos + 'set contract gls.emit ' + args.contracts_dir + 'golos.emit/')
     retry(args.cleos + 'set contract gls.vesting ' + args.contracts_dir + 'golos.vesting/')
     retry(args.cleos + 'set contract gls.publish ' + args.contracts_dir + 'golos.publication/')
+    retry(args.cleos + 'set contract gls.social ' + args.contracts_dir + 'golos.social/')
 
 def stepCreateTokens():
     retry(args.cleos + 'push action eosio.token create ' + jsonArg(["gls.publish", intToToken(10000000000*10000)]) + ' -p eosio.token')
@@ -258,11 +265,10 @@ def createWitnessAccounts():
         voteWitness('gls.ctrl', a['name'], a['name'], 10000)
         
 def initCommunity():
-    bignum=500*1000*1000*1000
     retry(args.cleos + 'push action gls.emit start ' + jsonArg([args.token]) + '-p gls.publish')
     retry(args.cleos + 'push action gls.publish setrules ' + jsonArg({
-        "mainfunc":{"str":"x","maxarg":bignum},
-        "curationfunc":{"str":"sqrt(x)","maxarg":bignum},
+        "mainfunc":{"str":"x","maxarg":fixp_max},
+        "curationfunc":{"str":golos_curation_func_str,"maxarg":fixp_max},
         "timepenalty":{"str":"x/1800","maxarg":1800},
         "curatorsprop":2500,
         "maxtokenprop":5000,
@@ -318,7 +324,7 @@ parser.add_argument('--user-limit', metavar='', help="Max number of users. (0 = 
 parser.add_argument('--max-user-keys', metavar='', help="Maximum user keys to import into wallet", type=int, default=100)
 parser.add_argument('--witness-limit', metavar='', help="Maximum number of witnesses. (0 = no limit)", type=int, default=0)
 parser.add_argument('--symbol', metavar='', help="The Golos community token symbol", default='GLS')
-parser.add_argument('--token-precision', metavar='', help="The Golos community token precision", type=int, default=6)
+parser.add_argument('--token-precision', metavar='', help="The Golos community token precision", type=int, default=3)
 parser.add_argument('--vesting-precision', metavar='', help="The Golos community vesting precision", type=int, default=6)
 parser.add_argument('--docker', action='store_true', help='Run actions only for Docker (used with -a)')
 parser.add_argument('-a', '--all', action='store_true', help="Do everything marked with (*)")

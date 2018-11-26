@@ -104,6 +104,7 @@ void publication::create_message(account_name account, std::string permlink,
 
     auto mssg_itr = message_table.emplace(account, [&]( auto &item ) {
         item.id = message_id;
+        item.permlink = permlink;
         item.date = cur_time;
         item.parentacc = parentacc;
         item.parent_id = parent_id;

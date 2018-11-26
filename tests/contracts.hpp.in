@@ -19,6 +19,8 @@ struct contracts {
     static std::vector<char>    charge_abi()  { return read_abi (GOLOS_CONTRACTS "golos.charge/golos.charge.abi"); }
     static std::vector<uint8_t> reward_calcs_wasm() { return read_wasm(GOLOS_CONTRACTS "reward_calcs/reward_calcs.wasm"); }
     static std::vector<char>    reward_calcs_abi()  { return read_abi (GOLOS_CONTRACTS "reward_calcs/reward_calcs.abi"); }
+    static std::vector<uint8_t> social_wasm() { return read_wasm(GOLOS_CONTRACTS "golos.social/golos.social.wasm"); }
+    static std::vector<char>    social_abi()  { return read_abi (GOLOS_CONTRACTS "golos.social/golos.social.abi"); }
 
 
     static std::vector<uint8_t> system_wasm() { return read_wasm(CYBERWAY_CONTRACTS "eosio.system/eosio.system.wasm"); }

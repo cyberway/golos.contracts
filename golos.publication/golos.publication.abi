@@ -192,6 +192,10 @@
         "type": "uint64"
       },
       {
+        "name": "permlink",
+        "type": "string"
+      },
+      {
         "name": "date",
         "type": "uint64"
       },

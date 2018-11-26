@@ -57,6 +57,7 @@ struct message {
     message() = default;
 
     uint64_t id;
+    std::string permlink;
     uint64_t date;
     account_name parentacc;
     uint64_t parent_id;

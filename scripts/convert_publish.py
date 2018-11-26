@@ -3,7 +3,10 @@ from collections import defaultdict
 import json
 import utils
 import dbs
+import re
+import ast
 import bson
+import subprocess
 import sys, traceback
 from datetime import datetime
 from datetime import timedelta
@@ -12,15 +15,29 @@ from bson.decimal128 import Decimal128
 from pymongo import MongoClient
 from config import *
 
+expiretion = timedelta(minutes = 30)
+
 def create_tags(metadata_tags):
     tags = []
-    for tag in metadata_tags or []:
-        tag_obj = {
-            "tag": tag
-        }
+    if (isinstance(metadata_tags, int)):
+        tag_obj = { "tag": str(metadata_tags) }
         tags.append(tag_obj)
-
+    if(isinstance(metadata_tags, list)):
+        for tag in metadata_tags or []:
+            tag_obj = { "tag": tag }
+            tags.append(tag_obj)
     return tags
+
+def create_trx(author, id_message):
+    trx = ""
+    try:
+        command = "cleos push action gls.publish closemssg '{\"account\":\""+author+"\", \"permlink\":\""+str(id_message)+"\"}' -p gls.publish -d --return-packed"
+        result = ast.literal_eval(re.sub("^\s+|\n|\r|\s+$", '', subprocess.check_output(command, stderr=subprocess.STDOUT, shell=True).decode("utf-8")))
+        trx = result["packed_trx"]
+    except Exception as e:
+        print(e.args)
+        print(traceback.format_exc())
+    return trx;
 
 class PublishConverter:
     def __init__(self, golos_db, publish_db, cyberway_db, cache_period = 10000):
@@ -32,7 +49,8 @@ class PublishConverter:
         self.publish_tables = dbs.Tables([
             ('vote',    self.publish_db['votetable'],    None, None),
             ('message', self.publish_db['messagetable'], None, None),
-            ('content', self.publish_db['contenttable'], None, None)
+            ('content', self.publish_db['contenttable'], None, None),
+            ("gtransaction", self.cyberway_db['gtransaction'], None, None)
         ])
         self.cache_period = cache_period
 
@@ -80,17 +98,32 @@ class PublishConverter:
                 }
             
                 isClosedMessage = True
-                expiretion = timedelta(minutes = 30)
                 date_close = datetime.strptime("2106-02-07T06:28:15", '%Y-%m-%dT%H:%M:%S').isoformat()
                 if (doc["cashout_time"].isoformat() != date_close and doc["cashout_time"].isoformat() > datetime.now().isoformat()):
                     rshares_sum += cur_rshares_raw
                     pool["state"]["msgs"] += 1
                     isClosedMessage = False
+                    
+                    delay_trx = {
+                      "trx_id": "",
+                      "sender": "gls.publish",
+                      "sender_id": hex(utils.convert_hash(doc["permlink"]) << 64 | utils.string_to_name(doc["author"])),
+                      "payer": "gls.publish",
+                      "delay_until" : doc["cashout_time"].isoformat(), 
+                      "expiration" :  (doc["cashout_time"] + expiretion).isoformat(), 
+                      "published" :   doc["created"].isoformat(), 
+                      "packed_trx" : create_trx(doc["author"], utils.convert_hash(doc["permlink"])), 
+                      "_SCOPE_" : "",
+                      "_PAYER_" : "",
+                      "_SIZE_" : 50
+                    }
+                    self.publish_tables.gtransaction.append(delay_trx)
                 
                 orphan_comment = (len(doc["parent_author"]) > 0) and (not (doc["parent_author"] in self.exists_accs))
 
                 message = {
                     "id": cur_mssg_id,
+                    "permlink": doc["permlink"],
                     "date": int(doc["last_update"].timestamp()) * 1000000,
                     "parentacc": "" if orphan_comment else doc["parent_author"],
                     "parent_id": 0  if (orphan_comment or (not len(doc["parent_permlink"]) > 0)) else utils.convert_hash(doc["parent_permlink"]),
@@ -142,14 +175,16 @@ class PublishConverter:
                 if added % self.cache_period == 0:
                     print("messages converted -- ", added)
                     self.publish_tables.writeCache()
+                    utils.printProgressBar(passed+1, length, prefix = 'Progress:', suffix = 'Complete', length = 50)
                 added += 1
-                utils.printProgressBar(passed + 1, length, prefix = 'Progress:', suffix = 'Complete', length = 50)
+
             except Exception as e:
                 print(doc)
                 print(e.args)
                 print(traceback.format_exc())
         try:
             self.publish_tables.writeCache()
+            utils.printProgressBar(passed+1, length, prefix = 'Progress:', suffix = 'Complete', length = 50)
         except Exception as e:
             print(e.args)
             print(traceback.format_exc())
@@ -202,14 +237,16 @@ class PublishConverter:
                 if added % self.cache_period == 0:
                     print("votes converted -- ", added)
                     self.publish_tables.writeCache()
+                    utils.printProgressBar(passed+1, length, prefix = 'Progress:', suffix = 'Complete', length = 50)
                 added += 1
-                utils.printProgressBar(passed + 1, length, prefix = 'Progress:', suffix = 'Complete', length = 50)
+                
             except Exception as e:
                 print(doc)
                 print(e.args)
                 print(traceback.format_exc())
         try:
             self.publish_tables.writeCache()
+            utils.printProgressBar(passed+1, length, prefix = 'Progress:', suffix = 'Complete', length = 50)
         except Exception as e:
             print(e.args)
             print(traceback.format_exc())
