@@ -29,7 +29,7 @@ struct golos_emit_api: domain_contract_api<symbol> {
     action_result set_params(account_name who, std::string json_params) {
         return push(N(setparams), who, args()
             ("who", who)
-            ("params", fc::json::from_string(json_params)));
+            ("params", json_str_to_obj(json_params)));
     }
 
     //// emit tables

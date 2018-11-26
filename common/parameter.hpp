@@ -55,16 +55,15 @@ struct param_helper {
     template<typename T>
     static void check_dups(const std::vector<T>& params) {
         using idx_type = decltype(params[0].index());
-        std::set<idx_type> types;
-        bool first = true;
         idx_type prev_idx = 0;
+        bool first = true;
         for (const auto& p: params) {
             auto i = p.index();
             if (!first) {
-                eosio_assert(i > prev_idx, "parameters must be ordered by variant index");
+                eosio_assert(i > prev_idx, i < prev_idx
+                    ? "parameters must be ordered by variant index"
+                    : "params contain several copies of the same parameter");
             }
-            eosio_assert(types.count(i) == 0, "params contain several copies of the same parameter");
-            types.emplace(i);
             prev_idx = i;
             first = false;
         }

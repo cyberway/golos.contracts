@@ -68,7 +68,7 @@ public:
     }
 
     struct errors: contract_error_messages {
-        // const string no_symbol          = amsg("symbol not found");
+        const string no_pool_account   = amsg("pool account must exist");
     } err;
 
     const string _test_key = string(fc::crypto::config::public_key_legacy_prefix)
@@ -169,21 +169,13 @@ BOOST_FIXTURE_TEST_CASE(set_params, golos_emit_tester) try {
     auto t = emit.get_params();
     BOOST_TEST_MESSAGE("--- " + fc::json::to_string(t));
 
-    struct err: contract_error_messages {
-        const string bad_variant_order = amsg("parameters must be ordered by variant index");
-        const string no_pool_account   = amsg("pool account must exist");
-    } err;
-
     string pool0 = "{\"name\":\"zero\",\"percent\":0}";
     string pool1 = "{\"name\":\"test\",\"percent\":5000}";
     string pool2 = "{\"name\":\"less\",\"percent\":4999}";
     string pool3 = "{\"name\":\"more\",\"percent\":5001}";
     const auto pools = "{\"pools\":[" + pool2 + "," + pool1 + "," + pool0 + "]}";
     const string infrate = "{\"start\":1,\"stop\":1,\"narrowing\":0}";
-    auto params = "[[\"reward_pools\"," + pools + "], [\"inflation_rate\"," + infrate + "]]";
-    BOOST_CHECK_EQUAL(err.bad_variant_order, emit.set_params(_bob, params));
-
-    params = "[[\"inflation_rate\"," + infrate + "], [\"reward_pools\"," + pools + "]]";
+    auto params = "[[\"inflation_rate\"," + infrate + "], [\"reward_pools\"," + pools + "]]";
     BOOST_CHECK_EQUAL(err.no_pool_account, emit.set_params(_bob, params));
     create_accounts({N(test), N(less), N(zero)});
     produce_block();
