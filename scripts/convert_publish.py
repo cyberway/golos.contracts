@@ -30,6 +30,7 @@ class PublishConverter:
         self.cyberway_db = cyberway_db
         self.exists_accs = set()
         self.mssgs_curatorsw = defaultdict(int)
+        self.childcount_list = []
         self.publish_tables = dbs.Tables([
             ('vote',    self.publish_db['votetable'],    None, None),
             ('message', self.publish_db['messagetable'], None, None),
@@ -111,11 +112,19 @@ class PublishConverter:
                 }
                 self.publish_tables.message.append(message)
 
-                if not orphan_comment:
+                
+                if orphan_comment or doc["parent_author"] == "":
+                    childcount_obj = {
+                        "id": cur_mssg_id,
+                        "_SCOPE_": doc["author"],
+                        "childcount": 0
+                    }
+                    childcount_list.appent(childcount_obj)
+                else:
                     match = next((
-                            msg for msg in self.publish_tables.getCache() 
-                            if msg["id"] == utils.convert_hash(doc["parent_permlink"]) and 
-                            msg["_SCOPE_"] == doc["author"]), None
+                        obj for obj in childcount_list 
+                        if obj["id"] == utils.convert_hash(doc["parent_permlink"]) and 
+                        obj["_SCOPE_"] == doc["parent_author"]), None
                     )
                     if match is not None:
                         match["childcount"] += 1 
@@ -225,11 +234,26 @@ class PublishConverter:
             print(traceback.format_exc())
         print('...done')
 
+    def update_childcount(self):
+        messages = self.publish_db['message']
+        for obj in self.childcount_list:
+            messages.updateOne(
+                {
+                    "$and": [
+                        { "id": obj["id"] },
+                        { "_SCOPE_": obj["_SCOPE_"] }
+                    ]
+                },
+                { 
+                    "$set": { "childcount": obj["childcount"] } 
+                }
+            )
+
     def run(self, query = {}):
         self.fill_exists_accs()
         self.convert_votes(query)
         self.convert_posts(query)
-        self.correct_childcount()
+        self.update_childcount()
 
 #PublishConverter(dbs.golos_db, dbs.cyberway_gls_publish_db, dbs.cyberway_db).run({"author" : "goloscore"})
 PublishConverter(dbs.golos_db, dbs.cyberway_gls_publish_db, dbs.cyberway_db).run()
