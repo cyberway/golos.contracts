@@ -162,12 +162,11 @@ BOOST_FIXTURE_TEST_CASE(start_emission_test, golos_emit_tester) try {
 BOOST_FIXTURE_TEST_CASE(set_params, golos_emit_tester) try {
     BOOST_TEST_MESSAGE("Test emission parameters");
     BOOST_TEST_MESSAGE("--- prepare control");
-    prepare_ctrl(step_vote_witnesses);
-    produce_blocks(10);
+    prepare_ctrl(step_only_create);
+    produce_block();
 
-    BOOST_TEST_MESSAGE("--- check global params");
-    auto t = emit.get_params();
-    BOOST_TEST_MESSAGE("--- " + fc::json::to_string(t));
+    BOOST_TEST_MESSAGE("--- check that global params not exist");
+    BOOST_TEST_CHECK(emit.get_params().is_null());
 
     string pool0 = "{\"name\":\"zero\",\"percent\":0}";
     string pool1 = "{\"name\":\"test\",\"percent\":5000}";
@@ -176,20 +175,20 @@ BOOST_FIXTURE_TEST_CASE(set_params, golos_emit_tester) try {
     const auto pools = "{\"pools\":[" + pool2 + "," + pool1 + "," + pool0 + "]}";
     const string infrate = "{\"start\":1,\"stop\":1,\"narrowing\":0}";
     auto params = "[[\"inflation_rate\"," + infrate + "], [\"reward_pools\"," + pools + "]]";
-    BOOST_CHECK_EQUAL(err.no_pool_account, emit.set_params(_bob, params));
+    BOOST_CHECK_EQUAL(err.no_pool_account, emit.set_params(params));
     create_accounts({N(test), N(less), N(zero)});
     produce_block();
 
-    BOOST_CHECK_EQUAL(success(), emit.set_params(_w[0], params));
-    t = emit.get_params();
+    BOOST_CHECK_EQUAL(success(), emit.set_params(params));
+    auto t = emit.get_params();
     BOOST_TEST_MESSAGE("--- " + fc::json::to_string(t));
-    BOOST_CHECK_EQUAL(success(), emit.set_params(_w[1],
+    BOOST_CHECK_EQUAL(success(), emit.set_params(
         "[[\"inflation_rate\"," + infrate + "], [\"reward_pools\",{\"pools\":[" +pool0+ "]}]]"
     ));
     t = emit.get_params();
     BOOST_TEST_MESSAGE("--- " + fc::json::to_string(t));
 
-    BOOST_CHECK_EQUAL(success(), emit.set_params(_w[2],
+    BOOST_CHECK_EQUAL(success(), emit.set_params(
         "[[\"inflation_rate\",{\"start\":5,\"stop\":5,\"narrowing\":0}], [\"reward_pools\"," + pools + "]]"
     ));
     t = emit.get_params();

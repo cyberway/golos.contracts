@@ -1,0 +1,134 @@
+#include "golos.config/golos.config.hpp"
+#include "golos.config/config.hpp"
+#include <eosiolib/transaction.hpp>
+#include <common/parameter_ops.hpp>
+
+namespace golos {
+
+using namespace eosio;
+
+
+configer::configer(account_name self): contract(self) {
+}
+
+struct emit_params_setter: set_params_visitor<emit_state> {
+    using set_params_visitor::set_params_visitor; // enable constructor
+
+    void operator()(const infrate_params& p) {
+        set_param(p, &emit_state::infrate);
+    }
+    void operator()(const reward_pools_param& p) {
+        set_param(p, &emit_state::pools);
+    }
+};
+
+void configer::updateparamse(account_name who, std::vector<emit_param> params) {
+    print("updateparams\n");
+    eosio_assert(who != _self, "can only change parameters of account, not contract");
+    print("not self ok\n");
+    require_auth(who);
+    print("auth ok\n");
+    param_helper::check_params(params); // TODO: validate using `validateprms` action of related contract
+    // INLINE_ACTION_SENDER(contract_class, validateprms)(contract_name, {{_self, N(active)}}, {params});
+
+    emit_state_singleton acc_params{_self, who};
+    bool update = acc_params.exists();
+    eosio_assert(update || params.size() == emit_state::params_count,
+        std::string("must provide all "+std::to_string(emit_state::params_count)+" parameters in initial set").c_str());
+    auto current = update ? acc_params.get() : emit_state{};
+    auto setter = emit_params_setter(current, update);
+    for (const auto& param: params) {
+        std::visit(setter, param);
+    }
+    acc_params.set(setter.state, who);
+
+    if (is_top_witness(who)) {
+        recalculate_state(params);
+    }
+}
+
+struct emit_state_updater: state_params_update_visitor<emit_state> {
+    using state_params_update_visitor::state_params_update_visitor;
+
+    static const int THRESHOLD = 2; // test only; TODO: get from cfg_state_singleton
+
+    void operator()(const infrate_params& p) {
+        update_state(&emit_state::infrate, THRESHOLD);
+    }
+    void operator()(const reward_pools_param& p) {
+        update_state(&emit_state::pools, THRESHOLD);
+    }
+};
+
+vector<account_name> configer::get_top_witnesses() {
+    vector<account_name> r;
+    // TODO: get from singleton
+    return r;
+}
+
+bool configer::is_top_witness(account_name account) {
+    auto t = get_top_witnesses();
+    auto x = std::find(t.begin(), t.end(), account);
+    return x != t.end();
+}
+
+void configer::recalculate_state(vector<emit_param> changed_params) {
+    emit_state_singleton state{_self, _self};
+    auto s = state.exists() ? state.get() : emit_state{};   // TODO: default state must be created (in counstructor/init)
+
+    auto top = get_top_witnesses();
+    auto top_params = param_helper::get_top_params<emit_state_singleton, emit_state>(_self, top);
+    auto v = emit_state_updater(s, top_params);
+    for (const auto& param: changed_params) {
+        std::visit(v, param);
+    }
+    if (v.changed) {
+        state.set(v.state, _self);
+        // TODO: notify contract
+        // INLINE_ACTION_SENDER(contract_class, setparams)(contract_name, {{_owner, N(active)}}, {v.state});
+
+    }
+}
+
+void configer::notifytop(vector<account_name> top) {
+    // TODO: 1. store new top to singleton; 2. recalculate state
+    // require_auth(control);
+}
+
+
+////////////////////////////////////////////////////////////////
+// own parameters
+struct cfg_params_setter: set_params_visitor<cfg_state> {
+    using set_params_visitor::set_params_visitor; // enable constructor
+
+    bool operator()(const emit_pools_threshold_param& p) {
+        return set_param(p, &cfg_state::pools_threshold);
+    }
+    bool operator()(const emit_infrate_threshold_param& p) {
+        return set_param(p, &cfg_state::infrate_threshold);
+    }
+};
+
+void configer::validateprms(vector<cfg_param> params) {
+    param_helper::check_params(params);
+}
+
+void configer::setparams(vector<cfg_param> params) {
+    require_auth(_self);
+    param_helper::check_params(params);
+
+    cfg_state_singleton state{_self, _self};
+    auto s = state.exists() ? state.get() : cfg_state{};   // TODO: default state must be created (in counstructor/init)
+    auto setter = cfg_params_setter(s);
+    bool changed = false;
+    for (const auto& param: params) {
+        changed |= std::visit(setter, param);
+    }
+    eosio_assert(changed, "at least one parameter must change");    // don't add actions, which do nothing
+    state.set(setter.state, _self);
+}
+
+
+}
+
+EOSIO_ABI(golos::configer, (validateprms)(setparams)(updateparamse)(notifytop));

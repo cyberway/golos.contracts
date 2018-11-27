@@ -72,7 +72,7 @@ struct [[eosio::table]] emit_state {
 
     static constexpr int params_count = 2;
 };
-using emit_state_singleton = eosio::singleton<N(params), emit_state>;
+using emit_state_singleton = eosio::singleton<N(emitparams), emit_state>;
 
 
 } // golos

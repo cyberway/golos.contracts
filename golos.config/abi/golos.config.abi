@@ -34,79 +34,29 @@
                 {"type": "inflation_rate", "name": "infrate"},
                 {"type": "reward_pools",   "name": "pools"}]
         }, {
-            "name": "setparams",
+            "name": "updateparamse",
             "fields": [
-                {"type": "symbol",       "name": "domain"},
+                {"type": "account_name", "name": "who"},
                 {"type": "emit_param[]", "name": "params"}]
-        },
-
-        {
-            "name": "state",
-            "base": "",
+        }, {
+            "name": "notifytop",
             "fields": [
-                {"type": "uint64", "name": "id"},
-                {"type": "uint64", "name": "prev_emit"},
-                {"type": "uint128", "name": "tx_id"},
-                {"type": "uint64", "name": "start_time"},
-                {"type": "account_name", "name": "post_name"},
-                {"type": "account_name", "name": "work_name"},
-                {"type": "bool", "name": "active"}
-            ]
-        },
-        {
-            "name": "emit",
-            "base": "",
-            "fields": [
-                {"type": "symbol", "name": "domain"}
-            ]
-        },
-        {
-            "name": "start",
-            "base": "",
-            "fields": [
-                {"type": "symbol", "name": "domain"}
-            ]
-        },
-        {
-            "name": "stop",
-            "base": "",
-            "fields": [
-                {"type": "symbol", "name": "domain"}
-            ]
+                {"type": "account_name[]", "name": "top"}]
         }
     ],
     "actions": [
         {
-            "name": "setparams",
-            "type": "setparams",
+            "name": "updateparamse",
+            "type": "updateparamse",
             "ricardian_contract": ""
-        },
-        {
-            "name": "emit",
-            "type": "emit",
-            "ricardian_contract": ""
-        },
-        {
-            "name": "start",
-            "type": "start",
-            "ricardian_contract": ""
-        },
-        {
-            "name": "stop",
-            "type": "stop",
+        }, {
+            "name": "notifytop",
+            "type": "notifytop",
             "ricardian_contract": ""
         }
     ],
     "tables": [
         {
-            "name": "state",
-            "type": "state",
-            "indexes" : [{
-                "name": "primary",
-                "unique": true,
-                "orders": [{"field": "id", "order": "asc"}]
-            }]
-        }, {
             "name": "emitparams",
             "type": "emit_state",
             "indexes" : [{

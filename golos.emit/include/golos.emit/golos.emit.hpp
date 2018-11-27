@@ -24,7 +24,8 @@ class emission: public contract {
 public:
     emission(account_name self, symbol_type token, uint64_t action = 0);
 
-    [[eosio::action]] void setparams(account_name, std::vector<emit_param>);
+    [[eosio::action]] void validateprms(std::vector<emit_param>);
+    [[eosio::action]] void setparams(std::vector<emit_param>);
 
     [[eosio::action]] void emit();
     [[eosio::action]] void start();

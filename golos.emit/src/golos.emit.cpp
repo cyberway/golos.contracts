@@ -25,63 +25,34 @@ emission::emission(account_name self, symbol_type token, uint64_t action)
 struct emit_params_setter: set_params_visitor<emit_state> {
     using set_params_visitor::set_params_visitor; // enable constructor
 
-    void operator()(const infrate_params& p) {
-        set_param(p, &emit_state::infrate);
+    bool operator()(const infrate_params& p) {
+        return set_param(p, &emit_state::infrate);
     }
-    void operator()(const reward_pools_param& p) {
-        set_param(p, &emit_state::pools);
+    bool operator()(const reward_pools_param& p) {
+        return set_param(p, &emit_state::pools);
     }
 };
 
-void emission::setparams(account_name who, std::vector<emit_param> params) {
-    eosio_assert(who != _self, "can only change parameters of account, not contract");
-    require_auth(who);
+void emission::validateprms(vector<emit_param> params) {
+    //require_auth(who?)
     param_helper::check_params(params);
-
-    emit_state_singleton current_params{_self, who};
-    bool update = current_params.exists();
-    eosio_assert(update || params.size() == emit_state::params_count, "must provide all parameters in initial set");
-    auto current = update ? current_params.get() : emit_state{};
-    auto setter = emit_params_setter(update, current);
-    for (const auto& param: params) {
-        std::visit(setter, param);
-    }
-    current_params.set(setter.state, who);
-
-    if (control::is_top_witness(who, _token)) {
-        recalculate_state(params);
-    }
 }
 
-struct emit_state_updater: state_params_update_visitor<emit_state> {
-    using state_params_update_visitor::state_params_update_visitor;
+void emission::setparams(vector<emit_param> params) {
+    require_auth(_self);
+    param_helper::check_params(params);
 
-    static const int THRESHOLD = 2; // test only; TODO: actual value must be derived from max_witness_count
-
-    void operator()(const infrate_params& p) {
-        print("processing infrate\n");
-        update_state(&emit_state::infrate, THRESHOLD);
-    }
-    void operator()(const reward_pools_param& p) {
-        print("processing pools\n");
-        update_state(&emit_state::pools, THRESHOLD);
-    }
-};
-
-void emission::recalculate_state(std::vector<emit_param> changed_params) {
     emit_state_singleton state{_self, _self};
-    auto s = state.exists() ? state.get() : emit_state{};   // TODO: default state must be created (in counstructor/init)
-
-    auto top = control::get_top_witnesses(_token);
-    auto top_params = param_helper::get_top_params<emit_state_singleton, emit_state>(_self, top);
-    auto v = emit_state_updater(s, top_params);
-    for (const auto& param: changed_params) {
-        std::visit(v, param);
+    auto update = state.exists();
+    eosio_assert(update || params.size() == emit_state::params_count, "must provide all parameters in initial set");
+    auto s = update ? state.get() : emit_state{};
+    auto setter = emit_params_setter(s);
+    bool changed = false;
+    for (const auto& param: params) {
+        changed |= std::visit(setter, param);   // why we have no ||= ?
     }
-    if (v.changed) {
-        state.set(v.state, _self);
-        // TODO: notify
-    }
+    eosio_assert(changed, "at least one parameter must change");    // don't add actions, which do nothing
+    state.set(setter.state, _self);
 }
 
 
@@ -189,4 +160,4 @@ void emission::schedule_next(state& s, uint32_t delay) {
 
 } // golos
 
-APP_DOMAIN_ABI(golos::emission, (setparams)(emit)(start)(stop))
+APP_DOMAIN_ABI(golos::emission, (setparams)(validateprms)(emit)(start)(stop))

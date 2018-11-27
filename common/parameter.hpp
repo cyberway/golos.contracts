@@ -114,8 +114,9 @@ struct param_helper {
         return false;
     }
 
+    // TODO: add selection: median/majority/orher
     template<typename T, typename S, typename F>
-    static bool update_state(T& top, S& state, F field, int threshold) {
+    static bool recalculate_state(T& top, S& state, F field, int threshold) {
         using ParamType = typename member_pointer_info<F>::value_type;
         std::vector<ParamType> param_top(top.size());
         std::transform(top.begin(), top.end(), param_top.begin(), [&](const auto& p) {
@@ -153,30 +154,34 @@ struct param_helper {
 };
 
 /**
- * Base for visitors to set witness local parameters struct
+ * Base for visitors to update parameters struct
  *
- * @brief add operator() for each parameter type
+ * @brief add operator() for each parameter type and call `set_param` to do all common stuff
  * @tparam T - parameters struct type
  */
 template<typename T>
 struct set_params_visitor {
     T& state;
-    bool update;
+    bool no_same;   // disallows setting same parameter value
 
-    set_params_visitor(bool up, T& s): update(up), state(s) {}
+    set_params_visitor(T& s, bool fail_on_same = false): state(s), no_same(fail_on_same) {}
 
     template<typename P, typename F>
-    void set_param(const P& value, F field) {
-        if (update) {
-            eosio_assert(state.*field != value, "can't set same parameter value");   // TODO: add parameter name to assert message
+    bool set_param(const P& value, F field) {
+        bool changed = state.*field != value;
+        if (no_same) {
+            eosio_assert(changed, "can't set same parameter value");   // TODO: add parameter name to assert message
         }
-        state.*field = value;
+        if (changed) {
+            state.*field = value;
+        }
+        return changed;
     }
 };
 
 // TODO: combine both visitors to reduce boilerplate required to write in contract
 /**
- * Base for visitors to update global state parameters of contract
+ * Base for visitors to recalculate parameters state
  *
  * @brief add operator() for each parameter type
  * @tparam T - global storage type
@@ -191,7 +196,7 @@ struct state_params_update_visitor {
 
     template<typename F>
     void update_state(F field, int threshold) {
-        bool ch = param_helper::update_state(top, state, field, threshold);
+        bool ch = param_helper::recalculate_state(top, state, field, threshold);
         if (ch) {
             changed = true;
         }

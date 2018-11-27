@@ -26,9 +26,8 @@ struct golos_emit_api: domain_contract_api<symbol> {
         return push_msig(N(stop), {{owner, config::active_name}}, signers, args());
     }
 
-    action_result set_params(account_name who, std::string json_params) {
-        return push(N(setparams), who, args()
-            ("who", who)
+    action_result set_params(std::string json_params) {
+        return push(N(setparams), _code, args()
             ("params", json_str_to_obj(json_params)));
     }
 

@@ -57,18 +57,24 @@ public:
     const uint64_t _w[4] = {N(witn1), N(witn2), N(witn3), N(witn4)};
     const size_t _n_w = sizeof(_w) / sizeof(_w[0]);
 
+    const int emit_params_count = 2;
+
     struct errors: contract_error_messages {
         const string empty             = amsg("empty params not allowed");
         const string bad_variant_order = amsg("parameters must be ordered by variant index");
         const string duplicates        = amsg("params contain several copies of the same parameter");
         const string incomplete        = amsg("must provide all parameters in initial set");
-        const string same_value        = amsg("can't set same parameter value");
+        // const string incomplete(int n) { return amsg("must provide all "+std::to_string(n)+" parameters in initial set");}   // eosio string bugs
+        // const string same_value        = amsg("can't set same parameter value");
+        const string nothing_changed   = amsg("at least one parameter must change");
     } err;
 
-    void prepare_top_witnesses() {
+    void prepare_top_witnesses(bool only_create) {
         BOOST_CHECK_EQUAL(success(),
             ctrl.create(BLOG, ctrl.default_params(_max_witnesses, 4, cfg::workers_name)));
         produce_block();
+        if (only_create)
+            return;
         ctrl.prepare_owner(BLOG);
         produce_block();
 
@@ -128,44 +134,53 @@ public:
 BOOST_AUTO_TEST_SUITE(golos_params_tests)
 
 BOOST_FIXTURE_TEST_CASE(set_params, golos_params_tester) try {
+    // TODO: Rewrite for golos.cfg
     BOOST_TEST_MESSAGE("Test parameters logic");
     BOOST_TEST_MESSAGE("--- prepare top witnesses");
-    prepare_top_witnesses();
+    prepare_top_witnesses(true);
 
     BOOST_TEST_MESSAGE("--- check global params initially not set");
     BOOST_TEST_CHECK(emit.get_params().is_null());
 
     BOOST_TEST_MESSAGE("--- check_params: fail on empty parameters, wrong variant order or several copies of the same parameter");
-    BOOST_CHECK_EQUAL(err.empty, emit.set_params(_bob, "[]"));
+    BOOST_CHECK_EQUAL(err.empty, emit.set_params("[]"));
     auto pools = "['reward_pools',{'pools':[" + pool_json(_bob,0) + "]}]";
     auto pools2 = "['reward_pools',{'pools':[" + pool_json(_alice,1000) + "," + pool_json(_bob,0) + "]}]";
     auto infrate = infrate_json(0,0);
     auto infrate2 = infrate_json(500,500);
-    BOOST_CHECK_EQUAL(err.bad_variant_order, emit.set_params(_bob, "[" + pools + "," + infrate + "]"));
-    BOOST_CHECK_EQUAL(err.duplicates, emit.set_params(_bob, "[" + infrate + "," + infrate + "]"));
-    BOOST_CHECK_EQUAL(err.duplicates, emit.set_params(_bob, "[" + infrate + "," + infrate2 + "]"));
-    BOOST_CHECK_EQUAL(err.duplicates, emit.set_params(_bob, "[" + pools + "," + pools2 + "]"));
+    BOOST_CHECK_EQUAL(err.bad_variant_order, emit.set_params("[" + pools + "," + infrate + "]"));
+    BOOST_CHECK_EQUAL(err.duplicates, emit.set_params("[" + infrate + "," + infrate + "]"));
+    BOOST_CHECK_EQUAL(err.duplicates, emit.set_params("[" + infrate + "," + infrate2 + "]"));
+    BOOST_CHECK_EQUAL(err.duplicates, emit.set_params("[" + pools + "," + pools2 + "]"));
 
     BOOST_TEST_MESSAGE("--- setparams: fail if first call to setparams action contains not all parameters");
-    BOOST_CHECK_EQUAL(err.incomplete, emit.set_params(_bob, "[" + infrate + "]"));
-    BOOST_CHECK_EQUAL(err.incomplete, emit.set_params(_bob, "[" + infrate_json(1,1) + "]"));
+    BOOST_CHECK_EQUAL(err.incomplete, emit.set_params("[" + infrate + "]"));
+    BOOST_CHECK_EQUAL(err.incomplete, emit.set_params("[" + infrate_json(1,1) + "]"));
 
     BOOST_TEST_MESSAGE("--- success on valid parameters and changing parameters");
-    BOOST_CHECK_EQUAL(success(), emit.set_params(_bob, "[" + infrate + "," + pools + "]"));
+    BOOST_CHECK_EQUAL(success(), emit.set_params("[" + infrate + "," + pools + "]"));
     produce_block();
-    BOOST_CHECK_EQUAL(success(), emit.set_params(_bob, "[" + infrate2 + "," + pools2 + "]"));
+    BOOST_CHECK_EQUAL(success(), emit.set_params("[" + infrate2 + "," + pools2 + "]"));
     produce_block();
-    BOOST_CHECK_EQUAL(success(), emit.set_params(_bob, "[" + pools + "]"));
+    BOOST_CHECK_EQUAL(success(), emit.set_params("[" + pools + "]"));
     produce_block();
-    BOOST_CHECK_EQUAL(success(), emit.set_params(_bob, "[" + infrate + "]"));
+    BOOST_CHECK_EQUAL(success(), emit.set_params("[" + infrate + "]"));
     produce_block();
-
+/*
     BOOST_TEST_MESSAGE("--- fail if parameter value not changed");
-    BOOST_CHECK_EQUAL(err.same_value, emit.set_params(_bob, "[" + infrate + "]"));
-    BOOST_CHECK_EQUAL(err.same_value, emit.set_params(_bob, "[" + pools + "]"));
-    BOOST_CHECK_EQUAL(err.same_value, emit.set_params(_bob, "[" + infrate + "," + pools + "]"));
-    BOOST_CHECK_EQUAL(err.same_value, emit.set_params(_bob, "[" + infrate + "," + pools2 + "]"));
-    BOOST_CHECK_EQUAL(err.same_value, emit.set_params(_bob, "[" + infrate2 + "," + pools + "]"));
+    BOOST_CHECK_EQUAL(err.same_value, emit.set_params("[" + infrate + "]"));
+    BOOST_CHECK_EQUAL(err.same_value, emit.set_params("[" + pools + "]"));
+    BOOST_CHECK_EQUAL(err.same_value, emit.set_params("[" + infrate + "," + pools + "]"));
+    BOOST_CHECK_EQUAL(err.same_value, emit.set_params("[" + infrate + "," + pools2 + "]"));
+    BOOST_CHECK_EQUAL(err.same_value, emit.set_params("[" + infrate2 + "," + pools + "]"));
+*/
+    BOOST_TEST_MESSAGE("--- fail if no parameters actually change state");
+    BOOST_CHECK_EQUAL(err.nothing_changed, emit.set_params("[" + infrate + "]"));
+    BOOST_CHECK_EQUAL(err.nothing_changed, emit.set_params("[" + pools + "]"));
+    BOOST_CHECK_EQUAL(err.nothing_changed, emit.set_params("[" + infrate + "," + pools + "]"));
+    BOOST_CHECK_EQUAL(success(), emit.set_params("[" + infrate + "," + pools2 + "]"));
+    BOOST_CHECK_EQUAL(success(), emit.set_params("[" + infrate2 + "," + pools2 + "]"));
+    BOOST_CHECK_EQUAL(success(), emit.set_params("[" + infrate2 + "," + pools + "]"));
 
 } FC_LOG_AND_RETHROW()
 

@@ -123,7 +123,7 @@ void publication::create_message(account_name account, std::string permlink,
         item.tags = tags;
         item.jsonmetadata = jsonmetadata;
     });
-    
+
     structures::accandvalue parent {parentacc, parent_id};
     uint64_t seconds_diff = 0;
     bool closed = false;
