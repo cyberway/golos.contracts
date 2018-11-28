@@ -11,6 +11,7 @@ from decimal import Decimal
 from bson.decimal128 import Decimal128
 from pymongo import MongoClient
 from config import *
+from pymongo import UpdateOne
 
 def create_tags(metadata_tags):
     tags = []
@@ -31,6 +32,8 @@ class PublishConverter:
         self.exists_accs = set()
         self.mssgs_curatorsw = defaultdict(int)
         self.childcount_list = []
+        self.update_list = []
+        self.messages = self.publish_db["message"]
         self.publish_tables = dbs.Tables([
             ('vote',    self.publish_db['votetable'],    None, None),
             ('message', self.publish_db['messagetable'], None, None),
@@ -95,13 +98,13 @@ class PublishConverter:
                 message = {
                     "id": cur_mssg_id,
                     "date": int(doc["last_update"].timestamp()) * 1000000,
-                    "parentacc": "" if orphan_comment or doc["parent_author"] == "" else doc["parent_author"],
+                    "parentacc": "" if orphan_comment else doc["parent_author"],
                     "parent_id": 0  if (orphan_comment or (not len(doc["parent_permlink"]) > 0)) else utils.convert_hash(doc["parent_permlink"]),
                     "tokenprop": utils.get_prop_raw(doc["percent_steem_dollars"] / 2),
                     "beneficiaries": [],
                     "rewardweight": utils.get_prop_raw(doc["reward_weight"]),
                     "state": messagestate,
-                    "childcount": 0,
+                    "childcount": doc["children"],
                     "closed": isClosedMessage,
                     "level": 0 if orphan_comment else doc["depth"], # this value will be incorrect for comment to orphan comment
                                                                     # but we only use level for comments nesting limits, 
@@ -113,16 +116,17 @@ class PublishConverter:
                 self.publish_tables.message.append(message)
 
                 
-                if orphan_comment or doc["parent_author"] == "":
+                if orphan_comment or doc["parent_author"] == "" or doc["children"]:
                     childcount_obj = {
                         "id": cur_mssg_id,
                         "_SCOPE_": doc["author"],
-                        "childcount": 0
+                        "childcount": 0,
+                        "gls_childcount": doc["children"]
                     }
-                    childcount_list.appent(childcount_obj)
+                    self.childcount_list.append(childcount_obj)
                 else:
                     match = next((
-                        obj for obj in childcount_list 
+                        obj for obj in self.childcount_list 
                         if obj["id"] == utils.convert_hash(doc["parent_permlink"]) and 
                         obj["_SCOPE_"] == doc["parent_author"]), None
                     )
@@ -234,20 +238,24 @@ class PublishConverter:
             print(traceback.format_exc())
         print('...done')
 
+    def write_childcount(self):
+        self.messages.bulk_write(self.update_list)
+        self.update_list = []
+
     def update_childcount(self):
-        messages = self.publish_db['message']
-        for obj in self.childcount_list:
-            messages.updateOne(
-                {
-                    "$and": [
-                        { "id": obj["id"] },
-                        { "_SCOPE_": obj["_SCOPE_"] }
-                    ]
-                },
-                { 
-                    "$set": { "childcount": obj["childcount"] } 
+        for child in self.childcount_list:
+            if child["gls_childcount"] != child["childcount"]:
+                update_filter = {
+                    "$and":[{"id":child["id"]},{"_SCOPE":child["_SCOPE_"]}]
                 }
-            )
+                update_obj = {
+                    "$set":{"childcount":child["childcount"]}
+                }
+                self.update_list.append(UpdateOne(update_filter, update_obj))
+            if len(self.update_list) == 1000:
+                self.write_childcount()
+        if len(self.update_list):
+            self.write_childcount()
 
     def run(self, query = {}):
         self.fill_exists_accs()
