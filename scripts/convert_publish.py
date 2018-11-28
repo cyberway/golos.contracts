@@ -31,7 +31,7 @@ class PublishConverter:
         self.cyberway_db = cyberway_db
         self.exists_accs = set()
         self.mssgs_curatorsw = defaultdict(int)
-        self.childcount_list = []
+        self.childcount_dict = {}
         self.update_list = []
         self.messages = self.publish_db["message"]
         self.publish_tables = dbs.Tables([
@@ -116,22 +116,15 @@ class PublishConverter:
                 self.publish_tables.message.append(message)
 
                 
-                if orphan_comment or doc["parent_author"] == "" or doc["children"]:
-                    childcount_obj = {
-                        "id": cur_mssg_id,
-                        "_SCOPE_": doc["author"],
-                        "childcount": 0,
-                        "gls_childcount": doc["children"]
-                    }
-                    self.childcount_list.append(childcount_obj)
-                else:
-                    match = next((
-                        obj for obj in self.childcount_list 
-                        if obj["id"] == utils.convert_hash(doc["parent_permlink"]) and 
-                        obj["_SCOPE_"] == doc["parent_author"]), None
-                    )
-                    if match is not None:
-                        match["childcount"] += 1 
+                childcount_obj = {
+                    "id": cur_mssg_id,
+                    "_SCOPE_": doc["author"],
+                    "childcount": 0,
+                    "gls_childcount": doc["children"]
+                }
+                self.childcount_dict[childcount_obj["id"] << 64 | utils.string_to_name(childcount_obj["_SCOPE_"])] = childcount_obj
+                if message["parentacc"]:
+                    self.childcount_dict[message["parent_id"] << 64 | utils.string_to_name(message["parentacc"])]["childcount"] += 1
                 
                 tags = []
                 if (isinstance(doc["json_metadata"], dict)):
@@ -243,7 +236,7 @@ class PublishConverter:
         self.update_list = []
 
     def update_childcount(self):
-        for child in self.childcount_list:
+        for child in self.childcount_dict.values():
             if child["gls_childcount"] != child["childcount"]:
                 update_filter = {
                     "$and":[{"id":child["id"]},{"_SCOPE":child["_SCOPE_"]}]
@@ -252,7 +245,7 @@ class PublishConverter:
                     "$set":{"childcount":child["childcount"]}
                 }
                 self.update_list.append(UpdateOne(update_filter, update_obj))
-            if len(self.update_list) == 1000:
+            if len(self.update_list) == 10000:
                 self.write_childcount()
         if len(self.update_list):
             self.write_childcount()
