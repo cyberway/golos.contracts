@@ -3,7 +3,6 @@ add_executable(golos.emit.wasm ${CMAKE_CURRENT_SOURCE_DIR}/src/golos.emit.cpp)
 target_include_directories(golos.emit.wasm
    PUBLIC
    ${CMAKE_CURRENT_SOURCE_DIR}/include
-   ${CMAKE_CURRENT_SOURCE_DIR}/../golos.ctrl/include
    ${CMAKE_CURRENT_SOURCE_DIR}/../cyberway.contracts/eosio.token/include
    ${CMAKE_CURRENT_SOURCE_DIR}/..)
 

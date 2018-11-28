@@ -48,8 +48,6 @@
                 {"type": "uint64", "name": "prev_emit"},
                 {"type": "uint128", "name": "tx_id"},
                 {"type": "uint64", "name": "start_time"},
-                {"type": "account_name", "name": "post_name"},
-                {"type": "account_name", "name": "work_name"},
                 {"type": "bool", "name": "active"}
             ]
         },

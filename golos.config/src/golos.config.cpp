@@ -31,7 +31,7 @@ void configer::updateparamse(account_name who, std::vector<emit_param> params) {
     param_helper::check_params(params); // TODO: validate using `validateprms` action of related contract
     // INLINE_ACTION_SENDER(contract_class, validateprms)(contract_name, {{_self, N(active)}}, {params});
 
-    emit_state_singleton acc_params{_self, who};
+    emit_params_singleton acc_params{_self, who};
     bool update = acc_params.exists();
     eosio_assert(update || params.size() == emit_state::params_count,
         std::string("must provide all "+std::to_string(emit_state::params_count)+" parameters in initial set").c_str());
@@ -50,7 +50,7 @@ void configer::updateparamse(account_name who, std::vector<emit_param> params) {
 struct emit_state_updater: state_params_update_visitor<emit_state> {
     using state_params_update_visitor::state_params_update_visitor;
 
-    static const int THRESHOLD = 2; // test only; TODO: get from cfg_state_singleton
+    static const int THRESHOLD = 2; // test only; TODO: get from cfg_params_singleton
 
     void operator()(const infrate_params& p) {
         update_state(&emit_state::infrate, THRESHOLD);
@@ -73,11 +73,11 @@ bool configer::is_top_witness(account_name account) {
 }
 
 void configer::recalculate_state(vector<emit_param> changed_params) {
-    emit_state_singleton state{_self, _self};
+    emit_params_singleton state{_self, _self};
     auto s = state.exists() ? state.get() : emit_state{};   // TODO: default state must be created (in counstructor/init)
 
     auto top = get_top_witnesses();
-    auto top_params = param_helper::get_top_params<emit_state_singleton, emit_state>(_self, top);
+    auto top_params = param_helper::get_top_params<emit_params_singleton, emit_state>(_self, top);
     auto v = emit_state_updater(s, top_params);
     for (const auto& param: changed_params) {
         std::visit(v, param);
@@ -117,7 +117,7 @@ void configer::setparams(vector<cfg_param> params) {
     require_auth(_self);
     param_helper::check_params(params);
 
-    cfg_state_singleton state{_self, _self};
+    cfg_params_singleton state{_self, _self};
     auto s = state.exists() ? state.get() : cfg_state{};   // TODO: default state must be created (in counstructor/init)
     auto setter = cfg_params_setter(s);
     bool changed = false;

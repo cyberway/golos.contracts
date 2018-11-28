@@ -31,7 +31,7 @@ struct [[eosio::table]] cfg_state {
 
     static constexpr int params_count = 2;
 };
-using cfg_state_singleton = eosio::singleton<N(cfgparams), cfg_state>;
+using cfg_params_singleton = eosio::singleton<N(cfgparams), cfg_state>;
 
 
 } // golos
