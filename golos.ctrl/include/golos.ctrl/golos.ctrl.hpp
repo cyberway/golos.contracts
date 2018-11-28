@@ -93,7 +93,7 @@ public:
         , _token(token)
         , _props_tbl(_self, token)
     {
-        props(action == N(create) || action == N(changevest));
+        props(action == N(create) || action == N(changevest) || action == 0);   // 0 = transfer
     };
 
     [[eosio::action]] void create(account_name owner, properties props);
@@ -109,6 +109,7 @@ public:
     [[eosio::action]] void unvotewitn(account_name voter, account_name witness);
 
     [[eosio::action]] void changevest(account_name owner, asset diff);
+    void transfer(account_name from, account_name to, asset quantity, std::string memo);
 
     inline std::vector<account_name> get_top_witnesses();
     static inline std::vector<account_name> get_top_witnesses(symbol_type token, account_name code = config::control_name);

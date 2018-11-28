@@ -2,11 +2,15 @@
 #include "golos.ctrl/config.hpp"
 #include <golos.vesting/golos.vesting.hpp>
 #include <eosio.system/native.hpp>
+#include <eosio.token/eosio.token.hpp>
+#include <eosiolib/transaction.hpp>
 
 #define DOMAIN_TYPE symbol_type
+#define HANDLE_TRANSFER
 #include <common/dispatcher.hpp>
 
 namespace golos {
+
 
 using namespace eosio;
 using std::vector;
@@ -54,6 +58,54 @@ void control::updateprops(properties new_props) {
         };
     });
 }
+
+void control::transfer(account_name from, account_name to, asset quantity, string memo) {
+    if (to == _self && quantity.amount > 0) {
+        // Don't check `from` for now, just distribute to top witnesses
+
+        //Reinitialize props because called without symbol
+        _token = quantity.symbol;
+        props_tbl tbl{_self, _token};
+        auto i = tbl.begin();
+        bool exists = i != tbl.end();
+        if (!exists) {
+            print("symbol not found");
+            return;     // it's notification, so fail silently
+        }
+        _props = i->props;
+        _owner = i->owner;
+        _has_props = exists;
+
+        // Distribute between top witnesses
+        auto total = quantity.amount;
+        auto top = get_top_witnesses();
+        auto n = top.size();
+        if (n == 0) {
+            print("nobody in top");
+            return;
+        }
+
+        auto transfer = [&](auto from, auto to, auto amount) {
+            print("ctrl.transfer ", amount, " to ", to, "\n");
+            if (amount > 0) {
+                INLINE_ACTION_SENDER(eosio::token, transfer)(config::token_name, {from, N(active)},
+                    {from, to, asset(amount, _token), memo});
+            }
+        };
+        static const auto memo = "emission";
+        auto random = tapos_block_prefix();     // trx.ref_block_prefix; can generate hash from timestamp insead
+        auto winner = top[random % n];          // witness, who will receive fraction after reward division
+        auto reward = total / n;
+        for (const auto& w: top) {
+            if (w == winner)
+                continue;
+            transfer(_self, w, reward);
+            total -= reward;
+        }
+        transfer(_self, winner, total);
+    }
+}
+
 
 void control::attachacc(account_name user) {
     require_auth({_owner, config::minority_name});
@@ -268,3 +320,4 @@ APP_DOMAIN_ABI(golos::control,
     (attachacc)(detachacc)
     (regwitness)(unregwitness)
     (votewitness)(unvotewitn)(changevest))
+#undef HANDLE_TRANSFER
