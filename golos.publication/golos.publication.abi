@@ -530,6 +530,30 @@
     ]
   },
   {
+    "name": "forumprops",
+    "base": "",
+    "fields": [
+        {
+            "name": "socialon",
+            "type": "bool"
+        }
+    ]
+  },
+  {
+    "name": "forumprops_record",
+    "base": "",
+    "fields": [
+        {
+            "name": "id",
+            "type": "uint64"
+        },
+        {
+            "name": "socialon",
+            "type": "bool"
+        }
+    ]
+  },
+  {
     "name": "poolstate",
     "base": "",
     "fields": [
@@ -616,6 +640,16 @@
             "type": "limitsarg"
         }
     ]
+  },
+  {
+    "name": "setprops",
+    "base": "",
+    "fields": [
+        {
+            "name": "props",
+            "type": "forumprops"
+        }
+    ]
   }
   ],
   "actions": [
@@ -654,6 +688,10 @@
   {
     "name": "setrules",
     "type": "setrules"
+  },
+  {
+    "name": "setprops",
+    "type": "setprops"
   }
   ],
   "tables": [
@@ -727,6 +765,19 @@
               {"field": "poolcreated", "order": "asc"}
           ]
        }
+    ]
+  },
+  {
+    "name": "forumprops",
+    "type": "forumprops_record",
+    "indexes": [
+      {
+        "name": "primary",
+        "unique": "true",
+        "orders": [
+          {"field": "id", "order": "asc"}
+        ]
+      }
     ]
   }
   ],

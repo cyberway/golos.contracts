@@ -3,6 +3,7 @@
 #include <eosiolib/transaction.hpp>
 #include <eosiolib/types.hpp>
 #include <eosio.token/eosio.token.hpp>
+#include <golos.social/golos.social.hpp>
 #include <golos.vesting/golos.vesting.hpp>
 
 namespace golos {
@@ -40,6 +41,8 @@ void publication::apply(uint64_t code, uint64_t action) {
         execute_action(this, &publication::close_message);
     if (N(setrules) == action)
         execute_action(this, &publication::set_rules);
+    if (N(setprops) == action)
+        execute_action(this, &publication::setprops);
 }
 
 void publication::create_message(account_name account, std::string permlink,
@@ -394,7 +397,7 @@ void publication::set_vote(account_name voter, account_name author, string perml
 
             eosio_assert(weight != vote_itr->weight, "Vote with the same weight has already existed.");
             eosio_assert(vote_itr->count != config::max_vote_changes, "You can't revote anymore.");
-            
+
             atmsp::machine<fixp_t> machine;
             fixp_t rshares = calc_rshares(voter, weight, cur_time, *pool, machine);
             if(rshares > FP(vote_itr->rshares))
@@ -420,7 +423,7 @@ void publication::set_vote(account_name voter, account_name author, string perml
                item.rshares = rshares.data();
                ++item.count;
             });
-            
+
             return;
         }
         ++vote_itr;
@@ -467,6 +470,14 @@ void publication::set_vote(account_name voter, account_name author, string perml
         item.curatorsw = (fixp_t(sumcuratorsw_delta * curatorsw_factor)).data();
         item.rshares = rshares.data();
     });
+
+    tables::forumprops_singleton props_single(_self, _self);
+    auto props = props_single.get_or_default();
+
+    if (props.socialon) {
+        INLINE_ACTION_SENDER(golos::social, changereput) (config::social_name, {_self, N(active)},
+            {voter, author, (rshares.data() >> 6)});
+    }
 }
 
 uint16_t publication::notify_parent(bool increase, account_name parentacc, uint64_t parent_id) {
@@ -654,6 +665,17 @@ elaf_t publication::apply_limits(atmsp::machine<fixp_t>& machine, account_name u
         else
             ++itr;
     return ret;
+}
+
+void publication::setprops(const forumprops& props) {
+    require_auth(_self);
+
+    tables::forumprops_singleton props_single(_self, _self);
+
+    structures::forumprops_record item;
+    item.socialon = props.socialon;
+
+    props_single.set(item, _self);
 }
 
 

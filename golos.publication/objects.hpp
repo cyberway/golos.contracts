@@ -136,6 +136,14 @@ struct rewardpool {
     EOSLIB_SERIALIZE(rewardpool, (created)(rules)(lims)(state))
 };
 
+struct forumprops_record {
+    forumprops_record() = default;
+
+    bool socialon = true;
+
+    EOSLIB_SERIALIZE(forumprops_record, (socialon))
+};
+
 } // structures
 
 namespace tables {
@@ -154,6 +162,8 @@ using vote_table = multi_index<N(votetable), structures::voteinfo, vote_id_index
 
 using reward_pools = multi_index<N(rewardpools), structures::rewardpool>;
 using charges = multi_index<N(charges), structures::usercharges>;
+
+using forumprops_singleton = eosio::singleton<N(forumprops), structures::forumprops_record>;
 }
 
 

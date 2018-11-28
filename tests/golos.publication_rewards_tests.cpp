@@ -224,6 +224,10 @@ public:
         return ret;
     }
 
+    action_result setprops(const forumprops& props) {
+        return post.setprops(props);
+    }
+
     void set_token_balance_from_table(account_name user, statemap& s) {
         auto accs = token.get_accounts(user);
         BOOST_CHECK_EQUAL(accs.size() <= 1, true); //for now we are checking just one token
@@ -532,6 +536,12 @@ BOOST_FIXTURE_TEST_CASE(basic_tests, reward_calcs_tester) try {
         [](double x){ return x * x; }, [](double x){ return sqrt(x); }, [](double x){ return 1.0; }));
     check();
 
+    BOOST_TEST_MESSAGE("--- setprops");
+    forumprops props;
+    props.socialon = false;
+    BOOST_CHECK_EQUAL(success(), setprops(props));
+    check();
+
     BOOST_TEST_MESSAGE("--- create_message: alice");
     BOOST_CHECK_EQUAL(success(), create_message(N(alice), "permlink"));
     check();
@@ -607,6 +617,12 @@ BOOST_FIXTURE_TEST_CASE(timepenalty_test, reward_calcs_tester) try {
     BOOST_CHECK_EQUAL(success(), setrules({"x", bignum}, {"x", bignum}, {"x/50", 50}, 2500,
         [](double x){ return x; }, [](double x){ return x; }, [](double x){ return x / 50.0; }));
     check();
+
+    forumprops props;
+    props.socialon = false;
+    BOOST_CHECK_EQUAL(success(), setprops(props));
+    check();
+
     BOOST_TEST_MESSAGE("--- add_funds_to_forum");
     BOOST_CHECK_EQUAL(success(), add_funds_to_forum(50000));
     check();
@@ -647,6 +663,11 @@ BOOST_FIXTURE_TEST_CASE(limits_test, reward_calcs_tester) try {
             [](double p, double v, double t){ return t / 250.0; }
         })
     );
+
+    forumprops props;
+    props.socialon = false;
+    BOOST_CHECK_EQUAL(success(), setprops(props));
+    check();
 
     BOOST_TEST_MESSAGE("--- add_funds_to_forum");
     BOOST_CHECK_EQUAL(success(), add_funds_to_forum(100000));
@@ -692,6 +713,12 @@ BOOST_FIXTURE_TEST_CASE(rshares_sum_overflow_test, reward_calcs_tester) try {
         [](double x){ return x; }, [](double x){ return sqrt(x); }, [](double x){ return 1.0; }));
     check();
 
+    BOOST_TEST_MESSAGE("--- setprops");
+    forumprops props;
+    props.socialon = false;
+    BOOST_CHECK_EQUAL(success(), setprops(props));
+    check();
+
     BOOST_TEST_MESSAGE("--- add_funds_to_forum");
     BOOST_CHECK_EQUAL(success(), add_funds_to_forum(50000));
     check();
@@ -716,6 +743,12 @@ BOOST_FIXTURE_TEST_CASE(golos_curation_test, reward_calcs_tester) try {
     using namespace golos_curation;
     BOOST_CHECK_EQUAL(success(), setrules({"x", maxfp}, {golos_curation::func_str, maxfp}, {"1", bignum}, 2500,
         [](double x){ return x; }, golos_curation::func, [](double x){ return 1.0; }));
+    check();
+
+    BOOST_TEST_MESSAGE("--- setprops");
+    forumprops props;
+    props.socialon = false;
+    BOOST_CHECK_EQUAL(success(), setprops(props));
     check();
 
     BOOST_TEST_MESSAGE("--- add_funds_to_forum");

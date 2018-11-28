@@ -15,6 +15,9 @@ social::social(account_name self)
 {}
 
 void social::apply(uint64_t code, uint64_t action) {
+    if (N(changereput) == action) {
+        execute_action(this, &social::changereput);
+    }
     if (N(pin) == action) {
         execute_action(this, &social::pin);
     }
@@ -27,6 +30,29 @@ void social::apply(uint64_t code, uint64_t action) {
     if (N(unblock) == action) {
         execute_action(this, &social::unblock);
     }
+}
+
+void social::changereput(account_name voter, account_name author, int64_t rshares) {
+    eosio_assert(has_auth(_self) || has_auth(N(golos.soc)), "Not for external calls");
+
+    tables::reputation_singleton voter_single(_self, voter);
+    auto voter_rep = voter_single.get_or_default();
+
+    tables::reputation_singleton author_single(_self, author);
+    auto author_rep = author_single.get_or_create(author);
+
+    // Rule #1: Must have non-negative reputation to affect another user's reputation
+    if (voter_rep.reputation < 0) {
+        return;
+    }
+
+    // Rule #2: If you are downvoяting another user, you must have more reputation than him
+    if (rshares < 0 && voter_rep.reputation <= author_rep.reputation) {
+        return;
+    }
+
+    author_rep.reputation += rshares;
+    author_single.set(author_rep, author);
 }
 
 void social::pin(account_name pinner, account_name pinning) {

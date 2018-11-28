@@ -10,6 +10,8 @@ public:
     social(account_name self);
     void apply(uint64_t code, uint64_t action);
 
+    void changereput(account_name voter, account_name author, int64_t rshares);
+
 private:
     void pin(account_name pinner, account_name pinning);
     void unpin(account_name pinner, account_name pinning);

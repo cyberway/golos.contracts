@@ -35,9 +35,16 @@ struct limitsarg {
     std::vector<int64_t> minvestings;
 };
 
+struct forumprops {
+    forumprops() = default;
+
+    bool socialon = true;
+};
+
 #ifdef UNIT_TEST_ENV
 FC_REFLECT(limitedact, (chargenum)(restorernum)(cutoffval)(chargeprice))
 FC_REFLECT(limitsarg, (restorers)(limitedacts)(vestingprices)(minvestings))
+FC_REFLECT(forumprops, (socialon))
 #endif
 
 enum class payment_t: enum_t { TOKEN, VESTING };

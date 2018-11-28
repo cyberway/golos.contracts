@@ -61,6 +61,11 @@ public:
         BOOST_CHECK_EQUAL(success(), token.open(_code, _sym, _code));
         funcparams fn{"0", 1};
         BOOST_CHECK_EQUAL(success(), post.set_rules(fn ,fn ,fn , 0, 0));
+
+        forumprops props;
+        props.socialon = false;
+        BOOST_CHECK_EQUAL(success(), post.setprops(props));
+
         for (auto& u : _users) {
             BOOST_CHECK_EQUAL(success(), vest.open(u, _sym, u));
         }
