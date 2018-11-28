@@ -109,7 +109,7 @@ using bw_user_tbl = eosio::multi_index<N(bwuser), bw_user>;
 
 class control: public contract {
 public:
-    control(account_name self, symbol_type token, uint64_t action = 0)
+    control(account_name self, symbol_type token = symbol_type(), uint64_t action = 0)
         : contract(self)
         , _token(token)
         , _props_tbl(_self, token)
@@ -131,7 +131,9 @@ public:
 
     [[eosio::action]] void changevest(account_name owner, asset diff);
 
-    inline vector<account_name> get_top_witnesses();
+    inline std::vector<account_name> get_top_witnesses();
+    static inline std::vector<account_name> get_top_witnesses(symbol_type token, account_name code = config::control_name);
+    static inline bool is_top_witness(account_name account, symbol_type token, account_name code = config::control_name);
     static inline properties get_params(symbol_type token);
     static inline account_name get_owner(symbol_type token);
 
@@ -144,8 +146,8 @@ private:
     properties _props;          // cache
 
 private:
-    vector<account_name> top_witnesses();
-    vector<witness_info> top_witness_info();
+    std::vector<account_name> top_witnesses();
+    std::vector<witness_info> top_witness_info();
 
     const properties& props(bool allow_default = false) {
         if (!_has_props) {
@@ -172,8 +174,14 @@ private:
 
     void change_voter_vests(account_name voter, share_type diff);
     void apply_vote_weight(account_name voter, account_name witness, bool add);
-    void update_witnesses_weights(vector<account_name> witnesses, share_type diff);
+    void update_witnesses_weights(std::vector<account_name> witnesses, share_type diff);
     void update_auths();
+
+    // used by inline functions for external contracts
+    static control& get_control(symbol_type token, account_name code = config::control_name) {
+        static auto ctrl = control(code, token);
+        return ctrl;
+    }
 };
 
 bool control::is_attached(account_name user) const {
@@ -197,14 +205,21 @@ std::vector<account_name> control::get_top_witnesses() {
     return top;
 }
 
+std::vector<account_name> control::get_top_witnesses(symbol_type token, account_name code) {
+    static auto top = get_control(token, code).get_top_witnesses();
+    return top;
+}
+bool control::is_top_witness(account_name account, symbol_type token, account_name code) {
+    auto t = get_top_witnesses(token, code);
+    auto x = std::find(t.begin(), t.end(), account);
+    return x != t.end();
+}
+
 properties control::get_params(symbol_type token) {
-    static auto ctrl = control(config::control_name, token);
-    return ctrl._props;
+    return get_control(token)._props;
 }
 account_name control::get_owner(symbol_type token) {
-    // TODO: find better way than creating second control instance
-    static auto ctrl = control(config::control_name, token);
-    return ctrl._owner;
+    return get_control(token)._owner;
 }
 
 

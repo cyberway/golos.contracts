@@ -1,6 +1,8 @@
 #pragma once
 
 #include "tuple_helper.hpp"
+#include <eosiolib/datastream.hpp>
+#include <common/parameter_ops.hpp>
 
 namespace golos {
 
@@ -23,9 +25,10 @@ bool execute_action(uint64_t action, void (Q::*func)(Args...)) {
         buffer = max_stack_buffer_size < size ? malloc(size) : alloca(size);
         read_action_data(buffer, size);
     }
+    std::tuple<DOMAIN_TYPE, std::decay_t<Args>...> args;
+    datastream<const char*> ds((char*)buffer, size);
+    ds >> args;
 
-    // auto args = unpack<std::tuple<std::decay_t<Args>...>>((char*)buffer, size);
-    auto args = unpack<std::tuple<DOMAIN_TYPE/* app domain */, std::decay_t<Args>.../* function args */>>((char*)buffer, size);
 
     if (max_stack_buffer_size < size) {
         free(buffer);

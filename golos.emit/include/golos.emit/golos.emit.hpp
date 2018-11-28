@@ -1,4 +1,5 @@
 #pragma once
+#include "golos.emit/parameters.hpp"
 #include <eosiolib/eosio.hpp>
 #include <eosiolib/singleton.hpp>
 #include <eosiolib/asset.hpp>
@@ -23,11 +24,15 @@ class emission: public contract {
 public:
     emission(account_name self, symbol_type token, uint64_t action = 0);
 
+    [[eosio::action]] void validateprms(std::vector<emit_param>);
+    [[eosio::action]] void setparams(std::vector<emit_param>);
+
     [[eosio::action]] void emit();
     [[eosio::action]] void start();
     [[eosio::action]] void stop();
 
 private:
+    void recalculate_state(std::vector<emit_param>);
     symbol_type _token;
     account_name _owner;
     state_singleton _state;

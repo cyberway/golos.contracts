@@ -19,8 +19,42 @@ emission::emission(account_name self, symbol_type token, uint64_t action)
     , _token(token)
     , _state(_self, token)
 {
-    _owner = control::get_owner(token);      // TODO: find better way
+    _owner = control::get_owner(token);
 }
+
+struct emit_params_setter: set_params_visitor<emit_state> {
+    using set_params_visitor::set_params_visitor; // enable constructor
+
+    bool operator()(const infrate_params& p) {
+        return set_param(p, &emit_state::infrate);
+    }
+    bool operator()(const reward_pools_param& p) {
+        return set_param(p, &emit_state::pools);
+    }
+};
+
+void emission::validateprms(vector<emit_param> params) {
+    //require_auth(who?)
+    param_helper::check_params(params);
+}
+
+void emission::setparams(vector<emit_param> params) {
+    require_auth(_self);
+    param_helper::check_params(params);
+
+    emit_state_singleton state{_self, _self};
+    auto update = state.exists();
+    eosio_assert(update || params.size() == emit_state::params_count, "must provide all parameters in initial set");
+    auto s = update ? state.get() : emit_state{};
+    auto setter = emit_params_setter(s);
+    bool changed = false;
+    for (const auto& param: params) {
+        changed |= std::visit(setter, param);   // why we have no ||= ?
+    }
+    eosio_assert(changed, "at least one parameter must change");    // don't add actions, which do nothing
+    state.set(setter.state, _self);
+}
+
 
 void emission::start() {
     require_auth(_owner);
@@ -92,8 +126,7 @@ void emission::emit() {
         content_reward += witness_reward;
         witness_reward /= p.max_witnesses;
         if (witness_reward > 0) {
-            auto ctrl = control(config::control_name, _token);  // TODO: reuse existing control object
-            auto top = ctrl.get_top_witnesses();
+            auto top = control::get_top_witnesses(_token);
             for (const auto& w: top) {
                 // TODO: maybe reimplement as claim to avoid missing balance asserts (or skip witnesses without balances)
                 TRANSFER(w, witness_reward, "emission");
@@ -127,4 +160,4 @@ void emission::schedule_next(state& s, uint32_t delay) {
 
 } // golos
 
-APP_DOMAIN_ABI(golos::emission, (emit)(start)(stop))
+APP_DOMAIN_ABI(golos::emission, (setparams)(validateprms)(emit)(start)(stop))
