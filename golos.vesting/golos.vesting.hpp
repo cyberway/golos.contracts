@@ -43,6 +43,8 @@ private:
     void timeout_delay_trx();
     void calculate_convert_vesting();
     void calculate_delegate_vesting();
+
+    const auto _notify_balance_acc = N(notify.blnc);
 };
 
 asset vesting::get_account_vesting(account_name account, symbol_name sym) const {
