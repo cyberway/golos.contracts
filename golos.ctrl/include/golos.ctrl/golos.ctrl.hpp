@@ -21,27 +21,6 @@ struct [[eosio::table]] properties {
     uint16_t witness_minority = 0;          // 0 = auto
     uint16_t max_witness_votes = 30;        // MAX_ACCOUNT_WITNESS_VOTES
 
-    // emission
-    uint16_t infrate_start = 1500;          // INFLATION_RATE_START_PERCENT
-    uint16_t infrate_stop = 95;             // INFLATION_RATE_STOP_PERCENT
-    uint32_t infrate_narrowing = 250000;    // INFLATION_NARROWING_PERIOD
-    uint16_t content_reward = 6667-667;     // CONTENT_REWARD_PERCENT
-    uint16_t vesting_reward = 2667-267;     // VESTING_FUND_PERCENT
-    uint16_t workers_reward = 1000;         // 10%
-    account_name workers_pool = N(worker);  // TODO: remove from defaults
-
-    void validate_emit_params() const {
-        eosio_assert(infrate_start >= infrate_stop, "infrate_start can not be less than infrate_stop");
-        eosio_assert(content_reward <= config::_100percent, "content reward must be <= 100%");
-        eosio_assert(vesting_reward <= config::_100percent, "vesting reward must be <= 100%");
-        eosio_assert(workers_reward <= config::_100percent, "workers reward must be <= 100%");
-        eosio_assert((content_reward + vesting_reward + workers_reward) <= config::_100percent,
-            "sum of rewards must be <= 100%");
-        eosio_assert(is_account(workers_pool), "workers pool account must exist");
-        // TODO: validate params change (compare with prev values)
-        // TODO: maybe separate params so some settable only on creation and cannot be changed
-    }
-
     // helpers
     bool validate() const;
     uint16_t active_threshold() const;

@@ -13,8 +13,6 @@ struct [[eosio::table]] state {
     uint64_t prev_emit;
     uint128_t tx_id;
     uint64_t start_time;
-    account_name post_name;     // get from ctrl?
-    account_name work_name;     // get from ctrl?
     bool active;
 };
 using state_singleton = eosio::singleton<N(state), state>;
@@ -34,8 +32,8 @@ public:
 private:
     void recalculate_state(std::vector<emit_param>);
     symbol_type _token;
-    account_name _owner;
     state_singleton _state;
+    emit_params_singleton _cfg;
 
     void schedule_next(state& s, uint32_t delay);
 };

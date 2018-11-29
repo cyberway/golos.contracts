@@ -120,14 +120,6 @@ public:
         CHECK_MATCHING_OBJECT(vest.get_balance(_bob), vest.make_balance(700));
         CHECK_MATCHING_OBJECT(vest.get_balance(_w[0]), vest.make_balance(100));
     }
-
-    string pool_json(account_name pool, uint16_t percent) {
-        return string("{'name':'") + name{pool}.to_string() + "','percent':" + std::to_string(percent) + "}";
-    }
-    string infrate_json(uint16_t start, uint16_t stop, uint32_t narrowing = 0) {
-        return string("['inflation_rate',{'start':") + std::to_string(start) + ",'stop':" + std::to_string(stop)
-            + ",'narrowing':" + std::to_string(narrowing) + "}]";
-    }
 };
 
 
@@ -144,10 +136,10 @@ BOOST_FIXTURE_TEST_CASE(set_params, golos_params_tester) try {
 
     BOOST_TEST_MESSAGE("--- check_params: fail on empty parameters, wrong variant order or several copies of the same parameter");
     BOOST_CHECK_EQUAL(err.empty, emit.set_params("[]"));
-    auto pools = "['reward_pools',{'pools':[" + pool_json(_bob,0) + "]}]";
-    auto pools2 = "['reward_pools',{'pools':[" + pool_json(_alice,1000) + "," + pool_json(_bob,0) + "]}]";
-    auto infrate = infrate_json(0,0);
-    auto infrate2 = infrate_json(500,500);
+    auto pools = "['reward_pools',{'pools':[" + emit.pool_json(_bob,0) + "]}]";
+    auto pools2 = "['reward_pools',{'pools':[" + emit.pool_json(_alice,1000) + "," + emit.pool_json(_bob,0) + "]}]";
+    auto infrate = emit.infrate_json(0,0);
+    auto infrate2 = emit.infrate_json(500,500);
     BOOST_CHECK_EQUAL(err.bad_variant_order, emit.set_params("[" + pools + "," + infrate + "]"));
     BOOST_CHECK_EQUAL(err.duplicates, emit.set_params("[" + infrate + "," + infrate + "]"));
     BOOST_CHECK_EQUAL(err.duplicates, emit.set_params("[" + infrate + "," + infrate2 + "]"));
@@ -155,7 +147,7 @@ BOOST_FIXTURE_TEST_CASE(set_params, golos_params_tester) try {
 
     BOOST_TEST_MESSAGE("--- setparams: fail if first call to setparams action contains not all parameters");
     BOOST_CHECK_EQUAL(err.incomplete, emit.set_params("[" + infrate + "]"));
-    BOOST_CHECK_EQUAL(err.incomplete, emit.set_params("[" + infrate_json(1,1) + "]"));
+    BOOST_CHECK_EQUAL(err.incomplete, emit.set_params("[" + emit.infrate_json(1,1) + "]"));
 
     BOOST_TEST_MESSAGE("--- success on valid parameters and changing parameters");
     BOOST_CHECK_EQUAL(success(), emit.set_params("[" + infrate + "," + pools + "]"));

@@ -29,7 +29,7 @@ struct parameter {
 
     // used to detect is parameter can be used in median.
     // by default checks if default comparer set, this means parameter can't be used in median
-    virtual bool can_median() const { return !(this < this); }
+    virtual bool can_median() const { return !(*this < *this); }
 };
 
 struct param_helper {

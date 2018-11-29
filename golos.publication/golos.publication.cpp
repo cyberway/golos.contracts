@@ -394,25 +394,25 @@ void publication::set_vote(account_name voter, account_name author, string perml
 
             eosio_assert(weight != vote_itr->weight, "Vote with the same weight has already existed.");
             eosio_assert(vote_itr->count != config::max_vote_changes, "You can't revote anymore.");
-            
+
             atmsp::machine<fixp_t> machine;
             fixp_t rshares = calc_rshares(voter, weight, cur_time, *pool, machine);
             if(rshares > FP(vote_itr->rshares))
                 check_upvote_time(cur_time, mssg_itr->date);
-            
+
             fixp_t new_mssg_rshares = (FP(mssg_itr->state.netshares) - FP(vote_itr->rshares)) + rshares;
             auto rsharesfn_delta = get_delta(machine, FP(mssg_itr->state.netshares), new_mssg_rshares, pool->rules.mainfunc);
-            
+
             pools.modify(*pool, _self, [&](auto &item) {
                 item.state.rshares = ((WP(item.state.rshares) - wdfp_t(FP(vote_itr->rshares))) + wdfp_t(rshares)).data();
                 item.state.rsharesfn = (WP(item.state.rsharesfn) + wdfp_t(rsharesfn_delta)).data();
             });
-            
+
             message_table.modify(mssg_itr, 0, [&]( auto &item ) {
                 item.state.netshares = new_mssg_rshares.data();
                 item.state.sumcuratorsw = (FP(item.state.sumcuratorsw) - FP(vote_itr->curatorsw)).data();
             });
-            
+
             votetable_index.modify(vote_itr, voter, [&]( auto &item ) {
                item.weight = weight;
                item.time = cur_time;
@@ -420,7 +420,7 @@ void publication::set_vote(account_name voter, account_name author, string perml
                item.rshares = rshares.data();
                ++item.count;
             });
-            
+
             return;
         }
         ++vote_itr;
