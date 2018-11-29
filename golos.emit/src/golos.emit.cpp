@@ -1,6 +1,5 @@
 #include "golos.emit/golos.emit.hpp"
 #include "golos.emit/config.hpp"
-#include <golos.ctrl/golos.ctrl.hpp>
 #include <eosio.token/eosio.token.hpp>
 #include <eosiolib/transaction.hpp>
 
@@ -18,94 +17,125 @@ emission::emission(account_name self, symbol_type token, uint64_t action)
     : contract(self)
     , _token(token)
     , _state(_self, token)
+    , _cfg(_self, _self)
 {
-    _owner = control::get_owner(token);      // TODO: find better way
 }
 
+struct emit_params_setter: set_params_visitor<emit_state> {
+    using set_params_visitor::set_params_visitor; // enable constructor
+
+    bool operator()(const infrate_params& p) {
+        return set_param(p, &emit_state::infrate);
+    }
+    bool operator()(const reward_pools_param& p) {
+        return set_param(p, &emit_state::pools);
+    }
+};
+
+void emission::validateprms(vector<emit_param> params) {
+    //require_auth(who?)
+    param_helper::check_params(params);
+}
+
+void emission::setparams(vector<emit_param> params) {
+    require_auth(_self);
+    param_helper::check_params(params);
+
+    auto update = _cfg.exists();
+    eosio_assert(update || params.size() == emit_state::params_count, "must provide all parameters in initial set");
+    auto s = update ? _cfg.get() : emit_state{};
+    auto setter = emit_params_setter(s);
+    bool changed = false;
+    for (const auto& param: params) {
+        changed |= std::visit(setter, param);   // why we have no ||= ?
+    }
+    eosio_assert(changed, "at least one parameter must change");    // don't add actions, which do nothing
+    _cfg.set(setter.state, _self);
+}
+
+
 void emission::start() {
-    require_auth(_owner);
+    // TODO: disallow if no initial parameters set
+    require_auth(_self);
+    auto now = current_time();
     state s = {
-        .post_name = _owner,
-        // .work_name = p.workers_pool,
-        .start_time = current_time(),
-        .prev_emit = current_time() - config::emit_interval*1000'000   // instant emit. TODO: maybe delay on first start?
+        .start_time = now,
+        .prev_emit = now - config::emit_interval*1000'000   // instant emit. TODO: maybe delay on first start?
     };
-    s = _state.get_or_create(_owner, s);
+    s = _state.get_or_create(_self, s);
     eosio_assert(!s.active, "already active");
     s.active = true;
 
-    uint32_t elapsed = (current_time() - s.prev_emit) / 1e6;
+    uint32_t elapsed = (now - s.prev_emit) / 1e6;
     auto delay = elapsed < config::emit_interval ? config::emit_interval - elapsed : 0;
     schedule_next(s, delay);
 }
 
 void emission::stop() {
-    require_auth(_owner);
+    require_auth(_self);
     auto s = _state.get();  // TODO: create own singleton allowing custom assert message
     eosio_assert(s.active, "already stopped");
     auto id = s.tx_id;
     s.active = false;
     s.tx_id = 0;
-    _state.set(s, _owner);
-    if (id)
+    _state.set(s, _self);
+    if (id) {
         cancel_deferred(id);
+    }
 }
 
 void emission::emit() {
-    // eosio_assert(!_has_props, "this token already created");
     require_auth(_self);
     auto s = _state.get();
     eosio_assert(s.active, "emit called in inactive state");    // impossible?
     auto now = current_time();
     auto elapsed = now - s.prev_emit;
-    if (elapsed != 1e6 * config::emit_interval) {
-        eosio_assert(elapsed > config::emit_interval, "emit called too early");   // impossible?
+    auto emit_interval = seconds(config::emit_interval).count();
+    if (elapsed != emit_interval) {
+        eosio_assert(elapsed > emit_interval, "emit called too early");   // possible only on manual call
         print("warning: emit call delayed. elapsed: ", elapsed);
     }
     // TODO: maybe limit elapsed to avoid instant high value emission
 
-    auto p = control::get_params(_token);
-    auto narrowed = int64_t((now - s.start_time)/1000000 / p.infrate_narrowing);
-    int64_t infrate = std::max(int64_t(p.infrate_start) - narrowed, int64_t(p.infrate_stop));
+    auto pools = _cfg.get().pools.pools;
+    auto infrate = _cfg.get().infrate;
+    auto narrowed = microseconds(now - s.start_time).to_seconds() / infrate.narrowing;
+    auto inf_rate = std::max(int64_t(infrate.start) - narrowed, int64_t(infrate.stop));
 
     auto token = eosio::token(config::token_name);
-    auto new_tokens =
-        token.get_supply(_token.name()).amount * infrate * time_to_blocks(elapsed)
-        / (int64_t(config::blocks_per_year) * config::_100percent);
-    auto content_reward = new_tokens * p.content_reward / config::_100percent;
-    auto vesting_reward = new_tokens * p.vesting_reward / config::_100percent;
-    auto workers_reward = new_tokens * p.workers_reward / config::_100percent;
-    auto witness_reward = new_tokens - content_reward - vesting_reward - workers_reward; /// Remaining 6% to witness pay
-    eosio_assert(witness_reward >= 0, "bad reward percents params");    // impossible, TODO: remove after tests
+    auto new_tokens = static_cast<int64_t>(
+        token.get_supply(_token.name()).amount * static_cast<uint128_t>(inf_rate) * time_to_blocks(elapsed)
+        / (int64_t(config::blocks_per_year) * config::_100percent));
 
     if (new_tokens > 0) {
-#define TRANSFER(to, amount, memo) if (amount > 0) { \
-    INLINE_ACTION_SENDER(eosio::token, transfer)(config::token_name, {from, N(active)}, \
-        {from, to, asset(amount, _token), memo}); \
-}
+        const auto issue_memo = "emission"; // TODO: make configurable?
+        const auto trans_memo = "emission";
         auto from = _self;
-        INLINE_ACTION_SENDER(eosio::token, issue)(config::token_name, {{_owner, N(active)}},
-            {from, asset(new_tokens, _token), "emission"});
+        INLINE_ACTION_SENDER(eosio::token, issue)(config::token_name, {{_self, N(active)}},
+            {from, asset(new_tokens, _token), issue_memo});
 
-        // 1. witness reward can have remainder after division, it stay in content pool
-        // 2. if there less than max witnesses, their reward stay in content pool
-        content_reward += witness_reward;
-        witness_reward /= p.max_witnesses;
-        if (witness_reward > 0) {
-            auto ctrl = control(config::control_name, _token);  // TODO: reuse existing control object
-            auto top = ctrl.get_top_witnesses();
-            for (const auto& w: top) {
-                // TODO: maybe reimplement as claim to avoid missing balance asserts (or skip witnesses without balances)
-                TRANSFER(w, witness_reward, "emission");
-                content_reward -= witness_reward;
+        auto transfer = [&](auto from, auto to, auto amount) {
+            if (amount > 0) {
+                auto memo = to == config::vesting_name ? "" : trans_memo;   // vesting contract requires empty memo to add to supply
+                INLINE_ACTION_SENDER(eosio::token, transfer)(config::token_name, {from, N(active)}, \
+                    {from, to, asset(amount, _token), memo}); \
             }
+        };
+        account_name remainder = N();
+        for (const auto& pool: pools) {
+            if (pool.percent == 0) {
+                remainder = pool.name;
+                continue;
+            }
+            auto reward = new_tokens * pool.percent / config::_100percent;
+            eosio_assert(reward <= new_tokens, "SYSTEM: not enough tokens to pay emission reward"); // must not happen
+            transfer(from, pool.name, reward);
+            new_tokens -= reward;
         }
-
-        TRANSFER(_owner, content_reward, "emission");
-        TRANSFER(config::vesting_name, vesting_reward, ""); // memo must be empty to add to supply
-        TRANSFER(p.workers_pool, workers_reward, "emission");
-
-#undef TRANSFER
+        eosio_assert(remainder != N(), "SYSTEM: emission remainder pool is not set"); // must not happen
+        transfer(from, remainder, new_tokens);
+    } else {
+        print("no emission\n");
     }
 
     s.prev_emit = current_time();
@@ -121,10 +151,10 @@ void emission::schedule_next(state& s, uint32_t delay) {
     trx.send(sender_id, _self);
 
     s.tx_id = sender_id;
-    _state.set(s, _owner);
+    _state.set(s, _self);
 }
 
 
 } // golos
 
-APP_DOMAIN_ABI(golos::emission, (emit)(start)(stop))
+APP_DOMAIN_ABI(golos::emission, (setparams)(validateprms)(emit)(start)(stop))

@@ -47,7 +47,7 @@ public:
     }
 
     // constants
-    const uint16_t _max_witnesses = 2;
+    const uint16_t _max_witnesses = 3;
     const uint16_t _smajor_witn_count = _max_witnesses * 2 / 3 + 1;
 
     const account_name BLOG = N(blog);
@@ -68,7 +68,7 @@ public:
     }
 
     struct errors: contract_error_messages {
-        // const string no_symbol          = amsg("symbol not found");
+        const string no_pool_account   = amsg("pool account must exist");
     } err;
 
     const string _test_key = string(fc::crypto::config::public_key_legacy_prefix)
@@ -108,8 +108,8 @@ public:
     }
 
     void prepare_balances() {
-        BOOST_CHECK_EQUAL(success(), token.create(BLOG, dasset(100500)));
-        BOOST_CHECK_EQUAL(success(), vest.create_vesting(BLOG, _token, {_code}));
+        BOOST_CHECK_EQUAL(success(), token.create(_code, dasset(100500)));
+        BOOST_CHECK_EQUAL(success(), vest.create_vesting(_code, _token, {_code}));
         BOOST_CHECK_EQUAL(success(), vest.open(cfg::vesting_name, _token, cfg::vesting_name));
         vector<std::pair<uint64_t,double>> amounts = {
             {BLOG, 1000}, {cfg::workers_name, 0}, {_alice, 800}, {_bob, 700}, {_carol, 600},
@@ -120,7 +120,7 @@ public:
             auto amount = p.second;
             BOOST_CHECK_EQUAL(success(), vest.open(acc, _token, acc));
             if (amount > 0) {
-                BOOST_CHECK_EQUAL(success(), token.issue(BLOG, acc, dasset(amount), "issue"));
+                BOOST_CHECK_EQUAL(success(), token.issue(_code, acc, dasset(amount), "issue"));
                 BOOST_CHECK_EQUAL(success(), token.transfer(acc, cfg::vesting_name, dasset(amount), "buy vesting"));
             } else {
                 BOOST_CHECK_EQUAL(success(), token.open(acc, _token, acc));
@@ -138,24 +138,72 @@ BOOST_AUTO_TEST_SUITE(golos_emit_tests)
 BOOST_FIXTURE_TEST_CASE(start_emission_test, golos_emit_tester) try {
     BOOST_TEST_MESSAGE("Test emission start");
 
-    BOOST_TEST_MESSAGE("--- prepare control");
+    BOOST_TEST_MESSAGE("--- prepare");
     prepare_ctrl(step_vote_witnesses);
     produce_blocks(10);
+    auto content_pool = emit.pool_json(BLOG, 6667-667);
+    auto vesting_pool = emit.pool_json(cfg::vesting_name, 2667-267);
+    auto witness_pool = emit.pool_json(cfg::control_name, 0);
+    auto workers_pool = emit.pool_json(cfg::workers_name, 1000);
+    auto pools = "{'pools':[" + content_pool + "," + witness_pool + "," + vesting_pool + "," + workers_pool + "]}";
+    auto params = "[" + emit.infrate_json(1500, 95, 250000) + ",['reward_pools'," + pools + "]]";
+    BOOST_CHECK_EQUAL(success(), emit.set_params(params));
 
     BOOST_TEST_MESSAGE("--- start succeed");
-    auto w = witness_vect(_smajor_witn_count);
-    BOOST_CHECK_EQUAL(success(), emit.start(BLOG, w));
+    BOOST_CHECK_EQUAL(success(), emit.start());
+    emit.get_state();
     BOOST_TEST_MESSAGE("--- started");
+    produce_block();    // `emit` being processed in next tx (deferred), go next block to be sure state updated
+    emit.get_params();
     auto t = emit.get_state();
     auto tx = t["tx_id"];
 
     BOOST_TEST_MESSAGE("--- go to block just before emission");
     auto emit_interval = cfg::emit_interval * 1000 / cfg::block_interval_ms;
-    produce_blocks(emit_interval - 1);
+    produce_blocks(emit_interval - 1);      // actually we go to emission block now; TODO: resolve, why deferred tx sometimes applied before get_state() and sometimes we need to go next block
     BOOST_CHECK_EQUAL(tx, emit.get_state()["tx_id"]);
     BOOST_TEST_MESSAGE("--- next block, check emission");
     produce_block();
-    BOOST_CHECK_NE(tx, emit.get_state()["tx_id"]);
+    auto tx2 = emit.get_state()["tx_id"];
+    BOOST_CHECK_NE(tx, tx2);
+    produce_block();
+    BOOST_CHECK_EQUAL(tx2, emit.get_state()["tx_id"]);
+} FC_LOG_AND_RETHROW()
+
+BOOST_FIXTURE_TEST_CASE(set_params, golos_emit_tester) try {
+    BOOST_TEST_MESSAGE("Test emission parameters");
+    BOOST_TEST_MESSAGE("--- prepare");
+    prepare_ctrl(step_only_create);
+    produce_block();
+
+    BOOST_TEST_MESSAGE("--- check that global params not exist");
+    BOOST_TEST_CHECK(emit.get_params().is_null());
+
+    string pool0 = "{'name':'zero','percent':0}";
+    string pool1 = "{'name':'test','percent':5000}";
+    string pool2 = "{'name':'less','percent':4999}";
+    string pool3 = "{'name':'more','percent':5001}";
+    const auto pools = "{'pools':[" + pool2 + "," + pool1 + "," + pool0 + "]}";
+    const string infrate = "{'start':1,'stop':1,'narrowing':0}";
+    auto params = "[['inflation_rate'," + infrate + "], ['reward_pools'," + pools + "]]";
+    BOOST_CHECK_EQUAL(err.no_pool_account, emit.set_params(params));
+    create_accounts({N(test), N(less), N(zero)});
+    produce_block();
+
+    BOOST_CHECK_EQUAL(success(), emit.set_params(params));
+    auto t = emit.get_params();
+    BOOST_TEST_MESSAGE("--- " + fc::json::to_string(t));
+    BOOST_CHECK_EQUAL(success(), emit.set_params(
+        "[['inflation_rate'," + infrate + "], ['reward_pools',{'pools':[" +pool0+ "]}]]"
+    ));
+    t = emit.get_params();
+    BOOST_TEST_MESSAGE("--- " + fc::json::to_string(t));
+
+    BOOST_CHECK_EQUAL(success(), emit.set_params(
+        "[['inflation_rate',{'start':5,'stop':5,'narrowing':0}], ['reward_pools'," + pools + "]]"
+    ));
+    t = emit.get_params();
+    BOOST_TEST_MESSAGE("--- " + fc::json::to_string(t));
 
 } FC_LOG_AND_RETHROW()
 

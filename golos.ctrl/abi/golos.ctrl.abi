@@ -54,15 +54,7 @@
                 {"type": "uint16", "name": "witness_supermajority"},
                 {"type": "uint16", "name": "witness_majority"},
                 {"type": "uint16", "name": "witness_minority"},
-                {"type": "uint16", "name": "max_witness_votes"},
-
-                {"type": "uint16", "name": "infrate_start"},
-                {"type": "uint16", "name": "infrate_stop"},
-                {"type": "uint32", "name": "infrate_narrowing"},
-                {"type": "uint16", "name": "content_reward"},
-                {"type": "uint16", "name": "vesting_reward"},
-                {"type": "uint16", "name": "workers_reward"},
-                {"type": "account_name", "name": "workers_pool"}
+                {"type": "uint16", "name": "max_witness_votes"}
             ]
         },
         {
