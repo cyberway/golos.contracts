@@ -47,7 +47,7 @@ void control::create(account_name owner, properties new_props) {
 void control::updateprops(properties new_props) {
     eosio_assert(new_props.validate(), "invalid properties");
     eosio_assert(props() != new_props, "same properties are already set");
-    require_auth({_owner, config::active_name});
+    require_auth(_owner);
     // TODO: auto-change auths on params change?
     upsert_tbl<props_tbl>(_owner, [&](bool) {
         return [&](auto& p) {
@@ -57,7 +57,7 @@ void control::updateprops(properties new_props) {
 }
 
 void control::attachacc(account_name user) {
-    require_auth({_owner, config::minority_name});
+    require_auth(_owner);
     upsert_tbl<bw_user_tbl>(user, [&](bool exists) {
         return [&,exists](bw_user& u) {
             eosio_assert(!exists || !u.attached, "already attached");   //TODO: maybe it's better to check this earlier (not inside modify())
@@ -68,7 +68,7 @@ void control::attachacc(account_name user) {
 }
 
 void control::detachacc(account_name user) {
-    require_auth({_owner, config::minority_name});
+    require_auth(_owner);
     bool exist = upsert_tbl<bw_user_tbl>(user, [&](bool) {
         return [&](bw_user& u) {
             eosio_assert(u.attached, "user already detached");
