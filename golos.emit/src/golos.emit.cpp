@@ -90,21 +90,22 @@ void emission::emit() {
     eosio_assert(s.active, "emit called in inactive state");    // impossible?
     auto now = current_time();
     auto elapsed = now - s.prev_emit;
-    if (elapsed != 1e6 * config::emit_interval) {
-        eosio_assert(elapsed > config::emit_interval, "emit called too early");   // impossible?
+    auto emit_interval = seconds(config::emit_interval).count();
+    if (elapsed != emit_interval) {
+        eosio_assert(elapsed > emit_interval, "emit called too early");   // possible only on manual call
         print("warning: emit call delayed. elapsed: ", elapsed);
     }
     // TODO: maybe limit elapsed to avoid instant high value emission
 
     auto pools = _cfg.get().pools.pools;
     auto infrate = _cfg.get().infrate;
-    auto narrowed = int64_t((now - s.start_time)/1000000 / infrate.narrowing);
-    int64_t inf_rate = std::max(int64_t(infrate.start) - narrowed, int64_t(infrate.stop));
+    auto narrowed = microseconds(now - s.start_time).to_seconds() / infrate.narrowing;
+    auto inf_rate = std::max(int64_t(infrate.start) - narrowed, int64_t(infrate.stop));
 
     auto token = eosio::token(config::token_name);
-    auto new_tokens =
-        token.get_supply(_token.name()).amount * inf_rate * time_to_blocks(elapsed)
-        / (int64_t(config::blocks_per_year) * config::_100percent);
+    auto new_tokens = static_cast<int64_t>(
+        token.get_supply(_token.name()).amount * static_cast<uint128_t>(inf_rate) * time_to_blocks(elapsed)
+        / (int64_t(config::blocks_per_year) * config::_100percent));
 
     if (new_tokens > 0) {
         const auto issue_memo = "emission"; // TODO: make configurable?
@@ -131,6 +132,7 @@ void emission::emit() {
             transfer(from, pool.name, reward);
             new_tokens -= reward;
         }
+        eosio_assert(remainder != N(), "SYSTEM: emission remainder pool is not set"); // must not happen
         transfer(from, remainder, new_tokens);
     } else {
         print("no emission\n");
