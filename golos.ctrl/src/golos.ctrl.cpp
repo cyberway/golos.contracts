@@ -25,7 +25,7 @@ constexpr uint16_t calc_threshold(uint16_t val, uint16_t top, uint16_t num, uint
     return 0 == val ? uint32_t(top) * num / denom + 1 : val;
 }
 
-uint16_t properties::active_threshold()   const { return calc_threshold(witness_supermajority, max_witnesses, 2, 3); };
+uint16_t properties::super_majority_threshold()   const { return calc_threshold(witness_supermajority, max_witnesses, 2, 3); };
 uint16_t properties::majority_threshold() const { return calc_threshold(witness_majority, max_witnesses, 1, 2); };
 uint16_t properties::minority_threshold() const { return calc_threshold(witness_minority, max_witnesses, 1, 3); };
 
@@ -218,29 +218,25 @@ void control::update_auths() {
     vector<std::pair<uint64_t,uint16_t>> auths = {
         {config::minority_name, props().minority_threshold()},
         {config::majority_name, props().majority_threshold()},
-        {config::active_name, props().active_threshold()}         // active must be the last because it adds eosio.code
+        {config::super_majority_name, props().super_majority_threshold()}
     };
 
     for (const auto& a: auths) {
         auto perm = a.first;
         auto thrs = a.second;
-        bool is_active = config::active_name == perm;
-        if (is_active) {
-            auth.accounts.push_back({{_self, config::code_name}, thrs});    // add eosio.code
-            auth.accounts.push_back({{config::emission_name, config::code_name}, thrs});    // needed to create tokens
-            auth.accounts.push_back({{_owner, config::code_name}, thrs});    // needed to pay rewards
-        }
+
         //permissions must be sorted
         std::sort(auth.accounts.begin(), auth.accounts.end(),
             [](const eosiosystem::permission_level_weight& l, const eosiosystem::permission_level_weight& r) {
                 return std::tie(l.permission.actor, l.permission.permission) < std::tie(r.permission.actor, r.permission.permission);
             }
         );
+
         auth.threshold = thrs;
         const auto& act = action(
             permission_level{_owner, config::active_name},
             config::internal_name, N(updateauth),
-            std::make_tuple(_owner, perm, is_active ? config::owner_name : config::active_name, auth)
+            std::make_tuple(_owner, perm, config::active_name, auth)
         );
         act.send();
     }

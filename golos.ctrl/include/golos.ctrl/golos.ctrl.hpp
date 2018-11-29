@@ -44,7 +44,7 @@ struct [[eosio::table]] properties {
 
     // helpers
     bool validate() const;
-    uint16_t active_threshold() const;
+    uint16_t super_majority_threshold() const;
     uint16_t majority_threshold() const;
     uint16_t minority_threshold() const;
 

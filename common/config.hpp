@@ -15,6 +15,7 @@ static const auto internal_name = N(eosio);
 static const auto code_name = N(eosio.code);
 static const auto owner_name = N(owner);
 static const auto active_name = N(active);
+static const auto super_majority_name = N(witn.smajor);
 static const auto majority_name = N(witn.major);
 static const auto minority_name = N(witn.minor);
 
