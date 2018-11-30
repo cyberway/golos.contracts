@@ -6,10 +6,8 @@
 namespace golos {
 
 using namespace eosio;
+using std::vector;
 
-
-configer::configer(account_name self): contract(self) {
-}
 
 struct emit_params_setter: set_params_visitor<emit_state> {
     using set_params_visitor::set_params_visitor; // enable constructor
@@ -22,7 +20,7 @@ struct emit_params_setter: set_params_visitor<emit_state> {
     }
 };
 
-void configer::updateparamse(account_name who, std::vector<emit_param> params) {
+void configer::updateparamse(name who, std::vector<emit_param> params) {
     print("updateparams\n");
     eosio_assert(who != _self, "can only change parameters of account, not contract");
     print("not self ok\n");
@@ -31,7 +29,7 @@ void configer::updateparamse(account_name who, std::vector<emit_param> params) {
     param_helper::check_params(params); // TODO: validate using `validateprms` action of related contract
     // INLINE_ACTION_SENDER(contract_class, validateprms)(contract_name, {{_self, N(active)}}, {params});
 
-    emit_params_singleton acc_params{_self, who};
+    emit_params_singleton acc_params{_self, who.value};
     bool update = acc_params.exists();
     eosio_assert(update || params.size() == emit_state::params_count,
         std::string("must provide all "+std::to_string(emit_state::params_count)+" parameters in initial set").c_str());
@@ -60,20 +58,20 @@ struct emit_state_updater: state_params_update_visitor<emit_state> {
     }
 };
 
-vector<account_name> configer::get_top_witnesses() {
-    vector<account_name> r;
+vector<name> configer::get_top_witnesses() {
+    vector<name> r;
     // TODO: get from singleton
     return r;
 }
 
-bool configer::is_top_witness(account_name account) {
+bool configer::is_top_witness(name account) {
     auto t = get_top_witnesses();
     auto x = std::find(t.begin(), t.end(), account);
     return x != t.end();
 }
 
 void configer::recalculate_state(vector<emit_param> changed_params) {
-    emit_params_singleton state{_self, _self};
+    emit_params_singleton state{_self, _self.value};
     auto s = state.exists() ? state.get() : emit_state{};   // TODO: default state must be created (in counstructor/init)
 
     auto top = get_top_witnesses();
@@ -90,7 +88,7 @@ void configer::recalculate_state(vector<emit_param> changed_params) {
     }
 }
 
-void configer::notifytop(vector<account_name> top) {
+void configer::notifytop(vector<name> top) {
     // TODO: 1. store new top to singleton; 2. recalculate state
     // require_auth(control);
 }
@@ -117,7 +115,7 @@ void configer::setparams(vector<cfg_param> params) {
     require_auth(_self);
     param_helper::check_params(params);
 
-    cfg_params_singleton state{_self, _self};
+    cfg_params_singleton state{_self, _self.value};
     auto s = state.exists() ? state.get() : cfg_state{};   // TODO: default state must be created (in counstructor/init)
     auto setter = cfg_params_setter(s);
     bool changed = false;
@@ -131,4 +129,4 @@ void configer::setparams(vector<cfg_param> params) {
 
 }
 
-EOSIO_ABI(golos::configer, (validateprms)(setparams)(updateparamse)(notifytop));
+EOSIO_DISPATCH(golos::configer, (validateprms)(setparams)(updateparamse)(notifytop));

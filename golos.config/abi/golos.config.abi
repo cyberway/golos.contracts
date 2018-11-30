@@ -1,9 +1,6 @@
 {
     "version": "cyberway::abi/1.1",
-    "types": [{
-        "new_type_name": "account_name",
-        "type": "name"
-    }],
+    "types": [],
     "variants": [{
         "name": "emit_param",
         "types": [
@@ -25,8 +22,8 @@
         }, {
             "name": "reward_pool",
             "fields": [
-                {"type": "account_name", "name": "name"},
-                {"type": "uint16",       "name": "percent"}]
+                {"type": "name",   "name": "name"},
+                {"type": "uint16", "name": "percent"}]
         }, {
             "name": "emit_state",
             "fields": [
@@ -36,12 +33,12 @@
         }, {
             "name": "updateparamse",
             "fields": [
-                {"type": "account_name", "name": "who"},
+                {"type": "name", "name": "who"},
                 {"type": "emit_param[]", "name": "params"}]
         }, {
             "name": "notifytop",
             "fields": [
-                {"type": "account_name[]", "name": "top"}]
+                {"type": "name[]", "name": "top"}]
         }
     ],
     "actions": [

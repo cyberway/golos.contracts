@@ -26,7 +26,7 @@ protected:
 public:
     golos_params_tester()
         : golos_tester(cfg::emission_name)
-        , emit({this, cfg::emission_name, _token})
+        , emit({this, cfg::emission_name})
         , ctrl({this, cfg::control_name, _token})
         , vest({this, cfg::vesting_name, _token})
         , token({this, cfg::token_name, _token})
