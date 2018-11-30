@@ -14,6 +14,7 @@ from decimal import Decimal
 from bson.decimal128 import Decimal128
 from pymongo import MongoClient
 from config import *
+from pymongo import UpdateOne
 
 expiretion = timedelta(minutes = 30)
 
@@ -46,6 +47,9 @@ class PublishConverter:
         self.cyberway_db = cyberway_db
         self.exists_accs = set()
         self.mssgs_curatorsw = defaultdict(int)
+        self.childcount_dict = {}
+        self.update_list = []
+        self.messages = self.publish_db["message"]
         self.publish_tables = dbs.Tables([
             ('vote',    self.publish_db['votetable'],    None, None),
             ('message', self.publish_db['messagetable'], None, None),
@@ -141,6 +145,17 @@ class PublishConverter:
                     "_SIZE_": 50
                 }
                 self.publish_tables.message.append(message)
+
+                
+                childcount_obj = {
+                    "id": cur_mssg_id,
+                    "_SCOPE_": doc["author"],
+                    "childcount": 0,
+                    "gls_childcount": doc["children"]
+                }
+                self.childcount_dict[childcount_obj["id"] << 64 | utils.string_to_name(childcount_obj["_SCOPE_"])] = childcount_obj
+                if message["parentacc"]:
+                    self.childcount_dict[message["parent_id"] << 64 | utils.string_to_name(message["parentacc"])]["childcount"] += 1
                 
                 tags = []
                 if (isinstance(doc["json_metadata"], dict)):
@@ -251,14 +266,31 @@ class PublishConverter:
             print(e.args)
             print(traceback.format_exc())
         print('...done')
-    
+
+    def write_childcount(self):
+        self.messages.bulk_write(self.update_list)
+        self.update_list = []
+
+    def update_childcount(self):
+        for child in self.childcount_dict.values():
+            if child["gls_childcount"] != child["childcount"]:
+                update_filter = {
+                    "$and":[{"id":child["id"]},{"_SCOPE":child["_SCOPE_"]}]
+                }
+                update_obj = {
+                    "$set":{"childcount":child["childcount"]}
+                }
+                self.update_list.append(UpdateOne(update_filter, update_obj))
+            if len(self.update_list) == 10000:
+                self.write_childcount()
+        if len(self.update_list):
+            self.write_childcount()
+
     def run(self, query = {}):
         self.fill_exists_accs()
         self.convert_votes(query)
         self.convert_posts(query)
+        self.update_childcount()
 
 #PublishConverter(dbs.golos_db, dbs.cyberway_gls_publish_db, dbs.cyberway_db).run({"author" : "goloscore"})
-PublishConverter(dbs.golos_db, dbs.cyberway_gls_publish_db, dbs.cyberway_db).run()   
-
-
-
+PublishConverter(dbs.golos_db, dbs.cyberway_gls_publish_db, dbs.cyberway_db).run()
