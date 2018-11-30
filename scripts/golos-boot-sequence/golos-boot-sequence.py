@@ -213,7 +213,8 @@ def createGolosAccounts():
         openTokenBalance(a)
     updateAuth('gls.publish', 'witn.major', 'active', [args.public_key], [])
     updateAuth('gls.publish', 'witn.minor', 'active', [args.public_key], [])
-    updateAuth('gls.publish', 'active', 'owner', [args.public_key], ['gls.ctrl@eosio.code'])
+    updateAuth('gls.publish', 'witn.smajor', 'active', [args.public_key], [])
+    updateAuth('gls.publish', 'active', 'owner', [args.public_key], ['gls.ctrl@eosio.code', "gls.emit@eosio.code", "gls.publish@eosio.code"])
     updateAuth('gls.vesting', 'active', 'owner', [args.public_key], ['gls.vesting@eosio.code'])
     updateAuth('gls.emit',    'active', 'owner', [args.public_key], ['gls.emit@eosio.code'])
 
