@@ -14,13 +14,12 @@ struct vesting_info {
 
     asset supply;
     std::vector<name> issuers;
-    name notify_acc;
 
     uint64_t primary_key() const {
         return supply.symbol.code().raw();
     }
 
-    EOSLIB_SERIALIZE(vesting_info, (supply)(issuers)(notify_acc))
+    EOSLIB_SERIALIZE(vesting_info, (supply)(issuers))
 };
 
 struct user_balance {
