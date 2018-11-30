@@ -5,6 +5,7 @@
 
 #define DOMAIN_TYPE symbol_type
 #include <common/dispatcher.hpp>
+#include <eosiolib/time.hpp>
 
 namespace golos {
 
@@ -60,13 +61,13 @@ void emission::start() {
     auto now = current_time();
     state s = {
         .start_time = now,
-        .prev_emit = now - config::emit_interval*1000'000   // instant emit. TODO: maybe delay on first start?
+        .prev_emit = now - seconds(config::emit_interval).count()   // instant emit. TODO: maybe delay on first start?
     };
     s = _state.get_or_create(_self, s);
     eosio_assert(!s.active, "already active");
     s.active = true;
 
-    uint32_t elapsed = (now - s.prev_emit) / 1e6;
+    uint32_t elapsed = microseconds(now - s.prev_emit).to_seconds();
     auto delay = elapsed < config::emit_interval ? config::emit_interval - elapsed : 0;
     schedule_next(s, delay);
 }
@@ -122,12 +123,13 @@ void emission::emit() {
             }
         };
         account_name remainder = N();
+        auto total = new_tokens;
         for (const auto& pool: pools) {
             if (pool.percent == 0) {
                 remainder = pool.name;
                 continue;
             }
-            auto reward = new_tokens * pool.percent / config::_100percent;
+            auto reward = total * pool.percent / config::_100percent;
             eosio_assert(reward <= new_tokens, "SYSTEM: not enough tokens to pay emission reward"); // must not happen
             transfer(from, pool.name, reward);
             new_tokens -= reward;
@@ -138,7 +140,7 @@ void emission::emit() {
         print("no emission\n");
     }
 
-    s.prev_emit = current_time();
+    s.prev_emit = now;
     schedule_next(s, config::emit_interval);
 }
 
