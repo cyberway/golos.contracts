@@ -5,6 +5,9 @@
 
 namespace golos {
 
+
+using namespace eosio;
+
 template<typename T, int L>
 struct param_wrapper: T {
     param_wrapper() = default;
@@ -33,6 +36,7 @@ struct parameter {
 };
 
 struct param_helper {
+
     template<typename T>
     static void check_params(const std::vector<T>& params) {
         eosio::print("check_params, size: ", params.size(), "\n");
@@ -141,10 +145,10 @@ struct param_helper {
      * @param top - top witnesses
      */
     template<typename Tbl, typename Item>   // TODO: Item can be derived from Tbl
-    static std::vector<Item> get_top_params(account_name code, const std::vector<account_name>& top) {
+    static std::vector<Item> get_top_params(name code, const std::vector<name>& top) {
         std::vector<Item> r;
         for (const auto& w: top) {
-            Tbl p{code, w};                 // NOTE: convention to store parameters in account scope
+            Tbl p{code, w.value};           // NOTE: convention to store parameters in account scope
             if (p.exists())
                 r.emplace_back(p.get());
         }
