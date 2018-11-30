@@ -28,9 +28,9 @@ struct contracts {
     static std::vector<uint8_t> msig_wasm()   { return read_wasm(CYBERWAY_CONTRACTS "eosio.msig/eosio.msig.wasm"); }
     static std::string          msig_wast()   { return read_wast(CYBERWAY_CONTRACTS "eosio.msig/eosio.msig.wast"); }
     static std::vector<char>    msig_abi()    { return read_abi (CYBERWAY_CONTRACTS "eosio.msig/eosio.msig.abi"); }
-    static std::vector<uint8_t> sudo_wasm()   { return read_wasm(CYBERWAY_CONTRACTS "eosio.sudo/eosio.sudo.wasm"); }
-    static std::string          sudo_wast()   { return read_wast(CYBERWAY_CONTRACTS "eosio.sudo/eosio.sudo.wast"); }
-    static std::vector<char>    sudo_abi()    { return read_abi (CYBERWAY_CONTRACTS "eosio.sudo/eosio.sudo.abi"); }
+    static std::vector<uint8_t> wrap_wasm()   { return read_wasm(CYBERWAY_CONTRACTS "eosio.wrap/eosio.wrap.wasm"); }
+    static std::string          wrap_wast()   { return read_wast(CYBERWAY_CONTRACTS "eosio.wrap/eosio.wrap.wast"); }
+    static std::vector<char>    wrap_abi()    { return read_abi (CYBERWAY_CONTRACTS "eosio.wrap/eosio.wrap.abi"); }
     static std::vector<uint8_t> bios_wasm()   { return read_wasm(CYBERWAY_CONTRACTS "eosio.bios/eosio.bios.wasm"); }
     static std::string          bios_wast()   { return read_wast(CYBERWAY_CONTRACTS "eosio.bios/eosio.bios.wast"); }
     static std::vector<char>    bios_abi()    { return read_abi (CYBERWAY_CONTRACTS "eosio.bios/eosio.bios.abi"); }
