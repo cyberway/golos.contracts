@@ -1,24 +1,22 @@
 #include "golos.emit/golos.emit.hpp"
 #include "golos.emit/config.hpp"
+#include <common/parameter_ops.hpp>
 #include <eosio.token/eosio.token.hpp>
 #include <eosiolib/transaction.hpp>
-
-#define DOMAIN_TYPE symbol_type
-#include <common/dispatcher.hpp>
 #include <eosiolib/time.hpp>
 
 namespace golos {
 
 using namespace eosio;
+using std::vector;
 
 
 ////////////////////////////////////////////////////////////////
 /// emission
-emission::emission(account_name self, symbol_type token, uint64_t action)
-    : contract(self)
-    , _token(token)
-    , _state(_self, token)
-    , _cfg(_self, _self)
+emission::emission(name self, name code, datastream<const char*> ds)
+    : contract(self, code, ds)
+    , _state(_self, _self.value)
+    , _cfg(_self, _self.value)
 {
 }
 
@@ -103,27 +101,27 @@ void emission::emit() {
     auto narrowed = microseconds(now - s.start_time).to_seconds() / infrate.narrowing;
     auto inf_rate = std::max(int64_t(infrate.start) - narrowed, int64_t(infrate.stop));
 
-    auto token = eosio::token(config::token_name);
+    auto supply = eosio::token::get_supply(config::token_name, _token.code());
     auto new_tokens = static_cast<int64_t>(
-        token.get_supply(_token.name()).amount * static_cast<uint128_t>(inf_rate) * time_to_blocks(elapsed)
+        supply.amount * static_cast<uint128_t>(inf_rate) * time_to_blocks(elapsed)
         / (int64_t(config::blocks_per_year) * config::_100percent));
 
     if (new_tokens > 0) {
         const auto issue_memo = "emission"; // TODO: make configurable?
         const auto trans_memo = "emission";
         auto from = _self;
-        INLINE_ACTION_SENDER(eosio::token, issue)(config::token_name, {{_self, N(active)}},
+        INLINE_ACTION_SENDER(eosio::token, issue)(config::token_name, {{_self, config::active_name}},
             {from, asset(new_tokens, _token), issue_memo});
 
         auto transfer = [&](auto from, auto to, auto amount) {
             if (amount > 0) {
                 auto memo = to == config::vesting_name ? "" : trans_memo;   // vesting contract requires empty memo to add to supply
-                INLINE_ACTION_SENDER(eosio::token, transfer)(config::token_name, {from, N(active)},
+                INLINE_ACTION_SENDER(eosio::token, transfer)(config::token_name, {from, config::active_name},
                     {from, to, asset(amount, _token), memo});
             }
         };
-        account_name remainder = N();
         auto total = new_tokens;
+        auto remainder = name();
         for (const auto& pool: pools) {
             if (pool.percent == 0) {
                 remainder = pool.name;
@@ -134,7 +132,7 @@ void emission::emit() {
             transfer(from, pool.name, reward);
             new_tokens -= reward;
         }
-        eosio_assert(remainder != N(), "SYSTEM: emission remainder pool is not set"); // must not happen
+        eosio_assert(remainder != name(), "SYSTEM: emission remainder pool is not set"); // must not happen
         transfer(from, remainder, new_tokens);
     } else {
         print("no emission\n");
@@ -145,10 +143,10 @@ void emission::emit() {
 }
 
 void emission::schedule_next(state& s, uint32_t delay) {
-    auto sender_id = (uint128_t(_token) << 64) | s.prev_emit;
+    auto sender_id = (uint128_t(_token.raw()) << 64) | s.prev_emit;
 
     transaction trx;
-    trx.actions.emplace_back(action{permission_level(_self, N(active)), _self, N(emit), _token});   // just use _token instead of struct
+    trx.actions.emplace_back(action{permission_level(_self, config::active_name), _self, "emit"_n, std::tuple<>()});
     trx.delay_sec = delay;
     trx.send(sender_id, _self);
 
@@ -159,4 +157,4 @@ void emission::schedule_next(state& s, uint32_t delay) {
 
 } // golos
 
-APP_DOMAIN_ABI(golos::emission, (setparams)(validateprms)(emit)(start)(stop))
+EOSIO_DISPATCH(golos::emission, (setparams)(validateprms)(emit)(start)(stop))

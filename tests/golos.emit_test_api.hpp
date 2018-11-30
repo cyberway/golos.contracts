@@ -4,8 +4,8 @@
 namespace eosio { namespace testing {
 
 
-struct golos_emit_api: domain_contract_api<symbol> {
-    using domain_contract_api::domain_contract_api;
+struct golos_emit_api: base_contract_api {
+    using base_contract_api::base_contract_api;
 
     //// emit actions
     action_result emit(account_name signer) {
@@ -36,7 +36,7 @@ struct golos_emit_api: domain_contract_api<symbol> {
 
     //// emit tables
     variant get_state() const {
-        return get_struct(N(state), N(state), "state");
+        return get_struct(_code, N(state), N(state), "state");
     }
 
     variant get_params() const {

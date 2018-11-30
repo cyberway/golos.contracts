@@ -6,8 +6,10 @@
 namespace golos {
 
 
+using namespace eosio;
+
 struct reward_pool {
-    account_name name;
+    name name;
     uint16_t percent;
 };
 // TODO: use pfr
@@ -25,7 +27,7 @@ struct reward_pools: parameter {
         auto n_pools = pools.size();
         eosio_assert(n_pools > 0, "at least 1 pool must be set");
         uint32_t total = 0;
-        account_name prev_name = N();
+        name prev_name = name();
         bool first = true;
         bool have0 = false;
         for (const auto& p: pools) {
@@ -72,7 +74,7 @@ struct [[eosio::table]] emit_state {
 
     static constexpr int params_count = 2;
 };
-using emit_params_singleton = eosio::singleton<N(emitparams), emit_state>;
+using emit_params_singleton = eosio::singleton<"emitparams"_n, emit_state>;
 
 
 } // golos

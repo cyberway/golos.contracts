@@ -36,7 +36,6 @@
         }, {
             "name": "setparams",
             "fields": [
-                {"type": "symbol",       "name": "domain"},
                 {"type": "emit_param[]", "name": "params"}]
         },
 
@@ -54,23 +53,17 @@
         {
             "name": "emit",
             "base": "",
-            "fields": [
-                {"type": "symbol", "name": "domain"}
-            ]
+            "fields": []
         },
         {
             "name": "start",
             "base": "",
-            "fields": [
-                {"type": "symbol", "name": "domain"}
-            ]
+            "fields": []
         },
         {
             "name": "stop",
             "base": "",
-            "fields": [
-                {"type": "symbol", "name": "domain"}
-            ]
+            "fields": []
         }
     ],
     "actions": [
