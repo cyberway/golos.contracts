@@ -13,10 +13,10 @@ struct vesting_info {
     vesting_info() = default;
 
     asset supply;
-    std::vector<account_name> issuers;
+    std::vector<name> issuers;
 
     uint64_t primary_key() const {
-        return supply.symbol.name();
+        return supply.symbol.code().raw();
     }
 
     EOSLIB_SERIALIZE(vesting_info, (supply)(issuers))
@@ -31,7 +31,7 @@ struct user_balance {
     asset unlocked_limit;
 
     uint64_t primary_key() const {
-        return vesting.symbol.name();
+        return vesting.symbol.code().raw();
     }
 
     asset available_vesting() const {
@@ -53,16 +53,16 @@ struct delegate_record {
     delegate_record() = default;
 
     uint64_t id;
-    account_name sender;
-    account_name recipient;
+    name sender;
+    name recipient;
     asset quantity;
     asset deductions;
     uint16_t interest_rate;
     uint8_t payout_strategy;
     time_point_sec return_date;
 
-    static uint128_t unique_key(account_name u_sender, account_name u_recipient) {
-        return (uint128_t)u_sender + (((uint128_t)u_recipient)<<64);
+    static uint128_t unique_key(name u_sender, name u_recipient) {
+        return (uint128_t)u_sender.value + (((uint128_t)u_recipient.value)<<64);
     }
 
     auto primary_key() const {
@@ -74,11 +74,11 @@ struct delegate_record {
     }
 
     auto sender_key() const {
-        return sender;
+        return sender.value;
     }
 
     auto recipient_key() const {
-        return recipient;
+        return recipient.value;
     }
 
     EOSLIB_SERIALIZE(delegate_record, (id)(sender)(recipient)(quantity)
@@ -89,7 +89,7 @@ struct return_delegate {
     return_delegate() = default;
 
     uint64_t id;
-    account_name recipient;
+    name recipient;
     asset amount;
     time_point_sec date;
 
@@ -107,15 +107,15 @@ struct return_delegate {
 struct convert_of_tokens {
     convert_of_tokens() = default;
 
-    account_name sender;
-    account_name recipient;
+    name sender;
+    name recipient;
     uint8_t number_of_payments;
     time_point_sec payout_time;
     asset payout_part;
     asset balance_amount;
 
     uint64_t primary_key() const {
-        return sender;
+        return sender.value;
     }
 
     uint64_t payout_time_key() const {

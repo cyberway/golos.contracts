@@ -1,5 +1,13 @@
 #pragma once
 
+#ifndef UNIT_TEST_ENV
+// test env still use N macro, so we continue to use it here
+#   define STRINGIFY_(x) #x
+#   define STRINGIFY(x) STRINGIFY_(x)
+#   define N(x) eosio::name(STRINGIFY(x))
+#endif
+
+
 namespace golos { namespace config {
 
 // contracts

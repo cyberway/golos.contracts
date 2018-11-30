@@ -7,31 +7,6 @@
 namespace golos {
 
 
-// variant deserializer don't implemented in CDT 1.2.x
-template<int I, typename Stream, typename... Ts>
-void deserialize(datastream<Stream>& ds, std::variant<Ts...>& var, int i) {
-    if constexpr (I < std::variant_size_v<std::variant<Ts...>>) {
-        if (i == I) {
-            std::variant_alternative_t<I, std::variant<Ts...>> tmp;
-            ds >> tmp;
-            var = std::move(tmp);
-        } else {
-            deserialize<I+1>(ds,var,i);
-        }
-    } else {
-        eosio_assert(false, "invalid variant index");
-    }
-}
-
-template<typename Stream, typename... Ts>
-inline datastream<Stream>& operator>>(datastream<Stream>& ds, std::variant<Ts...>& var) {
-    unsigned_int index;
-    ds >> index;
-    deserialize<0>(ds,var,index);
-    return ds;
-}
-
-
 ////////////////////////////////////////////////////////////////////////////////
 // param wrapper ops
 
