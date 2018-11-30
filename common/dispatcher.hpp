@@ -54,6 +54,17 @@ bool execute_action(uint64_t action, void (Q::*func)(Args...)) {
 #define APP_DOMAIN_API(TYPENAME, MEMBERS) \
     BOOST_PP_SEQ_FOR_EACH(APP_DOMAIN_API_CALL, TYPENAME, MEMBERS)
 
+// Temporary workaround
+#ifdef HANDLE_TRANSFER
+#   define HANDLE_TRANSFER_ACTION(T) if (action == N(transfer) && code == golos::config::token_name) { \
+    eosio_assert(1, "jo");\
+    T obj{self}; \
+    ::eosio::execute_action(&obj, &T::transfer); \
+}
+#else
+#   define HANDLE_TRANSFER_ACTION(T)
+#endif
+
 #define APP_DOMAIN_ABI(TYPENAME, MEMBERS)                                                                                        \
     extern "C" {                                                                                                                 \
         void apply(uint64_t receiver, uint64_t code, uint64_t action) {                                                          \
@@ -62,6 +73,7 @@ bool execute_action(uint64_t action, void (Q::*func)(Args...)) {
                 /* onerror is only valid if it is for the "eosio" code account and authorized by "eosio"'s "active permission */ \
                 eosio_assert(code == N(eosio), "onerror action's are only valid from the \"eosio\" system account");             \
             }                                                                                                                    \
+            HANDLE_TRANSFER_ACTION(TYPENAME) \
             if (code == self || action == N(onerror)) {                                                                          \
                 switch (action) {                                                                                                \
                     APP_DOMAIN_API(TYPENAME, MEMBERS)                                                                            \

@@ -117,8 +117,8 @@ void emission::emit() {
         auto transfer = [&](auto from, auto to, auto amount) {
             if (amount > 0) {
                 auto memo = to == config::vesting_name ? "" : trans_memo;   // vesting contract requires empty memo to add to supply
-                INLINE_ACTION_SENDER(eosio::token, transfer)(config::token_name, {from, N(active)}, \
-                    {from, to, asset(amount, _token), memo}); \
+                INLINE_ACTION_SENDER(eosio::token, transfer)(config::token_name, {from, N(active)},
+                    {from, to, asset(amount, _token), memo});
             }
         };
         account_name remainder = N();
