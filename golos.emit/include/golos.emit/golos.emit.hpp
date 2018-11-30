@@ -15,12 +15,12 @@ struct [[eosio::table]] state {
     uint64_t start_time;
     bool active;
 };
-using state_singleton = eosio::singleton<N(state), state>;
+using state_singleton = eosio::singleton<"state"_n, state>;
 
 
 class emission: public contract {
 public:
-    emission(account_name self, symbol_type token, uint64_t action = 0);
+    emission(name self, name, datastream<const char*>);
 
     [[eosio::action]] void validateprms(std::vector<emit_param>);
     [[eosio::action]] void setparams(std::vector<emit_param>);
@@ -31,7 +31,7 @@ public:
 
 private:
     void recalculate_state(std::vector<emit_param>);
-    symbol_type _token;
+    symbol _token{"GLS",3};     // TODO: make configurable
     state_singleton _state;
     emit_params_singleton _cfg;
 
