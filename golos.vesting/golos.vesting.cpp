@@ -254,7 +254,7 @@ void vesting::undelegate_vesting(name sender, name recipient, asset quantity) {
     eosio_assert(balance->received_vesting.amount >= config::delegation.min_remainder, "delegated vesting withdrawn");
 }
 
-void vesting::create(name creator, symbol symbol, std::vector<name> issuers, name notify_acc) {
+void vesting::create(name creator, symbol symbol, std::vector<name> issuers) {
     require_auth(creator);
     eosio_assert(creator == token::get_issuer(config::token_name, symbol.code()), "Only token issuer can create it");
 
@@ -265,7 +265,6 @@ void vesting::create(name creator, symbol symbol, std::vector<name> issuers, nam
     table_vesting.emplace(_self, [&](auto& item){
         item.supply = asset(0, symbol);
         item.issuers = issuers;
-        item.notify_acc = notify_acc;
     });
 }
 
@@ -360,11 +359,9 @@ void vesting::close(name owner, symbol symbol) {
 }
 
 void vesting::notify_balance_change(name owner, asset diff) {
-    tables::vesting_table table_vesting(_self, _self.value);
-    auto notify = table_vesting.find(diff.symbol.code().raw());
     action(
         permission_level{_self, config::active_name},
-        notify->notify_acc,
+        golos::config::control_name,
         "changevest"_n,
         std::make_tuple(diff.symbol, owner, diff)   // TODO: asset is enough, but ctrl uses symbol (1st arg) to detect app
     ).send();
