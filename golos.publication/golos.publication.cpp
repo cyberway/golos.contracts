@@ -215,7 +215,7 @@ void publication::payto(account_name user, eosio::asset quantity, enum_t mode) {
         INLINE_ACTION_SENDER(eosio::token, transfer) (N(eosio.token), {_self, N(active)}, {_self, user, quantity, ""});
     else if(static_cast<payment_t>(mode) == payment_t::VESTING)
         INLINE_ACTION_SENDER(eosio::token, transfer) (N(eosio.token), {_self, N(active)},
-            {_self, config::vesting_name, quantity, name{user}.to_string()});
+            {_self, config::vesting_name, quantity, config::send_prefix + name{user}.to_string()});
     else
         eosio_assert(false, "publication::payto: unknown kind of payment");
 }
@@ -639,8 +639,9 @@ elaf_t publication::apply_limits(atmsp::machine<fixp_t>& machine, account_name u
             auto price = pool.lims.get_vesting_price(kind);
             eosio_assert(price > 0, "publication::apply_limits: can't post, not enough power, vesting payment is disabled");
             eosio_assert(user_vesting >= price, "publication::apply_limits: insufficient vesting amount");
-            INLINE_ACTION_SENDER(golos::vesting, retire) (config::vesting_name, {_self, N(active)},
-                {_self, eosio::asset(price, pool.state.funds.symbol), user});
+            INLINE_ACTION_SENDER(golos::vesting, retire) (config::vesting_name, 
+                {token(N(eosio.token)).get_issuer(pool.state.funds.symbol.name()), golos::config::invoice_name},
+                {eosio::asset(price, pool.state.funds.symbol), user});
             cur_chgs = pre_chgs;
         }
         else

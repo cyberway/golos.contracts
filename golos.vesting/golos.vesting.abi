@@ -11,8 +11,7 @@
       "name": "balance_vesting",
       "base": "",
       "fields": [
-        {"name": "supply", "type": "asset"},
-        {"name": "issuers", "type": "account_name[]"}
+        {"name": "supply", "type": "asset"}
       ]
     },
     {
@@ -174,10 +173,6 @@
       "base": "",
       "fields": [
         {
-          "name": "issuer",
-          "type": "account_name"
-        },
-        {
           "name": "quantity",
           "type": "asset"
         },
@@ -246,9 +241,7 @@
        "name": "createvest",
        "base": "",
        "fields": [
-          {"name":"creator", "type":"account_name"},
-          {"name":"symbol", "type":"symbol"},
-          {"name":"issuers", "type":"account_name[]"}
+          {"name":"symbol", "type":"symbol"}
        ]
     }
   ],
