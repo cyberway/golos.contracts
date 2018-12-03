@@ -51,35 +51,36 @@ extern "C" {
 }
 
 void vesting::on_transfer(name from, name to, asset quantity, std::string memo) {
-    if (_self == from) // contract can not buy vesting itself
+    if (_self != to)
         return;
-
-    require_auth(from);                                         // checked in eosio.token, looks unneded here
-    eosio_assert(from != to, "cannot transfer to self");        // this 2 asserts already checked in eosio.token. chack again for sure
-    eosio_assert(is_account(to), "to account does not exist");
-    eosio_assert(quantity.is_valid(), "invalid quantity");      // this 2 asserts checked in eosio.token after require_recipient. TODO: find, are they different
-    eosio_assert(quantity.amount > 0, "must transfer positive quantity");
-    // it's notification, so there is no need to validate symbol, eosio.token already checked it
+        
+    auto recipient = get_recipient(memo);
+    if(token::get_issuer(config::token_name, quantity.symbol.code()) == from && recipient == name())
+        return;     // just increase token supply
 
     tables::vesting_table table_vesting(_self, _self.value);
     auto vesting = table_vesting.find(quantity.symbol.code().raw());
     eosio_assert(vesting != table_vesting.end(), "Token not found");
 
-    bool from_issuer = std::find(vesting->issuers.begin(), vesting->issuers.end(), from) != vesting->issuers.end();
-    if (from_issuer && memo.empty()) {
-        return;     // just increase token supply
-    }
-
     asset converted = convert_to_vesting(quantity, *vesting);
     table_vesting.modify(vesting, name(), [&](auto& item) {
         item.supply += converted;
     });
-    auto receiver = from_issuer ? name(std::string_view(memo)) : from;
-    add_balance(receiver, converted, has_auth(to) ? to : from);
+    
+    add_balance(recipient != name() ? recipient : from, converted, has_auth(to) ? to : from);
 }
 
-void vesting::retire(name issuer, asset quantity, name user) {
-    require_auth(issuer);
+name vesting::get_recipient(const std::string& memo) {
+    const size_t pref_size = config::send_prefix.size();
+    const size_t memo_size = memo.size();
+    if (memo_size < pref_size || memo.substr(0, pref_size) != config::send_prefix)
+        return name();
+    eosio_assert(memo_size > pref_size, "must provide recipient's name");
+    return name(memo.substr(pref_size).c_str());
+}
+
+void vesting::retire(asset quantity, name user) {
+    require_auth(name(token::get_issuer(config::token_name, quantity.symbol.code())));
     eosio_assert(quantity.is_valid(), "invalid quantity");
     eosio_assert(quantity.amount > 0, "must retire positive quantity");
 
@@ -87,8 +88,6 @@ void vesting::retire(name issuer, asset quantity, name user) {
     auto vesting = table_vesting.find(quantity.symbol.code().raw());
     eosio_assert(vesting != table_vesting.end(), "Vesting not found");
     eosio_assert(quantity.symbol == vesting->supply.symbol, "symbol precision mismatch");
-    bool from_issuer = std::find(vesting->issuers.begin(), vesting->issuers.end(), issuer) != vesting->issuers.end();
-    eosio_assert(from_issuer, "issuer mismatch");
     eosio_assert(quantity.amount <= vesting->supply.amount, "invalid amount");
 
     sub_balance(user, quantity, true);
@@ -254,9 +253,8 @@ void vesting::undelegate_vesting(name sender, name recipient, asset quantity) {
     eosio_assert(balance->received_vesting.amount >= config::delegation.min_remainder, "delegated vesting withdrawn");
 }
 
-void vesting::create(name creator, symbol symbol, std::vector<name> issuers, name notify_acc) {
-    require_auth(creator);
-    eosio_assert(creator == token::get_issuer(config::token_name, symbol.code()), "Only token issuer can create it");
+void vesting::create(symbol symbol, name notify_acc) {
+    require_auth(name(token::get_issuer(config::token_name, symbol.code())));
 
     tables::vesting_table table_vesting(_self, _self.value);
     auto vesting = table_vesting.find(symbol.code().raw());
@@ -264,7 +262,6 @@ void vesting::create(name creator, symbol symbol, std::vector<name> issuers, nam
 
     table_vesting.emplace(_self, [&](auto& item){
         item.supply = asset(0, symbol);
-        item.issuers = issuers;
         item.notify_acc = notify_acc;
     });
 }
