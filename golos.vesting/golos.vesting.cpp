@@ -366,7 +366,7 @@ void vesting::notify_balance_change(name owner, asset diff) {
         permission_level{_self, config::active_name},
         notify->notify_acc,
         "changevest"_n,
-        std::make_tuple(diff.symbol, owner, diff)   // TODO: asset is enough, but ctrl uses symbol (1st arg) to detect app
+        std::make_tuple(owner, diff)
     ).send();
 }
 

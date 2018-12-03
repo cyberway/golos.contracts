@@ -29,7 +29,11 @@ public:
     void calculate_convert_vesting();
     void calculate_delegate_vesting();
 
-    inline asset get_account_vesting(name account, symbol_code sym) const;
+    static inline asset get_account_vesting(name code, name account, symbol_code sym) {
+        tables::account_table balances(code, account.value);
+        const auto& balance = balances.get(sym.raw());
+        return balance.vesting;
+    };
     inline asset get_account_effective_vesting(name account, symbol_code sym) const;
     inline asset get_account_available_vesting(name account, symbol_code sym) const;
     inline asset get_account_unlocked_vesting(name account, symbol_code sym) const;
@@ -43,12 +47,6 @@ private:
     const asset convert_to_token(const asset& vesting, const structures::vesting_info& vinfo) const;
     const asset convert_to_vesting(const asset& token, const structures::vesting_info& vinfo) const;
 };
-
-asset vesting::get_account_vesting(name account, symbol_code sym) const {
-    tables::account_table balances(_self, account.value);
-    const auto& balance = balances.get(sym.raw());
-    return balance.vesting;
-}
 
 asset vesting::get_account_available_vesting(name account, symbol_code sym) const {
     tables::account_table balances(_self, account.value);
