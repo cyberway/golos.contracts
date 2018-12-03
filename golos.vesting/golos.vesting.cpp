@@ -16,7 +16,7 @@ extern "C" {
 }
 
 void vesting::apply(uint64_t code, uint64_t action) {
-    if (N(transfer) == action && N(eosio.token) == code)
+    if (N(transfer) == action && config::token_name == code)
         execute_action(this, &vesting::on_transfer);
 
     else if (N(retire) == action)
@@ -52,7 +52,7 @@ void vesting::on_transfer(account_name from, account_name to, asset quantity, st
         return;
         
     auto recipient = get_recipient(memo);
-    if(token(N(eosio.token)).get_issuer(quantity.symbol.name()) == from && recipient == N())
+    if(token(config::token_name).get_issuer(quantity.symbol.name()) == from && recipient == N())
         return;     // just increase token supply
 
     tables::vesting_table table_vesting(_self, _self);
@@ -77,7 +77,7 @@ account_name vesting::get_recipient(const std::string& memo) {
 }
 
 void vesting::retire(asset quantity, account_name user) {
-    require_auth(token(N(eosio.token)).get_issuer(quantity.symbol.name()));
+    require_auth(token(config::token_name).get_issuer(quantity.symbol.name()));
     eosio_assert(quantity.is_valid(), "invalid quantity");
     eosio_assert(quantity.amount > 0, "must retire positive quantity");
 
@@ -252,7 +252,7 @@ void vesting::undelegate_vesting(account_name sender, account_name recipient, as
 }
 
 void vesting::create(symbol_type symbol) {
-    require_auth(token(N(eosio.token)).get_issuer(symbol.name()));
+    require_auth(token(config::token_name).get_issuer(symbol.name()));
 
     tables::vesting_table table_vesting(_self, _self);
     auto vesting = table_vesting.find(symbol.name());
@@ -297,7 +297,7 @@ void vesting::calculate_convert_vesting() {
                     table_vesting.modify(vest, 0, [&](auto& item) {
                         item.supply -= quantity;
                     });
-                    INLINE_ACTION_SENDER(eosio::token, transfer)(N(eosio.token), {_self, N(active)},
+                    INLINE_ACTION_SENDER(eosio::token, transfer)(config::token_name, {_self, N(active)},
                         {_self, obj->recipient, convert_to_token(quantity, *vest), "Convert vesting"});
                 });
 
@@ -421,7 +421,7 @@ int64_t fix_precision(const asset from, const symbol_type to) {
 
 const asset vesting::convert_to_token(const asset& src, const structures::vesting_info& vinfo) const {
     symbol_type sym = src.symbol;
-    auto token_supply = token(N(eosio.token)).get_balance(_self, sym.name());
+    auto token_supply = token(config::token_name).get_balance(_self, sym.name());
     // eosio_assert(sym.name() == token_supply.symbol.name() && sym == vinfo.supply.symbol, "The token type does not match");   // guaranteed to be valid here
 
     int64_t amount = vinfo.supply.amount && token_supply.amount
@@ -433,7 +433,7 @@ const asset vesting::convert_to_token(const asset& src, const structures::vestin
 
 const asset vesting::convert_to_vesting(const asset& src, const structures::vesting_info& vinfo) const {
     symbol_type sym = src.symbol;
-    auto balance = token(N(eosio.token)).get_balance(_self, sym.name()) - src;
+    auto balance = token(config::token_name).get_balance(_self, sym.name()) - src;
     // eosio_assert(sym == balance.symbol && sym.name() == vinfo.supply.symbol.name(), "The token type does not match"); //
 
     int64_t amount = vinfo.supply.amount && balance.amount
