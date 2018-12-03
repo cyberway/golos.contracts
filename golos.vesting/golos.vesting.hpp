@@ -1,4 +1,5 @@
 #pragma once
+#include "parameters.hpp"
 #include "objects.hpp"
 
 namespace golos {
@@ -10,6 +11,9 @@ class vesting : public contract {
 
 public:
     using contract::contract;
+
+    void validateprms(std::vector<vesting_params>);
+    void setparams(std::vector<vesting_params>);
 
     void on_transfer(name from, name to, asset quantity, std::string memo);
     void retire(name issuer, asset quantity, name user);
