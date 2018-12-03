@@ -534,8 +534,8 @@
     "base": "",
     "fields": [
         {
-            "name": "socialon",
-            "type": "bool"
+            "name": "contract_for_reputation",
+            "type": "account_name"
         }
     ]
   },
@@ -548,8 +548,8 @@
             "type": "uint64"
         },
         {
-            "name": "socialon",
-            "type": "bool"
+            "name": "contract_for_reputation",
+            "type": "account_name"
         }
     ]
   },

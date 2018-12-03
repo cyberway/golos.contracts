@@ -139,9 +139,9 @@ struct rewardpool {
 struct forumprops_record {
     forumprops_record() = default;
 
-    bool socialon = true;
+    account_name contract_for_reputation = config::social_name;
 
-    EOSLIB_SERIALIZE(forumprops_record, (socialon))
+    EOSLIB_SERIALIZE(forumprops_record, (contract_for_reputation))
 };
 
 } // structures

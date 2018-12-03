@@ -63,7 +63,7 @@ public:
         BOOST_CHECK_EQUAL(success(), post.set_rules(fn ,fn ,fn , 0, 0));
 
         forumprops props;
-        props.socialon = false;
+        props.contract_for_reputation = account_name();
         BOOST_CHECK_EQUAL(success(), post.setprops(props));
 
         for (auto& u : _users) {

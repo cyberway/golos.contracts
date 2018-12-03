@@ -474,8 +474,9 @@ void publication::set_vote(account_name voter, account_name author, string perml
     tables::forumprops_singleton props_single(_self, _self);
     auto props = props_single.get_or_default();
 
-    if (props.socialon) {
-        INLINE_ACTION_SENDER(golos::social, changereput) (config::social_name, {_self, N(active)},
+    if (props.contract_for_reputation != 0) {
+        INLINE_ACTION_SENDER(golos::social, changereput)
+            (props.contract_for_reputation, {props.contract_for_reputation, N(active)},
             {voter, author, (rshares.data() >> 6)});
     }
 }
@@ -673,7 +674,7 @@ void publication::setprops(const forumprops& props) {
     tables::forumprops_singleton props_single(_self, _self);
 
     structures::forumprops_record item;
-    item.socialon = props.socialon;
+    item.contract_for_reputation = props.contract_for_reputation;
 
     props_single.set(item, _self);
 }

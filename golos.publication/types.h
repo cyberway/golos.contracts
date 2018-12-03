@@ -1,12 +1,17 @@
 #pragma once
 
+#include <common/config.hpp>
+
 #ifdef UNIT_TEST_ENV
 #   define ABI_TABLE
+#   include <eosio/chain/types.hpp>
     using int128_t = __int128;
     using uint128_t = __uint128_t;
     using uint8_t = unsigned char;
+    using eosio::chain::account_name;
 #else
 #   define ABI_TABLE [[eosio::table]]
+#   include <eosiolib/types.h>
 #endif
 
 using enum_t = uint8_t;
@@ -38,13 +43,13 @@ struct limitsarg {
 struct forumprops {
     forumprops() = default;
 
-    bool socialon = true;
+    account_name contract_for_reputation = golos::config::social_name;
 };
 
 #ifdef UNIT_TEST_ENV
 FC_REFLECT(limitedact, (chargenum)(restorernum)(cutoffval)(chargeprice))
 FC_REFLECT(limitsarg, (restorers)(limitedacts)(vestingprices)(minvestings))
-FC_REFLECT(forumprops, (socialon))
+FC_REFLECT(forumprops, (contract_for_reputation))
 #endif
 
 enum class payment_t: enum_t { TOKEN, VESTING };

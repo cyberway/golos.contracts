@@ -538,7 +538,7 @@ BOOST_FIXTURE_TEST_CASE(basic_tests, reward_calcs_tester) try {
 
     BOOST_TEST_MESSAGE("--- setprops");
     forumprops props;
-    props.socialon = false;
+    props.contract_for_reputation = account_name();
     BOOST_CHECK_EQUAL(success(), setprops(props));
     check();
 
@@ -619,7 +619,7 @@ BOOST_FIXTURE_TEST_CASE(timepenalty_test, reward_calcs_tester) try {
     check();
 
     forumprops props;
-    props.socialon = false;
+    props.contract_for_reputation = account_name();
     BOOST_CHECK_EQUAL(success(), setprops(props));
     check();
 
@@ -665,7 +665,7 @@ BOOST_FIXTURE_TEST_CASE(limits_test, reward_calcs_tester) try {
     );
 
     forumprops props;
-    props.socialon = false;
+    props.contract_for_reputation = account_name();
     BOOST_CHECK_EQUAL(success(), setprops(props));
     check();
 
@@ -715,7 +715,7 @@ BOOST_FIXTURE_TEST_CASE(rshares_sum_overflow_test, reward_calcs_tester) try {
 
     BOOST_TEST_MESSAGE("--- setprops");
     forumprops props;
-    props.socialon = false;
+    props.contract_for_reputation = account_name();
     BOOST_CHECK_EQUAL(success(), setprops(props));
     check();
 
@@ -747,7 +747,7 @@ BOOST_FIXTURE_TEST_CASE(golos_curation_test, reward_calcs_tester) try {
 
     BOOST_TEST_MESSAGE("--- setprops");
     forumprops props;
-    props.socialon = false;
+    props.contract_for_reputation = account_name();
     BOOST_CHECK_EQUAL(success(), setprops(props));
     check();
 

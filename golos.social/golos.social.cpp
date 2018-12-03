@@ -33,7 +33,7 @@ void social::apply(uint64_t code, uint64_t action) {
 }
 
 void social::changereput(account_name voter, account_name author, int64_t rshares) {
-    eosio_assert(has_auth(_self) || has_auth(N(golos.soc)), "Not for external calls");
+    require_auth(_self);
 
     tables::reputation_singleton voter_single(_self, voter);
     auto voter_rep = voter_single.get_or_default();

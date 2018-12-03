@@ -41,6 +41,11 @@ public:
         create_accounts({N(issuer), cfg::control_name, cfg::token_name, cfg::vesting_name, cfg::social_name});
         produce_block();
 
+        set_authority(cfg::social_name, "active", authority(1,
+            { {get_public_key(cfg::social_name, "active"), 1} },
+            { {{N(golos.soc), "eosio.code"}, 1} }),
+            "owner");
+
         install_contract(_code, contracts::posting_wasm(), contracts::posting_abi());
         install_contract(cfg::vesting_name, contracts::vesting_wasm(), contracts::vesting_abi());
         install_contract(cfg::token_name, contracts::token_wasm(), contracts::token_abi());
