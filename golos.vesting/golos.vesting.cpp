@@ -51,8 +51,8 @@ void vesting::on_transfer(account_name from, account_name to, asset quantity, st
     if (_self != to)
         return;
         
-    auto receiver = get_receiver(from, memo);
-    if(token(N(eosio.token)).get_issuer(quantity.symbol.name()) == from && from == receiver)
+    auto recipient = get_recipient(memo);
+    if(token(N(eosio.token)).get_issuer(quantity.symbol.name()) == from && recipient == N())
         return;     // just increase token supply
 
     tables::vesting_table table_vesting(_self, _self);
@@ -64,15 +64,15 @@ void vesting::on_transfer(account_name from, account_name to, asset quantity, st
         item.supply += converted;
     });
 
-    add_balance(receiver, converted, has_auth(to) ? to : from);
+    add_balance(recipient != N() ? recipient : from, converted, has_auth(to) ? to : from);
 }
 
-account_name vesting::get_receiver(account_name from, const std::string& memo) {
+account_name vesting::get_recipient(const std::string& memo) {
     const size_t pref_size = config::send_prefix.size();
     const size_t memo_size = memo.size();
     if (memo_size < pref_size || memo.substr(0, pref_size) != config::send_prefix)
-        return from;
-    eosio_assert(memo_size > pref_size, "must provide receiver's name");
+        return N();
+    eosio_assert(memo_size > pref_size, "must provide recipient's name");
     return string_to_name(memo.substr(pref_size).c_str());
 }
 

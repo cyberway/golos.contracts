@@ -44,7 +44,7 @@ private:
     void calculate_convert_vesting();
     void calculate_delegate_vesting();
     
-    static account_name get_receiver(account_name from, const std::string& memo);
+    static account_name get_recipient(const std::string& memo);
 };
 
 asset vesting::get_account_vesting(account_name account, symbol_name sym) const {
