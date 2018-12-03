@@ -20,7 +20,7 @@ public:
     void delegate_vesting(name sender, name recipient, asset quantity, uint16_t interest_rate, uint8_t payout_strategy);
     void undelegate_vesting(name sender, name recipient, asset quantity);
 
-    void create(name creator, symbol symbol, std::vector<name> issuers);
+    void create(name creator, symbol symbol, std::vector<name> issuers, name notify_acc);
 
     void open(name owner, symbol symbol, name ram_payer);
     void close(name owner, symbol symbol);

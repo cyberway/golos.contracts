@@ -7,7 +7,8 @@
       "base": "",
       "fields": [
         {"name": "supply", "type": "asset"},
-        {"name": "issuers", "type": "name[]"}
+        {"name": "issuers", "type": "name[]"},
+        {"name": "notify_acc", "type": "name"}
       ]
     },
     {
@@ -243,7 +244,8 @@
        "fields": [
           {"name":"creator", "type":"name"},
           {"name":"symbol", "type":"symbol"},
-          {"name":"issuers", "type":"name[]"}
+          {"name":"issuers", "type":"name[]"},
+          {"name":"notify_acc", "type":"name"}
        ]
     }
   ],
