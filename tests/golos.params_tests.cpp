@@ -27,7 +27,7 @@ public:
     golos_params_tester()
         : golos_tester(cfg::emission_name)
         , emit({this, cfg::emission_name})
-        , ctrl({this, cfg::control_name, _token})
+        , ctrl({this, cfg::control_name})
         , vest({this, cfg::vesting_name, _token})
         , token({this, cfg::token_name, _token})
     {
@@ -71,11 +71,11 @@ public:
 
     void prepare_top_witnesses(bool only_create) {
         BOOST_CHECK_EQUAL(success(),
-            ctrl.create(BLOG, ctrl.default_params(_max_witnesses, 4, cfg::workers_name)));
+            ctrl.create(ctrl.default_params(BLOG, _token, _max_witnesses, 4)));
         produce_block();
         if (only_create)
             return;
-        ctrl.prepare_owner(BLOG);
+        ctrl.prepare_multisig(BLOG);
         produce_block();
 
         const string _test_key = string(fc::crypto::config::public_key_legacy_prefix)
@@ -102,8 +102,8 @@ public:
         BOOST_CHECK_EQUAL(success(), vest.create_vesting(BLOG, _token, {cfg::emission_name}));
         BOOST_CHECK_EQUAL(success(), vest.open(cfg::vesting_name, _token, cfg::vesting_name));
         vector<std::pair<uint64_t,double>> amounts = {
-            {_alice, 800}, {_bob, 700}, //{_carol, 600},
-            {_w[0], 100}//, {_w[1], 200}, {_w[2], 300}, {_w[3], 400}, {_w[4], 500}
+            {_alice, 800}, {_bob, 700},
+            {_w[0], 100}
         };
         for (const auto& p : amounts) {
             auto acc = p.first;

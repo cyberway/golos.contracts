@@ -179,10 +179,11 @@ vector<variant> golos_tester::get_all_chaindb_rows(name code, uint64_t scope, na
     auto cursor_ = _chaindb.lower_bound({code, scope, tbl, N(primary)}, nullptr, 0);
     cyberway::chaindb::cursor_request cursor = {code, cursor_};
     auto v = _chaindb.value_at_cursor(cursor);
-    if (strict)
+    if (strict) {
         BOOST_TEST_REQUIRE(!v.is_null());
-    else if (v.is_null())
+    } else if (v.is_null()) {
         return all;
+    }
 
     auto prev = _chaindb.current(cursor);
     do {
