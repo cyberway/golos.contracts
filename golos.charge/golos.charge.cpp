@@ -40,7 +40,7 @@ void charge::use(name user, symbol_code token_code, unsigned char suffix, uint64
     if (itr == balances_table.end()) {
         if(new_val > 0)
             balances_table.emplace(issuer, [&]( auto &item ) {
-                item.charge_symbol = charge_symbol;
+                item.charge_symbol = charge_symbol.raw();
                 item.last_update = current_time();
                 item.value = new_val.data();
             });
@@ -83,7 +83,7 @@ void charge::set_restorer(symbol_code token_code, unsigned char suffix, std::str
         });
     else
         restorers_table.emplace(issuer, [&]( auto &item ) {
-             item.charge_symbol = charge_symbol; 
+             item.charge_symbol = charge_symbol.raw(); 
              item.func = func;
              item.max_prev = fixp_t(max_prev).data();
              item.max_vesting = fixp_t(max_vesting).data();
@@ -100,7 +100,7 @@ fixp_t charge::calc_value(name user, symbol_code token_code, balances& balances_
     if (cur_time > itr->last_update) {
         
         restorers restorers_table(_self, _self.value);
-        auto restorer_itr = restorers_table.find(itr->charge_symbol.raw());
+        auto restorer_itr = restorers_table.find(itr->charge_symbol);
         eosio_assert(restorer_itr != restorers_table.end(), "charge::calc_value restorer_itr == restorers_table.end()");
         atmsp::machine<fixp_t> machine;
         

@@ -16,9 +16,6 @@
       "new_type_name": "counter_t",
       "type": "uint64"
     },{
-      "new_type_name": "symbol_code",
-      "type": "uint64"
-    },{
       "new_type_name": "uchar",
       "type": "uint8"
     }
@@ -126,7 +123,7 @@
     "fields": [
         {
             "name": "charge_symbol",
-            "type": "symbol"
+            "type": "uint64"
         },
         {
             "name": "last_update",
@@ -144,7 +141,7 @@
     "fields": [
         {
             "name": "charge_symbol",
-            "type": "symbol"
+            "type": "uint64"
         },
         {
             "name": "func",

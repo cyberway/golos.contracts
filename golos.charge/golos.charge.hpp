@@ -35,21 +35,21 @@ public:
 
 private:
     struct balance {
-        symbol charge_symbol;
+        uint64_t charge_symbol;
         uint64_t last_update;
         base_t value;
-        uint64_t primary_key()const { return charge_symbol.raw(); }
+        uint64_t primary_key()const { return charge_symbol; }
     };
     
     struct restorer {
-        symbol charge_symbol;
+        uint64_t charge_symbol;
         atmsp::storable::bytecode func;
         
         base_t max_prev;
         base_t max_vesting;
         base_t max_elapsed;
         
-        uint64_t primary_key()const { return charge_symbol.raw(); }
+        uint64_t primary_key()const { return charge_symbol; }
     };
 
     typedef eosio::multi_index<N(balances), balance> balances;
