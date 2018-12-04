@@ -14,11 +14,14 @@ struct golos_vesting_api: base_contract_api {
     action_result create_vesting(account_name creator, std::vector<account_name> issuers = {}) {
         return create_vesting(creator, _symbol, issuers);
     }
-    action_result create_vesting(account_name creator, symbol vesting_symbol, std::vector<account_name> issuers = {}) {
+    action_result create_vesting(account_name creator, symbol vesting_symbol,
+                                 std::vector<account_name> issuers = {},
+                                 account_name notify_acc = N(notify.acc)) {
         return push(N(createvest), creator, args()
             ("creator", creator)
             ("symbol", vesting_symbol)
             ("issuers", issuers)
+            ("notify_acc", notify_acc)
         );
     }
 
