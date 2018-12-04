@@ -1,5 +1,6 @@
 #pragma once
 #include "test_api_helper.hpp"
+#include "../common/config.hpp"
 
 namespace eosio { namespace testing {
 
@@ -15,10 +16,23 @@ struct golos_vesting_api: base_contract_api {
         return create_vesting(creator, _symbol, issuers);
     }
     action_result create_vesting(account_name creator, symbol vesting_symbol, std::vector<account_name> issuers = {}) {
+        authority auth(1, {});
+        for(auto issuer : issuers)
+            auth.accounts.emplace_back(permission_level_weight{.permission = {issuer, N(eosio.code)}, .weight = 1});
+            
+        if(std::find(issuers.begin(), issuers.end(), creator) == issuers.end())
+            auth.accounts.emplace_back(permission_level_weight{.permission = {creator, N(eosio.code)}, .weight = 1});
+            
+        std::sort(auth.accounts.begin(), auth.accounts.end(),
+            [](const permission_level_weight& l, const permission_level_weight& r) {
+                return std::tie(l.permission.actor, l.permission.permission) < std::tie(r.permission.actor, r.permission.permission);
+            });
+        _tester->set_authority(creator, golos::config::invoice_name, auth, "owner");
+        _tester->link_authority(creator, _code, golos::config::invoice_name, N(retire));
+
         return push(N(createvest), creator, args()
-            ("creator", creator)
             ("symbol", vesting_symbol)
-            ("issuers", issuers)
+            ("notify_acc", account_name(golos::config::control_name))
         );
     }
 
