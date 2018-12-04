@@ -33,23 +33,12 @@ struct emit_params_setter: set_params_visitor<emit_state> {
 
 void emission::validateprms(vector<emit_param> params) {
     //require_auth(who?)
-    param_helper::check_params(params);
+    param_helper::check_params(params, _cfg.exists());
 }
 
 void emission::setparams(vector<emit_param> params) {
     require_auth(_self);
-    param_helper::check_params(params);
-
-    auto update = _cfg.exists();
-    eosio_assert(update || params.size() == emit_state::params_count, "must provide all parameters in initial set");
-    auto s = update ? _cfg.get() : emit_state{};
-    auto setter = emit_params_setter(s);
-    bool changed = false;
-    for (const auto& param: params) {
-        changed |= std::visit(setter, param);   // why we have no ||= ?
-    }
-    eosio_assert(changed, "at least one parameter must change");    // don't add actions, which do nothing
-    _cfg.set(setter.state, _self);
+    param_helper::set_parameters<emit_params_setter>(params, _cfg, _self);
 }
 
 

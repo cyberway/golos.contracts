@@ -1,4 +1,5 @@
 #pragma once
+#include "golos.ctrl/parameters.hpp"
 #include <common/upsert.hpp>
 #include <common/config.hpp>
 #include <eosiolib/eosio.hpp>
@@ -13,31 +14,6 @@ namespace golos {
 using namespace eosio;
 using share_type = int64_t;
 
-
-struct [[eosio::table]] properties {
-    // control
-    name owner;
-    symbol token = symbol{"GLS",3};
-    uint16_t max_witnesses = 21;            // MAX_WITNESSES
-    uint16_t witness_supermajority = 0;     // 0 = auto
-    uint16_t witness_majority = 0;          // 0 = auto
-    uint16_t witness_minority = 0;          // 0 = auto
-    uint16_t max_witness_votes = 30;        // MAX_ACCOUNT_WITNESS_VOTES
-
-    // helpers
-    bool validate() const;
-    uint16_t super_majority_threshold() const;
-    uint16_t majority_threshold() const;
-    uint16_t minority_threshold() const;
-
-    friend bool operator==(const properties& a, const properties& b) {
-        return memcmp(&a, &b, sizeof(properties)) == 0;
-    }
-    friend bool operator!=(const properties& a, const properties& b) {
-        return !(a == b);
-    }
-};
-using props_singleton = eosio::singleton<"props"_n, properties>;
 
 struct [[eosio::table]] witness_info {
     name name;
@@ -84,16 +60,20 @@ class control: public contract {
 public:
     control(name self, name code, datastream<const char*> ds)
         : contract(self, code, ds)
-        , _props(_self, _self.value)
+        , _cfg(_self, _self.value)
     {
     }
 
-    [[eosio::action]] void create(properties props);
-    [[eosio::action]] void updateprops(properties props);
+    [[eosio::action]] void validateprms(std::vector<ctrl_param>);
+    [[eosio::action]] void setparams(std::vector<ctrl_param>);
 
     [[eosio::action]] void attachacc(name user);
     [[eosio::action]] void detachacc(name user);
-    inline bool is_attached(name user) const;
+    static inline bool is_attached(name code, name user) {
+        bw_user_tbl tbl(code, code.value);
+        auto itr = tbl.find(user.value);
+        return itr != tbl.end() && itr->attached;
+    }
 
     [[eosio::action]] void regwitness(name witness, eosio::public_key key, std::string url);
     [[eosio::action]] void unregwitness(name witness);
@@ -104,9 +84,9 @@ public:
     void on_transfer(name from, name to, asset quantity, std::string memo);
 
 private:
-    props_singleton _props;
-    properties props() {
-        return _props.get();
+    ctrl_params_singleton _cfg;
+    ctrl_state props() {
+        return _cfg.get();
     }
     void assert_started();
 
@@ -127,13 +107,6 @@ private:
     void update_witnesses_weights(std::vector<name> witnesses, share_type diff);
     void update_auths();
 };
-
-bool control::is_attached(name user) const {
-    bw_user_tbl tbl(_self, _self.value);
-    auto itr = tbl.find(user.value);
-    bool exists = itr != tbl.end();
-    return exists && itr->attached;
-}
 
 
 } // golos
