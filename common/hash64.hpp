@@ -3,8 +3,7 @@
 namespace fc {
 
 uint64_t hash64(const char* buf, size_t len) {
-    checksum256 hash;
-    sha256(buf, len, &hash);
+    eosio::checksum256 hash = sha256(buf, len);
     return *(reinterpret_cast<const uint64_t *>(&hash));
 }
 

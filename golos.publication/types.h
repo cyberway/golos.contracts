@@ -9,6 +9,8 @@
 #   define ABI_TABLE [[eosio::table]]
 #endif
 
+using namespace eosio;
+
 using enum_t = uint8_t;
 using base_t = int64_t;// !if you change it -- don't forget about the abi-file
 using wide_t = int128_t;
