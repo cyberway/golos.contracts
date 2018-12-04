@@ -15,7 +15,7 @@ struct golos_vesting_api: base_contract_api {
     action_result create_vesting(name creator, std::vector<name> issuers = {}) {
         return create_vesting(creator, _symbol, golos::config::control_name, issuers);
     }
-    action_result create_vesting(name creator, symbol vesting_symbol, name ctrl, std::vector<name> issuers = {}) {
+    action_result create_vesting(name creator, symbol vesting_symbol, std::vector<name> issuers = {}, name notify_acc = N(notify.acc)) {
         authority auth(1, {});
         for(auto issuer : issuers)
             auth.accounts.emplace_back(permission_level_weight{.permission = {issuer, N(eosio.code)}, .weight = 1});
@@ -32,7 +32,8 @@ struct golos_vesting_api: base_contract_api {
 
         return push(N(createvest), creator, args()
             ("symbol", vesting_symbol)
-            ("notify_acc", ctrl)
+            ("issuers", issuers)
+            ("notify_acc", notify_acc)
         );
     }
 
