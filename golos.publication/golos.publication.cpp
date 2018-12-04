@@ -21,7 +21,7 @@ publication::publication(account_name self)
 {}
 
 void publication::apply(uint64_t code, uint64_t action) {
-    if (N(transfer) == action && N(eosio.token) == code)
+    if (N(transfer) == action && config::token_name == code)
         execute_action(this, &publication::on_transfer);
 
     if (N(createmssg) == action)
@@ -123,7 +123,7 @@ void publication::create_message(account_name account, std::string permlink,
         item.tags = tags;
         item.jsonmetadata = jsonmetadata;
     });
-    
+
     structures::accandvalue parent {parentacc, parent_id};
     uint64_t seconds_diff = 0;
     bool closed = false;
@@ -212,9 +212,9 @@ void publication::payto(account_name user, eosio::asset quantity, enum_t mode) {
         return;
 
     if(static_cast<payment_t>(mode) == payment_t::TOKEN)
-        INLINE_ACTION_SENDER(eosio::token, transfer) (N(eosio.token), {_self, N(active)}, {_self, user, quantity, ""});
+        INLINE_ACTION_SENDER(eosio::token, transfer) (config::token_name, {_self, N(active)}, {_self, user, quantity, ""});
     else if(static_cast<payment_t>(mode) == payment_t::VESTING)
-        INLINE_ACTION_SENDER(eosio::token, transfer) (N(eosio.token), {_self, N(active)},
+        INLINE_ACTION_SENDER(eosio::token, transfer) (config::token_name, {_self, N(active)},
             {_self, config::vesting_name, quantity, config::send_prefix + name{user}.to_string()});
     else
         eosio_assert(false, "publication::payto: unknown kind of payment");
@@ -394,25 +394,25 @@ void publication::set_vote(account_name voter, account_name author, string perml
 
             eosio_assert(weight != vote_itr->weight, "Vote with the same weight has already existed.");
             eosio_assert(vote_itr->count != config::max_vote_changes, "You can't revote anymore.");
-            
+
             atmsp::machine<fixp_t> machine;
             fixp_t rshares = calc_rshares(voter, weight, cur_time, *pool, machine);
             if(rshares > FP(vote_itr->rshares))
                 check_upvote_time(cur_time, mssg_itr->date);
-            
+
             fixp_t new_mssg_rshares = (FP(mssg_itr->state.netshares) - FP(vote_itr->rshares)) + rshares;
             auto rsharesfn_delta = get_delta(machine, FP(mssg_itr->state.netshares), new_mssg_rshares, pool->rules.mainfunc);
-            
+
             pools.modify(*pool, _self, [&](auto &item) {
                 item.state.rshares = ((WP(item.state.rshares) - wdfp_t(FP(vote_itr->rshares))) + wdfp_t(rshares)).data();
                 item.state.rsharesfn = (WP(item.state.rsharesfn) + wdfp_t(rsharesfn_delta)).data();
             });
-            
+
             message_table.modify(mssg_itr, 0, [&]( auto &item ) {
                 item.state.netshares = new_mssg_rshares.data();
                 item.state.sumcuratorsw = (FP(item.state.sumcuratorsw) - FP(vote_itr->curatorsw)).data();
             });
-            
+
             votetable_index.modify(vote_itr, voter, [&]( auto &item ) {
                item.weight = weight;
                item.time = cur_time;
@@ -420,7 +420,7 @@ void publication::set_vote(account_name voter, account_name author, string perml
                item.rshares = rshares.data();
                ++item.count;
             });
-            
+
             return;
         }
         ++vote_itr;
@@ -522,7 +522,7 @@ void publication::set_rules(const funcparams& mainfunc, const funcparams& curati
     reward_pools pools(_self, _self);
     uint64_t created = current_time();
 
-    eosio::asset unclaimed_funds = eosio::token(N(eosio.token)).get_balance(_self, tokensymbol.name());
+    eosio::asset unclaimed_funds = eosio::token(config::token_name).get_balance(_self, tokensymbol.name());
 
     auto old_pool = pools.begin();
     while(old_pool != pools.end())
@@ -640,8 +640,9 @@ elaf_t publication::apply_limits(atmsp::machine<fixp_t>& machine, account_name u
             eosio_assert(price > 0, "publication::apply_limits: can't post, not enough power, vesting payment is disabled");
             eosio_assert(user_vesting >= price, "publication::apply_limits: insufficient vesting amount");
             INLINE_ACTION_SENDER(golos::vesting, retire) (config::vesting_name, 
-                {token(N(eosio.token)).get_issuer(pool.state.funds.symbol.name()), golos::config::invoice_name},
+                {token(config::token_name).get_issuer(pool.state.funds.symbol.name()), golos::config::invoice_name},
                 {eosio::asset(price, pool.state.funds.symbol), user});
+                
             cur_chgs = pre_chgs;
         }
         else

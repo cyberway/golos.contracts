@@ -1,4 +1,3 @@
-#define UNIT_TEST_ENV
 //#define SHOW_ENABLE
 #include "golos.publication_rewards_types.hpp"
 #include "golos_tester.hpp"

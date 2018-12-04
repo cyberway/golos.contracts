@@ -1,5 +1,13 @@
 #pragma once
 
+#ifndef UNIT_TEST_ENV
+// test env still use N macro, so we continue to use it here
+#   define STRINGIFY_(x) #x
+#   define STRINGIFY(x) STRINGIFY_(x)
+#   define N(x) eosio::name(STRINGIFY(x))
+#endif
+
+
 namespace golos { namespace config {
 
 // contracts
@@ -17,6 +25,7 @@ static const auto code_name = N(eosio.code);
 static const auto owner_name = N(owner);
 static const auto active_name = N(active);
 static const auto invoice_name = N(invoice);
+static const auto super_majority_name = N(witn.smajor);
 static const auto majority_name = N(witn.major);
 static const auto minority_name = N(witn.minor);
 

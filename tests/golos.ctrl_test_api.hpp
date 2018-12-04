@@ -4,18 +4,24 @@
 namespace eosio { namespace testing {
 
 
-struct golos_ctrl_api: domain_contract_api<symbol> {
-    using domain_contract_api::domain_contract_api;
+struct golos_ctrl_api: base_contract_api {
+    using base_contract_api::base_contract_api;
 
     // name _owner; // TODO: domain linked to owner, some actions can have shortcuts with no need to pass owner
 
     const name _minority_name = N(witn.minor);
     const name _majority_name = N(witn.major);
+    const name _supermajority_name = N(witn.smajor);
 
     //// control actions
-    action_result create(account_name owner, mvo props) {
-        return push(N(create), owner, args()
-            ("owner", owner)
+    action_result create(mvo props) {
+        return push(N(create), _code, args()
+            ("props", props)
+        );
+    }
+
+    action_result set_props(mvo props) {
+        return push(N(updateprops), _code, args()
             ("props", props)
         );
     }
@@ -46,6 +52,17 @@ struct golos_ctrl_api: domain_contract_api<symbol> {
         return detach_acc_ex(owner, signers, user);
     }
 
+    action_result attach_acc(account_name user) {
+        return push(N(attachacc), _code, args()
+            ("user", user)
+        );
+    }
+    action_result detach_acc(account_name user) {
+        return push(N(detachacc), _code, args()
+            ("user", user)
+        );
+    }
+
     action_result reg_witness(account_name witness, string key, string url) {
         return push(N(regwitness), witness, args()
             ("witness", witness)
@@ -72,62 +89,58 @@ struct golos_ctrl_api: domain_contract_api<symbol> {
             ("witness", witness));
     }
 
-    action_result change_vests(account_name owner, asset diff) {
-        return push(N(changevest), owner, args()
-            ("owner", owner)
+    action_result change_vests(account_name who, asset diff) {
+        return push(N(changevest), who, args()
+            ("who", who)
             ("diff", diff));
     }
 
     //// control tables
     variant get_attached(account_name user) const {
-        return get_struct(N(bwuser), user, "bw_user");
+        return get_struct(_code, N(bwuser), user, "bw_user");
     }
 
-    variant get_props(account_name owner) const {
-        return get_struct(N(props), owner, "ctrl_props");
+    variant get_props() const {
+        return get_struct(_code, N(props), N(props), "props");  // TODO: get_singleton instead of get_struct
     }
 
     variant get_witness(account_name witness) const {
-        return get_struct(N(witness), witness, "witness_info");
+        return get_struct(_code, N(witness), witness, "witness_info");
     }
 
     //// helpers
-    static mvo default_params(uint16_t witnesses, uint16_t witness_votes, account_name worker) {
+    static mvo default_params(name owner, symbol token, uint16_t witnesses = 21, uint16_t witness_votes = 30) {
         return mvo()
+            ("owner", owner)
+            ("token", token)
             ("max_witnesses", witnesses)
             ("max_witness_votes", witness_votes)
             ("witness_supermajority", 0)
             ("witness_majority", 0)
-            ("witness_minority", 0)
-            ("infrate_start", 1500)
-            ("infrate_stop", 95)
-            ("infrate_narrowing", 250000)
-            ("content_reward", 6667-667)
-            ("vesting_reward", 2667-267)
-            ("workers_reward", 1000)
-            ("workers_pool", worker.to_string());
+            ("witness_minority", 0);
     }
 
-    void prepare_owner(account_name owner) {
+    // sets permissions for "multisig" account
+    void prepare_multisig(account_name msig) {
         // witn.major/minor
         auto auth = authority(1, {}, {
-            {.permission = {owner, config::active_name}, .weight = 1}
+            {.permission = {msig, config::active_name}, .weight = 1}
         });
-        _tester->set_authority(owner, _majority_name, auth, "active");
-        _tester->set_authority(owner, _minority_name, auth, "active");
+        _tester->set_authority(msig, _majority_name, auth, "active");
+        _tester->set_authority(msig, _minority_name, auth, "active");
         // link witn.minor to allow attachacc/detachacc
-        _tester->link_authority(owner, _code, _minority_name, N(attachacc));
-        _tester->link_authority(owner, _code, _minority_name, N(detachacc));
+        _tester->link_authority(msig, _code, _minority_name, N(attachacc));
+        _tester->link_authority(msig, _code, _minority_name, N(detachacc));
 
         // eosio.code
         auto code_auth = authority(1, {}, {
             {.permission = {_code, config::eosio_code_name}, .weight = 1}
         });
-        _tester->set_authority(owner, config::owner_name, code_auth, 0);
-        code_auth.keys = {{_tester->get_public_key(owner, "active"), 1}};
-        _tester->set_authority(owner, config::active_name, code_auth, "owner",
-            {permission_level{owner, config::active_name}},
-            {_tester->get_private_key(owner.to_string(), "active")});
+        _tester->set_authority(msig, config::owner_name, code_auth, 0);
+        code_auth.keys = {{_tester->get_public_key(msig, "active"), 1}};
+        _tester->set_authority(msig, config::active_name, code_auth, "owner",
+            {permission_level{msig, config::active_name}},
+            {_tester->get_private_key(msig.to_string(), "active")});
     }
 
 };

@@ -1,4 +1,5 @@
 #pragma once
+#include "golos.emit/parameters.hpp"
 #include <eosiolib/eosio.hpp>
 #include <eosiolib/singleton.hpp>
 #include <eosiolib/asset.hpp>
@@ -12,25 +13,27 @@ struct [[eosio::table]] state {
     uint64_t prev_emit;
     uint128_t tx_id;
     uint64_t start_time;
-    account_name post_name;     // get from ctrl?
-    account_name work_name;     // get from ctrl?
     bool active;
 };
-using state_singleton = eosio::singleton<N(state), state>;
+using state_singleton = eosio::singleton<"state"_n, state>;
 
 
 class emission: public contract {
 public:
-    emission(account_name self, symbol_type token, uint64_t action = 0);
+    emission(name self, name, datastream<const char*>);
+
+    [[eosio::action]] void validateprms(std::vector<emit_param>);
+    [[eosio::action]] void setparams(std::vector<emit_param>);
 
     [[eosio::action]] void emit();
     [[eosio::action]] void start();
     [[eosio::action]] void stop();
 
 private:
-    symbol_type _token;
-    account_name _owner;
+    void recalculate_state(std::vector<emit_param>);
+    symbol _token{"GLS",3};     // TODO: make configurable
     state_singleton _state;
+    emit_params_singleton _cfg;
 
     void schedule_next(state& s, uint32_t delay);
 };
