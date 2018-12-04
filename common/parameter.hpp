@@ -23,9 +23,10 @@ struct parameter {
     // validates parameter value(s), throws assert if invalid
     virtual void validate() const {};
 
-    // validates change from previous to new values
-    // virtual void validate(const parameter& prev) const = 0;
+    // returns true if parameter can't be changed after initialization; TODO: must not present in local witness params
+    virtual bool immutable() const { return false; }
 
+    // NOTE: the following fields are unused now, `golos.config` will need them later
     // compares parameters to use in median calculation
     // returns true by default, which means no comparer set, override if can use median
     virtual bool operator<(const parameter& other) const { return true; };
@@ -35,16 +36,35 @@ struct parameter {
     virtual bool can_median() const { return !(*this < *this); }
 };
 
+struct immutable_parameter: parameter {
+    bool immutable() const override {
+        return true;
+    }
+};
+
 struct param_helper {
 
     template<typename T>
-    static void check_params(const std::vector<T>& params) {
+    static void check_params(const std::vector<T>& params, bool initialized) {
         eosio::print("check_params, size: ", params.size(), "\n");
         eosio_assert(params.size(), "empty params not allowed");
-        check_dups(params);
+        check_duplicates(params);
         eosio::print("check_params: no dups\n");
+        if (initialized) {
+            check_immutables(params);
+            eosio::print("check_params: all mutable\n");
+        }
         validate_params(params);
         eosio::print("check_params: valid\n");
+    }
+
+    template<typename T>
+    static void check_immutables(const std::vector<T>& params) {
+        for (const auto& param: params) {
+            std::visit([](const parameter& p) {
+                eosio_assert(!p.immutable(), "can't change immutable parameter");
+            }, param);
+        }
     }
 
     template<typename T>
@@ -57,7 +77,7 @@ struct param_helper {
     }
 
     template<typename T>
-    static void check_dups(const std::vector<T>& params) {
+    static void check_duplicates(const std::vector<T>& params) {
         using idx_type = decltype(params[0].index());
         idx_type prev_idx = 0;
         bool first = true;
@@ -72,6 +92,36 @@ struct param_helper {
             first = false;
         }
     }
+
+    /**
+     * Validate and store contract parameters using visitor
+     *
+     * @brief helper to store parameters to state singleton
+     * @tparam V - type of visitor (inherited from set_params_visitor)
+     * @tparam T - type of parameters variant
+     * @param params - vector of parameters
+     * @param singleton - storage singleton to read from and write to
+     * @param ram_payer - account, who pays for storage (usually contract._self)
+     * @returns - constructed setter visitor if needed for further processing
+     */
+    template<typename V, typename T, typename S>
+    static V set_parameters(std::vector<T> params, S& singleton, name ram_payer) {
+        using state_type = decltype(singleton.get());
+        auto update = singleton.exists();
+        eosio_assert(update || params.size() == state_type::params_count, "must provide all parameters in initial set");
+        check_params(params, update);
+
+        auto s = update ? singleton.get() : state_type{};
+        auto setter = V(s);
+        bool changed = false;
+        for (const auto& param: params) {
+            changed |= std::visit(setter, param);   // why we have no ||= ?
+        }
+        eosio_assert(changed, "at least one parameter must change");    // don't add actions, which do nothing
+        singleton.set(setter.state, ram_payer);
+        return setter;
+    }
+
 
     template<typename T>
     static T get_median(std::vector<T>& params) {

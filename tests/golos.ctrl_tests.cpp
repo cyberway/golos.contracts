@@ -29,7 +29,8 @@ public:
         , vest({this, cfg::vesting_name, _token})
         , token({this, cfg::token_name, _token})
     {
-        create_accounts({_code, BLOG, N(witn1), N(witn2), N(witn3), N(witn4), N(witn5), _alice, _bob, _carol,
+        create_accounts({_code, BLOG, N(witn1), N(witn2), N(witn3), N(witn4), N(witn5),
+            _alice, _bob, _carol, _issuer,
             cfg::vesting_name, cfg::token_name, cfg::workers_name, cfg::emission_name});
         produce_block();
 
@@ -37,7 +38,7 @@ public:
         install_contract(cfg::token_name, contracts::token_wasm(), contracts::token_abi());
         install_contract(cfg::vesting_name, contracts::vesting_wasm(), contracts::vesting_abi());
 
-        _test_props = ctrl.default_params(BLOG, _token, _max_witnesses, _max_witness_votes);
+        _test_params = ctrl.default_params(BLOG, _token, _max_witnesses, _max_witness_votes);
     }
 
 
@@ -54,15 +55,16 @@ public:
     const name _minority_name = N(witn.minor);
     const name _majority_name = N(witn.major);
 
-    const account_name BLOG = N(blog);
-    const account_name _alice = N(alice);
-    const account_name _bob = N(bob);
-    const account_name _carol = N(carol);
+    const name BLOG = N(blog);
+    const name _alice = N(alice);
+    const name _bob = N(bob);
+    const name _carol = N(carol);
+    const name _issuer = N(issuer);
     const uint64_t _w[5] = {N(witn1), N(witn2), N(witn3), N(witn4), N(witn5)};
     const size_t _n_w = sizeof(_w) / sizeof(_w[0]);
 
-    vector<account_name> witness_vect(size_t n) const {
-        vector<account_name> r;
+    vector<name> witness_vect(size_t n) const {
+        vector<name> r;
         auto l = std::min(n, _n_w);
         r.reserve(l);
         while (l--) {
@@ -71,16 +73,28 @@ public:
         return r;
     }
 
-    mvo _test_props;
+    string _test_params;
     const string _test_key = string(fc::crypto::config::public_key_legacy_prefix)
         + "6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV";
 
     struct errors: contract_error_messages {
         const string no_symbol          = amsg("not initialized");
-        const string already_created    = amsg("already created");
-        const string max_witness0       = amsg("max_witnesses cannot be 0");
-        const string max_wit_votes0     = amsg("max_witness_votes cannot be 0");
-        const string same_params        = amsg("same properties are already set");
+        const string immutable          = amsg("can't change immutable parameter");
+        const string no_msig_acc        = amsg("multisig account doesn't exists");
+        const string max_witness0       = amsg("max witnesses can't be 0");
+        const string max_wit_votes0     = amsg("max witness votes can't be 0");
+
+        const string smaj_lt_maj        = amsg("super_majority must not be less than majority");
+        const string smaj_lt_min        = amsg("super_majority must not be less than minority");
+        const string maj_lt_min         = amsg("majority must not be less than minority");
+        const string maj_gt_smaj        = amsg("majority must not be greater than super_majority");
+        const string min_gt_smaj        = amsg("minority must not be greater than super_majority");
+        const string min_gt_maj         = amsg("minority must not be greater than majority");
+        const string smaj_gt_max        = amsg("super_majority must not be greater than max_witnesses");
+        const string maj_gt_max         = amsg("majority must not be greater than max_witnesses");
+        const string min_gt_max         = amsg("minority must not be greater than max_witnesses");
+
+        const string same_params        = amsg("at least one parameter must change");
 
         const string bad_url            = amsg("url too long");
         const string bad_pub_key        = amsg("public key should not be the default value");
@@ -108,7 +122,7 @@ public:
 
     void prepare(prep_step state) {
         if (state == step_0) return;
-        BOOST_CHECK_EQUAL(success(), ctrl.create(_test_props));
+        BOOST_CHECK_EQUAL(success(), ctrl.set_params(_test_params));
         produce_block();
         ctrl.prepare_multisig(BLOG);
         produce_block();
@@ -131,8 +145,8 @@ public:
     }
 
     void prepare_balances() {
-        BOOST_CHECK_EQUAL(success(), token.create(_bob, dasset(100500)));
-        BOOST_CHECK_EQUAL(success(), vest.create_vesting(_bob));
+        BOOST_CHECK_EQUAL(success(), token.create(_issuer, dasset(100500)));
+        BOOST_CHECK_EQUAL(success(), vest.create_vesting(_issuer));
         BOOST_CHECK_EQUAL(success(), vest.open(cfg::vesting_name, _token, cfg::vesting_name));
         vector<std::pair<uint64_t,double>> amounts = {
             {BLOG, 1000}, {_alice, 800}, {_bob, 700}, {_carol, 600},
@@ -140,7 +154,7 @@ public:
         };
         for (const auto& p : amounts) {
             BOOST_CHECK_EQUAL(success(), vest.open(p.first, _token, p.first));
-            BOOST_CHECK_EQUAL(success(), token.issue(_bob, p.first, dasset(p.second), "issue"));
+            BOOST_CHECK_EQUAL(success(), token.issue(_issuer, p.first, dasset(p.second), "issue"));
             BOOST_CHECK_EQUAL(success(), token.transfer(p.first, cfg::vesting_name, dasset(p.second), "buy vesting"));
         };
 
@@ -157,46 +171,45 @@ BOOST_AUTO_TEST_SUITE(golos_ctrl_tests)
 BOOST_FIXTURE_TEST_CASE(create_community, golos_ctrl_tester) try {
     BOOST_TEST_MESSAGE("Test community creation");
     BOOST_TEST_MESSAGE("--- check that actions disabled before community created");
-    BOOST_TEST_CHECK(ctrl.get_props().is_null());
+    BOOST_TEST_CHECK(ctrl.get_params().is_null());
     BOOST_CHECK_EQUAL(err.no_symbol, ctrl.reg_witness(_w[0], _test_key, "localhost"));
     BOOST_CHECK_EQUAL(err.no_symbol, ctrl.unreg_witness(_w[0]));
     BOOST_CHECK_EQUAL(err.no_symbol, ctrl.vote_witness(_alice, _w[0]));
     BOOST_CHECK_EQUAL(err.no_symbol, ctrl.unvote_witness(_alice, _w[0]));
-    BOOST_CHECK_EQUAL(err.no_symbol, ctrl.set_props(_test_props));
-    // attach/detach require permissions which do not exist at this moment
     BOOST_CHECK_EQUAL(err.no_symbol, ctrl.attach_acc(_carol));
     BOOST_CHECK_EQUAL(err.no_symbol, ctrl.detach_acc(_carol));
-    // add fake one to test
-    auto minority = authority(1, {}, {
-        {.permission = {_alice, config::active_name}, .weight = 1}
-    });
-    set_authority(_bob, _minority_name, minority, "active");
-    link_authority(_bob, _code, _minority_name, N(attachacc));
-    link_authority(_bob, _code, _minority_name, N(detachacc));
-    BOOST_CHECK_EQUAL(err.no_symbol, ctrl.attach_acc_ex(_bob, {_alice}, _carol));
-    BOOST_CHECK_EQUAL(err.no_symbol, ctrl.detach_acc_ex(_bob, {_alice}, _carol));
 
     BOOST_TEST_MESSAGE("--- test fail when create community with bad parameters");
-    auto w0 = mvo(_test_props)("max_witnesses",0);
-    auto v0 = mvo(_test_props)("max_witness_votes",0);
-    BOOST_CHECK_EQUAL(err.max_witness0, ctrl.create(w0));
-    BOOST_CHECK_EQUAL(err.max_wit_votes0, ctrl.create(v0));
+    BOOST_CHECK_EQUAL(err.no_msig_acc, ctrl.set_params(ctrl.default_params(N(nobody), _token)));
+    // BOOST_CHECK_EQUAL(err.max_witness0, ctrl.set_params(ctrl.default_params(BLOG, symbol(-1,"bad"))));   // is it handled by serializer?
+    BOOST_CHECK_EQUAL(err.max_witness0, ctrl.set_params(ctrl.default_params(BLOG, _token, 0)));
+    BOOST_CHECK_EQUAL(err.max_wit_votes0, ctrl.set_params(ctrl.default_params(BLOG, _token, 21, 0)));
+
+    BOOST_TEST_MESSAGE("------- permission thresholds");
+    BOOST_CHECK_EQUAL(err.smaj_lt_maj, ctrl.set_params(ctrl.default_params(BLOG, _token, 21, 30, 3,5,0)));
+    BOOST_CHECK_EQUAL(err.smaj_lt_min, ctrl.set_params(ctrl.default_params(BLOG, _token, 21, 30, 3,0,5)));
+    BOOST_CHECK_EQUAL(err.maj_lt_min,  ctrl.set_params(ctrl.default_params(BLOG, _token, 21, 30, 0,2,5)));
+
+    BOOST_CHECK_EQUAL(err.smaj_gt_max, ctrl.set_params(ctrl.default_params(BLOG, _token, 21, 30, 22,2,1)));
+    BOOST_CHECK_EQUAL(err.maj_gt_max,  ctrl.set_params(ctrl.default_params(BLOG, _token, 21, 30, 0,22,1)));
+    BOOST_CHECK_EQUAL(err.min_gt_max,  ctrl.set_params(ctrl.default_params(BLOG, _token, 21, 30, 0,0,22)));
+    BOOST_CHECK_EQUAL(err.maj_gt_smaj, ctrl.set_params(ctrl.default_params(BLOG, _token, 21, 30, 2,0,0)));
+    BOOST_CHECK_EQUAL(err.min_gt_smaj, ctrl.set_params(ctrl.default_params(BLOG, _token, 21, 30, 2,1,0)));
+    BOOST_CHECK_EQUAL(err.min_gt_maj,  ctrl.set_params(ctrl.default_params(BLOG, _token, 21, 30, 15,1,0)));
 
     BOOST_TEST_MESSAGE("--- create community with valid parameters succeed");
-    BOOST_CHECK_EQUAL(success(), ctrl.create(_test_props));
-    BOOST_TEST_MESSAGE("--- created");
-    const auto t = ctrl.get_props();
-    CHECK_EQUAL_OBJECTS(t["props"]["token"], _test_props["token"]);
-    auto props = mvo(_test_props);
-    props.erase("token");
-    CHECK_MATCHING_OBJECT(t["props"], props);
+    BOOST_CHECK_EQUAL(success(), ctrl.set_params(_test_params));
+    BOOST_TEST_MESSAGE("--- created, check state");
+    const auto t = ctrl.get_params();
+    CHECK_EQUAL_OBJECTS(t["token"], json_str_to_obj(ctrl.token_param(_token))[1]);
+    CHECK_EQUAL_OBJECTS(t["multisig"], json_str_to_obj(ctrl.multisig_param(BLOG))[1]);
+    CHECK_EQUAL_OBJECTS(t["witnesses"], json_str_to_obj(ctrl.max_witnesses_param(_max_witnesses))[1]);
+    CHECK_EQUAL_OBJECTS(t["msig_perms"], json_str_to_obj(ctrl.msig_perms_param())[1]);
+    CHECK_EQUAL_OBJECTS(t["witness_votes"], json_str_to_obj(ctrl.max_witness_votes_param(_max_witness_votes))[1]);
     produce_block();
 
     BOOST_TEST_MESSAGE("--- test fail when trying to create again");
-    BOOST_CHECK_EQUAL(err.already_created, ctrl.create(_test_props));
-    BOOST_CHECK_EQUAL(err.already_created, ctrl.create(_test_props));
-    auto w30 = mvo(_test_props)("max_witnesses",100);
-    BOOST_CHECK_EQUAL(err.already_created, ctrl.create(w30));
+    BOOST_CHECK_EQUAL(err.immutable, ctrl.set_params(_test_params));
 } FC_LOG_AND_RETHROW()
 
 
@@ -296,48 +309,32 @@ BOOST_FIXTURE_TEST_CASE(attach_detach_account, golos_ctrl_tester) try {
     BOOST_CHECK_EQUAL(err.no_account, ctrl.detach_acc(_code, w, _bob));
 } FC_LOG_AND_RETHROW()
 
-BOOST_FIXTURE_TEST_CASE(update_params, golos_ctrl_tester) try {
-    BOOST_TEST_MESSAGE("Update parameters");
-    return; // disabled for now. TODO: fix after move to new parameters mechanism
+BOOST_FIXTURE_TEST_CASE(set_params, golos_ctrl_tester) try {
+    BOOST_TEST_MESSAGE("Set parameters");
     BOOST_TEST_MESSAGE("--- prepare");
-    prepare(step_vote_witnesses);
+    prepare(step_only_create);
+
+    BOOST_TEST_MESSAGE("--- check that setting immutable parameters fail");
+    BOOST_CHECK_EQUAL(err.immutable, ctrl.set_param(ctrl.token_param(_token)));
+    BOOST_CHECK_EQUAL(err.immutable, ctrl.set_param(ctrl.max_witness_votes_param()));
 
     BOOST_TEST_MESSAGE("--- check that setting same parameters fail");
-    auto w = witness_vect(_smajor_witn_count);
-    BOOST_CHECK_EQUAL(err.same_params, ctrl.set_props(_test_props));
+    BOOST_CHECK_EQUAL(err.same_params, ctrl.set_param(ctrl.multisig_param(BLOG)));
+    BOOST_CHECK_EQUAL(err.same_params, ctrl.set_param(ctrl.max_witnesses_param(_max_witnesses)));
+    BOOST_CHECK_EQUAL(err.same_params, ctrl.set_param(ctrl.msig_perms_param()));
 
     BOOST_TEST_MESSAGE("--- check that setting invalid parameters fail");
     // TODO: maybe move to separate parameters validation test
-    auto p = mvo(_test_props);
-    BOOST_CHECK_EQUAL(err.max_witness0, ctrl.set_props(mvo(p)("max_witnesses",0)));
-    BOOST_CHECK_EQUAL(err.max_wit_votes0, ctrl.set_props(mvo(p)("max_witness_votes",0)));
+    BOOST_CHECK_EQUAL(err.no_msig_acc, ctrl.set_param(ctrl.multisig_param(N(nobody))));
+    BOOST_CHECK_EQUAL(err.max_witness0, ctrl.set_param(ctrl.max_witnesses_param(0)));
 
     BOOST_TEST_MESSAGE("--- check that setting valid parameters succeed");
-    BOOST_CHECK_EQUAL(success(), ctrl.set_props(mvo(p)("witness_majority",2)));
+    BOOST_CHECK_EQUAL(success(), ctrl.set_param(ctrl.msig_perms_param(_max_witnesses)));
 
-    // TODO: maybe separate test for signatures
-    BOOST_TEST_MESSAGE("--- check that too many or too less signatures fail");
-    p = mvo(_test_props)("witness_supermajority",1);
-    BOOST_CHECK_NE(success(), ctrl.set_props(p));
-    BOOST_CHECK_NE(success(), ctrl.set_props(p));
+    BOOST_TEST_MESSAGE("--- check that setting max_witnesses fails if conflicts with current msig_perms");
+    BOOST_CHECK_EQUAL(err.smaj_gt_max, ctrl.set_param(ctrl.max_witnesses_param(_max_witnesses-1)));
 
-    BOOST_TEST_MESSAGE("--- check that setting valid parameters succeed");
-    BOOST_CHECK_EQUAL(success(), ctrl.set_props(p));
-    BOOST_CHECK_EQUAL(success(), ctrl.vote_witness(_bob, _w[4]));    // it requires re-vote now
-
-    BOOST_TEST_MESSAGE("--- check that changed witness_supermajority = 1 in effect");
-    BOOST_CHECK_EQUAL(success(), ctrl.set_props(mvo(p)("witness_supermajority",0)));
-    BOOST_CHECK_EQUAL(success(), ctrl.unvote_witness(_bob, _w[4]));
-
-    BOOST_TEST_MESSAGE("--- check that restored witness_supermajority in effect");
-    BOOST_CHECK_EQUAL(success(), ctrl.set_props(mvo(p)("witness_supermajority",2)));
-
-    BOOST_TEST_MESSAGE("--- check that unregistered witness removed from miltisig");
-    BOOST_CHECK_EQUAL(success(), ctrl.unreg_witness(_w[0]));
-    auto top = witness_vect(3); // returns w3,w2,w1
-    BOOST_CHECK_NE(success(), ctrl.set_props(mvo(p)("witness_supermajority",0)));
-    top.erase(top.end() - 1);   // remove w1
-    BOOST_CHECK_EQUAL(success(), ctrl.set_props(mvo(p)("witness_supermajority",0)));
+    // TODO: test that multisig changes depending on max_witnesses
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE(change_vesting, golos_ctrl_tester) try {
@@ -354,7 +351,7 @@ BOOST_FIXTURE_TEST_CASE(change_vesting, golos_ctrl_tester) try {
     auto wp = mvo()("name","witn1")("key",_test_key)("url","localhost")("active",true);
     CHECK_MATCHING_OBJECT(ctrl.get_witness(_w[0]), wp("total_weight",_wmult*(800+700+100)));
     CHECK_MATCHING_OBJECT(ctrl.get_witness(_w[1]), wp("total_weight",_wmult*(800))("name","witn2"));
-    BOOST_CHECK_EQUAL(success(), token.issue(_bob, _alice, dasset(100), "issue"));
+    BOOST_CHECK_EQUAL(success(), token.issue(_issuer, _alice, dasset(100), "issue"));
     BOOST_CHECK_EQUAL(success(), token.transfer(_alice, cfg::vesting_name, dasset(100), "buy vesting"));
     CHECK_MATCHING_OBJECT(ctrl.get_witness(_w[0]), wp("total_weight",_wmult*(800+700+100+100))("name","witn1"));
     CHECK_MATCHING_OBJECT(ctrl.get_witness(_w[1]), wp("total_weight",_wmult*(800+100))("name","witn2"));
