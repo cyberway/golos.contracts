@@ -1,9 +1,6 @@
 {
   "version": "cyberway::abi/1.0",
   "types": [{
-      "new_type_name": "account_name",
-      "type": "name"
-    },{
       "new_type_name": "base_t",
       "type": "int64"
     },{
@@ -19,7 +16,7 @@
       "new_type_name": "counter_t",
       "type": "uint64"
     },{
-      "new_type_name": "symbol_name",
+      "new_type_name": "symbol_code",
       "type": "uint64"
     },{
       "new_type_name": "uchar",
@@ -72,8 +69,8 @@
     "base": "",
     "fields": [
         {
-            "name": "token_name",
-            "type": "symbol_name"
+            "name": "token_code",
+            "type": "symbol_code"
         },
         {
             "name": "suffix",
@@ -103,11 +100,11 @@
     "fields": [
         {
             "name": "user",
-            "type": "account_name"
+            "type": "name"
         },
         {
-            "name": "token_name",
-            "type": "symbol_name"
+            "name": "token_code",
+            "type": "symbol_code"
         },
         {
             "name": "suffix",
@@ -128,8 +125,8 @@
     "base": "",
     "fields": [
         {
-            "name": "charge_name",
-            "type": "symbol_name"
+            "name": "charge_symbol",
+            "type": "symbol"
         },
         {
             "name": "last_update",
@@ -146,8 +143,8 @@
     "base": "",
     "fields": [
         {
-            "name": "charge_name",
-            "type": "symbol_name"
+            "name": "charge_symbol",
+            "type": "symbol"
         },
         {
             "name": "func",
@@ -187,7 +184,7 @@
           "name": "primary",
           "unique": "true",
           "orders": [
-              {"field": "charge_name", "order": "asc"}
+              {"field": "charge_symbol", "order": "asc"}
           ]
        }
     ]
@@ -200,7 +197,7 @@
           "name": "primary",
           "unique": "true",
           "orders": [
-              {"field": "charge_name", "order": "asc"}
+              {"field": "charge_symbol", "order": "asc"}
           ]
        }
     ]
