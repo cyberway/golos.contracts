@@ -1,5 +1,6 @@
 #pragma once
 #include "test_api_helper.hpp"
+#include "../common/config.hpp"
 
 namespace eosio { namespace testing {
 
@@ -11,24 +12,35 @@ struct golos_vesting_api: base_contract_api {
     symbol _symbol;
 
     //// vesting actions
-    action_result create_vesting(account_name creator, std::vector<account_name> issuers = {}) {
-        return create_vesting(creator, _symbol, issuers);
+    action_result create_vesting(name creator, std::vector<name> issuers = {}) {
+        return create_vesting(creator, _symbol, golos::config::control_name, issuers);
     }
-    action_result create_vesting(account_name creator, symbol vesting_symbol,
-                                 std::vector<account_name> issuers = {},
-                                 account_name notify_acc = N(notify.acc)) {
+    action_result create_vesting(name creator, symbol vesting_symbol, std::vector<name> issuers = {}, name notify_acc = N(notify.acc)) {
+        authority auth(1, {});
+        for(auto issuer : issuers)
+            auth.accounts.emplace_back(permission_level_weight{.permission = {issuer, N(eosio.code)}, .weight = 1});
+            
+        if(std::find(issuers.begin(), issuers.end(), creator) == issuers.end())
+            auth.accounts.emplace_back(permission_level_weight{.permission = {creator, N(eosio.code)}, .weight = 1});
+            
+        std::sort(auth.accounts.begin(), auth.accounts.end(),
+            [](const permission_level_weight& l, const permission_level_weight& r) {
+                return std::tie(l.permission.actor, l.permission.permission) < std::tie(r.permission.actor, r.permission.permission);
+            });
+        _tester->set_authority(creator, golos::config::invoice_name, auth, "owner");
+        _tester->link_authority(creator, _code, golos::config::invoice_name, N(retire));
+
         return push(N(createvest), creator, args()
-            ("creator", creator)
             ("symbol", vesting_symbol)
             ("issuers", issuers)
             ("notify_acc", notify_acc)
         );
     }
 
-    action_result open(account_name owner) {
+    action_result open(name owner) {
         return open(owner, _symbol, owner);
     }
-    action_result open(account_name owner, symbol sym, account_name ram_payer) {
+    action_result open(name owner, symbol sym, name ram_payer) {
         return push(N(open), ram_payer, args()
             ("owner", owner)
             ("symbol", sym)
@@ -36,14 +48,14 @@ struct golos_vesting_api: base_contract_api {
         );
     }
 
-    action_result unlock_limit(account_name owner, asset quantity) {
+    action_result unlock_limit(name owner, asset quantity) {
         return push(N(unlocklimit), owner, args()
             ("owner", owner)
             ("quantity", quantity)
         );
     }
 
-    action_result convert_vesting(account_name sender, account_name recipient, asset quantity) {
+    action_result convert_vesting(name sender, name recipient, asset quantity) {
         return push(N(convertvg), sender, args()
             ("sender", sender)
             ("recipient", recipient)
@@ -51,14 +63,14 @@ struct golos_vesting_api: base_contract_api {
         );
     }
 
-    action_result cancel_convert_vesting(account_name sender, asset type) {
+    action_result cancel_convert_vesting(name sender, asset type) {
         return push(N(cancelvg), sender, args()
             ("sender", sender)
             ("type", type)
         );
     }
 
-    action_result delegate_vesting(account_name sender, account_name recipient, asset quantity,
+    action_result delegate_vesting(name sender, name recipient, asset quantity,
         uint16_t interest_rate = 0, uint8_t payout_strategy = 0
     ) {
         return push(N(delegatevg), sender, args()
@@ -70,7 +82,7 @@ struct golos_vesting_api: base_contract_api {
         );
     }
 
-    action_result undelegate_vesting(account_name sender, account_name recipient, asset quantity) {
+    action_result undelegate_vesting(name sender, name recipient, asset quantity) {
         return push(N(undelegatevg), sender, args()
             ("sender", sender)
             ("recipient", recipient)
@@ -78,7 +90,7 @@ struct golos_vesting_api: base_contract_api {
         );
     }
 
-    action_result timeout(account_name signer) {
+    action_result timeout(name signer) {
         return push(N(timeout), signer, args()("hash", 1));
     }
 
@@ -94,7 +106,7 @@ struct golos_vesting_api: base_contract_api {
         return v;
     }
 
-    variant get_balance(account_name acc) {
+    variant get_balance(name acc) {
         // converts assets to strings; TODO: generalize
         auto v = get_struct(acc, N(balances), _symbol.to_symbol_code().value, "user_balance");
         if (v.is_object()) {
@@ -108,16 +120,16 @@ struct golos_vesting_api: base_contract_api {
         return v;
     }
 
-    variant get_balance_raw(account_name acc) {
+    variant get_balance_raw(name acc) {
         // base_api_helper knows code
         return get_struct(acc, N(balances), _symbol.to_symbol_code().value, "user_balance");
     }
 
-    std::vector<variant> get_balances(account_name user) {
+    std::vector<variant> get_balances(name user) {
         return _tester->get_all_chaindb_rows(_code, user, N(balances), false);
     }
 
-    variant get_convert_obj(account_name from) {
+    variant get_convert_obj(name from) {
         return get_struct(_symbol.to_symbol_code().value, N(converttable), from, "convert_of_tokens");
     }
 

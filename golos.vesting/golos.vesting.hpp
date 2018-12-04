@@ -12,7 +12,7 @@ public:
     using contract::contract;
 
     void on_transfer(name from, name to, asset quantity, std::string memo);
-    void retire(name issuer, asset quantity, name user);
+    void retire(asset quantity, name user);
     void unlock_limit(name owner, asset quantity);
 
     void convert_vesting(name from, name to, asset quantity);
@@ -20,7 +20,7 @@ public:
     void delegate_vesting(name sender, name recipient, asset quantity, uint16_t interest_rate, uint8_t payout_strategy);
     void undelegate_vesting(name sender, name recipient, asset quantity);
 
-    void create(name creator, symbol symbol, std::vector<name> issuers, name notify_acc);
+    void create(symbol symbol, name notify_acc);
 
     void open(name owner, symbol symbol, name ram_payer);
     void close(name owner, symbol symbol);
@@ -29,7 +29,11 @@ public:
     void calculate_convert_vesting();
     void calculate_delegate_vesting();
 
-    inline asset get_account_vesting(name account, symbol_code sym) const;
+    static inline asset get_account_vesting(name code, name account, symbol_code sym) {
+        tables::account_table balances(code, account.value);
+        const auto& balance = balances.get(sym.raw());
+        return balance.vesting;
+    };
     inline asset get_account_effective_vesting(name account, symbol_code sym) const;
     inline asset get_account_available_vesting(name account, symbol_code sym) const;
     inline asset get_account_unlocked_vesting(name account, symbol_code sym) const;
@@ -42,13 +46,9 @@ private:
 
     const asset convert_to_token(const asset& vesting, const structures::vesting_info& vinfo) const;
     const asset convert_to_vesting(const asset& token, const structures::vesting_info& vinfo) const;
+    
+    static name get_recipient(const std::string& memo);
 };
-
-asset vesting::get_account_vesting(name account, symbol_code sym) const {
-    tables::account_table balances(_self, account.value);
-    const auto& balance = balances.get(sym.raw());
-    return balance.vesting;
-}
 
 asset vesting::get_account_available_vesting(name account, symbol_code sym) const {
     tables::account_table balances(_self, account.value);

@@ -21,7 +21,7 @@ publication::publication(account_name self)
 {}
 
 void publication::apply(uint64_t code, uint64_t action) {
-    if (N(transfer) == action && N(eosio.token) == code)
+    if (N(transfer) == action && config::token_name == code)
         execute_action(this, &publication::on_transfer);
 
     if (N(createmssg) == action)
@@ -212,10 +212,10 @@ void publication::payto(account_name user, eosio::asset quantity, enum_t mode) {
         return;
 
     if(static_cast<payment_t>(mode) == payment_t::TOKEN)
-        INLINE_ACTION_SENDER(eosio::token, transfer) (N(eosio.token), {_self, N(active)}, {_self, user, quantity, ""});
+        INLINE_ACTION_SENDER(eosio::token, transfer) (config::token_name, {_self, N(active)}, {_self, user, quantity, ""});
     else if(static_cast<payment_t>(mode) == payment_t::VESTING)
-        INLINE_ACTION_SENDER(eosio::token, transfer) (N(eosio.token), {_self, N(active)},
-            {_self, config::vesting_name, quantity, name{user}.to_string()});
+        INLINE_ACTION_SENDER(eosio::token, transfer) (config::token_name, {_self, N(active)},
+            {_self, config::vesting_name, quantity, config::send_prefix + name{user}.to_string()});
     else
         eosio_assert(false, "publication::payto: unknown kind of payment");
 }
@@ -522,7 +522,7 @@ void publication::set_rules(const funcparams& mainfunc, const funcparams& curati
     reward_pools pools(_self, _self);
     uint64_t created = current_time();
 
-    eosio::asset unclaimed_funds = eosio::token(N(eosio.token)).get_balance(_self, tokensymbol.name());
+    eosio::asset unclaimed_funds = eosio::token(config::token_name).get_balance(_self, tokensymbol.name());
 
     auto old_pool = pools.begin();
     while(old_pool != pools.end())
@@ -639,8 +639,10 @@ elaf_t publication::apply_limits(atmsp::machine<fixp_t>& machine, account_name u
             auto price = pool.lims.get_vesting_price(kind);
             eosio_assert(price > 0, "publication::apply_limits: can't post, not enough power, vesting payment is disabled");
             eosio_assert(user_vesting >= price, "publication::apply_limits: insufficient vesting amount");
-            INLINE_ACTION_SENDER(golos::vesting, retire) (config::vesting_name, {_self, N(active)},
-                {_self, eosio::asset(price, pool.state.funds.symbol), user});
+            INLINE_ACTION_SENDER(golos::vesting, retire) (config::vesting_name, 
+                {token(config::token_name).get_issuer(pool.state.funds.symbol.name()), golos::config::invoice_name},
+                {eosio::asset(price, pool.state.funds.symbol), user});
+                
             cur_chgs = pre_chgs;
         }
         else

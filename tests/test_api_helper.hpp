@@ -38,28 +38,5 @@ struct base_contract_api {
 
 };
 
-template<typename DomainType>
-struct domain_contract_api: base_contract_api {
-    DomainType _domain;
-    domain_contract_api(golos_tester* tester, name code, DomainType domain)
-    : base_contract_api(tester, code)
-    , _domain(domain) {}
-
-    uint64_t domain_to_scope() const;
-
-    variant get_struct(name tbl, uint64_t id, const string& name) const {
-        return base_contract_api::get_struct(domain_to_scope(), tbl, id, name);
-    }
-
-    //base args
-    mvo args() override {
-        return mvo()("domain", _domain);
-    }
-};
-
-template<>
-inline uint64_t domain_contract_api<symbol>::domain_to_scope() const {
-    return _domain.value();
-}
 
 } }

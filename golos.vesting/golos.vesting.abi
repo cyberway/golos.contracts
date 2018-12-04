@@ -7,7 +7,6 @@
       "base": "",
       "fields": [
         {"name": "supply", "type": "asset"},
-        {"name": "issuers", "type": "name[]"},
         {"name": "notify_acc", "type": "name"}
       ]
     },
@@ -170,10 +169,6 @@
       "base": "",
       "fields": [
         {
-          "name": "issuer",
-          "type": "name"
-        },
-        {
           "name": "quantity",
           "type": "asset"
         },
@@ -242,9 +237,7 @@
        "name": "createvest",
        "base": "",
        "fields": [
-          {"name":"creator", "type":"name"},
           {"name":"symbol", "type":"symbol"},
-          {"name":"issuers", "type":"name[]"},
           {"name":"notify_acc", "type":"name"}
        ]
     }
