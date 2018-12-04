@@ -32,7 +32,6 @@ struct golos_vesting_api: base_contract_api {
 
         return push(N(createvest), creator, args()
             ("symbol", vesting_symbol)
-            ("issuers", issuers)
             ("notify_acc", notify_acc)
         );
     }
