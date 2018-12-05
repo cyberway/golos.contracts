@@ -72,25 +72,18 @@ struct vesting_params_setter: set_params_visitor<vesting_state> {
     }
 };
 
-void vesting::validateprms(std::vector<vesting_params> params) {
-    param_helper::check_params(params);
+void vesting::validateprms(symbol symbol, std::vector<vesting_params> params) {
+    vesting_params_singleton cfg(_self, symbol.code().raw());
+    param_helper::check_params(params, cfg.exists());
 }
 
-void vesting::setparams(std::vector<vesting_params> params) {
-    require_auth(_self);
-    param_helper::check_params(params);
+void vesting::setparams(symbol symbol, std::vector<vesting_params> params) {
+    eosio_assert(symbol.is_valid(), "not valid symbol");
 
-    vesting_params_singleton cfg(_self, _self.value);
-    auto update = cfg.exists();
-    eosio_assert(update || params.size() == vesting_state::params_count, "must provide all parameters in initial set");
-    auto s = update ? cfg.get() : vesting_state{};
-    auto setter = vesting_params_setter(s);
-    bool changed = false;
-    for (const auto& param: params) {
-        changed |= std::visit(setter, param);   // why we have no ||= ?
-    }
-    eosio_assert(changed, "at least one parameter must change");    // don't add actions, which do nothing
-    cfg.set(setter.state, _self);
+    require_auth(name(token::get_issuer(config::token_name, symbol.code())));
+
+    vesting_params_singleton cfg(_self, symbol.code().raw());
+    param_helper::set_parameters<vesting_params_setter>(params, cfg, name(token::get_issuer(config::token_name, symbol.code())));
 }
 
 void vesting::on_transfer(name from, name to, asset quantity, std::string memo) {
@@ -142,7 +135,7 @@ void vesting::retire(asset quantity, name user) {
 void vesting::convert_vesting(name from, name to, asset quantity) {
     require_auth(from);
 
-    vesting_params_singleton cfg(_self, _self.value);
+    vesting_params_singleton cfg(_self, quantity.symbol.code().raw());
     eosio_assert(cfg.exists(), "not found vesting params");
     const auto &withdraw_params = cfg.get().vesting_withdraw_params;
     const auto &amount_params = cfg.get().amount_params;
@@ -206,7 +199,7 @@ void vesting::unlock_limit(name owner, asset quantity) {
 void vesting::delegate_vesting(name sender, name recipient, asset quantity, uint16_t interest_rate, uint8_t payout_strategy) {
     require_auth(sender);
 
-    vesting_params_singleton cfg(_self, _self.value);
+    vesting_params_singleton cfg(_self, quantity.symbol.code().raw());
     eosio_assert(cfg.exists(), "not found vesting params");
     const auto &amount_params = cfg.get().amount_params;
     const auto &delegation_params = cfg.get().delegation_params;
@@ -273,7 +266,7 @@ void vesting::delegate_vesting(name sender, name recipient, asset quantity, uint
 void vesting::undelegate_vesting(name sender, name recipient, asset quantity) {
     require_auth(sender);
 
-    vesting_params_singleton cfg(_self, _self.value);
+    vesting_params_singleton cfg(_self, quantity.symbol.code().raw());
     eosio_assert(cfg.exists(), "not found vesting params");
     const auto &amount_params = cfg.get().amount_params;
     const auto &delegation_params = cfg.get().delegation_params;
@@ -330,11 +323,11 @@ void vesting::calculate_convert_vesting() {
     require_auth(_self);
     tables::vesting_table table_vesting(_self, _self.value);
 
-    vesting_params_singleton cfg(_self, _self.value);
-    eosio_assert(cfg.exists(), "not found vesting params");
-    const auto &withdraw_params = cfg.get().vesting_withdraw_params;
-
     for (auto vesting : table_vesting) {
+        vesting_params_singleton cfg(_self, vesting.supply.symbol.code().raw());
+        eosio_assert(cfg.exists(), "not found vesting params");
+        const auto &withdraw_params = cfg.get().vesting_withdraw_params;
+
         tables::convert_table table(_self, vesting.supply.symbol.code().raw());
         auto index = table.get_index<"payouttime"_n>();
         for (auto obj = index.cbegin(); obj != index.cend(); ) {
