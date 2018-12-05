@@ -24,6 +24,7 @@ golosAccounts = [
     'gls.emit',
     'gls.vesting',
     'gls.publish',
+    'gls.social',
     'gls.worker',
 ]
 
@@ -216,6 +217,7 @@ def createGolosAccounts():
     updateAuth('gls.publish', 'witn.smajor', 'active', [args.public_key], [])
     updateAuth('gls.publish', 'active', 'owner', [args.public_key], ['gls.ctrl@eosio.code', "gls.emit@eosio.code", "gls.publish@eosio.code"])
     updateAuth('gls.vesting', 'active', 'owner', [args.public_key], ['gls.vesting@eosio.code'])
+    updateAuth('gls.social',  'active', 'owner', [args.public_key], ['gls.social@eosio.code'])
     updateAuth('gls.emit',    'active', 'owner', [args.public_key], ['gls.emit@eosio.code'])
 
 def stepInstallContracts():
@@ -223,6 +225,7 @@ def stepInstallContracts():
     retry(args.cleos + 'set contract gls.emit ' + args.contracts_dir + 'golos.emit/')
     retry(args.cleos + 'set contract gls.vesting ' + args.contracts_dir + 'golos.vesting/')
     retry(args.cleos + 'set contract gls.publish ' + args.contracts_dir + 'golos.publication/')
+    retry(args.cleos + 'set contract gls.social ' + args.contracts_dir + 'golos.social/')
 
 def stepCreateTokens():
     retry(args.cleos + 'push action eosio.token create ' + jsonArg(["gls.publish", intToToken(10000000000*10000)]) + ' -p eosio.token')
