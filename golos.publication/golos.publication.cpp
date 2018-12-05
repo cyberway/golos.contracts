@@ -638,7 +638,7 @@ elaf_t publication::apply_limits(atmsp::machine<fixp_t>& machine, name user,
             eosio_assert(price > 0, "publication::apply_limits: can't post, not enough power, vesting payment is disabled");
             eosio_assert(user_vesting >= price, "publication::apply_limits: insufficient vesting amount");
             INLINE_ACTION_SENDER(golos::vesting, retire) (config::vesting_name,
-                {token(config::token_name).get_issuer(pool.state.funds.symbol.name()), golos::config::invoice_name},
+                {eosio::token::get_issuer(config::token_name, pool.state.funds.symbol.code()), golos::config::invoice_name},
                 {eosio::asset(price, pool.state.funds.symbol), user});
             cur_chgs = pre_chgs;
         }
