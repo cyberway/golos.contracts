@@ -1,10 +1,11 @@
 #include "golos.ctrl/golos.ctrl.hpp"
 #include "golos.ctrl/config.hpp"
 #include <golos.vesting/golos.vesting.hpp>
+#include <common/parameter_ops.hpp>
+#include <common/dispatchers.hpp>
 #include <eosio.system/native.hpp>
 #include <eosio.token/eosio.token.hpp>
 #include <eosiolib/transaction.hpp>
-#include <common/dispatchers.hpp>
 
 namespace golos {
 
@@ -14,48 +15,85 @@ using std::vector;
 using std::string;
 
 
-/// properties
-bool properties::validate() const {
-    eosio_assert(is_account(owner), "owner not exists");
-    eosio_assert(token.is_valid(), "invalid token");
-    eosio_assert(max_witnesses > 0, "max_witnesses cannot be 0");
-    eosio_assert(max_witness_votes > 0, "max_witness_votes cannot be 0");
-    return true;
-}
-
-constexpr uint16_t calc_threshold(uint16_t val, uint16_t top, uint16_t num, uint16_t denom) {
+namespace param {
+constexpr uint16_t calc_thrs(uint16_t val, uint16_t top, uint16_t num, uint16_t denom) {
     return 0 == val ? uint32_t(top) * num / denom + 1 : val;
 }
-
-uint16_t properties::super_majority_threshold() const { return calc_threshold(witness_supermajority, max_witnesses, 2, 3); };
-uint16_t properties::majority_threshold() const { return calc_threshold(witness_majority, max_witnesses, 1, 2); };
-uint16_t properties::minority_threshold() const { return calc_threshold(witness_minority, max_witnesses, 1, 3); };
+uint16_t msig_permissions::super_majority_threshold(uint16_t top) const { return calc_thrs(super_majority, top, 2, 3); };
+uint16_t msig_permissions::majority_threshold(uint16_t top) const { return calc_thrs(majority, top, 1, 2); };
+uint16_t msig_permissions::minority_threshold(uint16_t top) const { return calc_thrs(minority, top, 1, 3); };
+}
 
 
 ////////////////////////////////////////////////////////////////
 /// control
 void control::assert_started() {
-    eosio_assert(_props.exists(), "not initialized");
+    eosio_assert(_cfg.exists(), "not initialized");
 }
 
-void control::create(properties new_props) {
-    eosio_assert(!_props.exists(), "already created");
-    eosio_assert(new_props.validate(), "invalid properties");
-    require_auth(_self);
-    _props.set(new_props, _self);
+struct ctrl_params_setter: set_params_visitor<ctrl_state> {
+    using set_params_visitor::set_params_visitor;
+
+    bool recheck_msig_perms = false;
+
+    bool operator()(const ctrl_token_param& p) {
+        return set_param(p, &ctrl_state::token);
+    }
+    bool operator()(const multisig_acc_param& p) {
+        // TODO: if change multisig account, then must set auths
+        return set_param(p, &ctrl_state::multisig);
+    }
+    bool operator()(const max_witnesses_param& p) {
+        // TODO: if change max_witnesses, then must set auths
+        bool changed = set_param(p, &ctrl_state::witnesses);
+        if (changed) {
+            // force re-check multisig_permissions, coz they can become invalid
+            recheck_msig_perms = true;
+        }
+        return changed;
+    }
+
+    void check_msig_perms(const msig_perms_param& p) {
+        const auto max = state.witnesses.max;
+        const auto smaj = p.super_majority_threshold(max);
+        const auto maj = p.majority_threshold(max);
+        const auto min = p.minority_threshold(max);
+        eosio_assert(smaj <= max, "super_majority must not be greater than max_witnesses");
+        eosio_assert(maj <= max, "majority must not be greater than max_witnesses");
+        eosio_assert(min <= max, "minority must not be greater than max_witnesses");
+        eosio_assert(maj <= smaj, "majority must not be greater than super_majority");
+        eosio_assert(min <= smaj, "minority must not be greater than super_majority");
+        eosio_assert(min <= maj, "minority must not be greater than majority");
+    }
+    bool operator()(const msig_perms_param& p) {
+        bool changed = set_param(p, &ctrl_state::msig_perms);
+        if (changed) {
+            // additionals checks against max_witnesses, which is not accessible in `validate()`
+            check_msig_perms(p);
+            recheck_msig_perms = false;     // don't re-check if parameter exists, variant order guarantees it checked after max_witnesses
+        }
+        return changed;
+    }
+    bool operator()(const witness_votes_param& p) {
+        return set_param(p, &ctrl_state::witness_votes);
+    }
+};
+
+void control::validateprms(vector<ctrl_param> params) {
+    param_helper::check_params(params, _cfg.exists());
 }
 
-void control::updateprops(properties new_props) {
-    assert_started();
-    eosio_assert(new_props.validate(), "invalid properties");
-    eosio_assert(props() != new_props, "same properties are already set");
+void control::setparams(vector<ctrl_param> params) {
     require_auth(_self);
-    // TODO: auto-change auths on params change?
-    _props.set(new_props, _self);
+    auto setter = param_helper::set_parameters<ctrl_params_setter>(params, _cfg, _self);
+    if (setter.recheck_msig_perms) {
+        setter.check_msig_perms(setter.state.msig_perms);
+    }
+    // TODO: auto-change auths on params change
 }
 
 void control::on_transfer(name from, name to, asset quantity, string memo) {
-    if (!_props.exists() || quantity.symbol != props().token)
+    if (!_cfg.exists() || quantity.symbol.code() != props().token.code)
         return; // distribute only community token
 
     if (to == _self && quantity.amount > 0) {
@@ -68,7 +106,7 @@ void control::on_transfer(name from, name to, asset quantity, string memo) {
             return;
         }
 
-        auto token = props().token;
+        auto token = quantity.symbol;
         auto transfer = [&](auto from, auto to, auto amount) {
             if (amount > 0) {
                 INLINE_ACTION_SENDER(eosio::token, transfer)(config::token_name, {from, config::active_name},
@@ -149,9 +187,12 @@ void control::unregwitness(name witness) {
 
 // Note: if not weighted, it's possible to pass all witnesses in vector like in BP actions
 void control::votewitness(name voter, name witness, uint16_t weight/* = 10000*/) {
-    // TODO: check witness existance (can work without it)
     assert_started();
     require_auth(voter);
+
+    witness_tbl witness_table(_self, _self.value);
+    eosio_assert(witness_table.find(witness.value) != witness_table.end(), "witness not found");
+
     witness_vote_tbl tbl(_self, _self.value);
     auto itr = tbl.find(voter.value);
     bool exists = itr != tbl.end();
@@ -164,7 +205,7 @@ void control::votewitness(name voter, name witness, uint16_t weight/* = 10000*/)
         auto& w = itr->witnesses;
         auto el = std::find(w.begin(), w.end(), witness);
         eosio_assert(el == w.end(), "already voted");
-        eosio_assert(w.size() < props().max_witness_votes, "all allowed votes already casted");
+        eosio_assert(w.size() < props().witness_votes.max, "all allowed votes already casted");
         tbl.modify(itr, voter, update);
     } else {
         tbl.emplace(voter, update);
@@ -176,6 +217,10 @@ void control::votewitness(name voter, name witness, uint16_t weight/* = 10000*/)
 void control::unvotewitn(name voter, name witness) {
     assert_started();
     require_auth(voter);
+
+    witness_tbl witness_table(_self, _self.value);
+    eosio_assert(witness_table.find(witness.value) != witness_table.end(), "witness not found");
+
     witness_vote_tbl tbl(_self, _self.value);
     auto itr = tbl.find(voter.value);
     bool exists = itr != tbl.end();
@@ -192,10 +237,10 @@ void control::unvotewitn(name voter, name witness) {
 }
 
 void control::changevest(name who, asset diff) {
-    if (!_props.exists()) return;       // allow silent exit if changing vests before community created
+    if (!_cfg.exists()) return;       // allow silent exit if changing vests before community created
     require_auth(config::vesting_name);
     eosio_assert(diff.amount != 0, "diff is 0. something broken");          // in normal conditions sender must guarantee it
-    eosio_assert(diff.symbol.code() == props().token.code(), "wrong symbol. something broken");  // in normal conditions sender must guarantee it
+    eosio_assert(diff.symbol.code() == props().token.code, "wrong symbol. something broken");  // in normal conditions sender must guarantee it
     change_voter_vests(who, diff.amount);
 }
 
@@ -213,7 +258,7 @@ void control::change_voter_vests(name voter, share_type diff) {
 }
 
 void control::apply_vote_weight(name voter, name witness, bool add) {
-    const auto power = vesting::get_account_vesting(config::vesting_name, voter, props().token.code()).amount;
+    const auto power = vesting::get_account_vesting(config::vesting_name, voter, props().token.code).amount;
     if (power > 0) {
         update_witnesses_weights({witness}, add ? power : -power);
     }
@@ -238,7 +283,8 @@ void control::update_witnesses_weights(vector<name> witnesses, share_type diff) 
 void control::update_auths() {
     // TODO: change only if top changed #35
     auto top = top_witnesses();
-    if (top.size() < props().max_witnesses) {           // TODO: ?restrict only just after creation and allow later
+    auto max_witn = props().witnesses.max;
+    if (top.size() < max_witn) {           // TODO: ?restrict only just after creation and allow later
         print("Not enough witnesses to change auth\n");
         return;
     }
@@ -247,13 +293,14 @@ void control::update_auths() {
         auth.accounts.push_back({{i,config::active_name},1});
     }
 
+    auto thrs = props().msig_perms;
     vector<std::pair<name,uint16_t>> auths = {
-        {config::minority_name, props().minority_threshold()},
-        {config::majority_name, props().majority_threshold()},
-        {config::super_majority_name, props().super_majority_threshold()}
+        {config::minority_name, thrs.minority_threshold(max_witn)},
+        {config::majority_name, thrs.majority_threshold(max_witn)},
+        {config::super_majority_name, thrs.super_majority_threshold(max_witn)}
     };
 
-    const auto owner = props().owner;
+    const auto owner = props().multisig.name;
     for (const auto& [perm, thrs]: auths) {
         //permissions must be sorted
         std::sort(auth.accounts.begin(), auth.accounts.end(),
@@ -274,7 +321,7 @@ void control::update_auths() {
 
 vector<witness_info> control::top_witness_info() {
     vector<witness_info> top;
-    const auto l = props().max_witnesses;
+    const auto l = props().witnesses.max;
     top.reserve(l);
     witness_tbl witness(_self, _self.value);
     auto idx = witness.get_index<"byweight"_n>();    // this index ordered descending
@@ -295,10 +342,10 @@ vector<name> control::top_witnesses() {
 }
 
 
-} // namespace golos
+} // golos
 
 DISPATCH_WITH_TRANSFER(golos::control, on_transfer,
-    (create)(updateprops)
+    (validateprms)(setparams)
     (attachacc)(detachacc)
     (regwitness)(unregwitness)
     (votewitness)(unvotewitn)(changevest))

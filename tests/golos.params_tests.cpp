@@ -67,11 +67,12 @@ public:
         // const string incomplete(int n) { return amsg("must provide all "+std::to_string(n)+" parameters in initial set");}   // eosio string bugs
         // const string same_value        = amsg("can't set same parameter value");
         const string nothing_changed   = amsg("at least one parameter must change");
+        // TODO: test immutable
     } err;
 
     void prepare_top_witnesses(bool only_create) {
         BOOST_CHECK_EQUAL(success(),
-            ctrl.create(ctrl.default_params(BLOG, _token, _max_witnesses, 4)));
+            ctrl.set_params(ctrl.default_params(BLOG, _token, _max_witnesses, 4)));
         produce_block();
         if (only_create)
             return;

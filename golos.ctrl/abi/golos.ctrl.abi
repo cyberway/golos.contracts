@@ -1,14 +1,18 @@
 {
-    "version": "cyberway::abi/1.0",
+    "version": "cyberway::abi/1.1",
     "types": [],
+    "variants": [{
+        "name": "ctrl_param",
+        "types": [
+            "ctrl_token",
+            "multisig_acc",
+            "max_witnesses",
+            "multisig_perms",
+            "max_witness_votes"
+        ]
+    }],
     "structs": [
         {
-            "name": "create",
-            "base": "",
-            "fields": [
-                {"type": "properties", "name": "props"}
-            ]
-        }, {
             "name": "bw_user",
             "base": "",
             "fields": [
@@ -26,25 +30,6 @@
             "base": "",
             "fields": [
                 {"type": "name",   "name": "user"}
-            ]
-        }, {
-            "name": "props",
-            "base": "",
-            "fields": [
-                {"type": "uint64",     "name": "id"},
-                {"type": "properties", "name": "props"}
-            ]
-        }, {
-            "name": "properties",
-            "base": "",
-            "fields": [
-                {"type": "name",   "name": "owner"},
-                {"type": "symbol", "name": "token"},
-                {"type": "uint16", "name": "max_witnesses"},
-                {"type": "uint16", "name": "witness_supermajority"},
-                {"type": "uint16", "name": "witness_majority"},
-                {"type": "uint16", "name": "witness_minority"},
-                {"type": "uint16", "name": "max_witness_votes"}
             ]
         }, {
             "name": "regwitness",
@@ -66,12 +51,6 @@
             "fields": [
                 {"type": "name", "name": "voter"},
                 {"type": "name", "name": "witness"}
-            ]
-        }, {
-            "name": "updateprops",
-            "base": "",
-            "fields": [
-                {"type": "properties", "name": "props"}
             ]
         }, {
             "name": "changevest",
@@ -105,12 +84,57 @@
                 {"type": "name", "name": "voter"},
                 {"type": "name[]", "name": "witnesses"}
             ]
+        }, {
+            "name": "ctrl_token",
+            "base": "",
+            "fields": [
+                {"type": "symbol_code", "name": "code"}]
+        }, {
+            "name": "multisig_acc",
+            "base": "",
+            "fields": [
+                {"type": "name", "name": "name"}]
+        }, {
+            "name": "max_witnesses",
+            "base": "",
+            "fields": [
+                {"type": "uint16", "name": "max"}]
+        }, {
+            "name": "multisig_perms",
+            "base": "",
+            "fields": [
+                {"type": "uint16", "name": "super_majority"},
+                {"type": "uint16", "name": "majority"},
+                {"type": "uint16", "name": "minority"}
+            ]
+        }, {
+            "name": "max_witness_votes",
+            "base": "",
+            "fields": [
+                {"type": "uint16", "name": "max"}]
+        }, {
+            "name": "ctrl_state",
+            "fields": [
+                {"type": "uint64",              "name": "id"},
+                {"type": "ctrl_token",          "name": "token"},
+                {"type": "multisig_acc",        "name": "multisig"},
+                {"type": "max_witnesses",       "name": "witnesses"},
+                {"type": "multisig_perms",      "name": "msig_perms"},
+                {"type": "max_witness_votes",   "name": "witness_votes"}]
+        }, {
+            "name": "setparams",
+            "fields": [
+                {"type": "ctrl_param[]", "name": "params"}]
         }
     ],
     "actions": [
         {
-            "name": "create",
-            "type": "create",
+            "name": "setparams",
+            "type": "setparams",
+            "ricardian_contract": ""
+        }, {
+            "name": "validateprms",
+            "type": "setparams",
             "ricardian_contract": ""
         }, {
             "name": "attachacc",
@@ -133,10 +157,6 @@
             "type": "unvotewitn",
             "ricardian_contract": ""
         }, {
-            "name": "updateprops",
-            "type": "updateprops",
-            "ricardian_contract": ""
-        }, {
             "name": "changevest",
             "type": "changevest",
             "ricardian_contract": ""
@@ -154,14 +174,6 @@
                 "name": "primary",
                 "unique": true,
                 "orders": [{"field": "name", "order": "asc"}]
-            }]
-        }, {
-            "name": "props",
-            "type": "props",
-            "indexes" : [{
-                "name": "primary",
-                "unique": true,
-                "orders": [{"field": "id", "order": "asc"}]
             }]
         }, {
             "name": "witness",
@@ -182,6 +194,14 @@
                 "name": "primary",
                 "unique": true,
                 "orders": [{"field": "voter", "order": "asc"}]
+            }]
+        }, {
+            "name": "ctrlparams",
+            "type": "ctrl_state",
+            "indexes" : [{
+                "name": "primary",
+                "unique": true,
+                "orders": [{"field": "id", "order": "asc"}]
             }]
         }
     ],

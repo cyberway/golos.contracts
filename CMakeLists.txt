@@ -1,8 +1,10 @@
 cmake_minimum_required(VERSION 3.5)
 project(golos_dapp_contracts VERSION 0.1.0)
 
-set(EOSIO_DEPENDENCY "1.3")
-set(EOSIO_CDT_DEPENDENCY "1.2")
+set(EOSIO_CDT_VERSION_MIN "1.4")
+set(EOSIO_CDT_VERSION_SOFT_MAX "1.4")
+
+find_package(eosio.cdt)
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
    set(TEST_BUILD_TYPE "Debug")
@@ -20,7 +22,7 @@ if(EOSIO_CDT_ROOT STREQUAL "" OR NOT EOSIO__ROOT)
 endif()
 
 list(APPEND CMAKE_MODULE_PATH ${EOSIO_CDT_ROOT}/lib/cmake)
-include(EosioWasmToolchain)
+#include(EosioWasmToolchain)
 
 ### Check the version of eosio.cdt
 string(FIND "${EOSIO_CDT_VERSION}" "${EOSIO_CDT_DEPENDENCY}" output)

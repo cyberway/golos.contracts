@@ -12,14 +12,15 @@
 
 namespace golos { namespace structures {
 
+using namespace eosio;
 
 struct accandvalue {
-    account_name account;
+    name account;
     uint64_t value;
 };
 using counter_t = uint64_t;
 struct beneficiary {
-    account_name account;
+    name account;
     int64_t deductprcnt; //elaf_t
 };
 
@@ -59,7 +60,7 @@ struct message {
     uint64_t id;
     std::string permlink;
     uint64_t date;
-    account_name parentacc;
+    name parentacc;
     uint64_t parent_id;
     base_t tokenprop; //elaf_t
     std::vector<structures::beneficiary> beneficiaries;
@@ -79,7 +80,7 @@ struct voteinfo {
 
     uint64_t id;
     uint64_t message_id;
-    account_name voter;
+    name voter;
     int16_t weight;
     uint64_t time;
     int64_t count;

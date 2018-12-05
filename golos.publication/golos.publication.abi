@@ -1,9 +1,7 @@
 {
   "version": "cyberway::abi/1.0",
-  "types": [{
-    "new_type_name": "account_name",
-    "type": "name"
-    },{
+  "types": [
+    {
       "new_type_name": "base_t",
       "type": "int64"
     },{
@@ -103,7 +101,7 @@
     "fields": [
       {
         "name": "account",
-        "type": "account_name"
+        "type": "name"
       },
       {
         "name": "permlink",
@@ -117,7 +115,7 @@
     "fields": [
       {
         "name": "account",
-        "type": "account_name"
+        "type": "name"
       },
       {
         "name": "deductprcnt",
@@ -201,7 +199,7 @@
       },
       {
         "name": "parentacc",
-        "type": "account_name"
+        "type": "name"
       },
       {
         "name": "parent_id",
@@ -243,7 +241,7 @@
     "fields": [
       {
         "name": "account",
-        "type": "account_name"
+        "type": "name"
       },
       {
         "name": "permlink",
@@ -251,7 +249,7 @@
       },
       {
         "name": "parentacc",
-        "type": "account_name"
+        "type": "name"
       },
       {
         "name": "parentprmlnk",
@@ -297,7 +295,7 @@
     "fields": [
       {
         "name": "account",
-        "type": "account_name"
+        "type": "name"
       },
       {
         "name": "permlink",
@@ -331,7 +329,7 @@
     "fields": [
       {
         "name": "account",
-        "type": "account_name"
+        "type": "name"
       },
       {
         "name": "permlink",
@@ -345,11 +343,11 @@
     "fields": [
       {
         "name": "voter",
-        "type": "account_name"
+        "type": "name"
       },
       {
         "name": "author",
-        "type": "account_name"
+        "type": "name"
       },
       {
         "name": "permlink",
@@ -367,11 +365,11 @@
     "fields": [
       {
         "name": "voter",
-        "type": "account_name"
+        "type": "name"
       },
       {
         "name": "author",
-        "type": "account_name"
+        "type": "name"
       },
       {
         "name": "permlink",
@@ -393,7 +391,7 @@
       },
       {
         "name": "voter",
-        "type": "account_name"
+        "type": "name"
       },
       {
         "name": "weight",
@@ -579,7 +577,7 @@
     "fields": [
       {
         "name": "name",
-        "type": "account_name"
+        "type": "name"
       }
     ]
   },

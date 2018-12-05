@@ -21,4 +21,4 @@ bool upsert_tbl(eosio::name code, uint64_t scope, eosio::name payer, uint64_t ke
 }
 
 
-} // namespace golos
+} // golos

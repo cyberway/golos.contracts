@@ -7,63 +7,57 @@ namespace eosio { namespace testing {
 struct golos_ctrl_api: base_contract_api {
     using base_contract_api::base_contract_api;
 
-    // name _owner; // TODO: domain linked to owner, some actions can have shortcuts with no need to pass owner
-
     const name _minority_name = N(witn.minor);
     const name _majority_name = N(witn.major);
     const name _supermajority_name = N(witn.smajor);
 
     //// control actions
-    action_result create(mvo props) {
-        return push(N(create), _code, args()
-            ("props", props)
+    action_result set_params(const std::string& json_params) {
+        return push(N(setparams), _code, args()
+            ("params", json_str_to_obj(json_params))
+        );
+    }
+    action_result set_param(const std::string& json_param) {
+        return push(N(setparams), _code, args()
+            ("params", json_str_to_obj(std::string() + "[" + json_param + "]"))
+        );
+    }
+    action_result validate_params(const std::string& json_params) {
+        return push(N(validateprms), _code, args()
+            ("params", json_str_to_obj(json_params))
         );
     }
 
-    action_result set_props(mvo props) {
-        return push(N(updateprops), _code, args()
-            ("props", props)
-        );
-    }
-
-    action_result set_props(account_name owner, vector<account_name> signers, mvo props) {
-        return push_msig(N(updateprops), {{owner, config::active_name}}, signers, args()
-            ("props", props)
-        );
-    }
-
-    action_result attach_acc_ex(account_name owner, vector<account_name> signers, account_name user) {
+    action_result attach_acc_ex(name owner, const std::vector<name>& signers, name user) {
         return push_msig(N(attachacc), {{owner, _minority_name}}, signers, args()
             ("user", user)
         );
     }
-
-    action_result detach_acc_ex(account_name owner, vector<account_name> signers, account_name user) {
+    action_result detach_acc_ex(name owner, const std::vector<name>& signers, name user) {
         return push_msig(N(detachacc), {{owner, _minority_name}}, signers, args()
             ("user", user)
         );
     }
 
-    action_result attach_acc(account_name owner, vector<account_name> signers, account_name user) {
+    action_result attach_acc(name owner, const std::vector<name>& signers, name user) {
         return attach_acc_ex(owner, signers, user);
     }
-
-    action_result detach_acc(account_name owner, vector<account_name> signers, account_name user) {
+    action_result detach_acc(name owner, const std::vector<name>& signers, name user) {
         return detach_acc_ex(owner, signers, user);
     }
 
-    action_result attach_acc(account_name user) {
+    action_result attach_acc(name user) {
         return push(N(attachacc), _code, args()
             ("user", user)
         );
     }
-    action_result detach_acc(account_name user) {
+    action_result detach_acc(name user) {
         return push(N(detachacc), _code, args()
             ("user", user)
         );
     }
 
-    action_result reg_witness(account_name witness, string key, string url) {
+    action_result reg_witness(name witness, string key, string url) {
         return push(N(regwitness), witness, args()
             ("witness", witness)
             ("key", key)    // TODO: remove
@@ -71,57 +65,74 @@ struct golos_ctrl_api: base_contract_api {
         );
     }
 
-    action_result unreg_witness(account_name witness) {
+    action_result unreg_witness(name witness) {
         return push(N(unregwitness), witness, args()
             ("witness", witness)
         );
     }
 
-    action_result vote_witness(account_name voter, account_name witness, uint16_t weight=10000) {
+    action_result vote_witness(name voter, name witness, uint16_t weight=10000) {
         return push(N(votewitness), voter, args()
             ("voter", voter)
             ("witness", witness)
             ("weight", weight));
     }
-    action_result unvote_witness(account_name voter, account_name witness) {
+    action_result unvote_witness(name voter, name witness) {
         return push(N(unvotewitn), voter, args()
             ("voter", voter)
             ("witness", witness));
     }
 
-    action_result change_vests(account_name who, asset diff) {
+    action_result change_vests(name who, asset diff) {
         return push(N(changevest), who, args()
             ("who", who)
             ("diff", diff));
     }
 
     //// control tables
-    variant get_attached(account_name user) const {
+    variant get_attached(name user) const {
         return get_struct(_code, N(bwuser), user, "bw_user");
     }
 
-    variant get_props() const {
-        return get_struct(_code, N(props), N(props), "props");  // TODO: get_singleton instead of get_struct
+    variant get_params() const {
+        return get_struct(_code, N(ctrlparams), N(ctrlparams), "ctrl_state");  // TODO: get_singleton instead of get_struct
     }
 
-    variant get_witness(account_name witness) const {
+    variant get_witness(name witness) const {
         return get_struct(_code, N(witness), witness, "witness_info");
     }
 
     //// helpers
-    static mvo default_params(name owner, symbol token, uint16_t witnesses = 21, uint16_t witness_votes = 30) {
-        return mvo()
-            ("owner", owner)
-            ("token", token)
-            ("max_witnesses", witnesses)
-            ("max_witness_votes", witness_votes)
-            ("witness_supermajority", 0)
-            ("witness_majority", 0)
-            ("witness_minority", 0);
+    static std::string token_param(symbol token) {
+        return std::string() + "['ctrl_token',{'code':'"+token.name()+"'}]";
+    }
+    static std::string multisig_param(name acc) {
+        return std::string() + "['multisig_acc',{'name':'"+acc.to_string()+"'}]";
+    }
+    static std::string max_witnesses_param(uint16_t max = 21) {
+        return std::string() + "['max_witnesses',{'max':"+std::to_string(max)+"}]";
+    }
+    static std::string max_witness_votes_param(uint16_t max = 30) {
+        return std::string() + "['max_witness_votes',{'max':"+std::to_string(max)+"}]";
+    }
+    static std::string msig_perms_param(uint16_t smajor = 0, uint16_t major = 0, uint16_t minor = 0) {
+        return std::string() + "['multisig_perms',{"
+            "'super_majority':"+std::to_string(smajor) +
+            ",'majority':"+std::to_string(major) +
+            ",'minority':"+std::to_string(minor) + "}]";
+    }
+    static std::string default_params(name owner, symbol token, uint16_t witnesses = 21, uint16_t witness_votes = 30,
+        uint16_t smajor = 0, uint16_t major = 0, uint16_t minor = 0) {
+        return std::string() + "[" +
+            token_param(token) + "," +
+            multisig_param(owner) + "," +
+            max_witnesses_param(witnesses) + "," +
+            msig_perms_param(smajor, major, minor) + "," +
+            max_witness_votes_param(witness_votes) + "]";
     }
 
     // sets permissions for "multisig" account
-    void prepare_multisig(account_name msig) {
+    void prepare_multisig(name msig) {
         // witn.major/minor
         auto auth = authority(1, {}, {
             {.permission = {msig, config::active_name}, .weight = 1}

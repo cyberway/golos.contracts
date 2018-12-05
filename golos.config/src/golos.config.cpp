@@ -1,7 +1,7 @@
 #include "golos.config/golos.config.hpp"
 #include "golos.config/config.hpp"
-#include <eosiolib/transaction.hpp>
 #include <common/parameter_ops.hpp>
+#include <eosiolib/transaction.hpp>
 
 namespace golos {
 
@@ -26,7 +26,7 @@ void configer::updateparamse(name who, std::vector<emit_param> params) {
     print("not self ok\n");
     require_auth(who);
     print("auth ok\n");
-    param_helper::check_params(params); // TODO: validate using `validateprms` action of related contract
+    param_helper::check_params(params, false); // TODO: validate using `validateprms` action of related contract
     // INLINE_ACTION_SENDER(contract_class, validateprms)(contract_name, {{_self, N(active)}}, {params});
 
     emit_params_singleton acc_params{_self, who.value};
@@ -108,12 +108,13 @@ struct cfg_params_setter: set_params_visitor<cfg_state> {
 };
 
 void configer::validateprms(vector<cfg_param> params) {
-    param_helper::check_params(params);
+    cfg_params_singleton state{_self, _self.value};
+    param_helper::check_params(params, state.exists());
 }
 
 void configer::setparams(vector<cfg_param> params) {
     require_auth(_self);
-    param_helper::check_params(params);
+    validateprms(params);
 
     cfg_params_singleton state{_self, _self.value};
     auto s = state.exists() ? state.get() : cfg_state{};   // TODO: default state must be created (in counstructor/init)
