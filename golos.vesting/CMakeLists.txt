@@ -1,4 +1,6 @@
+set(CMAKE_CXX_FLAGS " -abigen ${CMAKE_CXX_FLAGS} -std=c++17")
 add_executable(golos.vesting.wasm ${CMAKE_CURRENT_SOURCE_DIR}/golos.vesting.cpp)
+
 target_include_directories(golos.vesting.wasm
    PUBLIC
   #  ${CMAKE_CURRENT_SOURCE_DIR}/include

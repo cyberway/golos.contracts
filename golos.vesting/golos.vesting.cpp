@@ -3,6 +3,7 @@
 #include <eosiolib/transaction.hpp>
 #include <eosio.token/eosio.token.hpp>
 
+
 namespace golos {
 
 
@@ -46,8 +47,50 @@ extern "C" {
         execute_action(&vesting::calculate_convert_vesting);
     else if (NN(timeout) == action)
         execute_action(&vesting::timeout_delay_trx);
+
+    else if (NN(validateprms) == action)
+        execute_action(&vesting::validateprms);
+    else if (NN(setparams) == action)
+        execute_action(&vesting::setparams);
     }
 #undef NN
+}
+
+struct vesting_params_setter: set_params_visitor<vesting_state> {
+    using set_params_visitor::set_params_visitor; // enable constructor
+
+    bool operator()(const vesting_withdraw_param& p) {
+        return set_param(p, &vesting_state::vesting_withdraw_params);
+    }
+
+    bool operator()(const vesting_min_amount_param& p) {
+        return set_param(p, &vesting_state::amount_params);
+    }
+
+    bool operator()(const delegation_param& p) {
+        return set_param(p, &vesting_state::delegation_params);
+    }
+};
+
+void vesting::validateprms(std::vector<vesting_params> params) {
+    param_helper::check_params(params);
+}
+
+void vesting::setparams(std::vector<vesting_params> params) {
+    require_auth(_self);
+    param_helper::check_params(params);
+
+    vesting_params_singleton cfg(_self, _self.value);
+    auto update = cfg.exists();
+    eosio_assert(update || params.size() == vesting_state::params_count, "must provide all parameters in initial set");
+    auto s = update ? cfg.get() : vesting_state{};
+    auto setter = vesting_params_setter(s);
+    bool changed = false;
+    for (const auto& param: params) {
+        changed |= std::visit(setter, param);   // why we have no ||= ?
+    }
+    eosio_assert(changed, "at least one parameter must change");    // don't add actions, which do nothing
+    cfg.set(setter.state, _self);
 }
 
 void vesting::on_transfer(name from, name to, asset quantity, std::string memo) {
@@ -99,25 +142,30 @@ void vesting::retire(asset quantity, name user) {
 void vesting::convert_vesting(name from, name to, asset quantity) {
     require_auth(from);
 
+    vesting_params_singleton cfg(_self, _self.value);
+    eosio_assert(cfg.exists(), "not found vesting params");
+    const auto &withdraw_params = cfg.get().vesting_withdraw_params;
+    const auto &amount_params = cfg.get().amount_params;
+
     tables::account_table account(_self, from.value);
     auto vest = account.find(quantity.symbol.code().raw());
     eosio_assert(vest != account.end(), "unknown asset");
     eosio_assert(vest->vesting.symbol == quantity.symbol, "wrong asset precision");
     eosio_assert(vest->available_vesting().amount >= quantity.amount, "Insufficient funds");
-    eosio_assert(config::vesting_withdraw.min_amount <= vest->vesting.amount, "Insufficient funds for converting");
+    eosio_assert(amount_params.min_amount <= vest->vesting.amount, "Insufficient funds for converting");
     eosio_assert(quantity.amount > 0, "quantity must be positive");
 
     tables::convert_table table(_self, quantity.symbol.code().raw());
     auto record = table.find(from.value);
 
-    const auto intervals = config::vesting_withdraw.intervals;
+    const auto intervals = withdraw_params.intervals;
     auto fill_record = [&](auto& item) {
         item.recipient = to;
         item.number_of_payments = intervals;
-        item.payout_time = time_point_sec(now() + config::vesting_withdraw.interval_seconds);
+        item.payout_time = time_point_sec(now() + withdraw_params.interval_seconds);
         item.payout_part = quantity / intervals;
         item.balance_amount = quantity;
-        // print("payout_time: ", now() + config::vesting_withdraw.interval_seconds, " now:", now(), "\n");
+        // print("payout_time: ", now() + withdraw_params.interval_seconds, " now:", now(), "\n");
     };
 
     if (record != table.end()) {
@@ -157,11 +205,18 @@ void vesting::unlock_limit(name owner, asset quantity) {
 
 void vesting::delegate_vesting(name sender, name recipient, asset quantity, uint16_t interest_rate, uint8_t payout_strategy) {
     require_auth(sender);
+
+    vesting_params_singleton cfg(_self, _self.value);
+    eosio_assert(cfg.exists(), "not found vesting params");
+    const auto &amount_params = cfg.get().amount_params;
+    const auto &delegation_params = cfg.get().delegation_params;
+    const auto &withdraw_params = cfg.get().vesting_withdraw_params;
+
     eosio_assert(sender != recipient, "You can not delegate to yourself");
     eosio_assert(payout_strategy >= 0 && payout_strategy < 2, "not valid value payout_strategy");
     eosio_assert(quantity.amount > 0, "the number of tokens should not be less than 0");
-    eosio_assert(quantity.amount >= config::delegation.min_amount, "Insufficient funds for delegation");
-    eosio_assert(interest_rate <= config::delegation.max_interest, "Exceeded the percentage of delegated vesting");
+    eosio_assert(quantity.amount >= amount_params.min_amount, "Insufficient funds for delegation");
+    eosio_assert(interest_rate <= delegation_params.max_interest, "Exceeded the percentage of delegated vesting");
 
     auto sname = quantity.symbol.code().raw();
     tables::account_table account_sender(_self, sender.value);
@@ -172,7 +227,7 @@ void vesting::delegate_vesting(name sender, name recipient, asset quantity, uint
     auto convert_obj = convert_tbl.find(sender.value);
     if (convert_obj != convert_tbl.end()) {
         auto remains_int = convert_obj->payout_part * convert_obj->number_of_payments;
-        auto remains_fract = convert_obj->balance_amount - convert_obj->payout_part * config::vesting_withdraw.intervals;
+        auto remains_fract = convert_obj->balance_amount - convert_obj->payout_part * withdraw_params.intervals;
         auto user_balance = balance_sender->available_vesting() - (remains_int + remains_fract);
         eosio_assert(user_balance >= quantity, "insufficient funds for delegation");
     }
@@ -201,7 +256,7 @@ void vesting::delegate_vesting(name sender, name recipient, asset quantity, uint
             item.deductions.symbol = quantity.symbol;
             item.interest_rate = interest_rate;
             item.payout_strategy = payout_strategy; // TODO 0 - to_delegator, 1 - to_delegated_vestings
-            item.return_date = time_point_sec(now() + config::delegation.min_time);
+            item.return_date = time_point_sec(now() + delegation_params.min_time);
         });
     }
 
@@ -212,18 +267,23 @@ void vesting::delegate_vesting(name sender, name recipient, asset quantity, uint
         item.received_vesting += quantity;
     });
 
-    eosio_assert(balance_recipient->received_vesting.amount >= config::delegation.min_remainder, "delegated vesting withdrawn");
+    eosio_assert(balance_recipient->received_vesting.amount >= delegation_params.min_remainder, "delegated vesting withdrawn");
 }
 
 void vesting::undelegate_vesting(name sender, name recipient, asset quantity) {
     require_auth(sender);
+
+    vesting_params_singleton cfg(_self, _self.value);
+    eosio_assert(cfg.exists(), "not found vesting params");
+    const auto &amount_params = cfg.get().amount_params;
+    const auto &delegation_params = cfg.get().delegation_params;
 
     tables::delegate_table table(_self, quantity.symbol.code().raw());
     auto index_table = table.get_index<"unique"_n>();
     auto delegate_record = index_table.find(structures::delegate_record::unique_key(sender, recipient));
     eosio_assert(delegate_record != index_table.end(), "Not enough delegated vesting");
 
-    eosio_assert(quantity.amount >= config::delegation.min_amount, "Insufficient funds for undelegation");
+    eosio_assert(quantity.amount >= amount_params.min_amount, "Insufficient funds for undelegation");
     eosio_assert(delegate_record->return_date <= time_point_sec(now()), "Tokens are frozen until the end of the period");
     eosio_assert(delegate_record->quantity >= quantity, "There are not enough delegated tools for output");
 
@@ -240,7 +300,7 @@ void vesting::undelegate_vesting(name sender, name recipient, asset quantity) {
         item.id = table_delegate_vesting.available_primary_key();
         item.recipient = sender;
         item.amount = quantity;
-        item.date = time_point_sec(now() + config::delegation.return_time);
+        item.date = time_point_sec(now() + delegation_params.return_time);
     });
 
     tables::account_table account_recipient(_self, recipient.value);
@@ -250,7 +310,7 @@ void vesting::undelegate_vesting(name sender, name recipient, asset quantity) {
         item.received_vesting -= quantity;
     });
 
-    eosio_assert(balance->received_vesting.amount >= config::delegation.min_remainder, "delegated vesting withdrawn");
+    eosio_assert(balance->received_vesting.amount >= delegation_params.min_remainder, "delegated vesting withdrawn");
 }
 
 void vesting::create(symbol symbol, name notify_acc) {
@@ -269,6 +329,11 @@ void vesting::create(symbol symbol, name notify_acc) {
 void vesting::calculate_convert_vesting() {
     require_auth(_self);
     tables::vesting_table table_vesting(_self, _self.value);
+
+    vesting_params_singleton cfg(_self, _self.value);
+    eosio_assert(cfg.exists(), "not found vesting params");
+    const auto &withdraw_params = cfg.get().vesting_withdraw_params;
+
     for (auto vesting : table_vesting) {
         tables::convert_table table(_self, vesting.supply.symbol.code().raw());
         auto index = table.get_index<"payouttime"_n>();
@@ -278,7 +343,7 @@ void vesting::calculate_convert_vesting() {
 
             if (obj->number_of_payments > 0) {
                 index.modify(obj, name(), [&](auto& item) {
-                    item.payout_time = time_point_sec(now() + config::vesting_withdraw.interval_seconds);
+                    item.payout_time = time_point_sec(now() + withdraw_params.interval_seconds);
                     --item.number_of_payments;
 
                     tables::account_table account(_self, obj->sender.value);
@@ -289,7 +354,7 @@ void vesting::calculate_convert_vesting() {
                     if (balance->vesting < obj->payout_part) {
                         item.number_of_payments = 0;
                     } else if (!obj->number_of_payments) { // TODO obj->number_of_payments == 0
-                        quantity = obj->balance_amount - (obj->payout_part * (config::vesting_withdraw.intervals - 1));
+                        quantity = obj->balance_amount - (obj->payout_part * (withdraw_params.intervals - 1));
                     } else {
                         quantity = obj->payout_part;
                     }

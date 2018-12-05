@@ -1,6 +1,14 @@
 {
   "version": "cyberway::abi/1.0",
   "types": [],
+  "variants": [{
+      "name": "vesting_param",
+      "types": [
+          "vesting_withdraw",
+          "vesting_amount",
+          "delegation"
+      ]
+  }],
   "structs": [
     {
       "name": "balance_vesting",
@@ -240,9 +248,63 @@
           {"name":"symbol", "type":"symbol"},
           {"name":"notify_acc", "type":"name"}
        ]
+    },
+    {
+       "name": "vesting_withdraw",
+       "base": "",
+       "fields": [
+          {"name":"intervals",        "type":"uint32"},
+          {"name":"interval_seconds", "type":"uint32"}
+       ]
+    },
+    {
+       "name": "vesting_amount",
+       "base": "",
+       "fields": [
+          {"name":"min_amount",       "type":"uint64"}
+       ]
+    },
+    {
+       "name": "delegation",
+       "base": "",
+       "fields": [
+          {"name":"min_amount",    "type":"uint64"},
+          {"name":"min_remainder", "type":"uint64"},
+          {"name":"min_time",      "type":"uint32"},
+          {"name":"max_interest",  "type":"uint16"},
+          {"name":"return_time",   "type":"uint32"}
+       ]
+    },
+    {
+       "name": "vesting_state",
+       "base": "",
+       "fields": [
+          {"name": "id",                     "type": "uint64"},
+          {"name":"vesting_withdraw_params", "type":"vesting_withdraw"},
+          {"name":"amount_params",           "type":"vesting_amount"},
+          {"name":"delegation_params",       "type":"delegation"}
+
+       ]
+    },
+    {
+       "name": "setparams",
+       "base": "",
+       "fields": [
+          {"name": "params", "type": "vesting_param[]"}
+       ]
     }
   ],
   "actions": [
+    {
+      "name": "setparams",
+      "type": "setparams",
+      "ricardian_contract": ""
+    },
+    {
+      "name": "validateprms",
+      "type": "setparams",
+      "ricardian_contract": ""
+    },
     {
       "name": "buyvg",
       "type": "transfer_vesting"
@@ -363,6 +425,15 @@
           "name": "payouttime",
           "unique": false,
           "orders": [{"field": "payout_time", "order": "asc"}]
+      }]
+    },
+    {
+      "name": "vstngparams",
+      "type": "vesting_state",
+      "indexes" : [{
+          "name": "primary",
+          "unique": true,
+          "orders": [{"field": "id", "order": "asc"}]
       }]
     }
   ],
