@@ -187,9 +187,12 @@ void control::unregwitness(name witness) {
 
 // Note: if not weighted, it's possible to pass all witnesses in vector like in BP actions
 void control::votewitness(name voter, name witness, uint16_t weight/* = 10000*/) {
-    // TODO: check witness existance (can work without it)
     assert_started();
     require_auth(voter);
+
+    witness_tbl witness_table(_self, _self.value);
+    eosio_assert(witness_table.find(witness.value) != witness_table.end(), "witness not found");
+
     witness_vote_tbl tbl(_self, _self.value);
     auto itr = tbl.find(voter.value);
     bool exists = itr != tbl.end();
@@ -214,6 +217,10 @@ void control::votewitness(name voter, name witness, uint16_t weight/* = 10000*/)
 void control::unvotewitn(name voter, name witness) {
     assert_started();
     require_auth(voter);
+
+    witness_tbl witness_table(_self, _self.value);
+    eosio_assert(witness_table.find(witness.value) != witness_table.end(), "witness not found");
+
     witness_vote_tbl tbl(_self, _self.value);
     auto itr = tbl.find(voter.value);
     bool exists = itr != tbl.end();
