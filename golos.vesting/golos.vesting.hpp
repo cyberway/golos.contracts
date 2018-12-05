@@ -43,8 +43,8 @@ public:
         const auto& balance = balances.get(sym.raw());
         return balance.effective_vesting();
     }
-    static inline asset get_account_available_vesting(name account, symbol_code sym) {
-        tables::account_table balances(_self, account.value);
+    static inline asset get_account_available_vesting(name code, name account, symbol_code sym) {
+        tables::account_table balances(code, account.value);
         const auto& balance = balances.get(sym.raw());
         return balance.available_vesting();
     }
