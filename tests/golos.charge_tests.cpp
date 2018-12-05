@@ -51,7 +51,7 @@ public:
         BOOST_CHECK_EQUAL(success(), token.issue(cfg::emission_name, cfg::emission_name, asset(total_funds, _token_sym), "HERE COULD BE YOUR ADVERTISEMENT"));
         produce_block();
 
-        BOOST_CHECK_EQUAL(success(), vest.create_vesting(cfg::emission_name, _token_sym, {cfg::emission_name}));
+        BOOST_CHECK_EQUAL(success(), vest.create_vesting(cfg::emission_name, _token_sym, {cfg::emission_name}, {cfg::control_name}));
         produce_block();
 
         for (auto& u : _users) {
