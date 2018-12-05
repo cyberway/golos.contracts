@@ -11,12 +11,12 @@ namespace structures {
 struct pinblock_record {
     pinblock_record() = default;
 
-    account_name account;
+    name account;
     bool pinning = false;
     bool blocking = false;
 
-    auto primary_key() const {
-        return account;
+    uint64_t primary_key() const {
+        return account.value;
     }
 
     EOSLIB_SERIALIZE(pinblock_record, (account)(pinning)(blocking))
@@ -28,8 +28,8 @@ namespace tables {
 
 using namespace eosio;
 
-using pb_account_idx = indexed_by<N(account), const_mem_fun<structures::pinblock_record, account_name, &structures::pinblock_record::primary_key>>;
-using pinblock_table = multi_index<N(pinblock), structures::pinblock_record, pb_account_idx>;
+using pb_account_idx = indexed_by<"account"_n, const_mem_fun<structures::pinblock_record, uint64_t, &structures::pinblock_record::primary_key>>;
+using pinblock_table = multi_index<"pinblock"_n, structures::pinblock_record, pb_account_idx>;
 }
 
 

@@ -19,10 +19,10 @@ protected:
 public:
 
     golos_social_tester()
-        : golos_tester(N(golos.soc))
+        : golos_tester("golos.soc"_n)
         , _sym(0, "DUMMY")
         , social({this, cfg::social_name, _sym})
-        , _users{_code, N(dave), N(erin)} {
+        , _users{_code, "dave"_n, "erin"_n} {
 
         produce_block();
         create_accounts(_users);
@@ -78,31 +78,31 @@ BOOST_FIXTURE_TEST_CASE(golos_pinning_test, golos_social_tester) try {
     BOOST_TEST_MESSAGE("Simple golos pinning test");
 
     BOOST_TEST_MESSAGE("--- pin: dave dave");
-    BOOST_CHECK_EQUAL(err.cannot_pin_yourself, pin(N(dave), N(dave)));
+    BOOST_CHECK_EQUAL(err.cannot_pin_yourself, pin("dave"_n, "dave"_n));
     produce_block();
 
     BOOST_TEST_MESSAGE("--- unpin: dave dave");
-    BOOST_CHECK_EQUAL(err.cannot_unpin_yourself, unpin(N(dave), N(dave)));
+    BOOST_CHECK_EQUAL(err.cannot_unpin_yourself, unpin("dave"_n, "dave"_n));
     produce_block();
 
     BOOST_TEST_MESSAGE("--- pin: dave erin");
-    BOOST_CHECK_EQUAL(success(), pin(N(dave), N(erin)));
+    BOOST_CHECK_EQUAL(success(), pin("dave"_n, "erin"_n));
     produce_block();
 
     BOOST_TEST_MESSAGE("--- pin: dave erin again (fail)");
-    BOOST_CHECK_EQUAL(err.already_pinned, pin(N(dave), N(erin)));
+    BOOST_CHECK_EQUAL(err.already_pinned, pin("dave"_n, "erin"_n));
     produce_block();
 
     BOOST_TEST_MESSAGE("--- unpin: dave erin");
-    BOOST_CHECK_EQUAL(success(), unpin(N(dave), N(erin)));
+    BOOST_CHECK_EQUAL(success(), unpin("dave"_n, "erin"_n));
     produce_block();
 
     BOOST_TEST_MESSAGE("--- unpin: dave erin again (fail)");
-    BOOST_CHECK_EQUAL(err.cannot_unpin_not_pinned, unpin(N(dave), N(erin)));
+    BOOST_CHECK_EQUAL(err.cannot_unpin_not_pinned, unpin("dave"_n, "erin"_n));
     produce_block();
 
     BOOST_TEST_MESSAGE("--- pin: dave erin");
-    BOOST_CHECK_EQUAL(success(), pin(N(dave), N(erin)));
+    BOOST_CHECK_EQUAL(success(), pin("dave"_n, "erin"_n));
     produce_block();
 } FC_LOG_AND_RETHROW()
 
@@ -110,35 +110,35 @@ BOOST_FIXTURE_TEST_CASE(golos_blocking_test, golos_social_tester) try {
     BOOST_TEST_MESSAGE("Simple golos blocking test");
 
     BOOST_TEST_MESSAGE("--- block: dave dave");
-    BOOST_CHECK_EQUAL(err.cannot_block_yourself, block(N(dave), N(dave)));
+    BOOST_CHECK_EQUAL(err.cannot_block_yourself, block("dave"_n, "dave"_n));
     produce_block();
 
     BOOST_TEST_MESSAGE("--- unblock: dave dave");
-    BOOST_CHECK_EQUAL(err.cannot_unblock_yourself, unblock(N(dave), N(dave)));
+    BOOST_CHECK_EQUAL(err.cannot_unblock_yourself, unblock("dave"_n, "dave"_n));
     produce_block();
 
     BOOST_TEST_MESSAGE("--- block: dave erin");
-    BOOST_CHECK_EQUAL(success(), block(N(dave), N(erin)));
+    BOOST_CHECK_EQUAL(success(), block("dave"_n, "erin"_n));
     produce_block();
 
     BOOST_TEST_MESSAGE("--- block: dave erin again (fail)");
-    BOOST_CHECK_EQUAL(err.already_blocked, block(N(dave), N(erin)));
+    BOOST_CHECK_EQUAL(err.already_blocked, block("dave"_n, "erin"_n));
     produce_block();
 
     BOOST_TEST_MESSAGE("--- unblock: dave erin");
-    BOOST_CHECK_EQUAL(success(), unblock(N(dave), N(erin)));
+    BOOST_CHECK_EQUAL(success(), unblock("dave"_n, "erin"_n));
     produce_block();
 
     BOOST_TEST_MESSAGE("--- unblock: dave erin again (fail)");
-    BOOST_CHECK_EQUAL(err.cannot_unblock_not_blocked, unblock(N(dave), N(erin)));
+    BOOST_CHECK_EQUAL(err.cannot_unblock_not_blocked, unblock("dave"_n, "erin"_n));
     produce_block();
 
     BOOST_TEST_MESSAGE("--- block: dave erin");
-    BOOST_CHECK_EQUAL(success(), block(N(dave), N(erin)));
+    BOOST_CHECK_EQUAL(success(), block("dave"_n, "erin"_n));
     produce_block();
 
     BOOST_TEST_MESSAGE("--- pin: dave erin (fail)");
-    BOOST_CHECK_EQUAL(err.cannot_pin_blocked, pin(N(dave), N(erin)));
+    BOOST_CHECK_EQUAL(err.cannot_pin_blocked, pin("dave"_n, "erin"_n));
     produce_block();
 } FC_LOG_AND_RETHROW()
 
