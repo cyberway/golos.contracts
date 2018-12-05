@@ -6,23 +6,9 @@ namespace golos {
 using namespace eosio;
 using namespace atmsp::storable;
 
-extern "C" {
-    void apply(uint64_t receiver, uint64_t code, uint64_t action) {
-        auto execute_action = [&](const auto fn) {
-            return eosio::execute_action(eosio::name(receiver), eosio::name(code), fn);
-        };
-#define NN(x) N(x).value
-
-    if (NN(use) == action)
-        execute_action(&charge::use);
-    else if (NN(setrestorer) == action)
-        execute_action(&charge::set_restorer);
-    }
-}
-
 static constexpr auto max_arg = static_cast<uint64_t>(std::numeric_limits<fixp_t>::max());
 
-void charge::use(name user, symbol_code token_code, unsigned char suffix, uint64_t price_arg, uint64_t cutoff_arg) {
+void charge::use(name user, symbol_code token_code, uint8_t charge_id, uint64_t price_arg, uint64_t cutoff_arg) {
     eosio_assert(price_arg <= cutoff_arg, "price > cutoff");
     eosio_assert(price_arg <= max_arg, "price > max_input");
     eosio_assert(cutoff_arg <= max_arg, "cutoff > max_input");
@@ -32,7 +18,7 @@ void charge::use(name user, symbol_code token_code, unsigned char suffix, uint64
     
     auto issuer = name(token::get_issuer(config::token_name, token_code));
     require_auth(issuer);
-    auto charge_symbol = symbol(token_code, suffix);
+    auto charge_symbol = symbol(token_code, charge_id);
     balances balances_table(_self, user.value);
     balances::const_iterator itr = balances_table.find(charge_symbol.raw());
     auto new_val = calc_value(user, token_code, balances_table, itr, price);
@@ -41,6 +27,8 @@ void charge::use(name user, symbol_code token_code, unsigned char suffix, uint64
         if(new_val > 0)
             balances_table.emplace(issuer, [&]( auto &item ) {
                 item.charge_symbol = charge_symbol.raw();
+                item.token_code = token_code;
+                item.charge_id = charge_id;
                 item.last_update = current_time();
                 item.value = new_val.data();
             });
@@ -55,7 +43,7 @@ void charge::use(name user, symbol_code token_code, unsigned char suffix, uint64
         balances_table.erase(itr);
 }
 
-void charge::set_restorer(symbol_code token_code, unsigned char suffix, std::string func_str,
+void charge::setrestorer(symbol_code token_code, uint8_t charge_id, std::string func_str,
         uint64_t max_prev, uint64_t max_vesting, uint64_t max_elapsed) {
     
     eosio_assert(max_prev <= max_arg, "max_prev > max_input");
@@ -63,7 +51,7 @@ void charge::set_restorer(symbol_code token_code, unsigned char suffix, std::str
     eosio_assert(max_elapsed <= max_arg, "max_elapsed > max_input");
     auto issuer = name(token::get_issuer(config::token_name, token_code));
     require_auth(issuer);
-    auto charge_symbol = symbol(token_code, suffix);
+    auto charge_symbol = symbol(token_code, charge_id);
     restorers restorers_table(_self, _self.value);
     auto itr = restorers_table.find(charge_symbol.raw());
     
@@ -83,7 +71,9 @@ void charge::set_restorer(symbol_code token_code, unsigned char suffix, std::str
         });
     else
         restorers_table.emplace(issuer, [&]( auto &item ) {
-             item.charge_symbol = charge_symbol.raw(); 
+             item.charge_symbol = charge_symbol.raw();
+             item.token_code = token_code;
+             item.charge_id = charge_id;
              item.func = func;
              item.max_prev = fixp_t(max_prev).data();
              item.max_vesting = fixp_t(max_vesting).data();
@@ -118,5 +108,7 @@ fixp_t charge::calc_value(name user, symbol_code token_code, balances& balances_
     
     return fp_cast<fixp_t>((elap_t(FP(itr->value)) - elap_t(restored)) + elap_t(price));
 }
+EOSIO_DISPATCH(charge, (use)(setrestorer) )
+
 } /// namespace golos
 

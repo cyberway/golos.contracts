@@ -15,9 +15,6 @@
     },{
       "new_type_name": "counter_t",
       "type": "uint64"
-    },{
-      "new_type_name": "uchar",
-      "type": "uint8"
     }
   ],
   "structs": [
@@ -70,8 +67,8 @@
             "type": "symbol_code"
         },
         {
-            "name": "suffix",
-            "type": "uchar"
+            "name": "charge_id",
+            "type": "uint8"
         },
         {
             "name": "func_str",
@@ -104,8 +101,8 @@
             "type": "symbol_code"
         },
         {
-            "name": "suffix",
-            "type": "uchar"
+            "name": "charge_id",
+            "type": "uint8"
         },
         {
             "name": "price",
@@ -126,6 +123,14 @@
             "type": "uint64"
         },
         {
+            "name": "token_code",
+            "type": "symbol_code"
+        },
+        {
+            "name": "charge_id",
+            "type": "uint8"
+        },
+        {
             "name": "last_update",
             "type": "uint64"
         },
@@ -142,6 +147,14 @@
         {
             "name": "charge_symbol",
             "type": "uint64"
+        },
+        {
+            "name": "token_code",
+            "type": "symbol_code"
+        },
+        {
+            "name": "charge_id",
+            "type": "uint8"
         },
         {
             "name": "func",

@@ -8,11 +8,11 @@ struct golos_charge_api: base_contract_api {
     ,   _symbol(sym) {}
     symbol _symbol;
 
-    action_result set_restorer(name issuer, unsigned char suffix, std::string func_str,
+    action_result set_restorer(name issuer, uint8_t charge_id, std::string func_str,
         uint64_t max_prev, uint64_t max_vesting, uint64_t max_elapsed) {
         return push(N(setrestorer), issuer, args()
             ("token_code", _symbol.to_symbol_code())
-            ("suffix", suffix)
+            ("charge_id", charge_id)
             ("func_str", func_str)
             ("max_prev", max_prev)
             ("max_vesting", max_vesting)
@@ -20,11 +20,11 @@ struct golos_charge_api: base_contract_api {
         );
     }
 
-    action_result use(name issuer, name user, unsigned char suffix, uint64_t price, uint64_t cutoff) {
+    action_result use(name issuer, name user, uint8_t charge_id, uint64_t price, uint64_t cutoff) {
         return push(N(use), issuer, args()
             ("user", user)
             ("token_code", _symbol.to_symbol_code())
-            ("suffix", suffix)
+            ("charge_id", charge_id)
             ("price", price)
             ("cutoff", cutoff)
         );
