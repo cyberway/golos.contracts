@@ -1,5 +1,5 @@
 {
-  "version": "cyberway::abi/1.0",
+  "version": "cyberway::abi/1.1",
   "types": [],
   "variants": [{
       "name": "vesting_param",
@@ -290,6 +290,7 @@
        "name": "setparams",
        "base": "",
        "fields": [
+          {"name": "symbol", "type": "symbol"},
           {"name": "params", "type": "vesting_param[]"}
        ]
     }
