@@ -14,6 +14,7 @@ namespace golos { namespace config {
 static const auto control_name = N(gls.ctrl);
 static const auto social_name = N(gls.social);
 static const auto vesting_name = N(gls.vesting);
+static const auto charge_name = N(gls.charge);
 static const auto emission_name = N(gls.emit);
 static const auto workers_name = N(gls.worker);
 static const auto token_name = N(eosio.token);

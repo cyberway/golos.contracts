@@ -6,6 +6,7 @@
 #include "eosio.token_test_api.hpp"
 #include <math.h>
 #include "../golos.publication/types.h"
+#include "golos.charge_test_api.hpp"
 #include "../golos.publication/config.hpp"
 #include "contracts.hpp"
 
@@ -54,6 +55,7 @@ class reward_calcs_tester : public extended_tester {
     symbol _token_symbol;
     golos_posting_api post;
     golos_vesting_api vest;
+    golos_charge_api charge;
     eosio_token_api token;
 
 protected:
@@ -108,6 +110,7 @@ public:
         , _token_symbol(PRECESION, TOKEN_NAME)
         , post({this, _code, _token_symbol})
         , vest({this, cfg::vesting_name, _token_symbol})
+        , charge({this, cfg::charge_name, _token_symbol})
         , token({this, cfg::token_name, _token_symbol})
 
         , _forum_name(_code)
@@ -119,13 +122,14 @@ public:
         , _stranger(N(dan.larimer)) {
 
         step(2);    // why 2?
-        create_accounts({_forum_name, _issuer, cfg::vesting_name, cfg::token_name, cfg::control_name, _stranger});
+        create_accounts({_forum_name, _issuer, cfg::vesting_name, cfg::token_name, cfg::control_name, cfg::charge_name, _stranger});
         create_accounts(_users);
         step(2);
 
         install_contract(_forum_name, contracts::posting_wasm(), contracts::posting_abi());
         install_contract(cfg::token_name, contracts::token_wasm(), contracts::token_abi());
         install_contract(cfg::vesting_name, contracts::vesting_wasm(), contracts::vesting_abi());
+        install_contract(cfg::charge_name, contracts::charge_wasm(), contracts::charge_abi());
     }
 
     action_result add_funds_to(account_name user, int64_t amount) {
@@ -505,6 +509,15 @@ public:
         }
         return ret;
     }
+    
+    action_result set_restorer(name user, unsigned char suffix, std::string func_str,
+        uint64_t max_prev, uint64_t max_vesting, uint64_t max_elapsed) {
+        return charge.set_restorer(user, suffix, func_str, max_prev, max_vesting, max_elapsed);
+    }
+    
+    action_result use(name issuer, name user, unsigned char suffix, uint64_t price, uint64_t cutoff) {
+        return charge.use(issuer, user, suffix, price, cutoff);
+    }
 };
 
 BOOST_AUTO_TEST_SUITE(reward_calcs_tests)
@@ -731,6 +744,32 @@ BOOST_FIXTURE_TEST_CASE(golos_curation_test, reward_calcs_tester) try {
         check();
     }
     run(seconds(170));
+    check();
+    
+} FC_LOG_AND_RETHROW()
+
+BOOST_FIXTURE_TEST_CASE(charge_test, reward_calcs_tester) try {
+    init(1, 1);
+    
+    BOOST_CHECK_EQUAL(success(), set_restorer(_issuer, 'c', "t", 
+        10000, static_cast<uint64_t>(std::numeric_limits<fixp_t>::max() / fixp_t(10)), 60 * 60 * 24 * 40));
+    for (size_t i = 0; i < 10; i++) {
+        BOOST_TEST_MESSAGE("--- use_ " << i);
+        BOOST_CHECK_EQUAL(success(), use(_issuer, _users[0], 'c', 100, 1000));
+        check();
+    }
+    BOOST_TEST_MESSAGE("--- try to use");
+    BOOST_CHECK_EQUAL("assertion failure with message: new_val > cutoff", use(_issuer, _users[0], 'c', 100, 1000));
+    check();
+    BOOST_TEST_MESSAGE("--- waiting 900");
+    run(seconds(900));
+    BOOST_TEST_MESSAGE("--- try to use (cutoff == 1000)");
+    BOOST_CHECK_EQUAL("assertion failure with message: new_val > cutoff", use(_issuer, _users[0], 'c', 1000, 1000));
+    check();
+    BOOST_TEST_MESSAGE("--- waiting 100");
+    run(seconds(100));
+    BOOST_TEST_MESSAGE("--- use (cutoff == 1000)");
+    BOOST_CHECK_EQUAL(success(), use(_issuer, _users[0], 'c', 1000, 1000));
     check();
     
 } FC_LOG_AND_RETHROW()

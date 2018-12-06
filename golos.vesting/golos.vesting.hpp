@@ -42,21 +42,21 @@ public:
         tables::account_table balances(code, account.value);
         const auto& balance = balances.get(sym.raw());
         return balance.effective_vesting();
-    }
+    };
     static inline asset get_account_available_vesting(name code, name account, symbol_code sym) {
         tables::account_table balances(code, account.value);
         const auto& balance = balances.get(sym.raw());
         return balance.available_vesting();
-    }
+    };
     static inline asset get_account_unlocked_vesting(name code, name account, symbol_code sym) {
         tables::account_table balances(code, account.value);
         const auto& balance = balances.get(sym.raw());
         return balance.unlocked_vesting();
-    }
+    };
     static inline bool balance_exist(name code, name owner, symbol_code sym) {
         tables::account_table balances(code, owner.value);
         return balances.find(sym.raw()) != balances.end();
-    }
+    };
 
 private:
     void notify_balance_change(name owner, asset diff);

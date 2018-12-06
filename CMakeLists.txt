@@ -37,6 +37,7 @@ add_subdirectory(golos.emit)
 add_subdirectory(golos.config)
 add_subdirectory(golos.vesting)
 add_subdirectory(golos.publication)
+add_subdirectory(golos.charge)
 add_subdirectory(golos.social)
 
 if (APPLE)
