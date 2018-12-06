@@ -51,7 +51,7 @@ public:
         BOOST_CHECK_EQUAL(success(), token.issue(cfg::emission_name, cfg::emission_name, asset(total_funds, _token_sym), "HERE COULD BE YOUR ADVERTISEMENT"));
         produce_block();
 
-        BOOST_CHECK_EQUAL(success(), vest.create_vesting(cfg::emission_name, _token_sym, {cfg::emission_name}, {cfg::control_name}));
+        BOOST_CHECK_EQUAL(success(), vest.create_vesting(cfg::emission_name, _token_sym, {cfg::charge_name}, cfg::control_name));
         produce_block();
 
         for (auto& u : _users) {
@@ -68,8 +68,10 @@ public:
 
 protected:
     struct errors: contract_error_messages {
-        const string cutoff = amsg("new_val > cutoff");
+        const string cutoff = amsg("new_val > cutoff, vesting payment is disabled");
         const string stored_not_found = amsg("itr == storedvals_index.end()");
+        const string insufficient_vesting = amsg("insufficient vesting amount");
+        
     } err;
 
 };
@@ -78,7 +80,7 @@ BOOST_AUTO_TEST_SUITE(golos_charge_tests)
 
 BOOST_FIXTURE_TEST_CASE(basic_tests, golos_charge_tester) try {
     BOOST_TEST_MESSAGE("Basic charge tests");
-    init(1, 1);
+    init(1, 100);
     auto max_arg = static_cast<uint64_t>(std::numeric_limits<fixp_t>::max());
     BOOST_CHECK_EQUAL(success(), charge.set_restorer(cfg::emission_name, 'c', "t", 
         max_arg, max_arg, max_arg));
@@ -95,6 +97,17 @@ BOOST_FIXTURE_TEST_CASE(basic_tests, golos_charge_tester) try {
     BOOST_TEST_MESSAGE("--- try to use (cutoff == 1000)");
     BOOST_CHECK_EQUAL(err.cutoff, charge.use(cfg::emission_name, _users[0], 'c', 1000 * cfg::_100percent, 1000 * cfg::_100percent));
     produce_block();
+    
+    BOOST_TEST_MESSAGE("--- try to use (cutoff == 1000, vesting_price = 101)");
+    BOOST_CHECK_EQUAL(err.insufficient_vesting, charge.use(cfg::emission_name, _users[0], 'c', 1000 * cfg::_100percent, 1000 * cfg::_100percent, 101));
+    produce_block();
+    BOOST_TEST_MESSAGE("--- use (cutoff == 1000, vesting_price = 100)");
+    BOOST_CHECK_EQUAL(success(), charge.use(cfg::emission_name, _users[0], 'c', 1000 * cfg::_100percent, 1000 * cfg::_100percent, 100));
+    produce_block();
+    BOOST_TEST_MESSAGE("--- try to use (cutoff == 1000, vesting_price = 1)");
+    BOOST_CHECK_EQUAL(err.insufficient_vesting, charge.use(cfg::emission_name, _users[0], 'c', 1000 * cfg::_100percent, 1000 * cfg::_100percent, 1));
+    produce_block();
+    
     BOOST_TEST_MESSAGE("--- waiting 100");
     _produce_block(seconds(100));
     BOOST_TEST_MESSAGE("--- use (cutoff == 1000)");
