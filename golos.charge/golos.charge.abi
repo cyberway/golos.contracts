@@ -115,6 +115,54 @@
     ]
   },
   {
+    "name": "useandstore",
+    "base": "",
+    "fields": [
+        {
+            "name": "user",
+            "type": "name"
+        },
+        {
+            "name": "token_code",
+            "type": "symbol_code"
+        },
+        {
+            "name": "charge_id",
+            "type": "uint8"
+        },
+        {
+            "name": "stamp_id",
+            "type": "uint64"
+        },
+        {
+            "name": "price",
+            "type": "uint64"
+        }
+    ]
+  },
+  {
+    "name": "removestored",
+    "base": "",
+    "fields": [
+        {
+            "name": "user",
+            "type": "name"
+        },
+        {
+            "name": "token_code",
+            "type": "symbol_code"
+        },
+        {
+            "name": "charge_id",
+            "type": "uint8"
+        },
+        {
+            "name": "stamp_id",
+            "type": "uint64"
+        }
+    ]
+  },
+  {
     "name": "balance",
     "base": "",
     "fields": [
@@ -133,6 +181,24 @@
         {
             "name": "last_update",
             "type": "uint64"
+        },
+        {
+            "name": "value",
+            "type": "base_t"
+        }
+    ]
+  },
+  {
+    "name": "stored",
+    "base": "",
+    "fields": [
+        {
+            "name": "id",
+            "type": "uint64"
+        },
+        {
+            "name": "symbol_stamp",
+            "type": "uint128"
         },
         {
             "name": "value",
@@ -183,6 +249,14 @@
   {
     "name": "use",
     "type": "use"
+  },
+  {
+    "name": "useandstore",
+    "type": "useandstore"
+  },
+  {
+    "name": "removestored",
+    "type": "removestored"
   }
   ],
   "tables": [
@@ -212,6 +286,26 @@
        }
     ]
   },
+  {
+    "name": "storedvals",
+    "type": "stored",
+    "indexes": [
+       {
+          "name": "primary",
+          "unique": "true",
+          "orders": [
+              {"field": "id", "order": "asc"}
+          ]
+       },
+       {
+          "name": "symbolstamp",
+          "unique": "true",
+          "orders": [
+              {"field": "symbol_stamp", "order": "asc"}
+          ]
+       }
+    ]
+  }
   ],
   "ricardian_clauses": [],
   "error_messages": [],

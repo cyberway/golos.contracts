@@ -15,19 +15,17 @@ namespace golos {
 using namespace eosio;
 
 class charge : public contract {
-    
+    fixp_t use_helper(name issuer, name user, symbol_code token_code, uint8_t charge_id, int64_t price, int64_t cutoff = -1);
 public:
     using contract::contract;
-    inline fixp_t get(name user, symbol_code token_code, uint8_t charge_id, fixp_t price_base) const;
-    //TODO:? in a case when you want to know a value of the charge from outside
-    //(actually, for now it only happens with post_band calculations), there are issues:
-    //* a value may be outdated: inline action is performed after the current one;
-    //* new value is calculated twice - here and in "use" action.
+    static int64_t get(name code, name user, symbol_code token_code, uint8_t charge_id, uint64_t stamp_id);
 
-    [[eosio::action]] void use(name user, symbol_code token_code, uint8_t charge_id, uint64_t price_base, uint64_t cutoff_base);
+    [[eosio::action]] void use(name user, symbol_code token_code, uint8_t charge_id, int64_t price, int64_t cutoff);
+    [[eosio::action]] void useandstore(name user, symbol_code token_code, uint8_t charge_id, int64_t stamp_id, int64_t price);
+    [[eosio::action]] void removestored(name user, symbol_code token_code, uint8_t charge_id, int64_t stamp_id);
     
     [[eosio::action]] void setrestorer(symbol_code token_code, uint8_t charge_id, std::string func_str, 
-        uint64_t max_prev, uint64_t max_vesting, uint64_t max_elapsed);
+        int64_t max_prev, int64_t max_vesting, int64_t max_elapsed);
         
     void on_transfer(name from, name to, asset quantity, std::string memo);
     //TODO:? user can restore a charge by transferring some amount to this contract (it will send these funds to the issuer)
@@ -55,19 +53,29 @@ private:
         
         uint64_t primary_key()const { return charge_symbol; }
     };
+    
+    struct stored {
+        static uint128_t get_key(symbol_code token_code, uint8_t charge_id, uint64_t stamp_id) {
+            return (static_cast<uint128_t>(symbol(token_code, charge_id).raw()) << 64) | stamp_id;
+        }
+        uint64_t id;
+        uint128_t symbol_stamp;
+        base_t value;
+        uint64_t primary_key() const {
+            return id;
+        }
+        uint128_t key()const {
+            return symbol_stamp;
+        }
+    };
 
-    typedef eosio::multi_index<N(balances), balance> balances;
-    typedef eosio::multi_index<N(restorers), restorer> restorers;
+    using balances = eosio::multi_index<N(balances), balance>;
+    using restorers = eosio::multi_index<N(restorers), restorer>;
+    using stored_key_idx = indexed_by<N(symbolstamp), const_mem_fun<stored, uint128_t, &stored::key> >;
+    using storedvals = eosio::multi_index<N(storedvals), stored, stored_key_idx>;
     
     fixp_t calc_value(name user, symbol_code token_code, balances& balances_table, balances::const_iterator& itr, fixp_t price) const;
 
 };
-
-fixp_t charge::get(name user, symbol_code token_code, uint8_t charge_id, fixp_t price) const {
-    eosio_assert(price >= 0, "price can't be negative");
-    balances balances_table(_self, user.value);
-    auto itr = balances_table.find(symbol(token_code, charge_id).raw());
-    return calc_value(user, token_code, balances_table, itr, price);
-}
 
 } /// namespace eosio
