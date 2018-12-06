@@ -3,8 +3,24 @@ project(golos_dapp_contracts VERSION 0.1.0)
 
 set(EOSIO_CDT_VERSION_MIN "1.4")
 set(EOSIO_CDT_VERSION_SOFT_MAX "1.4")
+#set(EOSIO_CDT_VERSION_HARD_MAX "")
 
 find_package(eosio.cdt)
+
+### Check the version of eosio.cdt
+set(VERSION_MATCH_ERROR_MSG "")
+EOSIO_CHECK_VERSION(VERSION_OUTPUT "${EOSIO_CDT_VERSION}"
+                                   "${EOSIO_CDT_VERSION_MIN}"
+                                   "${EOSIO_CDT_VERSION_SOFT_MAX}"
+                                   "${EOSIO_CDT_VERSION_HARD_MAX}"
+                                   VERSION_MATCH_ERROR_MSG)
+if(VERSION_OUTPUT STREQUAL "MATCH")
+   message(STATUS "Using eosio.cdt version ${EOSIO_CDT_VERSION}")
+elseif(VERSION_OUTPUT STREQUAL "WARN")
+   message(WARNING "Using eosio.cdt version ${EOSIO_CDT_VERSION} even though it exceeds the maximum supported version of ${EOSIO_CDT_VERSION_SOFT_MAX}; continuing with configuration, however build may fail.\nIt is recommended to use eosio.cdt version ${EOSIO_CDT_VERSION_SOFT_MAX}.x")
+else() # INVALID OR MISMATCH
+   message(FATAL_ERROR "Found eosio.cdt version ${EOSIO_CDT_VERSION} but it does not satisfy version requirements: ${VERSION_MATCH_ERROR_MSG}\nPlease use eosio.cdt version ${EOSIO_CDT_VERSION_SOFT_MAX}.x")
+endif(VERSION_OUTPUT STREQUAL "MATCH")
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
    set(TEST_BUILD_TYPE "Debug")
@@ -13,25 +29,8 @@ else()
    set(TEST_BUILD_TYPE ${CMAKE_BUILD_TYPE})
 endif()
 
-if(EOSIO_ROOT STREQUAL "" OR NOT EOSIO_ROOT)
-   set(EOSIO_ROOT "/usr/local/eosio")
-endif()
 
-if(EOSIO_CDT_ROOT STREQUAL "" OR NOT EOSIO__ROOT)
-   set(EOSIO_CDT_ROOT "/usr/local/eosio.cdt")
-endif()
-
-list(APPEND CMAKE_MODULE_PATH ${EOSIO_CDT_ROOT}/lib/cmake)
-#include(EosioWasmToolchain)
-
-### Check the version of eosio.cdt
-string(FIND "${EOSIO_CDT_VERSION}" "${EOSIO_CDT_DEPENDENCY}" output)
-
-if (NOT "${output}" EQUAL 0)
-   message(FATAL_ERROR "Incorrect EOSIO.CDT version, please use version ${EOSIO_CDT_DEPENDENCY}.x")
-endif()
-
-include_directories(AFTER ${BOOST_ROOT}/include)
+# include_directories(AFTER ${BOOST_ROOT}/include)
 add_subdirectory(golos.ctrl)
 add_subdirectory(golos.emit)
 add_subdirectory(golos.config)

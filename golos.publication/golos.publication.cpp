@@ -89,11 +89,11 @@ void publication::create_message(name account, std::string permlink,
     pools.modify(*pool, _self, [&](auto &item){ item.state.msgs++; });
 
     tables::message_table message_table(_self, account.value);
-    auto message_id = fc::hash64(permlink);
+    auto message_id = hash64(permlink);
     eosio_assert(message_table.find(message_id) == message_table.end(), "This message already exists.");
 
     tables::content_table content_table(_self, account.value);
-    auto parent_id = parentacc ? fc::hash64(parentprmlnk) : 0;
+    auto parent_id = parentacc ? hash64(parentprmlnk) : 0;
 
     uint8_t level = 0;
     if(parentacc)
@@ -148,7 +148,7 @@ void publication::update_message(name account, std::string permlink,
                               std::string jsonmetadata) {
     require_auth(account);
     tables::content_table content_table(_self, account.value);
-    auto cont_itr = content_table.find(fc::hash64(permlink));
+    auto cont_itr = content_table.find(hash64(permlink));
     eosio_assert(cont_itr != content_table.end(), "Content doesn't exist.");
 
     content_table.modify(cont_itr, account, [&]( auto &item ) {
@@ -167,7 +167,7 @@ void publication::delete_message(name account, std::string permlink) {
     tables::content_table content_table(_self, account.value);
     tables::vote_table vote_table(_self, account.value);
 
-    auto message_id = fc::hash64(permlink);
+    auto message_id = hash64(permlink);
     auto mssg_itr = message_table.find(message_id);
     eosio_assert(mssg_itr != message_table.end(), "Message doesn't exist.");
     eosio_assert((mssg_itr->childcount) == 0, "You can't delete comment with child comments.");
@@ -367,7 +367,7 @@ fixp_t publication::calc_rshares(name voter, int16_t weight, uint64_t cur_time, 
 void publication::set_vote(name voter, name author, string permlink, int16_t weight) {
     require_auth(voter);
 
-    uint64_t id = fc::hash64(permlink);
+    uint64_t id = hash64(permlink);
     tables::message_table message_table(_self, author.value);
     auto mssg_itr = message_table.find(id);
     eosio_assert(mssg_itr != message_table.end(), "Message doesn't exist.");
