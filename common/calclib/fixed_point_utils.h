@@ -1,6 +1,6 @@
 #pragma once
 
-#if defined(UNIT_TEST_ENV)
+#ifdef UNIT_TEST_ENV
 #define FIXED_POINT_ASSERT(COND,  MESSAGE) if(!(COND)) { throw std::runtime_error((MESSAGE)); }
 #else
 #define FIXED_POINT_ASSERT(COND,  MESSAGE) eosio_assert((COND), (MESSAGE))
@@ -8,7 +8,11 @@
 
 #include "fixed_point.h"
 
-namespace fixed_point_utils{
+namespace fixed_point_utils {
+
+#ifdef UNIT_TEST_ENV
+    using namespace eosio::testing;
+#endif
 
 using fixp_t = sg14::fixed_point<base_t, -fixed_point_fractional_digits>;
 using wdfp_t = sg14::fixed_point<wide_t, -fixed_point_fractional_digits>;

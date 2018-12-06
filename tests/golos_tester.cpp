@@ -6,6 +6,11 @@ namespace eosio { namespace testing {
 using std::vector;
 using std::string;
 
+uint64_t hash64(const std::string& s) {
+    return fc::sha256::hash(s.c_str(), s.size())._hash[0];
+}
+
+
 void golos_tester::install_contract(
     account_name acc, const vector<uint8_t>& wasm, const vector<char>& abi, bool produce
 ) {
@@ -199,10 +204,3 @@ vector<variant> golos_tester::get_all_chaindb_rows(name code, uint64_t scope, na
 }
 
 }} // eosio::tesing
-
-namespace fc {
-uint64_t hash64(const std::string& arg) {
-    return hash64(arg.c_str(), arg.size());
-}
-}
-

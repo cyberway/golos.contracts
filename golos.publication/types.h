@@ -2,14 +2,12 @@
 
 #ifdef UNIT_TEST_ENV
 #   define ABI_TABLE
-    using int128_t = __int128;
-    using uint128_t = __uint128_t;
-    using uint8_t = unsigned char;
+#   include <eosio/chain/types.hpp>
+namespace eosio { namespace testing {
+    using namespace eosio::chain;
 #else
 #   define ABI_TABLE [[eosio::table]]
 #endif
-
-using namespace eosio;
 
 using enum_t = uint8_t;
 using base_t = int64_t;// !if you change it -- don't forget about the abi-file
@@ -37,14 +35,15 @@ struct limitsarg {
     std::vector<int64_t> minvestings;
 };
 
-#ifdef UNIT_TEST_ENV
-FC_REFLECT(limitedact, (chargenum)(restorernum)(cutoffval)(chargeprice))
-FC_REFLECT(limitsarg, (restorers)(limitedacts)(vestingprices)(minvestings))
-#endif
-
 enum class payment_t: enum_t { TOKEN, VESTING };
 
-#if defined(UNIT_TEST_ENV)
+#ifdef UNIT_TEST_ENV
+}} // eosio::testing
+FC_REFLECT(eosio::testing::limitedact, (chargenum)(restorernum)(cutoffval)(chargeprice))
+FC_REFLECT(eosio::testing::limitsarg, (restorers)(limitedacts)(vestingprices)(minvestings))
+#endif
+
+#ifdef UNIT_TEST_ENV
 #   include "../common/calclib/fixed_point_utils.h"
 #else
 #   include <common/calclib/fixed_point_utils.h>

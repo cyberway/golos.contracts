@@ -6,10 +6,6 @@
 
 #define UNIT_TEST_ENV
 
-namespace fc {
-uint64_t hash64(const std::string& arg);
-}
-
 // Note: cannot check nested mvo
 #define CHECK_EQUAL_OBJECTS(left, right) { \
     auto l = fc::variant(left); \
@@ -30,6 +26,7 @@ uint64_t hash64(const std::string& arg);
 
 namespace eosio { namespace testing {
 
+uint64_t hash64(const std::string& arg);
 
 // TODO: maybe use native db struct
 struct permission {
