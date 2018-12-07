@@ -45,6 +45,9 @@ struct golos_social_api: base_contract_api {
         return _tester->get_all_chaindb_rows(_code, pinner_blocker, N(pinblock), false);
     }
 
+    variant get_reputation(account_name acc) {
+        return _tester->get_chaindb_singleton(_code, acc, "reputation"_n, "get reputation");
+    }
 };
 
 

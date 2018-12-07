@@ -22,6 +22,20 @@
     ]
   },
   {
+    "name": "reputation_record",
+    "base": "",
+    "fields": [
+      {
+        "name": "id",
+        "type": "uint64"
+      },
+      {
+        "name": "reputation",
+        "type": "int64"
+      }
+    ]
+  },
+  {
     "name": "pin",
     "base": "",
     "fields": [
@@ -48,6 +62,24 @@
         "type": "name"
       }
     ]
+  },
+  {
+    "name": "changereput",
+    "base": "",
+    "fields": [
+      {
+        "name": "voter",
+        "type": "name"
+      },
+      {
+        "name": "author",
+        "type": "name"
+      },
+      {
+        "name": "rshares",
+        "type": "int64"
+      }
+    ]
   }
   ],
   "actions": [
@@ -66,6 +98,10 @@
   {
     "name": "unblock",
     "type": "block"
+  },
+  {
+    "name": "changereput",
+    "type": "changereput"
   }
   ],
   "tables": [
@@ -78,6 +114,19 @@
         "unique": "true",
         "orders": [
           {"field": "account", "order": "asc"}
+        ]
+      }
+    ]
+  },
+  {
+    "name": "reputation",
+    "type": "reputation_record",
+    "indexes": [
+      {
+        "name": "primary",
+        "unique": "true",
+        "orders": [
+          {"field": "id", "order": "asc"}
         ]
       }
     ]
