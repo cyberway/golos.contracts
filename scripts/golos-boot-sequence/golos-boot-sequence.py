@@ -20,6 +20,7 @@ logFile = None
 unlockTimeout = 999999999
 
 golosAccounts = [
+    'gls.issuer',
     'gls.ctrl',
     'gls.emit',
     'gls.vesting',
@@ -137,7 +138,7 @@ def openTokenBalance(account):
         jsonArg([account, args.token, account]) + '-p %s'%account)
 
 def issueToken(account, amount):
-    retry(args.cleos + 'push action eosio.token issue ' + jsonArg([account, amount, "memo"]) + ' -p gls.publish')
+    retry(args.cleos + 'push action eosio.token issue ' + jsonArg([account, amount, "memo"]) + ' -p gls.issuer')
 
 def buyVesting(account, amount):
     issueToken(account, amount)
@@ -145,7 +146,6 @@ def buyVesting(account, amount):
 
 def registerWitness(ctrl, witness, key):
     retry(args.cleos + 'push action ' + ctrl + ' regwitness' + jsonArg({
-        'domain': args.token,
         'witness': witness,
         'key': key,
         'url': 'http://%s.witnesses.golos.io' % witness
@@ -153,7 +153,7 @@ def registerWitness(ctrl, witness, key):
 
 def voteWitness(ctrl, voter, witness, weight):
     retry(args.cleos + ' push action ' + ctrl + ' votewitness ' + 
-        jsonArg([args.token, voter, witness, weight]) + '-p %s'%voter)
+        jsonArg([voter, witness, weight]) + '-p %s'%voter)
 
 def createPost(author, permlink, header, body, *, beneficiaries=[]):
     retry(args.cleos + 'push action gls.publish createmssg' + 
@@ -211,11 +211,12 @@ def importKeys():
 def createGolosAccounts():
     for a in golosAccounts:
         createAccount('eosio', a, args.public_key)
-        openTokenBalance(a)
-    updateAuth('gls.publish', 'witn.major', 'active', [args.public_key], [])
-    updateAuth('gls.publish', 'witn.minor', 'active', [args.public_key], [])
-    updateAuth('gls.publish', 'witn.smajor', 'active', [args.public_key], [])
-    updateAuth('gls.publish', 'active', 'owner', [args.public_key], ['gls.ctrl@eosio.code', "gls.emit@eosio.code", "gls.publish@eosio.code"])
+    updateAuth('gls.issuer',  'witn.major', 'active', [args.public_key], [])
+    updateAuth('gls.issuer',  'witn.minor', 'active', [args.public_key], [])
+    updateAuth('gls.issuer',  'witn.smajor', 'active', [args.public_key], [])
+    updateAuth('gls.issuer',  'active', 'owner', [args.public_key], ['gls.ctrl@eosio.code', 'gls.emit@eosio.code'])
+    updateAuth('gls.ctrl',    'active', 'owner', [args.public_key], ['gls.ctrl@eosio.code'])
+    updateAuth('gls.publish', 'active', 'owner', [args.public_key], ['gls.publish@eosio.code'])
     updateAuth('gls.vesting', 'active', 'owner', [args.public_key], ['gls.vesting@eosio.code'])
     updateAuth('gls.social',  'active', 'owner', [args.public_key], ['gls.social@eosio.code'])
     updateAuth('gls.emit',    'active', 'owner', [args.public_key], ['gls.emit@eosio.code'])
@@ -228,34 +229,69 @@ def stepInstallContracts():
     retry(args.cleos + 'set contract gls.social ' + args.contracts_dir + 'golos.social/')
 
 def stepCreateTokens():
-    retry(args.cleos + 'push action eosio.token create ' + jsonArg(["gls.publish", intToToken(10000000000*10000)]) + ' -p eosio.token')
+    retry(args.cleos + 'push action eosio.token create ' + jsonArg(["gls.issuer", intToToken(10000000000*10000)]) + ' -p eosio.token')
     #totalAllocation = allocateFunds(0, len(accounts))
     #totalAllocation = 10000000*10000 
     #retry(args.cleos + 'push action eosio.token issue ' + jsonArg(["gls.publish", intToToken(totalAllocation), "memo"]) + ' -p gls.publish')
-    retry(args.cleos + 'push action gls.vesting createvest ' + jsonArg(['gls.publish', args.vesting, golosAccounts]) + '-p gls.publish')
+    retry(args.cleos + 'push action gls.vesting createvest ' + jsonArg([args.vesting, 'gls.ctrl']) + '-p gls.issuer')
+    for a in golosAccounts:
+        openTokenBalance(a)
     sleep(1)
 
 def createCommunity():
-    control = 'gls.ctrl'
-    owner = 'gls.publish'
-    retry(args.cleos + 'push action ' + control + ' create ' + jsonArg({
-        'domain': args.token,
-        'owner': owner,
-        'props': {
-            'max_witnesses': 5,
-            'witness_supermajority': 0,
-            'witness_majority': 0,
-            'witness_minority': 0,
-            'max_witness_votes': 30,
-            'infrate_start': 1500,
-            'infrate_stop': 95,
-            'infrate_narrowing': 250000*6,
-            'content_reward': 6667-667,
-            'vesting_reward': 2667-267,
-            'workers_reward': 1000,
-            'workers_pool': 'gls.worker',
-        }
-    }) + '-p ' + owner)
+    cleos('push action gls.emit setparams ' + jsonArg([
+        [
+            ['inflation_rate',{
+                'start':1500,
+                'stop':95,
+                'narrowing':250000
+            }],
+            ['reward_pools',{
+                'pools':[
+                    {'name':'gls.ctrl','percent':0},
+                    {'name':'gls.publish','percent':6000},
+                    {'name':'gls.vesting','percent':2400}
+                ]
+            }]
+        ]]) + '-p gls.emit')
+    cleos('push action gls.vesting setparams ' + jsonArg([
+        args.vesting, 
+        [
+            ['vesting_withdraw',{
+                'intervals':13,
+                'interval_seconds':120
+            }],
+            ['vesting_amount',{
+                'min_amount':10000
+            }],
+            ['delegation',{
+                'min_amount':5000000,
+                'min_remainder':15000000,
+                'min_time':0,
+                'max_interest':0,
+                'return_time':120
+            }]
+        ]]) + '-p gls.issuer')
+    cleos('push action gls.ctrl setparams ' + jsonArg([
+        [
+            ['ctrl_token',{
+                'code':args.symbol
+            }],
+            ['multisig_acc',{
+                'name':'gls.issuer'
+            }],
+            ['max_witnesses',{
+                'max':5
+            }],
+            ['multisig_perms',{
+                'super_majority':0,
+                'majority':0,
+                'minority':0
+            }],
+            ['max_witness_votes',{
+                'max':30
+            }]
+        ]]) + '-p gls.ctrl')
 
 def createWitnessAccounts():
     for i in range(firstWitness, firstWitness + numWitness):
@@ -266,7 +302,7 @@ def createWitnessAccounts():
         voteWitness('gls.ctrl', a['name'], a['name'], 10000)
         
 def initCommunity():
-    retry(args.cleos + 'push action gls.emit start ' + jsonArg([args.token]) + '-p gls.publish')
+    retry(args.cleos + 'push action gls.emit start ' + jsonArg([]) + '-p gls.emit')
     retry(args.cleos + 'push action gls.publish setrules ' + jsonArg({
         "mainfunc":{"str":"x","maxarg":fixp_max},
         "curationfunc":{"str":golos_curation_func_str,"maxarg":fixp_max},
