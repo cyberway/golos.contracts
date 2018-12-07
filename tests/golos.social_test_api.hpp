@@ -1,5 +1,6 @@
 #pragma once
 #include "test_api_helper.hpp"
+#include <common/config.hpp> // For ""_n
 
 namespace eosio { namespace testing {
 
@@ -12,28 +13,28 @@ struct golos_social_api: base_contract_api {
 
     //// social actions
     action_result pin(account_name pinner, account_name pinning) {
-        return push(N(pin), pinner, args()
+        return push("pin"_n, pinner, args()
             ("pinner", pinner)
             ("pinning", pinning)
         );
     }
 
     action_result unpin(account_name pinner, account_name pinning) {
-        return push(N(unpin), pinner, args()
+        return push("unpin"_n, pinner, args()
             ("pinner", pinner)
             ("pinning", pinning)
         );
     }
 
     action_result block(account_name blocker, account_name blocking) {
-        return push(N(block), blocker, args()
+        return push("block"_n, blocker, args()
             ("blocker", blocker)
             ("blocking", blocking)
         );
     }
 
     action_result unblock(account_name blocker, account_name blocking) {
-        return push(N(unblock), blocker, args()
+        return push("unblock"_n, blocker, args()
             ("blocker", blocker)
             ("blocking", blocking)
         );
