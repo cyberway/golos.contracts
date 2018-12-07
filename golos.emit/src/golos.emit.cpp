@@ -91,6 +91,7 @@ void emission::emit() {
     auto inf_rate = std::max(int64_t(infrate.start) - narrowed, int64_t(infrate.stop));
 
     auto supply = eosio::token::get_supply(config::token_name, _token.code());
+    auto issuer = eosio::token::get_issuer(config::token_name, _token.code());
     auto new_tokens = static_cast<int64_t>(
         supply.amount * static_cast<uint128_t>(inf_rate) * time_to_blocks(elapsed)
         / (int64_t(config::blocks_per_year) * config::_100percent));
@@ -99,8 +100,9 @@ void emission::emit() {
         const auto issue_memo = "emission"; // TODO: make configurable?
         const auto trans_memo = "emission";
         auto from = _self;
-        INLINE_ACTION_SENDER(eosio::token, issue)(config::token_name, {{_self, config::active_name}},
-            {from, asset(new_tokens, _token), issue_memo});
+        INLINE_ACTION_SENDER(eosio::token, issue)(config::token_name,
+            {{issuer, config::active_name}},
+            {_self, asset(new_tokens, _token), issue_memo});
 
         auto transfer = [&](auto from, auto to, auto amount) {
             if (amount > 0) {
