@@ -48,7 +48,7 @@ public:
 
         produce_block();
         create_accounts(_users);
-        create_accounts({cfg::token_name, cfg::vesting_name, N(dan.larimer)});
+        create_accounts({cfg::token_name, cfg::vesting_name, cfg::emission_name, N(dan.larimer)});
         produce_block();
 
         install_contract(_code, contracts::posting_wasm(), contracts::posting_abi());
@@ -57,9 +57,15 @@ public:
     }
 
     void init() {
+        BOOST_CHECK_EQUAL(success(), token.create(cfg::emission_name, asset(1, _sym)));
         BOOST_CHECK_EQUAL(success(), token.open(_code, _sym, _code));
         funcparams fn{"0", 1};
         BOOST_CHECK_EQUAL(success(), post.set_rules(fn ,fn ,fn , 0, 0));
+        BOOST_CHECK_EQUAL(success(), post.set_limit("post"));
+        BOOST_CHECK_EQUAL(success(), post.set_limit("comment"));
+        BOOST_CHECK_EQUAL(success(), post.set_limit("vote"));
+        BOOST_CHECK_EQUAL(success(), post.set_limit("post bandwidth"));
+        produce_block();
         for (auto& u : _users) {
             BOOST_CHECK_EQUAL(success(), vest.open(u, _sym, u));
         }
@@ -103,7 +109,7 @@ public:
 protected:
     const mvo _test_msg = mvo()
         ("id", hash64("permlink"))
-        ("date", 1577836818000000ull)
+        ("date", 1577836821000000ull)
         ("parentacc", "")
         ("parent_id", 0)
         ("tokenprop", 0)
@@ -113,7 +119,7 @@ protected:
             // ("deductprcnt", static_cast<base_t>(elaf_t(elai_t(777) / elai_t(10000)).data()))}
         ))
         ("rewardweight", 4611686018427387904ull)    // TODO: fix
-        ("state", mvo()("absshares",0)("netshares",0)("voteshares",0)("sumcuratorsw",0))
+        ("state", mvo()("netshares",0)("voteshares",0)("sumcuratorsw",0))
         ("childcount", 0)
         ("closed", false)
         ("level", 0);

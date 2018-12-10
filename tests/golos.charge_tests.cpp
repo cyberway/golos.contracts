@@ -45,15 +45,14 @@ public:
 
     void init(int64_t issuer_funds, int64_t user_vesting_funds) {
         auto total_funds = issuer_funds + _users.size() * user_vesting_funds;
-        BOOST_CHECK_EQUAL(success(), token.create(cfg::emission_name, asset(total_funds, _token_sym)));
+        BOOST_CHECK_EQUAL(success(), token.create(cfg::emission_name, asset(total_funds, _token_sym), {cfg::charge_name}));
         produce_block();
 
         BOOST_CHECK_EQUAL(success(), token.issue(cfg::emission_name, cfg::emission_name, asset(total_funds, _token_sym), "HERE COULD BE YOUR ADVERTISEMENT"));
         produce_block();
 
-        BOOST_CHECK_EQUAL(success(), vest.create_vesting(cfg::emission_name, _token_sym, {cfg::charge_name}, cfg::control_name));
+        BOOST_CHECK_EQUAL(success(), vest.create_vesting(cfg::emission_name, _token_sym, cfg::control_name));
         produce_block();
-
         for (auto& u : _users) {
             BOOST_CHECK_EQUAL(success(), vest.open(u, _token_sym, u));
             produce_block();
@@ -68,7 +67,7 @@ public:
 
 protected:
     struct errors: contract_error_messages {
-        const string cutoff = amsg("new_val > cutoff, vesting payment is disabled");
+        const string cutoff = amsg("not enough power");
         const string stored_not_found = amsg("itr == storedvals_index.end()");
         const string insufficient_vesting = amsg("insufficient vesting amount");
         
@@ -85,7 +84,7 @@ BOOST_FIXTURE_TEST_CASE(basic_tests, golos_charge_tester) try {
     BOOST_CHECK_EQUAL(success(), charge.set_restorer(cfg::emission_name, 'c', "t", 
         max_arg, max_arg, max_arg));
     for (size_t i = 0; i < 10; i++) {
-        BOOST_TEST_MESSAGE("--- use_ " << i);
+        BOOST_TEST_MESSAGE("--- use_" << i);
         BOOST_CHECK_EQUAL(success(), charge.use(cfg::emission_name, _users[0], 'c', 100 * cfg::_100percent, 1000 * cfg::_100percent));
         produce_block();
     }

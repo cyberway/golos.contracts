@@ -6,7 +6,7 @@ namespace golos {
 using namespace eosio;
 using namespace atmsp::storable;
 
-static constexpr auto max_arg = static_cast<uint64_t>(std::numeric_limits<fixp_t>::max());
+static constexpr auto max_arg = static_cast<int64_t>(std::numeric_limits<fixp_t>::max());
 
 fixp_t charge::use_helper(name issuer, name user, symbol_code token_code, uint8_t charge_id, int64_t price_arg, int64_t cutoff_arg, int64_t vesting_price) {
     eosio_assert(cutoff_arg < 0 || price_arg <= cutoff_arg, "price > cutoff");
@@ -20,7 +20,7 @@ fixp_t charge::use_helper(name issuer, name user, symbol_code token_code, uint8_
     balances::const_iterator itr = balances_table.find(charge_symbol.raw());
     auto new_val = calc_value(user, token_code, balances_table, itr, price);
     if(cutoff_arg > 0 && new_val > to_fixp(cutoff_arg)) {
-        eosio_assert(vesting_price > 0, "new_val > cutoff, vesting payment is disabled");
+        eosio_assert(vesting_price > 0, "not enough power");
         auto user_vesting = golos::vesting::get_account_unlocked_vesting(config::vesting_name, user, token_code);
         eosio_assert(user_vesting.amount >= vesting_price, "insufficient vesting amount");
         INLINE_ACTION_SENDER(golos::vesting, retire) (config::vesting_name,

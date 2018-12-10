@@ -26,6 +26,11 @@ public:
         auto itr = storedvals_index.find(stored::get_key(token_code, charge_id, stamp_id));
         return itr != storedvals_index.end() ? from_fixp(FP(itr->value)) : -1; //charge can't be negative
     }
+    
+    static inline bool exist(name code, symbol_code token_code, uint8_t charge_id) {
+        restorers restorers_table(code, code.value);
+        return restorers_table.find(symbol(token_code, charge_id).raw()) != restorers_table.end();
+    }
 
     [[eosio::action]] void use(name user, symbol_code token_code, uint8_t charge_id, int64_t price, int64_t cutoff, int64_t vesting_price);
     [[eosio::action]] void useandstore(name user, symbol_code token_code, uint8_t charge_id, int64_t stamp_id, int64_t price);

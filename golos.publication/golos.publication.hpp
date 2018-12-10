@@ -8,8 +8,10 @@ using namespace eosio;
 class publication : public contract {
 public:
     using contract::contract;
+    
+    void set_limit(std::string act, symbol_code token_code, uint8_t charge_id, int64_t price, int64_t cutoff, int64_t vesting_price, int64_t min_vesting);
     void set_rules(const funcparams& mainfunc, const funcparams& curationfunc, const funcparams& timepenalty,
-        int64_t curatorsprop, int64_t maxtokenprop, symbol tokensymbol, limitsarg lims_arg);
+        int64_t curatorsprop, int64_t maxtokenprop, symbol tokensymbol);
     void on_transfer(name from, name to, asset quantity, std::string memo);
     void create_message(name account, std::string permlink, name parentacc, std::string parentprmlnk,
         std::vector<structures::beneficiary> beneficiaries, int64_t tokenprop, bool vestpayment,
@@ -35,13 +37,8 @@ private:
     void payto(name user, asset quantity, enum_t mode);
     void check_account(name user, symbol tokensymbol);
 
-    elaf_t apply_limits(atmsp::machine<fixp_t>& machine, name user, const structures::rewardpool& pool,
-        structures::limits::kind_t kind, uint64_t cur_time, elaf_t w);
-
     static structures::funcinfo load_func(const funcparams& params, const std::string& name,
         const atmsp::parser<fixp_t>& pa, atmsp::machine<fixp_t>& machine, bool inc);
-    static atmsp::storable::bytecode load_restorer_func(const std::string str_func,
-        const atmsp::parser<fixp_t>& pa, atmsp::machine<fixp_t>& machine);
     static fixp_t get_delta(atmsp::machine<fixp_t>& machine, fixp_t old_val, fixp_t new_val,
         const structures::funcinfo& func);
 
