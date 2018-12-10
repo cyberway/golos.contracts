@@ -6,9 +6,9 @@ namespace golos {
 using namespace eosio;
 using namespace atmsp::storable;
 
-static constexpr auto max_arg = static_cast<int64_t>(std::numeric_limits<fixp_t>::max());
+static constexpr auto max_arg = static_cast<base_t>(std::numeric_limits<fixp_t>::max());
 
-fixp_t charge::use_helper(name issuer, name user, symbol_code token_code, uint8_t charge_id, int64_t price_arg, int64_t cutoff_arg, int64_t vesting_price) {
+fixp_t charge::consume_charge(name issuer, name user, symbol_code token_code, uint8_t charge_id, int64_t price_arg, int64_t cutoff_arg, int64_t vesting_price) {
     eosio_assert(cutoff_arg < 0 || price_arg <= cutoff_arg, "price > cutoff");
     eosio_assert(price_arg <= max_arg, "price > max_input");
     eosio_assert(cutoff_arg < 0 || cutoff_arg <= max_arg, "cutoff > max_input");
@@ -50,12 +50,12 @@ fixp_t charge::use_helper(name issuer, name user, symbol_code token_code, uint8_
 }
 
 void charge::use(name user, symbol_code token_code, uint8_t charge_id, int64_t price_arg, int64_t cutoff_arg, int64_t vesting_price) {
-    use_helper(token::get_issuer(config::token_name, token_code), user, token_code, charge_id, price_arg, cutoff_arg, vesting_price);
+    consume_charge(token::get_issuer(config::token_name, token_code), user, token_code, charge_id, price_arg, cutoff_arg, vesting_price);
 }
 
 void charge::useandstore(name user, symbol_code token_code, uint8_t charge_id, int64_t stamp_id, int64_t price_arg) {
     auto issuer = token::get_issuer(config::token_name, token_code);
-    auto new_val = use_helper(issuer, user, token_code, charge_id, price_arg);
+    auto new_val = consume_charge(issuer, user, token_code, charge_id, price_arg);
     
     storedvals storedvals_table(_self, user.value);
     auto storedvals_index = storedvals_table.get_index<N(symbolstamp)>();

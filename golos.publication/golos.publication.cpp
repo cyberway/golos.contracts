@@ -62,25 +62,14 @@ void publication::create_message(name account, std::string permlink,
     eosio_assert(pool != pools.end(), "publication::create_message: [pools] is empty");
     pool = --pools.end();
     check_account(account, pool->state.funds.symbol);
-    
-    tables::limit_table lims(_self, _self.value);
-    auto lim_itr = lims.find(parentacc ? structures::limitparams::COMM : structures::limitparams::POST);
-    eosio_assert(lim_itr != lims.end(), "publication::create_message: limit parameters not set");
     auto token_code = pool->state.funds.symbol.code();
-    eosio_assert(golos::vesting::get_account_effective_vesting(config::vesting_name, account, token_code).amount >= lim_itr->min_vesting,
-        "insufficient effective vesting amount");
     auto issuer = eosio::token::get_issuer(config::token_name, token_code);
+    tables::limit_table lims(_self, _self.value);
+    
+    use_charge(lims, parentacc ? structures::limitparams::COMM : structures::limitparams::POST, issuer, account, 
+        golos::vesting::get_account_effective_vesting(config::vesting_name, account, token_code).amount, token_code, vestpayment);
+            
     auto message_id = hash64(permlink);
-    if(lim_itr->price >= 0)
-        INLINE_ACTION_SENDER(charge, use) (config::charge_name, 
-            {issuer, config::invoice_name}, {
-                account, 
-                token_code, 
-                lim_itr->charge_id, 
-                lim_itr->price, 
-                lim_itr->cutoff,
-                vestpayment ? lim_itr->vesting_price : 0
-            });
     if(!parentacc) {
         auto bw_lim_itr = lims.find(structures::limitparams::POSTBW);
         if(bw_lim_itr->price >= 0)
@@ -220,20 +209,7 @@ void publication::delete_message(name account, std::string permlink) {
         notify_parent(false, mssg_itr->parentacc, mssg_itr->parent_id);
     else {
         tables::reward_pools pools(_self, _self.value);
-        auto pool = get_pool(pools, mssg_itr->date);
-        auto token_code = pool->state.funds.symbol.code();
-        auto issuer = eosio::token::get_issuer(config::token_name, token_code);
-        tables::limit_table lims(_self, _self.value);
-        auto bw_lim_itr = lims.find(structures::limitparams::POSTBW);
-        eosio_assert(bw_lim_itr != lims.end(), "publication::delete_message: limit parameters not set");
-        if(golos::charge::get(config::charge_name, account, token_code, bw_lim_itr->charge_id, mssg_itr->id) >= 0)
-            INLINE_ACTION_SENDER(charge, removestored) (config::charge_name, 
-                {issuer, config::invoice_name}, {
-                    account, 
-                    token_code, 
-                    bw_lim_itr->charge_id,
-                    mssg_itr->id
-                });
+        remove_postbw_charge(account, get_pool(pools, mssg_itr->date)->state.funds.symbol.code(), mssg_itr->id);
     }
 
     message_table.erase(mssg_itr);
@@ -297,6 +273,41 @@ int64_t publication::pay_curators(name author, uint64_t msgid, int64_t max_rewar
     return unclaimed_rewards;
 }
 
+void publication::remove_postbw_charge(name account, symbol_code token_code, int64_t mssg_id, elaf_t* reward_weight_ptr) {
+    auto issuer = eosio::token::get_issuer(config::token_name, token_code);
+    tables::limit_table lims(_self, _self.value);
+    auto bw_lim_itr = lims.find(structures::limitparams::POSTBW);
+    eosio_assert(bw_lim_itr != lims.end(), "publication::remove_postbw_charge: limit parameters not set");
+    auto post_charge = golos::charge::get_stored(config::charge_name, account, token_code, bw_lim_itr->charge_id, mssg_id);
+    if(post_charge >= 0)
+        INLINE_ACTION_SENDER(charge, removestored) (config::charge_name, 
+            {issuer, config::invoice_name}, {
+                account, 
+                token_code, 
+                bw_lim_itr->charge_id,
+                mssg_id
+            });
+    if(reward_weight_ptr)
+        *reward_weight_ptr = (post_charge > bw_lim_itr->cutoff) ? 
+            static_cast<elaf_t>(elai_t(bw_lim_itr->cutoff) / elai_t(post_charge)) : elaf_t(1);
+}
+void publication::use_charge(tables::limit_table& lims, structures::limitparams::act_t act, name issuer,
+                            name account, int64_t eff_vesting, symbol_code token_code, bool vestpayment, elaf_t weight) {
+    auto lim_itr = lims.find(act);
+    eosio_assert(lim_itr != lims.end(), "publication::use_charge: limit parameters not set");
+    eosio_assert(eff_vesting >= lim_itr->min_vesting, "insufficient effective vesting amount");
+    if(lim_itr->price >= 0)
+        INLINE_ACTION_SENDER(charge, use) (config::charge_name, 
+            {issuer, config::invoice_name}, {
+                account, 
+                token_code, 
+                lim_itr->charge_id, 
+                int_cast(elai_t(lim_itr->price) * weight), 
+                lim_itr->cutoff,
+                vestpayment ? int_cast(elai_t(lim_itr->vesting_price) * weight) : 0
+            });
+}
+
 void publication::close_message(name account, uint64_t id) {
     require_auth(_self);
     tables::message_table message_table(_self, account.value);
@@ -332,25 +343,9 @@ void publication::close_message(name account, uint64_t id) {
             auto denom = total_rsharesfn;
             narrow_down(numer, denom);
             
-            if(!mssg_itr->parentacc) {
-                auto token_code = pool->state.funds.symbol.code();
-                auto issuer = eosio::token::get_issuer(config::token_name, token_code);
-                tables::limit_table lims(_self, _self.value);
-                auto bw_lim_itr = lims.find(structures::limitparams::POSTBW);
-                eosio_assert(bw_lim_itr != lims.end(), "publication::close_message: limit parameters not set");
-                auto post_charge = golos::charge::get(config::charge_name, account, token_code, bw_lim_itr->charge_id, mssg_itr->id);
-                if(post_charge > bw_lim_itr->cutoff)
-                    reward_weight = static_cast<elaf_t>(elai_t(bw_lim_itr->cutoff) / elai_t(post_charge));
-                if(post_charge >= 0)
-                    INLINE_ACTION_SENDER(charge, removestored) (config::charge_name, 
-                        {issuer, config::invoice_name}, {
-                            account, 
-                            token_code, 
-                            bw_lim_itr->charge_id,
-                            mssg_itr->id
-                        });
-            }
-            
+            if(!mssg_itr->parentacc)
+                remove_postbw_charge(account, pool->state.funds.symbol.code(), mssg_itr->id, &reward_weight);
+
             payout = int_cast(reward_weight * elai_t(elai_t(state.funds.amount) * static_cast<elaf_t>(elap_t(numer) / elap_t(denom))));
             state.funds.amount -= payout;
             eosio_assert(state.funds.amount >= 0, "LOGIC ERROR! publication::payrewards: state.funds < 0");
@@ -428,24 +423,11 @@ void publication::check_upvote_time(uint64_t cur_time, uint64_t mssg_date) {
 fixp_t publication::calc_rshares(name voter, int16_t weight, uint64_t cur_time, const structures::rewardpool& pool, atmsp::machine<fixp_t>& machine) {
     elaf_t abs_w = get_limit_prop(abs(weight));
     tables::limit_table lims(_self, _self.value);
-    auto lim_itr = lims.find(structures::limitparams::VOTE);
-    eosio_assert(lim_itr != lims.end(), "publication::set_vote: limit parameters not set");
     auto token_code = pool.state.funds.symbol.code();
-    eosio_assert(golos::vesting::get_account_effective_vesting(config::vesting_name, voter, token_code).amount >= lim_itr->min_vesting,
-        "insufficient effective vesting amount");
-    if(lim_itr->price >= 0)
-        INLINE_ACTION_SENDER(charge, use) (config::charge_name, 
-            {eosio::token::get_issuer(config::token_name, token_code), config::invoice_name}, {
-                voter, 
-                token_code, 
-                lim_itr->charge_id, 
-                int_cast(elai_t(lim_itr->price) * abs_w), 
-                lim_itr->cutoff,
-                int_cast(elai_t(lim_itr->vesting_price) * abs_w)
-            });
-
-    int64_t sum_vesting = golos::vesting::get_account_effective_vesting(config::vesting_name, voter, pool.state.funds.symbol.code()).amount;
-    fixp_t abs_rshares = fp_cast<fixp_t>(sum_vesting, false) * abs_w;
+    int64_t eff_vesting = golos::vesting::get_account_effective_vesting(config::vesting_name, voter, pool.state.funds.symbol.code()).amount;
+    use_charge(lims, structures::limitparams::VOTE, eosio::token::get_issuer(config::token_name, token_code),
+        voter, eff_vesting, token_code, false, abs_w);
+    fixp_t abs_rshares = fp_cast<fixp_t>(eff_vesting, false) * abs_w;
     return (weight < 0) ? -abs_rshares : abs_rshares;
 }
 

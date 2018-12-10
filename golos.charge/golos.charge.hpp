@@ -15,12 +15,12 @@ namespace golos {
 using namespace eosio;
 
 class charge : public contract {
-    fixp_t use_helper(name issuer, name user, symbol_code token_code, uint8_t charge_id, int64_t price, int64_t cutoff = -1, int64_t vesting_price = -1);
+    fixp_t consume_charge(name issuer, name user, symbol_code token_code, uint8_t charge_id, int64_t price, int64_t cutoff = -1, int64_t vesting_price = -1);
     static inline fixp_t to_fixp(int64_t arg) { return fp_cast<fixp_t>(elai_t(arg) / elai_t(config::_100percent)); }
     static inline int64_t from_fixp(fixp_t arg) { return fp_cast<int64_t>(elap_t(arg) * elai_t(config::_100percent), false); }
 public:
     using contract::contract;    
-    static inline int64_t get(name code, name user, symbol_code token_code, uint8_t charge_id, uint64_t stamp_id) {
+    static inline int64_t get_stored(name code, name user, symbol_code token_code, uint8_t charge_id, uint64_t stamp_id) {
         storedvals storedvals_table(code, user.value);
         auto storedvals_index = storedvals_table.get_index<N(symbolstamp)>();
         auto itr = storedvals_index.find(stored::get_key(token_code, charge_id, stamp_id));

@@ -41,6 +41,10 @@ private:
         const atmsp::parser<fixp_t>& pa, atmsp::machine<fixp_t>& machine, bool inc);
     static fixp_t get_delta(atmsp::machine<fixp_t>& machine, fixp_t old_val, fixp_t new_val,
         const structures::funcinfo& func);
+        
+    void remove_postbw_charge(name account, symbol_code token_code, int64_t mssg_id, elaf_t* reward_weight_ptr = nullptr);
+    void use_charge(tables::limit_table& lims, structures::limitparams::act_t act, name issuer,
+                        name account, int64_t eff_vesting, symbol_code token_code, bool vestpayment, elaf_t weight = elaf_t(1));
 
     static void check_upvote_time(uint64_t cur_time, uint64_t mssg_date);
     fixp_t calc_rshares(name voter, int16_t weight, uint64_t cur_time, const structures::rewardpool& pool, atmsp::machine<fixp_t>& machine);

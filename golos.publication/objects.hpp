@@ -135,7 +135,7 @@ struct rewardpool {
 };
 
 struct limitparams {
-    enum act_t: uint64_t {POST, COMM, VOTE, POSTBW};
+    enum act_t: uint8_t {POST, COMM, VOTE, POSTBW};
     uint64_t act;
     uint8_t charge_id;
     int64_t price;
