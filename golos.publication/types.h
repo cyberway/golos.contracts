@@ -1,5 +1,7 @@
 #pragma once
 
+#include <common/config.hpp>
+
 #ifdef UNIT_TEST_ENV
 #   define ABI_TABLE
 #   include <eosio/chain/types.hpp>
@@ -7,6 +9,8 @@ namespace eosio { namespace testing {
     using namespace eosio::chain;
 #else
 #   define ABI_TABLE [[eosio::table]]
+#   include <eosiolib/types.h>
+    using namespace eosio;
 #endif
 
 using enum_t = uint8_t;
@@ -37,10 +41,17 @@ struct limitsarg {
 
 enum class payment_t: enum_t { TOKEN, VESTING };
 
+struct forumprops {
+    forumprops() = default;
+
+    name contract_for_reputation = name();
+};
+
 #ifdef UNIT_TEST_ENV
 }} // eosio::testing
 FC_REFLECT(eosio::testing::limitedact, (chargenum)(restorernum)(cutoffval)(chargeprice))
 FC_REFLECT(eosio::testing::limitsarg, (restorers)(limitedacts)(vestingprices)(minvestings))
+FC_REFLECT(eosio::testing::forumprops, (contract_for_reputation))
 #endif
 
 #ifdef UNIT_TEST_ENV

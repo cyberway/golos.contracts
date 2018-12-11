@@ -218,7 +218,7 @@ def createGolosAccounts():
     updateAuth('gls.ctrl',    'active', 'owner', [args.public_key], ['gls.ctrl@eosio.code'])
     updateAuth('gls.publish', 'active', 'owner', [args.public_key], ['gls.publish@eosio.code'])
     updateAuth('gls.vesting', 'active', 'owner', [args.public_key], ['gls.vesting@eosio.code'])
-    updateAuth('gls.social',  'active', 'owner', [args.public_key], ['gls.social@eosio.code'])
+    updateAuth('gls.social',  'active', 'owner', [args.public_key], ['gls.publish@eosio.code'])
     updateAuth('gls.emit',    'active', 'owner', [args.public_key], ['gls.emit@eosio.code'])
 
 def stepInstallContracts():

@@ -10,6 +10,7 @@ public:
     using contract::contract;
     void set_rules(const funcparams& mainfunc, const funcparams& curationfunc, const funcparams& timepenalty,
         int64_t curatorsprop, int64_t maxtokenprop, symbol tokensymbol, limitsarg lims_arg);
+    void setprops(const forumprops& props);
     void on_transfer(name from, name to, asset quantity, std::string memo);
     void create_message(name account, std::string permlink, name parentacc, std::string parentprmlnk,
         std::vector<structures::beneficiary> beneficiaries, int64_t tokenprop, bool vestpayment,
