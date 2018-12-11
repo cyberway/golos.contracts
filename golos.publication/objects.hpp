@@ -109,6 +109,14 @@ struct rewardrules {
     //uint64_t cashout_time; //TODO:
 };
 
+struct forumprops_record {
+    forumprops_record() = default;
+
+    name contract_for_reputation = name();
+
+    EOSLIB_SERIALIZE(forumprops_record, (contract_for_reputation))
+};
+
 struct poolstate {
     counter_t msgs;
     eosio::asset funds;
@@ -169,8 +177,10 @@ using vote_messageid_index = indexed_by<N(messageid), const_mem_fun<structures::
 using vote_table = multi_index<N(votetable), structures::voteinfo, vote_id_index, vote_messageid_index>;
 
 using reward_pools = multi_index<N(rewardpools), structures::rewardpool>;
-
 using limit_table = multi_index<N(limittable), structures::limitparams>;
+
+using forumprops_singleton = eosio::singleton<"forumprops"_n, structures::forumprops_record>;
+
 }
 
 

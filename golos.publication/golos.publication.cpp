@@ -2,6 +2,7 @@
 #include <common/hash64.hpp>
 #include <eosiolib/transaction.hpp>
 #include <eosio.token/eosio.token.hpp>
+#include <golos.social/golos.social.hpp>
 #include <golos.vesting/golos.vesting.hpp>
 #include <golos.charge/golos.charge.hpp>
 #include <common/upsert.hpp>
@@ -41,6 +42,8 @@ extern "C" {
             execute_action(&publication::set_rules);
         if (NN(setlimit) == action)
             execute_action(&publication::set_limit);
+        if (NN(setprops) == action)
+            execute_action(&publication::setprops);
     }
 #undef NN
 }
@@ -532,6 +535,15 @@ void publication::set_vote(name voter, name author, string permlink, int16_t wei
         item.curatorsw = (fixp_t(sumcuratorsw_delta * curatorsw_factor)).data();
         item.rshares = rshares.data();
     });
+
+    tables::forumprops_singleton props_single(_self, _self.value);
+    auto props = props_single.get_or_default();
+
+    if (props.contract_for_reputation != name()) {
+        INLINE_ACTION_SENDER(golos::social, changereput)
+            (props.contract_for_reputation, {props.contract_for_reputation, config::active_name},
+            {voter, author, (rshares.data() >> 6)});
+    }
 }
 
 uint16_t publication::notify_parent(bool increase, name parentacc, uint64_t parent_id) {
@@ -639,6 +651,17 @@ void publication::set_rules(const funcparams& mainfunc, const funcparams& curati
         item.state.rshares = (wdfp_t(0)).data();
         item.state.rsharesfn = (wdfp_t(0)).data();
     });
+}
+
+void publication::setprops(const forumprops& props) {
+    require_auth(_self);
+
+    tables::forumprops_singleton props_single(_self, _self.value);
+
+    structures::forumprops_record item;
+    item.contract_for_reputation = props.contract_for_reputation;
+
+    props_single.set(item, _self);
 }
 
 structures::funcinfo publication::load_func(const funcparams& params, const std::string& name, const atmsp::parser<fixp_t>& pa, atmsp::machine<fixp_t>& machine, bool inc) {
