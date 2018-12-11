@@ -10,6 +10,7 @@ namespace eosio { namespace testing {
 #else
 #   define ABI_TABLE [[eosio::table]]
 #   include <eosiolib/types.h>
+    using namespace eosio;
 #endif
 
 using enum_t = uint8_t;

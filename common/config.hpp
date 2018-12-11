@@ -9,6 +9,7 @@
 #endif
 
 #ifdef UNIT_TEST_ENV
+#   include <eosio/chain/types.hpp>
 template <typename T, T... Str>
 inline eosio::chain::name operator ""_n() {
    return eosio::chain::name({Str...});
