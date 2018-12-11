@@ -36,9 +36,35 @@ extern "C" {
             execute_action(&publication::close_message);
         if (NN(setrules) == action)
             execute_action(&publication::set_rules);
+        if (NN(setparams) == action)
+            execute_action(&publication::set_params);
     }
 #undef NN
 }
+
+struct posting_params_setter: set_params_visitor<posting_state> {
+    using set_params_visitor::set_params_visitor;
+
+    bool operator()(const max_vote_changes_prm& param) {
+        return set_param(param, &posting_state::max_vote_changes_param);
+    }
+
+    bool operator()(const cashout_window_prm& param) {
+        return set_param(param, &posting_state::cashout_window_param);
+    }
+
+    bool operator()(const upvote_lockout_prm& param) {
+        return set_param(param, &posting_state::upvote_lockout_param);
+    }
+
+    bool operator()(const max_beneficiaries_prm& param) {
+        return set_param(param, &posting_state::max_beneficiaries_param);
+    }
+
+    bool operator()(const max_comment_depth_prm& param) {
+        return set_param(param, &posting_state::max_comment_depth_param);
+    }
+};
 
 void publication::create_message(name account, std::string permlink,
                               name parentacc, std::string parentprmlnk,
@@ -51,6 +77,11 @@ void publication::create_message(name account, std::string permlink,
                               std::vector<structures::tag> tags,
                               std::string jsonmetadata) {
     require_auth(account);
+
+    posting_params_singleton cfg(_self, _self.value);
+    const auto &cashout_window_param = cfg.get().cashout_window_param;
+    const auto &max_beneficiaries_param = cfg.get().max_beneficiaries_param;
+    const auto &max_comment_depth_param = cfg.get().max_comment_depth_param;
 
     tables::reward_pools pools(_self, _self.value);
     auto pool = pools.begin();   // TODO: Reverse iterators doesn't work correctly
@@ -67,7 +98,7 @@ void publication::create_message(name account, std::string permlink,
         eosio_assert(prop_sum <= config::_100percent, "publication::create_message: prop_sum > 100%");
         benefic_map[ben.account] += ben.deductprcnt; //several entries for one user? ok.
     }
-    eosio_assert((benefic_map.size() <= config::max_beneficiaries), "publication::create_message: benafic_map.size() > MAX_BENEFICIARIES");
+    eosio_assert((benefic_map.size() <= max_beneficiaries_param.max_beneficiaries), "publication::create_message: benafic_map.size() > MAX_BENEFICIARIES");
 
     //reusing a vector
     beneficiaries.reserve(benefic_map.size());
@@ -98,7 +129,7 @@ void publication::create_message(name account, std::string permlink,
     uint8_t level = 0;
     if(parentacc)
         level = 1 + notify_parent(true, parentacc, parent_id);
-    eosio_assert(level <= config::max_comment_depth, "publication::create_message: level > MAX_COMMENT_DEPTH");
+    eosio_assert(level <= max_comment_depth_param.max_comment_depth, "publication::create_message: level > MAX_COMMENT_DEPTH");
 
     auto mssg_itr = message_table.emplace(account, [&]( auto &item ) {
         item.id = message_id;
@@ -135,7 +166,7 @@ void publication::create_message(name account, std::string permlink,
         closed = parent_itr->closed;
     }
     seconds_diff /= eosio::seconds(1).count();
-    uint64_t delay_sec = config::cashout_window > seconds_diff ? config::cashout_window - seconds_diff : 0;
+    uint64_t delay_sec = cashout_window_param.cashout_window > seconds_diff ? cashout_window_param.cashout_window - seconds_diff : 0;
     if (!closed && delay_sec)
         close_message_timer(account, message_id, delay_sec);
     else //parent is already closed or is about to
@@ -349,9 +380,13 @@ void publication::close_message_timer(name account, uint64_t id, uint64_t delay_
     trx.send((static_cast<uint128_t>(id) << 64) | account.value, _self);
 }
 
-void publication::check_upvote_time(uint64_t cur_time, uint64_t mssg_date) {
-    eosio_assert((cur_time <= mssg_date + ((config::cashout_window - config::upvote_lockout) * seconds(1).count())) ||
-                 (cur_time > mssg_date + (config::cashout_window * seconds(1).count())),
+void publication::check_upvote_time(uint64_t cur_time, uint64_t mssg_date, name code) {
+    posting_params_singleton cfg(code, code.value);
+    const auto &cashout_window_param = cfg.get().cashout_window_param;
+    const auto &upvote_lockout_param = cfg.get().upvote_lockout_param;
+
+    eosio_assert((cur_time <= mssg_date + ((cashout_window_param.cashout_window - upvote_lockout_param.upvote_lockout) * seconds(1).count())) ||
+                 (cur_time > mssg_date + (cashout_window_param.cashout_window * seconds(1).count())),
                   "You can't upvote, because publication will be closed soon.");
 }
 
@@ -366,6 +401,9 @@ fixp_t publication::calc_rshares(name voter, int16_t weight, uint64_t cur_time, 
 
 void publication::set_vote(name voter, name author, string permlink, int16_t weight) {
     require_auth(voter);
+
+    posting_params_singleton cfg(_self, _self.value);
+    const auto &max_vote_changes_param = cfg.get().max_vote_changes_param;
 
     uint64_t id = fc::hash64(permlink);
     tables::message_table message_table(_self, author.value);
@@ -391,12 +429,12 @@ void publication::set_vote(name voter, name author, string permlink, int16_t wei
             }
 
             eosio_assert(weight != vote_itr->weight, "Vote with the same weight has already existed.");
-            eosio_assert(vote_itr->count != config::max_vote_changes, "You can't revote anymore.");
+            eosio_assert(vote_itr->count != max_vote_changes_param.max_vote_changes, "You can't revote anymore.");
 
             atmsp::machine<fixp_t> machine;
             fixp_t rshares = calc_rshares(voter, weight, cur_time, *pool, machine);
             if(rshares > FP(vote_itr->rshares))
-                check_upvote_time(cur_time, mssg_itr->date);
+                check_upvote_time(cur_time, mssg_itr->date, _self);
 
             fixp_t new_mssg_rshares = (FP(mssg_itr->state.netshares) - FP(vote_itr->rshares)) + rshares;
             auto rsharesfn_delta = get_delta(machine, FP(mssg_itr->state.netshares), new_mssg_rshares, pool->rules.mainfunc);
@@ -426,7 +464,7 @@ void publication::set_vote(name voter, name author, string permlink, int16_t wei
     atmsp::machine<fixp_t> machine;
     fixp_t rshares = calc_rshares(voter, weight, cur_time, *pool, machine);
     if(rshares > 0)
-        check_upvote_time(cur_time, mssg_itr->date);
+        check_upvote_time(cur_time, mssg_itr->date, _self);
 
     structures::messagestate msg_new_state = {
         .netshares = add_cut(FP(mssg_itr->state.netshares), rshares).data(),
@@ -655,5 +693,18 @@ elaf_t publication::apply_limits(atmsp::machine<fixp_t>& machine, name user,
     return ret;
 }
 
+void publication::set_params(std::vector<posting_params> params) {
+    require_auth(_self);
+    posting_params_singleton cfg(_self, _self.value);
+    auto update = cfg.exists();
+    eosio_assert(update || params.size() == posting_state::params_count, "must provide all parameters in initial set");
+    param_helper::check_params(params, update);
+    auto s = update ? cfg.get() : posting_state{};
+    auto setter = posting_params_setter(s);
+    for (const auto& param: params) {
+        std::visit(setter, param);
+    }
+    cfg.set(setter.state, _self);
+}
 
 } // golos

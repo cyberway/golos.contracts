@@ -1,3 +1,4 @@
+set(CMAKE_CXX_FLAGS " -abigen ${CMAKE_CXX_FLAGS} -std=c++17")
 add_executable(golos.publication.wasm ${CMAKE_CURRENT_SOURCE_DIR}/golos.publication.cpp)
 target_include_directories(golos.publication.wasm
    PUBLIC

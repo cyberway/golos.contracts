@@ -1,5 +1,5 @@
 {
-  "version": "cyberway::abi/1.0",
+  "version": "cyberway::abi/1.1",
   "types": [
     {
       "new_type_name": "base_t",
@@ -18,6 +18,16 @@
       "type": "uint64"
     }
   ],
+  "variants": [{
+    "name": "posting_param",
+    "types": [
+      "st_max_vote_changes",
+      "st_cashout_window",
+      "st_upvote_lockout",
+      "st_max_beneficiaries",
+      "st_max_comment_depth"
+    ]
+  }],
   "structs": [
   {
     "name": "value",
@@ -614,6 +624,96 @@
             "type": "limitsarg"
         }
     ]
+  },
+  {
+    "name": "st_max_vote_changes",
+    "base": "",
+    "fields": [
+      {
+        "name": "max_vote_changes",
+        "type": "uint8"
+      }
+    ]
+  },
+  {
+    "name": "st_cashout_window",
+    "base": "",
+    "fields": [
+      {
+        "name": "cashout_window",
+        "type": "uint32"
+      }
+    ]
+  },
+  {
+    "name": "st_upvote_lockout",
+    "base": "",
+    "fields": [
+      {
+        "name": "upvote_lockout",
+        "type": "uint8"
+      }
+    ]
+  },
+  {
+    "name": "st_max_beneficiaries",
+    "base": "",
+    "fields": [
+      {
+        "name": "max_beneficiaries",
+        "type": "uint8"
+      }
+    ]
+  },
+  {
+    "name": "st_max_comment_depth",
+    "base": "",
+    "fields": [
+      {
+        "name": "max_comment_depth",
+        "type": "uint16"
+      }
+    ]
+  },
+  {
+    "name": "posting_state",
+    "base": "",
+    "fields": [
+      {
+        "name": "id",
+        "type": "uint64"
+      },
+      {
+        "name": "max_vote_changes_param",
+        "type": "st_max_vote_changes"
+      },
+      {
+        "name": "cashout_window_param",
+        "type": "st_cashout_window"
+      },
+      {
+        "name": "upvote_lockout_param",
+        "type": "st_upvote_lockout"
+      },
+      {
+        "name": "max_beneficiaries_param",
+        "type": "st_max_beneficiaries"
+      },
+      {
+        "name": "max_comment_depth_param",
+        "type": "st_max_comment_depth"
+      }
+    ]
+  },
+  {
+    "name": "setparams",
+    "base": "",
+    "fields": [
+      {
+        "name": "params",
+        "type": "posting_param[]"
+      }
+    ]
   }
   ],
   "actions": [
@@ -652,6 +752,10 @@
   {
     "name": "setrules",
     "type": "setrules"
+  },
+  {
+    "name": "setparams",
+    "type": "setparams"
   }
   ],
   "tables": [
@@ -723,6 +827,19 @@
           "unique": "true",
           "orders": [
               {"field": "poolcreated", "order": "asc"}
+          ]
+       }
+    ]
+  },
+  {
+    "name": "pstngparams",
+    "type": "posting_state",
+    "indexes": [
+       {
+          "name": "primary",
+          "unique": "true",
+          "orders": [
+              {"field": "id", "order": "asc"}
           ]
        }
     ]
