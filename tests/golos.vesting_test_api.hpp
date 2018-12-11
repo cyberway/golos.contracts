@@ -92,6 +92,12 @@ struct golos_vesting_api: base_contract_api {
         );
     }
 
+    action_result set_params(name creator, symbol symbol, std::string json_params) {
+        return push(N(setparams), creator, args()
+            ("symbol", symbol)
+            ("params", json_str_to_obj(json_params)));
+    }
+
     action_result timeout(name signer) {
         return push(N(timeout), signer, args()("hash", 1));
     }
@@ -150,6 +156,25 @@ struct golos_vesting_api: base_contract_api {
             ("delegate_vesting", asset_str(delegated))
             ("received_vesting", asset_str(received))
             ("unlocked_limit", asset_str(unlocked));
+    }
+
+    variant get_params(symbol symbol) const {
+        return base_contract_api::get_struct(symbol.to_symbol_code().value, N(vstngparams), N(vstngparams), "vesting_state");
+    }
+
+    string vesting_withdraw(uint32_t intervals, uint32_t interval_seconds) {
+        return string("['vesting_withdraw', {'intervals':'") + std::to_string(intervals) + "','interval_seconds':'" + std::to_string(interval_seconds) + "'}]";
+    }
+
+    string vesting_amount(uint64_t min_amount) {
+        return string("['vesting_amount', {'min_amount':'") + std::to_string(min_amount) + "'}]";
+    }
+
+    string delegation(uint64_t min_amount, uint64_t min_remainder, uint32_t min_time,
+                      uint16_t max_interest, uint32_t return_time) {
+        return string("['delegation', {'min_amount':'") + std::to_string(min_amount) + "','min_remainder':'" + std::to_string(min_remainder) +
+                "','min_time':'" + std::to_string(min_time) + "','max_interest':'" + std::to_string(max_interest) +
+                "','return_time':'" + std::to_string(return_time) + "'}]";
     }
 
 };

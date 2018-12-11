@@ -268,7 +268,6 @@ void vesting::undelegate_vesting(name sender, name recipient, asset quantity) {
 
     vesting_params_singleton cfg(_self, quantity.symbol.code().raw());
     eosio_assert(cfg.exists(), "not found vesting params");
-    const auto &amount_params = cfg.get().amount_params;
     const auto &delegation_params = cfg.get().delegation_params;
 
     tables::delegate_table table(_self, quantity.symbol.code().raw());
@@ -276,7 +275,7 @@ void vesting::undelegate_vesting(name sender, name recipient, asset quantity) {
     auto delegate_record = index_table.find(structures::delegate_record::unique_key(sender, recipient));
     eosio_assert(delegate_record != index_table.end(), "Not enough delegated vesting");
 
-    eosio_assert(quantity.amount >= amount_params.min_amount, "Insufficient funds for undelegation");
+    eosio_assert(quantity.amount >= delegation_params.min_amount, "Insufficient funds for undelegation");
     eosio_assert(delegate_record->return_date <= time_point_sec(now()), "Tokens are frozen until the end of the period");
     eosio_assert(delegate_record->quantity >= quantity, "There are not enough delegated tools for output");
 
