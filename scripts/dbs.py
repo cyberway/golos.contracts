@@ -1,6 +1,8 @@
 from pymongo import MongoClient
 import pymongo
 from config import *
+from decimal import Decimal
+from bson.decimal128 import Decimal128
 
 golos_client = MongoClient('172.17.0.1', 27017)
 cyberway_client = MongoClient('127.0.0.1', 27018)
@@ -21,7 +23,7 @@ def createIndexes(collection, indexes):
 
 def get_next_id(collection):
     item = collection.find_one(sort=[('id',pymongo.DESCENDING)])
-    return item['id']+1 if item else 0
+    return int(item['id'].to_decimal())+1 if item else 0
 
 class Table:
     def __init__(self, table, getNextId, indexes):
@@ -34,7 +36,7 @@ class Table:
 
     def nextId(self):
         current = self.next_id
-        self.next_id += 1
+        self.next_id = self.next_id + 1
         return current
 
     def append(self, item):
