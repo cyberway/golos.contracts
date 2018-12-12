@@ -22,8 +22,7 @@
     "name": "posting_param",
     "types": [
       "st_max_vote_changes",
-      "st_cashout_window",
-      "st_upvote_lockout",
+      "st_common",
       "st_max_beneficiaries",
       "st_max_comment_depth"
     ]
@@ -630,28 +629,22 @@
     "base": "",
     "fields": [
       {
-        "name": "max_vote_changes",
+        "name": "value",
         "type": "uint8"
       }
     ]
   },
   {
-    "name": "st_cashout_window",
+    "name": "st_common",
     "base": "",
     "fields": [
       {
         "name": "cashout_window",
         "type": "uint32"
-      }
-    ]
-  },
-  {
-    "name": "st_upvote_lockout",
-    "base": "",
-    "fields": [
+      },
       {
         "name": "upvote_lockout",
-        "type": "uint8"
+        "type": "uint32"
       }
     ]
   },
@@ -660,7 +653,7 @@
     "base": "",
     "fields": [
       {
-        "name": "max_beneficiaries",
+        "name": "value",
         "type": "uint8"
       }
     ]
@@ -670,7 +663,7 @@
     "base": "",
     "fields": [
       {
-        "name": "max_comment_depth",
+        "name": "value",
         "type": "uint16"
       }
     ]
@@ -684,23 +677,19 @@
         "type": "uint64"
       },
       {
-        "name": "max_vote_changes_param",
+        "name": "max_vote_changes",
         "type": "st_max_vote_changes"
       },
       {
-        "name": "cashout_window_param",
-        "type": "st_cashout_window"
+        "name": "common",
+        "type": "st_common"
       },
       {
-        "name": "upvote_lockout_param",
-        "type": "st_upvote_lockout"
-      },
-      {
-        "name": "max_beneficiaries_param",
+        "name": "max_beneficiaries",
         "type": "st_max_beneficiaries"
       },
       {
-        "name": "max_comment_depth_param",
+        "name": "max_comment_depth",
         "type": "st_max_comment_depth"
       }
     ]

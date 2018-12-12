@@ -49,12 +49,11 @@ struct posting_params_setter: set_params_visitor<posting_state> {
         return set_param(param, &posting_state::max_vote_changes_param);
     }
 
-    bool operator()(const cashout_window_prm& param) {
-        return set_param(param, &posting_state::cashout_window_param);
-    }
-
-    bool operator()(const upvote_lockout_prm& param) {
-        return set_param(param, &posting_state::upvote_lockout_param);
+    bool operator()(const common_prm& param) {
+        bool changed = set_param(param, &posting_state::common_param);
+        if (changed)
+            eosio_assert(param.cashout_window > param.upvote_lockout, "Cashout window can't be less than upvote lockout.");
+        return changed;
     }
 
     bool operator()(const max_beneficiaries_prm& param) {
@@ -79,7 +78,7 @@ void publication::create_message(name account, std::string permlink,
     require_auth(account);
 
     posting_params_singleton cfg(_self, _self.value);
-    const auto &cashout_window_param = cfg.get().cashout_window_param;
+    const auto &common_param = cfg.get().common_param;
     const auto &max_beneficiaries_param = cfg.get().max_beneficiaries_param;
     const auto &max_comment_depth_param = cfg.get().max_comment_depth_param;
 
@@ -166,7 +165,7 @@ void publication::create_message(name account, std::string permlink,
         closed = parent_itr->closed;
     }
     seconds_diff /= eosio::seconds(1).count();
-    uint64_t delay_sec = cashout_window_param.cashout_window > seconds_diff ? cashout_window_param.cashout_window - seconds_diff : 0;
+    uint64_t delay_sec = common_param.cashout_window > seconds_diff ? common_param.cashout_window - seconds_diff : 0;
     if (!closed && delay_sec)
         close_message_timer(account, message_id, delay_sec);
     else //parent is already closed or is about to
@@ -380,13 +379,12 @@ void publication::close_message_timer(name account, uint64_t id, uint64_t delay_
     trx.send((static_cast<uint128_t>(id) << 64) | account.value, _self);
 }
 
-void publication::check_upvote_time(uint64_t cur_time, uint64_t mssg_date, name code) {
-    posting_params_singleton cfg(code, code.value);
-    const auto &cashout_window_param = cfg.get().cashout_window_param;
-    const auto &upvote_lockout_param = cfg.get().upvote_lockout_param;
+void publication::check_upvote_time(uint64_t cur_time, uint64_t mssg_date) {
+    posting_params_singleton cfg(_self, _self.value);
+    const auto &common_param = cfg.get().common_param;
 
-    eosio_assert((cur_time <= mssg_date + ((cashout_window_param.cashout_window - upvote_lockout_param.upvote_lockout) * seconds(1).count())) ||
-                 (cur_time > mssg_date + (cashout_window_param.cashout_window * seconds(1).count())),
+    eosio_assert((cur_time <= mssg_date + ((common_param.cashout_window - common_param.upvote_lockout) * seconds(1).count())) ||
+                 (cur_time > mssg_date + (common_param.cashout_window * seconds(1).count())),
                   "You can't upvote, because publication will be closed soon.");
 }
 
@@ -434,7 +432,7 @@ void publication::set_vote(name voter, name author, string permlink, int16_t wei
             atmsp::machine<fixp_t> machine;
             fixp_t rshares = calc_rshares(voter, weight, cur_time, *pool, machine);
             if(rshares > FP(vote_itr->rshares))
-                check_upvote_time(cur_time, mssg_itr->date, _self);
+                check_upvote_time(cur_time, mssg_itr->date);
 
             fixp_t new_mssg_rshares = (FP(mssg_itr->state.netshares) - FP(vote_itr->rshares)) + rshares;
             auto rsharesfn_delta = get_delta(machine, FP(mssg_itr->state.netshares), new_mssg_rshares, pool->rules.mainfunc);
@@ -464,7 +462,7 @@ void publication::set_vote(name voter, name author, string permlink, int16_t wei
     atmsp::machine<fixp_t> machine;
     fixp_t rshares = calc_rshares(voter, weight, cur_time, *pool, machine);
     if(rshares > 0)
-        check_upvote_time(cur_time, mssg_itr->date, _self);
+        check_upvote_time(cur_time, mssg_itr->date);
 
     structures::messagestate msg_new_state = {
         .netshares = add_cut(FP(mssg_itr->state.netshares), rshares).data(),
@@ -696,15 +694,8 @@ elaf_t publication::apply_limits(atmsp::machine<fixp_t>& machine, name user,
 void publication::set_params(std::vector<posting_params> params) {
     require_auth(_self);
     posting_params_singleton cfg(_self, _self.value);
-    auto update = cfg.exists();
-    eosio_assert(update || params.size() == posting_state::params_count, "must provide all parameters in initial set");
-    param_helper::check_params(params, update);
-    auto s = update ? cfg.get() : posting_state{};
-    auto setter = posting_params_setter(s);
-    for (const auto& param: params) {
-        std::visit(setter, param);
-    }
-    cfg.set(setter.state, _self);
+    param_helper::check_params(params, cfg.exists());
+    param_helper::set_parameters<posting_params_setter>(params, cfg, _self);
 }
 
 } // golos

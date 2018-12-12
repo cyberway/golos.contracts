@@ -47,7 +47,7 @@ private:
     static fixp_t get_delta(atmsp::machine<fixp_t>& machine, fixp_t old_val, fixp_t new_val,
         const structures::funcinfo& func);
 
-    static void check_upvote_time(uint64_t cur_time, uint64_t mssg_date, name code);
+    void check_upvote_time(uint64_t cur_time, uint64_t mssg_date);
     fixp_t calc_rshares(name voter, int16_t weight, uint64_t cur_time, const structures::rewardpool& pool, atmsp::machine<fixp_t>& machine);
 };
 
