@@ -9,11 +9,19 @@ class social : public contract {
 private:
     using contract::contract;
 public:
-    void changereput(name voter, name author, int64_t rshares);
     void pin(name pinner, name pinning);
     void unpin(name pinner, name pinning);
+
     void block(name blocker, name blocking);
     void unblock(name blocker, name blocking);
+
+    void changereput(name voter, name author, int64_t rshares);
+
+    static inline bool is_blocking(name code, name blocker, name blocking) {
+        tables::pinblock_table table(code, blocker.value);
+        auto itr = table.find(blocking.value);
+        return (itr != table.end() && itr->blocking);
+    }
 };
 
 } // golos
