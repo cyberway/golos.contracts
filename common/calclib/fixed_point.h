@@ -33,6 +33,10 @@ namespace sg14 {
     }
 }
 namespace sg14 {
+#ifdef UNIT_TEST_ENV
+    using int128_t = __int128;
+    using uint128_t = unsigned __int128;
+#endif
     using _digits_type = int;
     template<class T, class Enable = void>
     struct is_composite : std::false_type {

@@ -31,6 +31,14 @@ struct golos_posting_api: base_contract_api {
         );
     }
 
+    action_result setprops(
+        const forumprops& props
+    ) {
+        return push("setprops"_n, _code, args()
+            ("props", props)
+        );
+    }
+
     action_result create_msg(
         account_name author,
         std::string permlink,

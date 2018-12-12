@@ -2,6 +2,7 @@
 #include <common/hash64.hpp>
 #include <eosiolib/transaction.hpp>
 #include <eosio.token/eosio.token.hpp>
+#include <golos.social/golos.social.hpp>
 #include <golos.vesting/golos.vesting.hpp>
 
 namespace golos {
@@ -38,6 +39,8 @@ extern "C" {
             execute_action(&publication::set_rules);
         if (NN(setparams) == action)
             execute_action(&publication::set_params);
+        if (NN(setprops) == action)
+            execute_action(&publication::setprops);
     }
 #undef NN
 }
@@ -119,11 +122,11 @@ void publication::create_message(name account, std::string permlink,
     pools.modify(*pool, _self, [&](auto &item){ item.state.msgs++; });
 
     tables::message_table message_table(_self, account.value);
-    auto message_id = fc::hash64(permlink);
+    auto message_id = hash64(permlink);
     eosio_assert(message_table.find(message_id) == message_table.end(), "This message already exists.");
 
     tables::content_table content_table(_self, account.value);
-    auto parent_id = parentacc ? fc::hash64(parentprmlnk) : 0;
+    auto parent_id = parentacc ? hash64(parentprmlnk) : 0;
 
     uint8_t level = 0;
     if(parentacc)
@@ -178,7 +181,7 @@ void publication::update_message(name account, std::string permlink,
                               std::string jsonmetadata) {
     require_auth(account);
     tables::content_table content_table(_self, account.value);
-    auto cont_itr = content_table.find(fc::hash64(permlink));
+    auto cont_itr = content_table.find(hash64(permlink));
     eosio_assert(cont_itr != content_table.end(), "Content doesn't exist.");
 
     content_table.modify(cont_itr, account, [&]( auto &item ) {
@@ -197,7 +200,7 @@ void publication::delete_message(name account, std::string permlink) {
     tables::content_table content_table(_self, account.value);
     tables::vote_table vote_table(_self, account.value);
 
-    auto message_id = fc::hash64(permlink);
+    auto message_id = hash64(permlink);
     auto mssg_itr = message_table.find(message_id);
     eosio_assert(mssg_itr != message_table.end(), "Message doesn't exist.");
     eosio_assert((mssg_itr->childcount) == 0, "You can't delete comment with child comments.");
@@ -403,7 +406,7 @@ void publication::set_vote(name voter, name author, string permlink, int16_t wei
     posting_params_singleton cfg(_self, _self.value);
     const auto &max_vote_changes_param = cfg.get().max_vote_changes_param;
 
-    uint64_t id = fc::hash64(permlink);
+    uint64_t id = hash64(permlink);
     tables::message_table message_table(_self, author.value);
     auto mssg_itr = message_table.find(id);
     eosio_assert(mssg_itr != message_table.end(), "Message doesn't exist.");
@@ -501,6 +504,15 @@ void publication::set_vote(name voter, name author, string permlink, int16_t wei
         item.curatorsw = (fixp_t(sumcuratorsw_delta * curatorsw_factor)).data();
         item.rshares = rshares.data();
     });
+
+    tables::forumprops_singleton props_single(_self, _self.value);
+    auto props = props_single.get_or_default();
+
+    if (props.contract_for_reputation != name()) {
+        INLINE_ACTION_SENDER(golos::social, changereput)
+            (props.contract_for_reputation, {props.contract_for_reputation, config::active_name},
+            {voter, author, (rshares.data() >> 6)});
+    }
 }
 
 uint16_t publication::notify_parent(bool increase, name parentacc, uint64_t parent_id) {
@@ -601,6 +613,17 @@ void publication::set_rules(const funcparams& mainfunc, const funcparams& curati
         item.state.rshares = (wdfp_t(0)).data();
         item.state.rsharesfn = (wdfp_t(0)).data();
     });
+}
+
+void publication::setprops(const forumprops& props) {
+    require_auth(_self);
+
+    tables::forumprops_singleton props_single(_self, _self.value);
+
+    structures::forumprops_record item;
+    item.contract_for_reputation = props.contract_for_reputation;
+
+    props_single.set(item, _self);
 }
 
 structures::funcinfo publication::load_func(const funcparams& params, const std::string& name, const atmsp::parser<fixp_t>& pa, atmsp::machine<fixp_t>& machine, bool inc) {

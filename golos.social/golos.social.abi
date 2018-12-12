@@ -1,9 +1,6 @@
 {
   "version": "cyberway::abi/1.0",
-  "types": [{
-      "new_type_name": "account_name",
-      "type": "name"
-    }
+  "types": [
   ],
   "structs": [
   {
@@ -12,7 +9,7 @@
     "fields": [
       {
         "name": "account",
-        "type": "account_name"
+        "type": "name"
       },
       {
         "name": "pinning",
@@ -21,6 +18,20 @@
       {
         "name": "blocking",
         "type": "bool"
+      }
+    ]
+  },
+  {
+    "name": "reputation_record",
+    "base": "",
+    "fields": [
+      {
+        "name": "id",
+        "type": "uint64"
+      },
+      {
+        "name": "reputation",
+        "type": "int64"
       }
     ]
   },
@@ -30,11 +41,11 @@
     "fields": [
       {
         "name": "pinner",
-        "type": "account_name"
+        "type": "name"
       },
       {
         "name": "pinning",
-        "type": "account_name"
+        "type": "name"
       }
     ]
   },
@@ -44,11 +55,29 @@
     "fields": [
       {
         "name": "blocker",
-        "type": "account_name"
+        "type": "name"
       },
       {
         "name": "blocking",
-        "type": "account_name"
+        "type": "name"
+      }
+    ]
+  },
+  {
+    "name": "changereput",
+    "base": "",
+    "fields": [
+      {
+        "name": "voter",
+        "type": "name"
+      },
+      {
+        "name": "author",
+        "type": "name"
+      },
+      {
+        "name": "rshares",
+        "type": "int64"
       }
     ]
   }
@@ -69,6 +98,10 @@
   {
     "name": "unblock",
     "type": "block"
+  },
+  {
+    "name": "changereput",
+    "type": "changereput"
   }
   ],
   "tables": [
@@ -81,6 +114,19 @@
         "unique": "true",
         "orders": [
           {"field": "account", "order": "asc"}
+        ]
+      }
+    ]
+  },
+  {
+    "name": "reputation",
+    "type": "reputation_record",
+    "indexes": [
+      {
+        "name": "primary",
+        "unique": "true",
+        "orders": [
+          {"field": "id", "order": "asc"}
         ]
       }
     ]

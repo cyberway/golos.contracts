@@ -537,6 +537,30 @@
     ]
   },
   {
+    "name": "forumprops",
+    "base": "",
+    "fields": [
+        {
+            "name": "contract_for_reputation",
+            "type": "name"
+        }
+    ]
+  },
+  {
+    "name": "forumprops_record",
+    "base": "",
+    "fields": [
+        {
+            "name": "id",
+            "type": "uint64"
+        },
+        {
+            "name": "contract_for_reputation",
+            "type": "name"
+        }
+    ]
+  },
+  {
     "name": "poolstate",
     "base": "",
     "fields": [
@@ -703,6 +727,16 @@
         "type": "posting_param[]"
       }
     ]
+  },
+  {
+    "name": "setprops",
+    "base": "",
+    "fields": [
+        {
+            "name": "props",
+            "type": "forumprops"
+        }
+    ]
   }
   ],
   "actions": [
@@ -745,6 +779,10 @@
   {
     "name": "setparams",
     "type": "setparams"
+  },
+  {
+    "name": "setprops",
+    "type": "setprops"
   }
   ],
   "tables": [
@@ -805,6 +843,19 @@
               {"field": "created", "order": "asc"}
           ]
        }
+    ]
+  },
+  {
+    "name": "forumprops",
+    "type": "forumprops_record",
+    "indexes": [
+      {
+        "name": "primary",
+        "unique": "true",
+        "orders": [
+          {"field": "id", "order": "asc"}
+        ]
+      }
     ]
   },
   {
