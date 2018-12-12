@@ -22,7 +22,7 @@
     "name": "posting_param",
     "types": [
       "st_max_vote_changes",
-      "st_common",
+      "st_cashout_window",
       "st_max_beneficiaries",
       "st_max_comment_depth"
     ]
@@ -659,11 +659,11 @@
     ]
   },
   {
-    "name": "st_common",
+    "name": "st_cashout_window",
     "base": "",
     "fields": [
       {
-        "name": "cashout_window",
+        "name": "window",
         "type": "uint32"
       },
       {
@@ -705,8 +705,8 @@
         "type": "st_max_vote_changes"
       },
       {
-        "name": "common",
-        "type": "st_common"
+        "name": "cashout_window",
+        "type": "st_cashout_window"
       },
       {
         "name": "max_beneficiaries",

@@ -12,15 +12,16 @@ namespace golos {
     };
     using max_vote_changes_prm = param_wrapper<st_max_vote_changes, 1>;
 
-    struct st_common : parameter {
-        uint32_t cashout_window;
+    struct st_cashout_window : parameter {
+        uint32_t window;
         uint32_t upvote_lockout;
 
         void validate() const override {
-            eosio_assert(cashout_window > 0, "Cashout window must be greater than 0.");
+            eosio_assert(window > 0, "Cashout window must be greater than 0.");
+            eosio_assert(window > upvote_lockout, "Cashout window can't be less than upvote lockout.");
         }
     };
-    using common_prm = param_wrapper<st_common, 2>;
+    using cashout_window_prm = param_wrapper<st_cashout_window, 2>;
 
     struct st_max_beneficiaries : parameter {
         uint8_t max_beneficiaries;
@@ -36,11 +37,11 @@ namespace golos {
     };
     using max_comment_depth_prm = param_wrapper<st_max_comment_depth, 1>;
 
-    using posting_params = std::variant<max_vote_changes_prm, common_prm, max_beneficiaries_prm, max_comment_depth_prm>;
+    using posting_params = std::variant<max_vote_changes_prm, cashout_window_prm, max_beneficiaries_prm, max_comment_depth_prm>;
 
     struct [[eosio::table]] posting_state {
         max_vote_changes_prm max_vote_changes_param;
-        common_prm common_param;
+        cashout_window_prm cashout_window_param;
         max_beneficiaries_prm max_beneficiaries_param;
         max_comment_depth_prm max_comment_depth_param;
 

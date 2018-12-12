@@ -52,11 +52,8 @@ struct posting_params_setter: set_params_visitor<posting_state> {
         return set_param(param, &posting_state::max_vote_changes_param);
     }
 
-    bool operator()(const common_prm& param) {
-        bool changed = set_param(param, &posting_state::common_param);
-        if (changed)
-            eosio_assert(param.cashout_window > param.upvote_lockout, "Cashout window can't be less than upvote lockout.");
-        return changed;
+    bool operator()(const cashout_window_prm& param) {
+        return set_param(param, &posting_state::cashout_window_param);
     }
 
     bool operator()(const max_beneficiaries_prm& param) {
@@ -81,7 +78,7 @@ void publication::create_message(name account, std::string permlink,
     require_auth(account);
 
     posting_params_singleton cfg(_self, _self.value);
-    const auto &common_param = cfg.get().common_param;
+    const auto &cashout_window_param = cfg.get().cashout_window_param;
     const auto &max_beneficiaries_param = cfg.get().max_beneficiaries_param;
     const auto &max_comment_depth_param = cfg.get().max_comment_depth_param;
 
@@ -168,7 +165,7 @@ void publication::create_message(name account, std::string permlink,
         closed = parent_itr->closed;
     }
     seconds_diff /= eosio::seconds(1).count();
-    uint64_t delay_sec = common_param.cashout_window > seconds_diff ? common_param.cashout_window - seconds_diff : 0;
+    uint64_t delay_sec = cashout_window_param.window > seconds_diff ? cashout_window_param.window - seconds_diff : 0;
     if (!closed && delay_sec)
         close_message_timer(account, message_id, delay_sec);
     else //parent is already closed or is about to
@@ -384,10 +381,10 @@ void publication::close_message_timer(name account, uint64_t id, uint64_t delay_
 
 void publication::check_upvote_time(uint64_t cur_time, uint64_t mssg_date) {
     posting_params_singleton cfg(_self, _self.value);
-    const auto &common_param = cfg.get().common_param;
+    const auto &cashout_window_param = cfg.get().cashout_window_param;
 
-    eosio_assert((cur_time <= mssg_date + ((common_param.cashout_window - common_param.upvote_lockout) * seconds(1).count())) ||
-                 (cur_time > mssg_date + (common_param.cashout_window * seconds(1).count())),
+    eosio_assert((cur_time <= mssg_date + ((cashout_window_param.window - cashout_window_param.upvote_lockout) * seconds(1).count())) ||
+                 (cur_time > mssg_date + (cashout_window_param.window * seconds(1).count())),
                   "You can't upvote, because publication will be closed soon.");
 }
 
