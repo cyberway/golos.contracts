@@ -1,18 +1,21 @@
 {
-  "version": "cyberway::abi/1.0",
-  "types": [
-    {
-      "new_type_name": "account_name",
-      "type": "name"
-    }
-  ],
+  "version": "cyberway::abi/1.1",
+  "types": [],
+  "variants": [{
+      "name": "vesting_param",
+      "types": [
+          "vesting_withdraw",
+          "vesting_amount",
+          "delegation"
+      ]
+  }],
   "structs": [
     {
       "name": "balance_vesting",
       "base": "",
       "fields": [
         {"name": "supply", "type": "asset"},
-        {"name": "issuers", "type": "account_name[]"}
+        {"name": "notify_acc", "type": "name"}
       ]
     },
     {
@@ -57,11 +60,11 @@
         },
         {
           "name": "sender",
-          "type": "account_name"
+          "type": "name"
         },
         {
           "name": "recipient",
-          "type": "account_name"
+          "type": "name"
         },
         {
           "name": "quantity",
@@ -95,7 +98,7 @@
         },
         {
           "name": "recipient",
-          "type": "account_name"
+          "type": "name"
         },
         {
           "name": "number_of_payments",
@@ -121,7 +124,7 @@
       "fields": [
         {
           "name": "sender",
-          "type": "account_name"
+          "type": "name"
         },
         {
           "name": "type",
@@ -139,7 +142,7 @@
         },
         {
           "name": "recipient",
-          "type": "account_name"
+          "type": "name"
         },
         {
           "name": "amount",
@@ -157,11 +160,11 @@
       "fields": [
         {
           "name": "sender",
-          "type": "account_name"
+          "type": "name"
         },
         {
           "name": "recipient",
-          "type": "account_name"
+          "type": "name"
         },
         {
           "name": "quantity",
@@ -174,16 +177,12 @@
       "base": "",
       "fields": [
         {
-          "name": "issuer",
-          "type": "account_name"
-        },
-        {
           "name": "quantity",
           "type": "asset"
         },
         {
           "name": "user",
-          "type": "account_name"
+          "type": "name"
         }
       ]
     },
@@ -193,7 +192,7 @@
       "fields": [
         {
           "name": "owner",
-          "type": "account_name"
+          "type": "name"
         },
         {
           "name": "quantity",
@@ -229,16 +228,16 @@
        "name": "open",
        "base": "",
        "fields": [
-          {"name":"owner", "type":"account_name"},
+          {"name":"owner", "type":"name"},
           {"name":"symbol", "type":"symbol"},
-          {"name":"ram_payer", "type":"account_name"}
+          {"name":"ram_payer", "type":"name"}
        ]
     },
     {
        "name": "close",
        "base": "",
        "fields": [
-          {"name":"owner", "type":"account_name"},
+          {"name":"owner", "type":"name"},
           {"name":"symbol", "type":"symbol"}
        ]
     },
@@ -246,13 +245,67 @@
        "name": "createvest",
        "base": "",
        "fields": [
-          {"name":"creator", "type":"account_name"},
           {"name":"symbol", "type":"symbol"},
-          {"name":"issuers", "type":"account_name[]"}
+          {"name":"notify_acc", "type":"name"}
+       ]
+    },
+    {
+       "name": "vesting_withdraw",
+       "base": "",
+       "fields": [
+          {"name":"intervals",        "type":"uint32"},
+          {"name":"interval_seconds", "type":"uint32"}
+       ]
+    },
+    {
+       "name": "vesting_amount",
+       "base": "",
+       "fields": [
+          {"name":"min_amount",       "type":"uint64"}
+       ]
+    },
+    {
+       "name": "delegation",
+       "base": "",
+       "fields": [
+          {"name":"min_amount",    "type":"uint64"},
+          {"name":"min_remainder", "type":"uint64"},
+          {"name":"min_time",      "type":"uint32"},
+          {"name":"max_interest",  "type":"uint16"},
+          {"name":"return_time",   "type":"uint32"}
+       ]
+    },
+    {
+       "name": "vesting_state",
+       "base": "",
+       "fields": [
+          {"name": "id",                     "type": "uint64"},
+          {"name":"vesting_withdraw_params", "type":"vesting_withdraw"},
+          {"name":"amount_params",           "type":"vesting_amount"},
+          {"name":"delegation_params",       "type":"delegation"}
+
+       ]
+    },
+    {
+       "name": "setparams",
+       "base": "",
+       "fields": [
+          {"name": "symbol", "type": "symbol"},
+          {"name": "params", "type": "vesting_param[]"}
        ]
     }
   ],
   "actions": [
+    {
+      "name": "setparams",
+      "type": "setparams",
+      "ricardian_contract": ""
+    },
+    {
+      "name": "validateprms",
+      "type": "setparams",
+      "ricardian_contract": ""
+    },
     {
       "name": "buyvg",
       "type": "transfer_vesting"
@@ -373,6 +426,15 @@
           "name": "payouttime",
           "unique": false,
           "orders": [{"field": "payout_time", "order": "asc"}]
+      }]
+    },
+    {
+      "name": "vstngparams",
+      "type": "vesting_state",
+      "indexes" : [{
+          "name": "primary",
+          "unique": true,
+          "orders": [{"field": "id", "order": "asc"}]
       }]
     }
   ],

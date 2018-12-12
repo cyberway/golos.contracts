@@ -29,7 +29,7 @@ public:
         , vest({this, cfg::vesting_name, _vesting_sym})
         , token({this, cfg::token_name, _token_sym})
     {
-        create_accounts({N(sania), N(pasha), N(tania), N(vania), N(issuer),
+        create_accounts({N(sania), N(pasha), N(tania), N(vania), N(issuer), N(notify.acc),
             _code, cfg::token_name, cfg::control_name, cfg::emission_name});
         produce_blocks(2);
 

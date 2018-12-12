@@ -6,9 +6,10 @@
 
 namespace golos {
 
+using namespace eosio;
 
 template<typename T, typename F>
-auto get_itr(T& tbl, uint64_t key, account_name payer, F&& insert_fn) {
+auto get_itr(T& tbl, uint64_t key, name payer, F&& insert_fn) {
     auto itr = tbl.find(key);
     if(itr == tbl.end())
         itr = tbl.emplace(payer, insert_fn);

@@ -1,4 +1,3 @@
-#define UNIT_TEST_ENV
 //#define SHOW_ENABLE
 #include "golos.publication_rewards_types.hpp"
 #include "golos_tester.hpp"
@@ -7,6 +6,7 @@
 #include "eosio.token_test_api.hpp"
 #include <math.h>
 #include "../golos.publication/types.h"
+#include "golos.charge_test_api.hpp"
 #include "../golos.publication/config.hpp"
 #include "contracts.hpp"
 
@@ -55,6 +55,7 @@ class reward_calcs_tester : public extended_tester {
     symbol _token_symbol;
     golos_posting_api post;
     golos_vesting_api vest;
+    golos_charge_api charge;
     eosio_token_api token;
 
 protected:
@@ -73,7 +74,7 @@ protected:
 
         const string limit_no_power     = amsg("publication::apply_limits: can't post, not enough power");
         const string limit_no_power_vest= amsg("publication::apply_limits: can't post, not enough power, vesting payment is disabled");
-    
+
         const string delete_upvoted     = amsg("Cannot delete a comment with net positive votes.");
     } err;
 
@@ -86,7 +87,7 @@ protected:
         step();
 
         BOOST_CHECK_EQUAL(success(), token.open(_forum_name, _token_symbol, _forum_name));
-        BOOST_CHECK_EQUAL(success(), vest.create_vesting(_issuer, _token_symbol, {_issuer, _forum_name}));
+        BOOST_CHECK_EQUAL(success(), vest.create_vesting(_issuer, _token_symbol, {_issuer, _forum_name}, cfg::control_name));
         step();
 
         BOOST_CHECK_EQUAL(success(), vest.open(_forum_name, _token_symbol, _forum_name));
@@ -109,6 +110,7 @@ public:
         , _token_symbol(PRECESION, TOKEN_NAME)
         , post({this, _code, _token_symbol})
         , vest({this, cfg::vesting_name, _token_symbol})
+        , charge({this, cfg::charge_name, _token_symbol})
         , token({this, cfg::token_name, _token_symbol})
 
         , _forum_name(_code)
@@ -120,13 +122,14 @@ public:
         , _stranger(N(dan.larimer)) {
 
         step(2);    // why 2?
-        create_accounts({_forum_name, _issuer, cfg::vesting_name, cfg::token_name, cfg::control_name, _stranger});
+        create_accounts({_forum_name, _issuer, cfg::vesting_name, cfg::token_name, cfg::control_name, cfg::charge_name, _stranger});
         create_accounts(_users);
         step(2);
 
         install_contract(_forum_name, contracts::posting_wasm(), contracts::posting_abi());
         install_contract(cfg::token_name, contracts::token_wasm(), contracts::token_abi());
         install_contract(cfg::vesting_name, contracts::vesting_wasm(), contracts::vesting_abi());
+        install_contract(cfg::charge_name, contracts::charge_wasm(), contracts::charge_abi());
     }
 
     action_result add_funds_to(account_name user, int64_t amount) {
@@ -345,12 +348,12 @@ public:
 
                     auto curation_payout = p.rules.curatorsprop * payout;
                     double unclaimed_funds = curation_payout;
-                    std::list<std::pair<account_name, double>> cur_rewards;                    
+                    std::list<std::pair<account_name, double>> cur_rewards;
                     double voteshares = 0.0;
                     double curators_fn_sum = 0.0;
                     double prev_curation_fn_val = p.rules.curationfunc(voteshares);
                     for (auto& v : m.votes) {
-                        voteshares += v.voteshares();                        
+                        voteshares += v.voteshares();
                         double curation_fn_val = p.rules.curationfunc(voteshares);
                         double curation_fn_add = v.revote_diff ? 0.0 : curation_fn_val - prev_curation_fn_val;
                         cur_rewards.emplace_back(std::make_pair(v.voter, curation_fn_add *
@@ -458,7 +461,7 @@ public:
         }
         return ret;
     }
-    
+
     action_result delete_message(account_name author, string permlink) {
         return post.delete_msg(author, permlink);
     }
@@ -505,6 +508,15 @@ public:
             BOOST_REQUIRE_MESSAGE(false, "addvote: ret == success(), but message not found in state");
         }
         return ret;
+    }
+
+    action_result set_restorer(name user, unsigned char suffix, std::string func_str,
+        uint64_t max_prev, uint64_t max_vesting, uint64_t max_elapsed) {
+        return charge.set_restorer(user, suffix, func_str, max_prev, max_vesting, max_elapsed);
+    }
+
+    action_result use(name issuer, name user, unsigned char suffix, uint64_t price, uint64_t cutoff) {
+        return charge.use(issuer, user, suffix, price, cutoff);
     }
 };
 
@@ -578,7 +590,7 @@ BOOST_FIXTURE_TEST_CASE(basic_tests, reward_calcs_tester) try {
     BOOST_CHECK_EQUAL(success(), add_funds_to_forum(100000));
     step();     // push transactions before run() call
     check();
-    
+
     BOOST_TEST_MESSAGE("--- waiting");
     run(seconds(99));   // TODO: remove magic number
     check();
@@ -721,11 +733,11 @@ BOOST_FIXTURE_TEST_CASE(golos_curation_test, reward_calcs_tester) try {
     BOOST_TEST_MESSAGE("--- add_funds_to_forum");
     BOOST_CHECK_EQUAL(success(), add_funds_to_forum(50000));
     check();
-    
+
     BOOST_TEST_MESSAGE("--- create_message: " << name{_users[0]}.to_string());
     BOOST_CHECK_EQUAL(success(), create_message(_users[0], "permlink"));
     check();
-    
+
     for (size_t i = 0; i < 10; i++) {
         BOOST_TEST_MESSAGE("--- " << name{_users[i]}.to_string() << " voted");
         BOOST_CHECK_EQUAL(success(), addvote(_users[i], _users[0], "permlink", 10000));
@@ -733,7 +745,33 @@ BOOST_FIXTURE_TEST_CASE(golos_curation_test, reward_calcs_tester) try {
     }
     run(seconds(170));
     check();
-    
+
+} FC_LOG_AND_RETHROW()
+
+BOOST_FIXTURE_TEST_CASE(charge_test, reward_calcs_tester) try {
+    init(1, 1);
+
+    BOOST_CHECK_EQUAL(success(), set_restorer(_issuer, 'c', "t",
+        10000, static_cast<uint64_t>(std::numeric_limits<fixp_t>::max() / fixp_t(10)), 60 * 60 * 24 * 40));
+    for (size_t i = 0; i < 10; i++) {
+        BOOST_TEST_MESSAGE("--- use_ " << i);
+        BOOST_CHECK_EQUAL(success(), use(_issuer, _users[0], 'c', 100, 1000));
+        check();
+    }
+    BOOST_TEST_MESSAGE("--- try to use");
+    BOOST_CHECK_EQUAL("assertion failure with message: new_val > cutoff", use(_issuer, _users[0], 'c', 100, 1000));
+    check();
+    BOOST_TEST_MESSAGE("--- waiting 900");
+    run(seconds(900));
+    BOOST_TEST_MESSAGE("--- try to use (cutoff == 1000)");
+    BOOST_CHECK_EQUAL("assertion failure with message: new_val > cutoff", use(_issuer, _users[0], 'c', 1000, 1000));
+    check();
+    BOOST_TEST_MESSAGE("--- waiting 100");
+    run(seconds(100));
+    BOOST_TEST_MESSAGE("--- use (cutoff == 1000)");
+    BOOST_CHECK_EQUAL(success(), use(_issuer, _users[0], 'c', 1000, 1000));
+    check();
+
 } FC_LOG_AND_RETHROW()
 
 BOOST_AUTO_TEST_SUITE_END()

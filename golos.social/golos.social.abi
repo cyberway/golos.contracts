@@ -1,9 +1,6 @@
 {
   "version": "cyberway::abi/1.0",
-  "types": [{
-      "new_type_name": "account_name",
-      "type": "name"
-    }
+  "types": [
   ],
   "structs": [
   {
@@ -12,7 +9,7 @@
     "fields": [
       {
         "name": "account",
-        "type": "account_name"
+        "type": "name"
       },
       {
         "name": "pinning",
@@ -30,11 +27,11 @@
     "fields": [
       {
         "name": "pinner",
-        "type": "account_name"
+        "type": "name"
       },
       {
         "name": "pinning",
-        "type": "account_name"
+        "type": "name"
       }
     ]
   },
@@ -44,11 +41,11 @@
     "fields": [
       {
         "name": "blocker",
-        "type": "account_name"
+        "type": "name"
       },
       {
         "name": "blocking",
-        "type": "account_name"
+        "type": "name"
       }
     ]
   }

@@ -4,9 +4,7 @@
 #include <eosio/chain/abi_serializer.hpp>
 #include <fc/variant_object.hpp>
 
-namespace fc {
-uint64_t hash64(const std::string& arg);
-}
+#define UNIT_TEST_ENV
 
 // Note: cannot check nested mvo
 #define CHECK_EQUAL_OBJECTS(left, right) { \
@@ -28,6 +26,7 @@ uint64_t hash64(const std::string& arg);
 
 namespace eosio { namespace testing {
 
+uint64_t hash64(const std::string& arg);
 
 // TODO: maybe use native db struct
 struct permission {

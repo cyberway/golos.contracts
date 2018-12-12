@@ -72,9 +72,11 @@ struct eosio_token_api: base_contract_api {
     }
 
     //// helpers
-    asset make_asset(double x = 0, symbol sym = symbol(0)) const {
-        if (sym == symbol(0)) sym = _symbol;
-        return asset(x * sym.precision(), sym);
+    int64_t to_shares(double x) const {
+        return x * _symbol.precision();
+    }
+    asset make_asset(double x = 0) const {
+        return asset(to_shares(x), _symbol);
     }
     string asset_str(double x = 0) {
         return make_asset(x).to_string();

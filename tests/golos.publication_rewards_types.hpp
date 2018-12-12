@@ -1,13 +1,16 @@
 #pragma once
-#include <eosio/chain/types.hpp>
-#include <boost/test/unit_test.hpp>
 #define UNIT_TEST_ENV
 #include "../golos.publication/types.h"
 #include "../golos.publication/config.hpp"
+#include <eosio/chain/types.hpp>
+#include <boost/test/unit_test.hpp>
 #include <string>
 #include <vector>
 #include <list>
 #include <map>
+
+namespace eosio { namespace testing {
+
 
 using namespace eosio::chain;
 
@@ -169,12 +172,10 @@ struct beneficiary {
     account_name account;
     int64_t deductprcnt;
 };
-FC_REFLECT(beneficiary, (account)(deductprcnt))
 
 struct tags {
     std::string tag;
 };
-FC_REFLECT(tags, (tag))
 
 struct message {
     message_key key;
@@ -190,7 +191,7 @@ struct message {
             ret += v.rshares();
         return ret;
     };
-    
+
     message(message_key k, double tokenprop_, double created_, const std::vector<beneficiary>& beneficiaries_, double reward_weight_) :
         key(k), tokenprop(tokenprop_), created(created_), beneficiaries(beneficiaries_), reward_weight(reward_weight_) {};
 };
@@ -364,3 +365,9 @@ struct state {
     std::vector<rewardpool> pools;
     void clear() { balances.clear(); pools.clear(); };
 };
+
+
+}} // eosio::testing
+
+FC_REFLECT(eosio::testing::beneficiary, (account)(deductprcnt))
+FC_REFLECT(eosio::testing::tags, (tag))

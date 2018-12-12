@@ -1,4 +1,3 @@
-#define UNIT_TEST_ENV
 #include "golos_tester.hpp"
 #include "golos.posting_test_api.hpp"
 #include "golos.vesting_test_api.hpp"

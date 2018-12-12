@@ -6,7 +6,7 @@ namespace golos {
 
 // TODO: can be simplified to <class T>: F depends only on T's item type, which possible can be derived from T
 template<typename T, typename F>
-bool upsert_tbl(uint64_t code, uint64_t scope, account_name payer, uint64_t key, F&& get_update_fn, bool allow_insert = true) {
+bool upsert_tbl(eosio::name code, uint64_t scope, eosio::name payer, uint64_t key, F&& get_update_fn, bool allow_insert = true) {
     T tbl{code, scope};
     auto itr = tbl.find(key);
     bool exists = itr != tbl.end();
@@ -21,4 +21,4 @@ bool upsert_tbl(uint64_t code, uint64_t scope, account_name payer, uint64_t key,
 }
 
 
-} // namespace golos
+} // golos

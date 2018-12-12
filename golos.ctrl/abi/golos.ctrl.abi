@@ -1,27 +1,17 @@
 {
-    "version": "cyberway::abi/1.0",
-    "types": [{
-        "new_type_name": "account_name",
-        "type": "name"
+    "version": "cyberway::abi/1.1",
+    "types": [],
+    "variants": [{
+        "name": "ctrl_param",
+        "types": [
+            "ctrl_token",
+            "multisig_acc",
+            "max_witnesses",
+            "multisig_perms",
+            "max_witness_votes"
+        ]
     }],
     "structs": [
-        {
-            "name": "create",
-            "base": "",
-            "fields": [
-                {"type": "symbol",       "name": "domain"}
-                {"type": "account_name", "name": "owner"}
-                {"type": "properties", "name": "props"}
-            ]
-        },
-        {
-            "name": "attachacc",
-            "base": "",
-            "fields": [
-                {"type": "symbol",       "name": "domain"}
-                {"type": "account_name", "name": "user"}
-            ]
-        },
         {
             "name": "bw_user",
             "base": "",
@@ -29,97 +19,55 @@
                 {"type": "name", "name": "name"},
                 {"type": "bool", "name": "attached"}
             ]
-        },
-        {
-            "name": "ctrl_props",
+        }, {
+            "name": "attachacc",
             "base": "",
             "fields": [
-                {"type": "name", "name": "owner"},
-                {"type": "properties", "name": "props"}
+                {"type": "name",   "name": "user"}
             ]
-        },
-        {
+        }, {
             "name": "detachacc",
             "base": "",
             "fields": [
-                {"type": "symbol", "name": "domain"}
-                {"type": "account_name", "name": "user"}
+                {"type": "name",   "name": "user"}
             ]
-        },
-        {
-            "name": "properties",
-            "base": "",
-            "fields": [
-                {"type": "uint16", "name": "max_witnesses"},
-                {"type": "uint16", "name": "witness_supermajority"},
-                {"type": "uint16", "name": "witness_majority"},
-                {"type": "uint16", "name": "witness_minority"},
-                {"type": "uint16", "name": "max_witness_votes"},
-
-                {"type": "uint16", "name": "infrate_start"},
-                {"type": "uint16", "name": "infrate_stop"},
-                {"type": "uint32", "name": "infrate_narrowing"},
-                {"type": "uint16", "name": "content_reward"},
-                {"type": "uint16", "name": "vesting_reward"},
-                {"type": "uint16", "name": "workers_reward"},
-                {"type": "account_name", "name": "workers_pool"}
-            ]
-        },
-        {
+        }, {
             "name": "regwitness",
             "base": "",
             "fields": [
-                {"type": "symbol", "name": "domain"}
-                {"type": "account_name", "name": "witness"},
+                {"type": "name", "name": "witness"},
                 {"type": "public_key", "name": "key"},
                 {"type": "string", "name": "url"}
             ]
-        },
-        {
+        }, {
             "name": "unregwitness",
             "base": "",
             "fields": [
-                {"type": "symbol", "name": "domain"}
-                {"type": "account_name", "name": "witness"}
+                {"type": "name",   "name": "witness"}
             ]
-        },
-        {
+        }, {
             "name": "unvotewitn",
             "base": "",
             "fields": [
-                {"type": "symbol", "name": "domain"}
-                {"type": "account_name", "name": "voter"},
-                {"type": "account_name", "name": "witness"}
+                {"type": "name", "name": "voter"},
+                {"type": "name", "name": "witness"}
             ]
-        },
-        {
-            "name": "updateprops",
-            "base": "",
-            "fields": [
-                {"type": "symbol", "name": "domain"}
-                {"type": "properties", "name": "props"}
-            ]
-        },
-        {
+        }, {
             "name": "changevest",
             "base": "",
             "fields": [
-                {"type": "symbol", "name": "domain"}
-                {"type": "account_name", "name": "owner"},
+                {"type": "name", "name": "who"},
                 {"type": "asset", "name": "diff"}
             ]
-        },
-        {
+        }, {
             "name": "votewitness",
             "base": "",
             "fields": [
-                {"type": "symbol", "name": "domain"}
-                {"type": "account_name", "name": "voter"},
-                {"type": "account_name", "name": "witness"},
+                {"type": "name", "name": "voter"},
+                {"type": "name", "name": "witness"},
                 {"type": "uint16", "name": "weight"}
             ]
-        },
-        {
+        }, {
             "name": "witness_info",
             "base": "",
             "fields": [
@@ -129,59 +77,90 @@
                 {"type": "bool", "name": "active"},
                 {"type": "uint64", "name": "total_weight"}
             ]
-        },
-        {
+        }, {
             "name": "witness_voter_s",
             "base": "",
             "fields": [
-                {"type": "name", "name": "community"},
-                {"type": "account_name[]", "name": "witnesses"}
+                {"type": "name", "name": "voter"},
+                {"type": "name[]", "name": "witnesses"}
             ]
+        }, {
+            "name": "ctrl_token",
+            "base": "",
+            "fields": [
+                {"type": "symbol_code", "name": "code"}]
+        }, {
+            "name": "multisig_acc",
+            "base": "",
+            "fields": [
+                {"type": "name", "name": "name"}]
+        }, {
+            "name": "max_witnesses",
+            "base": "",
+            "fields": [
+                {"type": "uint16", "name": "max"}]
+        }, {
+            "name": "multisig_perms",
+            "base": "",
+            "fields": [
+                {"type": "uint16", "name": "super_majority"},
+                {"type": "uint16", "name": "majority"},
+                {"type": "uint16", "name": "minority"}
+            ]
+        }, {
+            "name": "max_witness_votes",
+            "base": "",
+            "fields": [
+                {"type": "uint16", "name": "max"}]
+        }, {
+            "name": "ctrl_state",
+            "fields": [
+                {"type": "uint64",              "name": "id"},
+                {"type": "ctrl_token",          "name": "token"},
+                {"type": "multisig_acc",        "name": "multisig"},
+                {"type": "max_witnesses",       "name": "witnesses"},
+                {"type": "multisig_perms",      "name": "msig_perms"},
+                {"type": "max_witness_votes",   "name": "witness_votes"}]
+        }, {
+            "name": "setparams",
+            "fields": [
+                {"type": "ctrl_param[]", "name": "params"}]
         }
     ],
-    "types": [],
     "actions": [
         {
-            "name": "create",
-            "type": "create",
+            "name": "setparams",
+            "type": "setparams",
             "ricardian_contract": ""
-        },
-        {
+        }, {
+            "name": "validateprms",
+            "type": "setparams",
+            "ricardian_contract": ""
+        }, {
             "name": "attachacc",
             "type": "attachacc",
             "ricardian_contract": ""
-        },
-        {
+        }, {
             "name": "detachacc",
             "type": "detachacc",
             "ricardian_contract": ""
-        },
-        {
+        }, {
             "name": "regwitness",
             "type": "regwitness",
             "ricardian_contract": ""
-        },
-        {
+        }, {
             "name": "unregwitness",
             "type": "unregwitness",
             "ricardian_contract": ""
-        },
-        {
+        }, {
             "name": "unvotewitn",
             "type": "unvotewitn",
             "ricardian_contract": ""
-        },
-        {
-            "name": "updateprops",
-            "type": "updateprops",
-            "ricardian_contract": ""
-        },
-        {
+        }, {
             "name": "changevest",
             "type": "changevest",
             "ricardian_contract": ""
-        },
-        {
+        }, {
             "name": "votewitness",
             "type": "votewitness",
             "ricardian_contract": ""
@@ -196,17 +175,7 @@
                 "unique": true,
                 "orders": [{"field": "name", "order": "asc"}]
             }]
-        },
-        {
-            "name": "props",
-            "type": "ctrl_props",
-            "indexes" : [{
-                "name": "primary",
-                "unique": true,
-                "orders": [{"field": "owner", "order": "asc"}]
-            }]
-        },
-        {
+        }, {
             "name": "witness",
             "type": "witness_info",
             "indexes" : [{
@@ -218,14 +187,21 @@
                 "unique": false,
                 "orders": [{"field": "total_weight", "order": "desc"}]
             }]
-        },
-        {
+        }, {
             "name": "witnessvote",
             "type": "witness_voter_s",
             "indexes" : [{
                 "name": "primary",
                 "unique": true,
-                "orders": [{"field": "community", "order": "asc"}]
+                "orders": [{"field": "voter", "order": "asc"}]
+            }]
+        }, {
+            "name": "ctrlparams",
+            "type": "ctrl_state",
+            "indexes" : [{
+                "name": "primary",
+                "unique": true,
+                "orders": [{"field": "id", "order": "asc"}]
             }]
         }
     ],

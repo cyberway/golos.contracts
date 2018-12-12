@@ -1,6 +1,7 @@
 import dbs
 import bson
 from config import *
+import utils
 
 golos = dbs.Tables([
     ('witnesses', dbs.golos_db['witness_object'],      None, [('owner',True)]),
@@ -27,17 +28,17 @@ def create_witness(doc, exist_accounts):
             continue
         acc_list.append(vote["account"])
     for acc in acc_list:
-        total_weight += cyberway.vesting.table.find_one({"_SCOPE_":acc})["vesting"]["amount"]
+        total_weight += int(cyberway.vesting.table.find_one({"_SCOPE_":acc})["vesting"]["amount"].to_decimal())
         
     witness = { 
         "name" : doc["owner"],
         "key" : doc["signing_key"],
         "url" : doc["url"],
         "active" : True,
-        "total_weight" : total_weight,
-        "_SCOPE_" : BALANCE_SYMBOL_FOR_SCOPE,
+        "total_weight" : utils.UInt64(total_weight),
+        "_SCOPE_" : 'gls.ctrl',
         "_PAYER_" : doc["owner"], 
-        "_SIZE_" : bson.Int64(61) 
+        "_SIZE_" : utils.UInt64(61) 
     }
     cyberway.witness.append(witness)
 
@@ -47,7 +48,7 @@ def create_vote(account, witnesses_list):
         "witnesses" : witnesses_list, 
         "_SCOPE_" : account, 
         "_PAYER_" : account, 
-        "_SIZE_" : bson.Int64(41) 
+        "_SIZE_" : utils.UInt64(41) 
     }
     cyberway.witnessvote.append(witnessvote)
 

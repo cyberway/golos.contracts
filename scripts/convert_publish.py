@@ -10,11 +10,8 @@ import subprocess
 import sys, traceback
 from datetime import datetime
 from datetime import timedelta
-from decimal import Decimal
-from bson.decimal128 import Decimal128
-from pymongo import MongoClient
+import pymongo
 from config import *
-from pymongo import UpdateOne
 
 expiretion = timedelta(minutes = 30)
 
@@ -63,8 +60,6 @@ class PublishConverter:
         for doc in cw_accounts.find({},{'name':1}):
             self.exists_accs.add(doc["name"])
         print("accs num = ", len(self.exists_accs))
-        for a in self.exists_accs:
-            print(a)
 
     def convert_posts(self, query = {}):
         print("convert_posts")
@@ -73,11 +68,11 @@ class PublishConverter:
         
         reward_pools = self.publish_db['rewardpools']
         pool = reward_pools.find()[0] #we have to create it before converting
-        pool["state"]["funds"]["amount"] = utils.get_golos_asset_amount(golos_gpo["total_reward_fund_steem_value"])
-        pool["state"]["funds"]["decs"] = BALANCE_PRECISION
+        pool["state"]["funds"]["amount"] = utils.Int64(utils.get_golos_asset_amount(golos_gpo["total_reward_fund_steem_value"]))
+        pool["state"]["funds"]["decs"] = utils.UInt64(BALANCE_PRECISION)
         pool["state"]["funds"]["sym"] = BALANCE_SYMBOL
         
-        pool["state"]["msgs"] = 0
+        pool["state"]["msgs"] = utils.UInt64(0)
         rshares_sum = 0
         
         cursor = golos_posts.find(query)
@@ -96,22 +91,22 @@ class PublishConverter:
                 cur_mssg_id = utils.convert_hash(doc["permlink"])
                 cur_rshares_raw = utils.get_fixp_raw(doc["net_rshares"])
                 messagestate = {
-                    "netshares": cur_rshares_raw,
-                    "voteshares": utils.get_fixp_raw(doc["vote_rshares"]),
-                    "sumcuratorsw": self.mssgs_curatorsw[(doc["author"], cur_mssg_id)]
+                    "netshares": utils.Int64(cur_rshares_raw),
+                    "voteshares": utils.Int64(utils.get_fixp_raw(doc["vote_rshares"])),
+                    "sumcuratorsw": utils.Int64(self.mssgs_curatorsw[(doc["author"], cur_mssg_id)])
                 }
             
                 isClosedMessage = True
                 date_close = datetime.strptime("2106-02-07T06:28:15", '%Y-%m-%dT%H:%M:%S').isoformat()
                 if (doc["cashout_time"].isoformat() != date_close and doc["cashout_time"].isoformat() > datetime.now().isoformat()):
                     rshares_sum += cur_rshares_raw
-                    pool["state"]["msgs"] += 1
+                    pool["state"]["msgs"] = utils.UInt64(pool["state"]["msgs"].to_decimal()+1)
                     isClosedMessage = False
                     
                     delay_trx = {
                       "trx_id": "",
                       "sender": "gls.publish",
-                      "sender_id": hex(utils.convert_hash(doc["permlink"]) << 64 | utils.string_to_name(doc["author"])),
+                      "sender_id": hex(cur_mssg_id << 64 | utils.string_to_name(doc["author"])),
                       "payer": "gls.publish",
                       "delay_until" : doc["cashout_time"].isoformat(), 
                       "expiration" :  (doc["cashout_time"] + expiretion).isoformat(), 
@@ -119,44 +114,33 @@ class PublishConverter:
                       "packed_trx" : create_trx(doc["author"], utils.convert_hash(doc["permlink"])), 
                       "_SCOPE_" : "",
                       "_PAYER_" : "",
-                      "_SIZE_" : 50
+                      "_SIZE_" : utils.UInt64(50)
                     }
                     self.publish_tables.gtransaction.append(delay_trx)
                 
                 orphan_comment = (len(doc["parent_author"]) > 0) and (not (doc["parent_author"] in self.exists_accs))
 
                 message = {
-                    "id": cur_mssg_id,
+                    "id": utils.UInt64(cur_mssg_id),
                     "permlink": doc["permlink"],
-                    "date": int(doc["last_update"].timestamp()) * 1000000,
+                    "date": utils.UInt64(int(doc["last_update"].timestamp()) * 1000000),
                     "parentacc": "" if orphan_comment else doc["parent_author"],
-                    "parent_id": 0  if (orphan_comment or (not len(doc["parent_permlink"]) > 0)) else utils.convert_hash(doc["parent_permlink"]),
-                    "tokenprop": utils.get_prop_raw(doc["percent_steem_dollars"] / 2),
+                    "parent_id": utils.UInt64(0 if (orphan_comment or (not len(doc["parent_permlink"]) > 0)) else utils.convert_hash(doc["parent_permlink"])),
+                    "tokenprop": utils.Int64(utils.get_prop_raw(doc["percent_steem_dollars"] / 2)),
                     "beneficiaries": [],
-                    "rewardweight": utils.get_prop_raw(doc["reward_weight"]),
+                    "rewardweight": utils.Int64(utils.get_prop_raw(doc["reward_weight"])),
                     "state": messagestate,
-                    "childcount": doc["children"],
+                    "childcount": utils.UInt64(doc["children"]),
                     "closed": isClosedMessage,
-                    "level": 0 if orphan_comment else doc["depth"], # this value will be incorrect for comment to orphan comment
+                    "level": utils.UInt64(0 if orphan_comment else doc["depth"]), # this value will be incorrect for comment to orphan comment
                                                                     # but we only use level for comments nesting limits, 
                                                                     # so it seems that this is not a problem
                     "_SCOPE_": doc["author"],
                     "_PAYER_": doc["author"],
-                    "_SIZE_": 50
+                    "_SIZE_": utils.UInt64(50)
                 }
                 self.publish_tables.message.append(message)
 
-                
-                childcount_obj = {
-                    "id": cur_mssg_id,
-                    "_SCOPE_": doc["author"],
-                    "childcount": 0,
-                    "gls_childcount": doc["children"]
-                }
-                self.childcount_dict[childcount_obj["id"] << 64 | utils.string_to_name(childcount_obj["_SCOPE_"])] = childcount_obj
-                if message["parentacc"]:
-                    self.childcount_dict[message["parent_id"] << 64 | utils.string_to_name(message["parentacc"])]["childcount"] += 1
-                
                 tags = []
                 if (isinstance(doc["json_metadata"], dict)):
                     if ("tags" in doc["json_metadata"]):
@@ -175,7 +159,7 @@ class PublishConverter:
                         tags= []
                 
                 content = {
-                    "id": cur_mssg_id,
+                    "id": utils.UInt64(cur_mssg_id),
                     "headermssg": doc["title"],
                     "bodymssg": doc["body"],
                     "languagemssg": "",
@@ -183,20 +167,22 @@ class PublishConverter:
                     "jsonmetadata": doc["json_metadata"],
                     "_SCOPE_": doc["author"],
                     "_PAYER_": doc["author"],
-                    "_SIZE_": 50
+                    "_SIZE_": utils.UInt64(50)
                 }
                 self.publish_tables.content.append(content)
                 
                 if added % self.cache_period == 0:
-                    print("messages converted -- ", added)
                     self.publish_tables.writeCache()
+                    print("messages converted -- ", added)
                     utils.printProgressBar(passed+1, length, prefix = 'Progress:', suffix = 'Complete', length = 50)
                 added += 1
 
-            except Exception as e:
+            except pymongo.errors.BulkWriteError as e:
                 print(doc)
                 print(e.args)
+                print(e.details)
                 print(traceback.format_exc())
+                break
         try:
             self.publish_tables.writeCache()
             utils.printProgressBar(passed+1, length, prefix = 'Progress:', suffix = 'Complete', length = 50)
@@ -204,9 +190,8 @@ class PublishConverter:
             print(e.args)
             print(traceback.format_exc())
         
-        shares_sum_str = utils.uint_to_hex_str(max(rshares_sum, 0), 32) #negative sum is almost impossible here
-        pool["state"]["rshares"] = shares_sum_str
-        pool["state"]["rsharesfn"] = shares_sum_str
+        pool["state"]["rshares"] = utils.Int128(rshares_sum)
+        pool["state"]["rsharesfn"] = utils.Int128(rshares_sum)
         reward_pools.save(pool)
         print("...done")
         
@@ -232,17 +217,17 @@ class PublishConverter:
                     continue
 
                 vote = {
-                    "id" : added,
-                    "message_id" : cur_mssg_id,
+                    "id" : utils.UInt64(added),
+                    "message_id" : utils.UInt64(cur_mssg_id),
                     "voter" : doc["voter"],
                     "weight" : doc["vote_percent"],
-                    "time" : int(doc["last_update"].timestamp()) * 1000000,
-                    "count" : doc["num_changes"],
-                    "curatorsw": doc["weight"] / 2,
-                    "rshares": utils.get_fixp_raw(doc["rshares"]),
+                    "time" : utils.UInt64(int(doc["last_update"].timestamp()) * 1000000),
+                    "count" : utils.Int64(doc["num_changes"]),
+                    "curatorsw": utils.Int64(doc["weight"] / 2),
+                    "rshares": utils.Int64(utils.get_fixp_raw(doc["rshares"])),
                     "_SCOPE_" : doc["author"],
                     "_PAYER_" : doc["author"],
-                    "_SIZE_" : 50
+                    "_SIZE_" : utils.UInt64(50)
                 }
 
                 self.publish_tables.vote.append(vote)
@@ -250,8 +235,8 @@ class PublishConverter:
                 self.mssgs_curatorsw[(doc["author"], cur_mssg_id)] += vote["curatorsw"]
 
                 if added % self.cache_period == 0:
-                    print("votes converted -- ", added)
                     self.publish_tables.writeCache()
+                    print("votes converted -- ", added)
                     utils.printProgressBar(passed+1, length, prefix = 'Progress:', suffix = 'Complete', length = 50)
                 added += 1
                 
@@ -267,30 +252,10 @@ class PublishConverter:
             print(traceback.format_exc())
         print('...done')
 
-    def write_childcount(self):
-        self.messages.bulk_write(self.update_list)
-        self.update_list = []
-
-    def update_childcount(self):
-        for child in self.childcount_dict.values():
-            if child["gls_childcount"] != child["childcount"]:
-                update_filter = {
-                    "$and":[{"id":child["id"]},{"_SCOPE":child["_SCOPE_"]}]
-                }
-                update_obj = {
-                    "$set":{"childcount":child["childcount"]}
-                }
-                self.update_list.append(UpdateOne(update_filter, update_obj))
-            if len(self.update_list) == 10000:
-                self.write_childcount()
-        if len(self.update_list):
-            self.write_childcount()
-
     def run(self, query = {}):
         self.fill_exists_accs()
         self.convert_votes(query)
         self.convert_posts(query)
-        self.update_childcount()
 
 #PublishConverter(dbs.golos_db, dbs.cyberway_gls_publish_db, dbs.cyberway_db).run({"author" : "goloscore"})
 PublishConverter(dbs.golos_db, dbs.cyberway_gls_publish_db, dbs.cyberway_db).run()

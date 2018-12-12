@@ -3,6 +3,7 @@ import bson
 import re
 import pymongo
 from config import *
+import utils
 
 name_regex = "^[a-z1-5\.]{1,12}$|^[a-z1-5\.]{12}[a-j1-5\.]$"
 name_re = re.compile(name_regex)
@@ -27,29 +28,30 @@ cyberway = dbs.Tables([
 
 
 def create_permission(doc, name, parent_id):
+    permusage_id = cyberway.permusage.nextId()
     permusage = {
-	"id" : bson.Int64(cyberway.permusage.nextId()),
+	"id" : utils.UInt64(permusage_id),
 	"last_used" : doc["last_owner_update"].isoformat(),
 	"_SCOPE_" : "",
 	"_PAYER_" : "",
-	"_SIZE_" : bson.Int64(16)
+	"_SIZE_" : utils.UInt64(16)
     }
     cyberway.permusage.append(permusage)
 
     permission_id = cyberway.permission.nextId()
     permission = {
-	"id" : bson.Int64(permission_id),
-	"usage_id" : permusage["id"],
-	"parent" : bson.Int64(parent_id),
+	"id" : utils.UInt64(permission_id),
+	"usage_id" : utils.UInt64(permusage_id),
+	"parent" : utils.UInt64(parent_id),
 	"owner" : doc["account"],
 	"name" : name,
 	"last_updated" : doc["last_owner_update"].isoformat(),
 	"auth" : {
-	    "threshold" : bson.Int64(1),
+	    "threshold" : utils.UInt64(1),
 	    "keys" : [
 		{
 		    "key" : doc[name][0],
-		    "weight" : bson.Int64(1)
+		    "weight" : utils.UInt64(1)
 		}
 	    ],
 	    "accounts" : [ ],
@@ -57,7 +59,7 @@ def create_permission(doc, name, parent_id):
 	},
 	"_SCOPE_" : "",
 	"_PAYER_" : "",
-	"_SIZE_" : bson.Int64(91)
+	"_SIZE_" : utils.UInt64(91)
     }
     cyberway.permission.append(permission)
     return permission_id
@@ -68,10 +70,10 @@ def create_account(doc):
     account_id = cyberway.account.nextId()
 
     account = {
-        "id" : bson.Int64(account_id),
+        "id" : utils.UInt64(account_id),
         "name" : doc["name"],
-        "vm_type" : bson.Int64(0),
-        "vm_version" : bson.Int64(0),
+        "vm_type" : utils.UInt64(0),
+        "vm_version" : utils.UInt64(0),
         "privileged" : False,
         "last_code_update" : "1970-01-01T00:00:00.000",
         "code_version" : "0000000000000000000000000000000000000000000000000000000000000000",
@@ -80,72 +82,72 @@ def create_account(doc):
         "abi" : "",
         "_SCOPE_" : "",
         "_PAYER_" : "",
-        "_SIZE_" : bson.Int64(65)
+        "_SIZE_" : utils.UInt64(65)
     }
     cyberway.account.append(account)
 
     accountseq = {
-        "id" : bson.Int64(account_id),
+        "id" : utils.UInt64(account_id),
         "name" : doc["name"],
-        "recv_sequence" : bson.Int64(0),
-        "auth_sequence" : bson.Int64(0),
-        "code_sequence" : bson.Int64(0),
-        "abi_sequence" : bson.Int64(0),
+        "recv_sequence" : utils.UInt64(0),
+        "auth_sequence" : utils.UInt64(0),
+        "code_sequence" : utils.UInt64(0),
+        "abi_sequence" : utils.UInt64(0),
         "_SCOPE_" : "",
         "_PAYER_" : "",
-        "_SIZE_" : bson.Int64(48)
+        "_SIZE_" : utils.UInt64(48)
     }
     cyberway.accountseq.append(accountseq)
 
     reslimit = {
-        "id" : bson.Int64(account_id),
+        "id" : utils.UInt64(account_id),
         "owner" : doc["name"],
         "pending" : False,
-        "net_weight" : bson.Int64(-1),
-        "cpu_weight" : bson.Int64(-1),
-        "ram_bytes" : bson.Int64(-1),
+        "net_weight" : utils.Int64(-1),
+        "cpu_weight" : utils.Int64(-1),
+        "ram_bytes" : utils.Int64(-1),
         "_SCOPE_" : "",
         "_PAYER_" : "",
-        "_SIZE_" : bson.Int64(41)
+        "_SIZE_" : utils.UInt64(41)
     }
     cyberway.reslimit.append(reslimit)
 
     resusage = {
-        "id" : bson.Int64(account_id),
+        "id" : utils.UInt64(account_id),
         "owner" : doc["name"],
         "net_usage" : {
-	        "last_ordinal" : bson.Int64(0),
-	        "value_ex" : bson.Int64(0),
-	        "consumed" : bson.Int64(0)
+	        "last_ordinal" : utils.UInt64(0),
+	        "value_ex" : utils.UInt64(0),
+	        "consumed" : utils.UInt64(0)
         },
         "cpu_usage" : {
-	        "last_ordinal" : bson.Int64(0),
-	        "value_ex" : bson.Int64(0),
-	        "consumed" : bson.Int64(0)
+	        "last_ordinal" : utils.UInt64(0),
+	        "value_ex" : utils.UInt64(0),
+	        "consumed" : utils.UInt64(0)
         },
-        "ram_usage" : bson.Int64(2724),
+        "ram_usage" : utils.UInt64(2724),
         "_SCOPE_" : "",
         "_PAYER_" : "",
-        "_SIZE_" : bson.Int64(64)
+        "_SIZE_" : utils.UInt64(64)
     }
     cyberway.resusage.append(resusage)
 
 
 
 def convert_amount(amount, precision):
-    return bson.Int64(int(amount*(10**precision)))
+    return utils.UInt64(int(amount*(10**precision)))
 
 
 def create_balance(doc):
     balance = {
 	"balance": {
 	    "amount": convert_amount(doc["balance_value"], BALANCE_PRECISION),
-	    "decs": bson.Int64(BALANCE_PRECISION),
+	    "decs": utils.UInt64(BALANCE_PRECISION),
 	    "sym": BALANCE_SYMBOL
 	},
 	"_SCOPE_": doc["name"],
 	"_PAYER_": doc["name"],
-	"_SIZE_": bson.Int64(16)
+	"_SIZE_": utils.UInt64(16)
     }
     cyberway.balance.append(balance)
 
@@ -154,27 +156,27 @@ def create_vesting(doc):
     vesting = {
 	"vesting": {
 	    "amount": convert_amount(doc["vesting_shares_value"], VESTING_PRECISION),
-	    "decs": bson.Int64(VESTING_PRECISION),
+	    "decs": utils.UInt64(VESTING_PRECISION),
 	    "sym": VESTING_SYMBOL
 	},
 	"delegate_vesting": {
 	    "amount": convert_amount(doc["delegated_vesting_shares_value"], VESTING_PRECISION),
-	    "decs": bson.Int64(VESTING_PRECISION),
+	    "decs": utils.UInt64(VESTING_PRECISION),
 	    "sym": VESTING_SYMBOL
 	},
 	"received_vesting": {
 	    "amount": convert_amount(doc["received_vesting_shares_value"], VESTING_PRECISION),
-	    "decs": bson.Int64(VESTING_PRECISION),
+	    "decs": utils.UInt64(VESTING_PRECISION),
 	    "sym": VESTING_SYMBOL
 	},
 	"unlocked_limit": {
-	    "amount": bson.Int64(0),
-	    "decs": bson.Int64(VESTING_PRECISION),
+	    "amount": utils.Int64(0),
+	    "decs": utils.UInt64(VESTING_PRECISION),
 	    "sym": VESTING_SYMBOL
 	},
 	"_SCOPE_": doc["name"],
 	"_PAYER_": doc["name"],
-	"_SIZE_": bson.Int64(64)
+	"_SIZE_": utils.UInt64(64)
     }
     cyberway.vesting.append(vesting)
 
