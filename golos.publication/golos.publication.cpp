@@ -82,6 +82,14 @@ void publication::create_message(name account, std::string permlink,
     const auto &max_beneficiaries_param = cfg.get().max_beneficiaries_param;
     const auto &max_comment_depth_param = cfg.get().max_comment_depth_param;
 
+    if (parentacc) {
+        tables::forumprops_singleton props_single(_self, _self.value);
+        auto props = props_single.get_or_default();
+        if (props.social_contract) {
+            eosio_assert(!social::is_blocking(props.social_contract, parentacc, account), "You are blocked by this account");
+        }
+    }
+
     tables::reward_pools pools(_self, _self.value);
     auto pool = pools.begin();   // TODO: Reverse iterators doesn't work correctly
     eosio_assert(pool != pools.end(), "publication::create_message: [pools] is empty");
@@ -505,9 +513,9 @@ void publication::set_vote(name voter, name author, string permlink, int16_t wei
     tables::forumprops_singleton props_single(_self, _self.value);
     auto props = props_single.get_or_default();
 
-    if (props.contract_for_reputation != name()) {
+    if (props.social_contract) {
         INLINE_ACTION_SENDER(golos::social, changereput)
-            (props.contract_for_reputation, {props.contract_for_reputation, config::active_name},
+            (props.social_contract, {props.social_contract, config::active_name},
             {voter, author, (rshares.data() >> 6)});
     }
 }
@@ -617,8 +625,7 @@ void publication::setprops(const forumprops& props) {
 
     tables::forumprops_singleton props_single(_self, _self.value);
 
-    structures::forumprops_record item;
-    item.contract_for_reputation = props.contract_for_reputation;
+    structures::forumprops_record item(props);
 
     props_single.set(item, _self);
 }

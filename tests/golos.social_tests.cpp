@@ -60,10 +60,6 @@ public:
         funcparams fn{"0", 1};
         BOOST_CHECK_EQUAL(success(), post.set_rules(fn, fn, fn, 0, 0));
 
-        forumprops props;
-        props.contract_for_reputation = cfg::social_name;
-        BOOST_CHECK_EQUAL(success(), post.setprops(props));
-
         produce_block();
 
         for (auto& u : _users) {
@@ -88,6 +84,7 @@ protected:
         const string already_pinned             = amsg("You already have pinned this account");
         const string cannot_unblock_not_blocked = amsg("You have not blocked this account");
         const string already_blocked            = amsg("You already have blocked this account");
+        const string you_are_blocked            = amsg("You are blocked by this account");
     } err;
 };
 
@@ -162,11 +159,44 @@ BOOST_FIXTURE_TEST_CASE(golos_blocking_test, golos_social_tester) try {
     produce_block();
 } FC_LOG_AND_RETHROW()
 
+BOOST_FIXTURE_TEST_CASE(golos_blocked_commenting_test, golos_social_tester) try {
+    BOOST_TEST_MESSAGE("Test commenting when blocked");
+
+    auto bignum = 1000000;
+    init(bignum, 10);
+
+    forumprops props;
+    props.social_contract = cfg::social_name;
+    BOOST_CHECK_EQUAL(success(), post.setprops(props));
+
+    produce_block();
+
+    BOOST_TEST_MESSAGE("--- create post: dave");
+    BOOST_CHECK_EQUAL(success(), post.create_msg("dave"_n, "permlink"));
+    produce_block();
+
+    BOOST_TEST_MESSAGE("--- create comment: erin to dave");
+    BOOST_CHECK_EQUAL(success(), post.create_msg("erin"_n, "permlink2", "dave"_n, "permlink"));
+    produce_block();
+
+    BOOST_TEST_MESSAGE("--- block: dave erin");
+    BOOST_CHECK_EQUAL(success(), social.block("dave"_n, "erin"_n));
+    produce_block();
+
+    BOOST_TEST_MESSAGE("--- create comment: erin to dave again (fail)");
+    BOOST_CHECK_EQUAL(err.you_are_blocked, post.create_msg("erin"_n, "permlink3", "dave"_n, "permlink"));
+    produce_block();
+} FC_LOG_AND_RETHROW()
+
 BOOST_FIXTURE_TEST_CASE(golos_reputation_test, golos_social_tester) try {
     BOOST_TEST_MESSAGE("Simple golos reputation test");
 
     auto bignum = 1000000;
     init(bignum, 10);
+
+    forumprops props;
+    props.social_contract = cfg::social_name;
+    BOOST_CHECK_EQUAL(success(), post.setprops(props));
 
     produce_block();
 

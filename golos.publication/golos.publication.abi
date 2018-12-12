@@ -541,7 +541,7 @@
     "base": "",
     "fields": [
         {
-            "name": "contract_for_reputation",
+            "name": "social_contract",
             "type": "name"
         }
     ]
@@ -555,7 +555,7 @@
             "type": "uint64"
         },
         {
-            "name": "contract_for_reputation",
+            "name": "social_contract",
             "type": "name"
         }
     ]
