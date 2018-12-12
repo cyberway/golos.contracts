@@ -1,5 +1,5 @@
 {
-  "version": "cyberway::abi/1.0",
+  "version": "cyberway::abi/1.1",
   "types": [
     {
       "new_type_name": "base_t",
@@ -18,6 +18,15 @@
       "type": "uint64"
     }
   ],
+  "variants": [{
+    "name": "posting_param",
+    "types": [
+      "st_max_vote_changes",
+      "st_cashout_window",
+      "st_max_beneficiaries",
+      "st_max_comment_depth"
+    ]
+  }],
   "structs": [
   {
     "name": "value",
@@ -438,7 +447,7 @@
     "base": "",
     "fields": [
         {
-            "name": "contract_for_reputation",
+            "name": "social_contract",
             "type": "name"
         }
     ]
@@ -452,7 +461,7 @@
             "type": "uint64"
         },
         {
-            "name": "contract_for_reputation",
+            "name": "social_contract",
             "type": "name"
         }
     ]
@@ -602,6 +611,86 @@
     ]
   },
   {
+    "name": "st_max_vote_changes",
+    "base": "",
+    "fields": [
+      {
+        "name": "value",
+        "type": "uint8"
+      }
+    ]
+  },
+  {
+    "name": "st_cashout_window",
+    "base": "",
+    "fields": [
+      {
+        "name": "window",
+        "type": "uint32"
+      },
+      {
+        "name": "upvote_lockout",
+        "type": "uint32"
+      }
+    ]
+  },
+  {
+    "name": "st_max_beneficiaries",
+    "base": "",
+    "fields": [
+      {
+        "name": "value",
+        "type": "uint8"
+      }
+    ]
+  },
+  {
+    "name": "st_max_comment_depth",
+    "base": "",
+    "fields": [
+      {
+        "name": "value",
+        "type": "uint16"
+      }
+    ]
+  },
+  {
+    "name": "posting_state",
+    "base": "",
+    "fields": [
+      {
+        "name": "id",
+        "type": "uint64"
+      },
+      {
+        "name": "max_vote_changes",
+        "type": "st_max_vote_changes"
+      },
+      {
+        "name": "cashout_window",
+        "type": "st_cashout_window"
+      },
+      {
+        "name": "max_beneficiaries",
+        "type": "st_max_beneficiaries"
+      },
+      {
+        "name": "max_comment_depth",
+        "type": "st_max_comment_depth"
+      }
+    ]
+  },
+  {
+    "name": "setparams",
+    "base": "",
+    "fields": [
+      {
+        "name": "params",
+        "type": "posting_param[]"
+      }
+    ]
+  },
+  {
     "name": "setprops",
     "base": "",
     "fields": [
@@ -652,6 +741,10 @@
   {
     "name": "setlimit",
     "type": "setlimit"
+  },
+  {
+    "name": "setparams",
+    "type": "setparams"
   },
   {
     "name": "setprops",
@@ -740,6 +833,19 @@
           "unique": "true",
           "orders": [
               {"field": "act", "order": "asc"}
+          ]
+       }
+    ]
+  },
+  {
+    "name": "pstngparams",
+    "type": "posting_state",
+    "indexes": [
+       {
+          "name": "primary",
+          "unique": "true",
+          "orders": [
+              {"field": "id", "order": "asc"}
           ]
        }
     ]

@@ -112,9 +112,13 @@ struct rewardrules {
 struct forumprops_record {
     forumprops_record() = default;
 
-    name contract_for_reputation = name();
+    forumprops_record(const forumprops& props) {
+        social_contract = props.social_contract;
+    }
 
-    EOSLIB_SERIALIZE(forumprops_record, (contract_for_reputation))
+    name social_contract = name();
+
+    EOSLIB_SERIALIZE(forumprops_record, (social_contract))
 };
 
 struct poolstate {
