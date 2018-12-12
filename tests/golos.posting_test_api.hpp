@@ -17,9 +17,7 @@ struct golos_posting_api: base_contract_api {
         const funcparams& curation_fn,
         const funcparams& time_penalty,
         int64_t curators_prop,
-        int64_t max_token_prop,
-        const limitsarg& lims = {{"0"}, {{0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}}, {0, 0}, {0, 0, 0}}
-    ) {
+        int64_t max_token_prop) {
         return push(N(setrules), _code, args()
             ("mainfunc", fn_to_mvo(main_fn))
             ("curationfunc", fn_to_mvo(curation_fn))
@@ -27,7 +25,18 @@ struct golos_posting_api: base_contract_api {
             ("curatorsprop", curators_prop)
             ("maxtokenprop", max_token_prop)
             ("tokensymbol", _symbol)
-            ("lims", lims)
+        );
+    }
+    
+    action_result set_limit(std::string act, uint8_t charge_id = 0, int64_t price = -1, int64_t cutoff = 0, int64_t vesting_price = 0, int64_t min_vesting = 0) {
+        return push(N(setlimit), _code, args()
+            ("act", act)
+            ("token_code", _symbol.to_symbol_code())
+            ("charge_id", charge_id)
+            ("price", price)
+            ("cutoff", cutoff)
+            ("vesting_price", vesting_price)
+            ("min_vesting", min_vesting)
         );
     }
 

@@ -57,28 +57,6 @@
     ]
   },
   {
-    "name": "limitsarg",
-    "base": "",
-    "fields": [
-        {
-            "name": "restorers",
-            "type": "string[]"
-        },
-        {
-            "name": "limitedacts",
-            "type": "limitedact[]"
-        },
-        {
-            "name": "vestingprices",
-            "type": "int64[]"
-        },
-        {
-            "name": "minvestings",
-            "type": "int64[]"
-        }
-    ]
-  },
-  {
     "name": "bytecode",
     "base": "",
     "fields": [
@@ -425,78 +403,6 @@
     ]
   },
   {
-    "name": "limitedact",
-    "base": "",
-    "fields": [
-        {
-            "name": "chargenum",
-            "type": "uint8"
-        },
-        {
-            "name": "restorernum",
-            "type": "uint8"
-        },
-        {
-            "name": "cutoffval",
-            "type": "base_t"
-        },
-        {
-            "name": "chargeprice",
-            "type": "base_t"
-        }
-    ]
-  },
-  {
-    "name": "limits",
-    "base": "",
-    "fields": [
-        {
-            "name": "restorers",
-            "type": "bytecode[]"
-        },
-        {
-            "name": "limitedacts",
-            "type": "limitedact[]"
-        },
-        {
-            "name": "vestingprices",
-            "type": "int64[]"
-        },
-        {
-            "name": "minvestings",
-            "type": "int64[]"
-        }
-    ]
-  },
-  {
-    "name": "chargeinfo",
-    "base": "",
-    "fields": [
-        {
-            "name": "lastupdate",
-            "type": "uint64"
-        },
-        {
-            "name": "data",
-            "type": "base_t"
-        }
-    ]
-  },
-  {
-    "name": "usercharges",
-    "base": "",
-    "fields": [
-        {
-            "name": "poolcreated",
-            "type": "uint64"
-        },
-        {
-            "name": "vals",
-            "type": "chargeinfo[]"
-        }
-    ]
-  },
-  {
     "name": "funcinfo",
     "base": "",
     "fields": [
@@ -595,12 +501,38 @@
             "type": "rewardrules"
         },
         {
-            "name": "lims",
-            "type": "limits"
-        },
-        {
             "name": "state",
             "type": "poolstate"
+        }
+    ]
+  },
+  {
+    "name": "limitparams",
+    "base": "",
+    "fields": [
+        {
+            "name": "act",
+            "type": "uint64"
+        },
+        {
+            "name": "charge_id",
+            "type": "uint8"
+        },
+        {
+            "name": "price",
+            "type": "int64"
+        },
+        {
+            "name": "cutoff",
+            "type": "int64"
+        },
+        {
+            "name": "vesting_price",
+            "type": "int64"
+        },
+        {
+            "name": "min_vesting",
+            "type": "int64"
         }
     ]
   },
@@ -612,6 +544,40 @@
         "name": "name",
         "type": "name"
       }
+    ]
+  },
+  {
+    "name": "setlimit",
+    "base": "",
+    "fields": [
+        {
+            "name": "act",
+            "type": "string"
+        },
+        {
+            "name": "token_code",
+            "type": "symbol_code"
+        },
+        {
+            "name": "charge_id",
+            "type": "uint8"
+        },
+        {
+            "name": "price",
+            "type": "int64"
+        },
+        {
+            "name": "cutoff",
+            "type": "int64"
+        },
+        {
+            "name": "vesting_price",
+            "type": "int64"
+        },
+        {
+            "name": "min_vesting",
+            "type": "int64"
+        }
     ]
   },
   {
@@ -641,10 +607,6 @@
         {
             "name": "tokensymbol",
             "type": "symbol"
-        }
-        {
-            "name": "lims",
-            "type": "limitsarg"
         }
     ]
   },
@@ -777,6 +739,10 @@
     "type": "setrules"
   },
   {
+    "name": "setlimit",
+    "type": "setlimit"
+  },
+  {
     "name": "setparams",
     "type": "setparams"
   },
@@ -859,14 +825,14 @@
     ]
   },
   {
-    "name": "charges",
-    "type": "usercharges",
+    "name": "limittable",
+    "type": "limitparams",
     "indexes": [
        {
           "name": "primary",
           "unique": "true",
           "orders": [
-              {"field": "poolcreated", "order": "asc"}
+              {"field": "act", "order": "asc"}
           ]
        }
     ]

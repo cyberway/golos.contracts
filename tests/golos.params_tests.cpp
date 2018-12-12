@@ -99,8 +99,8 @@ public:
     }
 
     void prepare_balances() {
-        BOOST_CHECK_EQUAL(success(), token.create(BLOG, dasset(100500)));
-        BOOST_CHECK_EQUAL(success(), vest.create_vesting(BLOG, _token, {cfg::emission_name}));
+        BOOST_CHECK_EQUAL(success(), token.create(BLOG, dasset(100500), {cfg::emission_name}));
+        BOOST_CHECK_EQUAL(success(), vest.create_vesting(BLOG, _token));
         BOOST_CHECK_EQUAL(success(), vest.open(cfg::vesting_name, _token, cfg::vesting_name));
         vector<std::pair<uint64_t,double>> amounts = {
             {_alice, 800}, {_bob, 700},

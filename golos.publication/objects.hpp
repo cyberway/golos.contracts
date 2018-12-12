@@ -7,8 +7,6 @@
 #include <eosiolib/asset.hpp>
 #include <eosiolib/singleton.hpp>
 #include <eosiolib/crypto.h>
-#include "charges.hpp"
-
 
 namespace golos { namespace structures {
 
@@ -142,11 +140,28 @@ struct poolstate {
 struct rewardpool {
     uint64_t created;
     rewardrules rules;
-    limits lims;
     poolstate state;
 
     uint64_t primary_key() const { return created; }
-    EOSLIB_SERIALIZE(rewardpool, (created)(rules)(lims)(state))
+    EOSLIB_SERIALIZE(rewardpool, (created)(rules)(state))
+};
+
+struct limitparams {
+    enum act_t: uint8_t {POST, COMM, VOTE, POSTBW};
+    uint64_t act;
+    uint8_t charge_id;
+    int64_t price;
+    int64_t cutoff;
+    int64_t vesting_price;
+    int64_t min_vesting;
+    uint64_t primary_key() const { return act; }
+    static inline act_t act_from_str(const std::string& arg) {
+        if(arg == "post") return POST;
+        if(arg == "comment") return COMM;
+        if(arg == "vote") return VOTE;
+        eosio_assert(arg == "post bandwidth", "limitparams::act_from_str: wrong arg");
+        return POSTBW;
+    }
 };
 
 } // structures
@@ -166,9 +181,10 @@ using vote_messageid_index = indexed_by<N(messageid), const_mem_fun<structures::
 using vote_table = multi_index<N(votetable), structures::voteinfo, vote_id_index, vote_messageid_index>;
 
 using reward_pools = multi_index<N(rewardpools), structures::rewardpool>;
-using charges = multi_index<N(charges), structures::usercharges>;
+using limit_table = multi_index<N(limittable), structures::limitparams>;
 
 using forumprops_singleton = eosio::singleton<"forumprops"_n, structures::forumprops_record>;
+
 }
 
 

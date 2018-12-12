@@ -9,8 +9,10 @@ using namespace eosio;
 class publication : public contract {
 public:
     using contract::contract;
+    
+    void set_limit(std::string act, symbol_code token_code, uint8_t charge_id, int64_t price, int64_t cutoff, int64_t vesting_price, int64_t min_vesting);
     void set_rules(const funcparams& mainfunc, const funcparams& curationfunc, const funcparams& timepenalty,
-        int64_t curatorsprop, int64_t maxtokenprop, symbol tokensymbol, limitsarg lims_arg);
+        int64_t curatorsprop, int64_t maxtokenprop, symbol tokensymbol);
     void setprops(const forumprops& props);
     void on_transfer(name from, name to, asset quantity, std::string memo);
     void create_message(name account, std::string permlink, name parentacc, std::string parentprmlnk,
@@ -38,18 +40,18 @@ private:
     void payto(name user, asset quantity, enum_t mode);
     void check_account(name user, symbol tokensymbol);
 
-    elaf_t apply_limits(atmsp::machine<fixp_t>& machine, name user, const structures::rewardpool& pool,
-        structures::limits::kind_t kind, uint64_t cur_time, elaf_t w);
-
     static structures::funcinfo load_func(const funcparams& params, const std::string& name,
         const atmsp::parser<fixp_t>& pa, atmsp::machine<fixp_t>& machine, bool inc);
-    static atmsp::storable::bytecode load_restorer_func(const std::string str_func,
-        const atmsp::parser<fixp_t>& pa, atmsp::machine<fixp_t>& machine);
     static fixp_t get_delta(atmsp::machine<fixp_t>& machine, fixp_t old_val, fixp_t new_val,
         const structures::funcinfo& func);
+        
+    void remove_postbw_charge(name account, symbol_code token_code, int64_t mssg_id, elaf_t* reward_weight_ptr = nullptr);
+    void use_charge(tables::limit_table& lims, structures::limitparams::act_t act, name issuer,
+                        name account, int64_t eff_vesting, symbol_code token_code, bool vestpayment, elaf_t weight = elaf_t(1));
+    void use_postbw_charge(tables::limit_table& lims, name issuer, name account, symbol_code token_code, int64_t mssg_id);
 
+    fixp_t calc_available_rshares(name voter, int16_t weight, uint64_t cur_time, const structures::rewardpool& pool);
     void check_upvote_time(uint64_t cur_time, uint64_t mssg_date);
-    fixp_t calc_rshares(name voter, int16_t weight, uint64_t cur_time, const structures::rewardpool& pool, atmsp::machine<fixp_t>& machine);
 };
 
 } // golos

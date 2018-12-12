@@ -6,17 +6,9 @@ namespace golos {
 using namespace eosio;
 using namespace atmsp::storable;
 
-static constexpr auto max_arg = static_cast<uint64_t>(std::numeric_limits<fixp_t>::max());
+static constexpr auto max_arg = static_cast<base_t>(std::numeric_limits<fixp_t>::max());
 
-static fixp_t to_fixp(int64_t arg) {
-    return fp_cast<fixp_t>(elai_t(arg) / elai_t(config::_100percent));
-}
-
-static int64_t from_fixp(fixp_t arg) {
-    return fp_cast<int64_t>(elap_t(arg) * elai_t(config::_100percent), false);
-}
-
-fixp_t charge::use_helper(name issuer, name user, symbol_code token_code, uint8_t charge_id, int64_t price_arg, int64_t cutoff_arg) {
+fixp_t charge::consume_charge(name issuer, name user, symbol_code token_code, uint8_t charge_id, int64_t price_arg, int64_t cutoff_arg, int64_t vesting_price) {
     eosio_assert(cutoff_arg < 0 || price_arg <= cutoff_arg, "price > cutoff");
     eosio_assert(price_arg <= max_arg, "price > max_input");
     eosio_assert(cutoff_arg < 0 || cutoff_arg <= max_arg, "cutoff > max_input");
@@ -27,7 +19,15 @@ fixp_t charge::use_helper(name issuer, name user, symbol_code token_code, uint8_
     balances balances_table(_self, user.value);
     balances::const_iterator itr = balances_table.find(charge_symbol.raw());
     auto new_val = calc_value(user, token_code, balances_table, itr, price);
-    eosio_assert(cutoff_arg < 0 || new_val <= to_fixp(cutoff_arg), "new_val > cutoff");
+    if(cutoff_arg > 0 && new_val > to_fixp(cutoff_arg)) {
+        eosio_assert(vesting_price > 0, "not enough power");
+        auto user_vesting = golos::vesting::get_account_unlocked_vesting(config::vesting_name, user, token_code);
+        eosio_assert(user_vesting.amount >= vesting_price, "insufficient vesting amount");
+        INLINE_ACTION_SENDER(golos::vesting, retire) (config::vesting_name,
+            {eosio::token::get_issuer(config::token_name, token_code), golos::config::invoice_name},
+            {eosio::asset(vesting_price, user_vesting.symbol), user});
+        return FP(itr->value);
+    }
     if (itr == balances_table.end()) {
         if (new_val > 0)
             balances_table.emplace(issuer, [&]( auto &item ) {
@@ -49,13 +49,13 @@ fixp_t charge::use_helper(name issuer, name user, symbol_code token_code, uint8_
     return new_val;
 }
 
-void charge::use(name user, symbol_code token_code, uint8_t charge_id, int64_t price_arg, int64_t cutoff_arg) {
-    use_helper(name(token::get_issuer(config::token_name, token_code)), user, token_code, charge_id, price_arg, cutoff_arg);
+void charge::use(name user, symbol_code token_code, uint8_t charge_id, int64_t price_arg, int64_t cutoff_arg, int64_t vesting_price) {
+    consume_charge(token::get_issuer(config::token_name, token_code), user, token_code, charge_id, price_arg, cutoff_arg, vesting_price);
 }
 
 void charge::useandstore(name user, symbol_code token_code, uint8_t charge_id, int64_t stamp_id, int64_t price_arg) {
-    auto issuer = name(token::get_issuer(config::token_name, token_code));
-    auto new_val = use_helper(issuer, user, token_code, charge_id, price_arg);
+    auto issuer = token::get_issuer(config::token_name, token_code);
+    auto new_val = consume_charge(issuer, user, token_code, charge_id, price_arg);
     
     storedvals storedvals_table(_self, user.value);
     auto storedvals_index = storedvals_table.get_index<N(symbolstamp)>();
@@ -80,20 +80,13 @@ void charge::removestored(name user, symbol_code token_code, uint8_t charge_id, 
     storedvals_index.erase(itr);
 }
 
-int64_t charge::get(name code, name user, symbol_code token_code, uint8_t charge_id, uint64_t stamp_id) {
-    storedvals storedvals_table(code, user.value);
-    auto storedvals_index = storedvals_table.get_index<N(symbolstamp)>();
-    auto itr = storedvals_index.find(stored::get_key(token_code, charge_id, stamp_id));
-    return itr != storedvals_index.end() ? from_fixp(FP(itr->value)) : -1; //charge can't be negative
-}
-
 void charge::setrestorer(symbol_code token_code, uint8_t charge_id, std::string func_str, 
         int64_t max_prev, int64_t max_vesting, int64_t max_elapsed) {
     
     eosio_assert(max_prev <= max_arg, "max_prev > max_input");
     eosio_assert(max_vesting <= max_arg, "max_vesting > max_input");
     eosio_assert(max_elapsed <= max_arg, "max_elapsed > max_input");
-    auto issuer = name(token::get_issuer(config::token_name, token_code));
+    auto issuer = token::get_issuer(config::token_name, token_code);
     require_auth(issuer);
     auto charge_symbol = symbol(token_code, charge_id);
     restorers restorers_table(_self, _self.value);
