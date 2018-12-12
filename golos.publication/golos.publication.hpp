@@ -46,9 +46,10 @@ private:
     void remove_postbw_charge(name account, symbol_code token_code, int64_t mssg_id, elaf_t* reward_weight_ptr = nullptr);
     void use_charge(tables::limit_table& lims, structures::limitparams::act_t act, name issuer,
                         name account, int64_t eff_vesting, symbol_code token_code, bool vestpayment, elaf_t weight = elaf_t(1));
+    void use_postbw_charge(tables::limit_table& lims, name issuer, name account, symbol_code token_code, int64_t mssg_id);
 
     static void check_upvote_time(uint64_t cur_time, uint64_t mssg_date);
-    fixp_t calc_rshares(name voter, int16_t weight, uint64_t cur_time, const structures::rewardpool& pool, atmsp::machine<fixp_t>& machine);
+    fixp_t calc_available_rshares(name voter, int16_t weight, uint64_t cur_time, const structures::rewardpool& pool);
 };
 
 } // golos

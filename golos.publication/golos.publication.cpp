@@ -73,18 +73,8 @@ void publication::create_message(name account, std::string permlink,
         golos::vesting::get_account_effective_vesting(config::vesting_name, account, token_code).amount, token_code, vestpayment);
             
     auto message_id = hash64(permlink);
-    if(!parentacc) {
-        auto bw_lim_itr = lims.find(structures::limitparams::POSTBW);
-        if(bw_lim_itr->price >= 0)
-            INLINE_ACTION_SENDER(charge, useandstore) (config::charge_name, 
-                {issuer, config::invoice_name}, {
-                    account, 
-                    token_code, 
-                    bw_lim_itr->charge_id,
-                    message_id,
-                    bw_lim_itr->price
-                });
-    }
+    if(!parentacc)
+        use_postbw_charge(lims, issuer, account, token_code, message_id);
 
     std::map<name, int64_t> benefic_map;
     int64_t prop_sum = 0;
@@ -311,6 +301,19 @@ void publication::use_charge(tables::limit_table& lims, structures::limitparams:
             });
 }
 
+void publication::use_postbw_charge(tables::limit_table& lims, name issuer, name account, symbol_code token_code, int64_t mssg_id) {
+    auto bw_lim_itr = lims.find(structures::limitparams::POSTBW);
+    if(bw_lim_itr->price >= 0)
+        INLINE_ACTION_SENDER(charge, useandstore) (config::charge_name, 
+            {issuer, config::invoice_name}, {
+                account, 
+                token_code, 
+                bw_lim_itr->charge_id,
+                mssg_id,
+                bw_lim_itr->price
+            });
+}
+
 void publication::close_message(name account, uint64_t id) {
     require_auth(_self);
     tables::message_table message_table(_self, account.value);
@@ -423,11 +426,11 @@ void publication::check_upvote_time(uint64_t cur_time, uint64_t mssg_date) {
                   "You can't upvote, because publication will be closed soon.");
 }
 
-fixp_t publication::calc_rshares(name voter, int16_t weight, uint64_t cur_time, const structures::rewardpool& pool, atmsp::machine<fixp_t>& machine) {
+fixp_t publication::calc_available_rshares(name voter, int16_t weight, uint64_t cur_time, const structures::rewardpool& pool) {
     elaf_t abs_w = get_limit_prop(abs(weight));
     tables::limit_table lims(_self, _self.value);
     auto token_code = pool.state.funds.symbol.code();
-    int64_t eff_vesting = golos::vesting::get_account_effective_vesting(config::vesting_name, voter, pool.state.funds.symbol.code()).amount;
+    int64_t eff_vesting = golos::vesting::get_account_effective_vesting(config::vesting_name, voter, token_code).amount;
     use_charge(lims, structures::limitparams::VOTE, eosio::token::get_issuer(config::token_name, token_code),
         voter, eff_vesting, token_code, false, abs_w);
     fixp_t abs_rshares = fp_cast<fixp_t>(eff_vesting, false) * abs_w;
@@ -464,7 +467,7 @@ void publication::set_vote(name voter, name author, string permlink, int16_t wei
             eosio_assert(vote_itr->count != config::max_vote_changes, "You can't revote anymore.");
 
             atmsp::machine<fixp_t> machine;
-            fixp_t rshares = calc_rshares(voter, weight, cur_time, *pool, machine);
+            fixp_t rshares = calc_available_rshares(voter, weight, cur_time, *pool);
             if(rshares > FP(vote_itr->rshares))
                 check_upvote_time(cur_time, mssg_itr->date);
 
@@ -494,7 +497,7 @@ void publication::set_vote(name voter, name author, string permlink, int16_t wei
         ++vote_itr;
     }
     atmsp::machine<fixp_t> machine;
-    fixp_t rshares = calc_rshares(voter, weight, cur_time, *pool, machine);
+    fixp_t rshares = calc_available_rshares(voter, weight, cur_time, *pool);
     if(rshares > 0)
         check_upvote_time(cur_time, mssg_itr->date);
 

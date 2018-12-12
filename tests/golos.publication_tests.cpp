@@ -74,7 +74,6 @@ public:
     void check_equal_post(const variant& a, const variant& b) {
         BOOST_CHECK_EQUAL(true, a.is_object() && b.is_object());
         BOOST_CHECK_EQUAL(a["id"].as<uint64_t>(), b["id"].as<uint64_t>());
-        BOOST_CHECK_EQUAL(a["date"].as<uint64_t>(), b["date"].as<uint64_t>());
         BOOST_CHECK_EQUAL(a["parentacc"].as<account_name>(), b["parentacc"].as<account_name>());
         BOOST_CHECK_EQUAL(a["parent_id"].as<uint64_t>(), b["parent_id"].as<uint64_t>());
         BOOST_CHECK_EQUAL(a["tokenprop"].as<uint64_t>(), b["tokenprop"].as<uint64_t>());
@@ -109,7 +108,6 @@ public:
 protected:
     const mvo _test_msg = mvo()
         ("id", hash64("permlink"))
-        ("date", 1577836821000000ull)
         ("parentacc", "")
         ("parent_id", 0)
         ("tokenprop", 0)
