@@ -1,0 +1,24 @@
+#include "golos.referral/golos.referral.hpp"
+
+namespace golos {
+
+using namespace eosio;
+
+void referral::crtreferral(name referrer, name referral, uint32_t percent,
+                           uint64_t expire, uint64_t breakout) {
+    require_auth(referrer);
+
+    referrals referrals_table(_self, referrer.value);
+    auto it_referral = referrals_table.find(referral.value);
+    eosio_assert(it_referral == referrals_table.end(), "This referral exits");
+    referrals_table.emplace(referrer, [&]( auto &item ) {
+        item.referral = referral;
+        item.percent  = percent;
+        item.expire   = expire;
+        item.breakout = breakout;
+    });
+}
+
+}
+
+EOSIO_DISPATCH(golos::referral, (crtreferral));

@@ -1,0 +1,46 @@
+{
+    "version": "cyberway::abi/1.1",
+    "structs": [
+        {
+            "name": "crtreferral",
+            "base": "",
+            "fields": [
+                {"type": "name", "name": "referral"},
+                {"type": "uint32", "name": "percent"},
+                {"type": "uint64", "name": "expire"},
+                {"type": "uint64", "name": "breakout"}
+            ]
+        },
+        {
+            "name": "referrals",
+            "base": "",
+            "fields": [
+                {"type": "name", "name": "referrer"},
+                {"type": "name", "name": "referral"},
+                {"type": "uint32", "name": "percent"},
+                {"type": "uint64", "name": "expire"},
+                {"type": "uint64", "name": "breakout"}
+            ]
+        }
+    ],
+    "actions": [
+        {
+            "name": "crtreferral",
+            "type": "crtreferral",
+            "ricardian_contract": ""
+        }
+    ],
+    "tables": [
+        {
+            "name": "referrals",
+            "type": "referrals",
+            "indexes" : [{
+                "name": "primary",
+                "unique": true,
+                "orders": [{"field": "referral", "order": "asc"}]
+            }]
+        }
+    ],
+    "ricardian_clauses": [],
+    "abi_extensions": []
+}
