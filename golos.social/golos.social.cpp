@@ -4,7 +4,7 @@ namespace golos {
 
 using namespace eosio;
 
-EOSIO_DISPATCH(social, (changereput)(pin)(unpin)(block)(unblock))
+EOSIO_DISPATCH(social, (pin)(unpin)(block)(unblock)(changereput)(updatemeta)(deletemeta))
 
 void social::pin(name pinner, name pinning) {
     require_auth(pinner);
@@ -111,6 +111,14 @@ void social::changereput(name voter, name author, int64_t rshares) {
 
     author_rep.reputation += rshares;
     author_single.set(author_rep, author);
+}
+
+void social::updatemeta(name account, accountmeta meta) {
+    require_auth(account);
+}
+
+void social::deletemeta(name account) {
+    require_auth(account);
 }
 
 
