@@ -28,6 +28,7 @@ public:
     void unvote(name voter, name author, std::string permlink);
     void close_message(name account, uint64_t id);
     void set_params(std::vector<posting_params> params);
+    void reblog(name rebloger, name author, std::string permlink);
 private:
     void close_message_timer(name account, uint64_t id, uint64_t delay_sec);
     void set_vote(name voter, name author, std::string permlink, int16_t weight);
