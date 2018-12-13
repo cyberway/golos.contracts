@@ -32,7 +32,7 @@ public:
         , token({this, cfg::token_name, _token})
     {
         create_accounts({cfg::emission_name, BLOG, N(witn1), N(witn2), N(witn3), N(witn4), N(witn5), _alice, _bob, //_carol,
-            cfg::control_name, cfg::vesting_name, cfg::token_name, cfg::workers_name});
+            cfg::control_name, cfg::vesting_name, cfg::token_name, cfg::workers_name, N(issuer)});
         produce_block();
 
         // TODO: maybe create separate parameters tester contract to reduce dependencies

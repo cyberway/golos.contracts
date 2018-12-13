@@ -41,7 +41,6 @@ public:
         BOOST_CHECK_EQUAL(success(), token.create(N(issuer), token.make_asset(supply)));
         BOOST_CHECK_EQUAL(success(), token.issue(N(issuer), N(sania), token.make_asset(issue1), "issue tokens sania"));
         BOOST_CHECK_EQUAL(success(), token.issue(N(issuer), N(pasha), token.make_asset(issue2), "issue tokens pasha"));
-        produce_block();
 
         BOOST_CHECK_EQUAL(success(), vest.open(N(sania)));
         BOOST_CHECK_EQUAL(success(), vest.open(N(pasha)));
@@ -53,6 +52,16 @@ public:
         BOOST_CHECK_EQUAL(success(), token.transfer(N(sania), cfg::vesting_name, token.make_asset(buy1), "buy vesting"));
         BOOST_CHECK_EQUAL(success(), token.transfer(N(pasha), cfg::vesting_name, token.make_asset(buy2), "buy vesting"));
         produce_block();
+    }
+
+    void init_params() {
+        auto vesting_withdraw = vest.vesting_withdraw(withdraw_intervals, withdraw_interval_seconds);
+        auto vesting_amount = vest.vesting_amount(vesting_min_amount);
+        auto delegation = vest.delegation(delegation_min_amount, delegation_min_remainder, delegation_min_time, delegation_max_interest, delegation_return_time);
+
+        auto issuer = N(issuer);
+        auto params = "[" + vesting_withdraw + "," + vesting_amount + "," + delegation + "]";
+        BOOST_CHECK_EQUAL(success(), vest.set_params(issuer, _vesting_sym, params));
     }
 
 protected:
@@ -73,12 +82,25 @@ protected:
         const string delegated_withdraw       = amsg("delegated vesting withdrawn");
         const string unknown_asset    = amsg("unknown asset");
         const string wrong_precision  = amsg("wrong asset precision");
+        const string vesting_params   = amsg("not found vesting params");
+        const string issuer_not_autority = "missing authority of issuer";
+
+        const string withdraw_intervals        = amsg("intervals <= 0");
+        const string withdraw_interval_seconds = amsg("interval_seconds <= 0");
+        const string delegation_min_amount     = amsg("delegation min_amount <= 0");
+        const string delegation_min_remainder  = amsg("delegation min_remainder <= 0");
+        const string delegation_max_interest   = amsg("delegation max_interest > 10000");
+        const string delegation_return_time    = amsg("delegation return_time <= 0");
     } err;
 
-    // to make things simple, this asset value equals to withdraw intervals count, so each interval withdraws 1 token
-    const asset _one_per_interval = vest.make_asset(cfg::vesting_withdraw.intervals);
-    const int64_t _blocks_in_interval = golos::seconds_to_blocks(cfg::vesting_withdraw.interval_seconds);
-    const int64_t _blocks_to_undelegate = golos::seconds_to_blocks(cfg::delegation.return_time);
+    const uint32_t withdraw_intervals = 13;
+    const uint32_t withdraw_interval_seconds = 120;
+    const uint64_t vesting_min_amount = 10*1e3;
+    const uint64_t delegation_min_amount = 5e6;
+    const uint64_t delegation_min_remainder = 15e6;
+    const uint32_t delegation_min_time = 0;
+    const uint16_t delegation_max_interest = 0;
+    const uint32_t delegation_return_time = 120;
 };
 
 BOOST_AUTO_TEST_SUITE(golos_vesting_tests)
@@ -105,6 +127,54 @@ BOOST_FIXTURE_TEST_CASE(token_tests, golos_vesting_tester) try {
     CHECK_MATCHING_OBJECT(token.get_account(N(pasha)), mvo()("balance", token.asset_str(300)));
 } FC_LOG_AND_RETHROW()
 
+BOOST_FIXTURE_TEST_CASE(set_params, golos_vesting_tester) try {
+    BOOST_TEST_MESSAGE("Test vesting parameters");
+    BOOST_TEST_MESSAGE("--- prepare");
+    produce_block();
+
+    auto issuer = N(issuer);
+    BOOST_TEST_MESSAGE("--- create token GOLOS");
+    BOOST_CHECK_EQUAL(success(), token.create(issuer, token.make_asset(100000)));
+
+    BOOST_TEST_MESSAGE("--- check that global params not exist");
+    BOOST_TEST_CHECK(vest.get_params(_token_sym).is_null());
+
+    init_params();
+
+    auto obj_params = vest.get_params(_token_sym);
+    BOOST_TEST_MESSAGE("--- " + fc::json::to_string(obj_params));
+
+    BOOST_TEST_CHECK(obj_params["vesting_withdraw_params"]["intervals"] == withdraw_intervals);
+    BOOST_TEST_CHECK(obj_params["vesting_withdraw_params"]["interval_seconds"] == withdraw_interval_seconds);
+    BOOST_TEST_CHECK(obj_params["amount_params"]["min_amount"] == vesting_min_amount);
+
+    BOOST_TEST_CHECK(obj_params["delegation_params"]["min_amount"] == delegation_min_amount);
+    BOOST_TEST_CHECK(obj_params["delegation_params"]["min_remainder"] == delegation_min_remainder);
+    BOOST_TEST_CHECK(obj_params["delegation_params"]["min_time"] == delegation_min_time);
+    BOOST_TEST_CHECK(obj_params["delegation_params"]["max_interest"] == delegation_max_interest);
+    BOOST_TEST_CHECK(obj_params["delegation_params"]["return_time"] == delegation_return_time);
+
+    auto params = "[" + vest.vesting_withdraw(0, withdraw_interval_seconds) + "]";
+    BOOST_CHECK_EQUAL(err.withdraw_intervals, vest.set_params(issuer, _vesting_sym, params));
+
+    params = "[" + vest.vesting_withdraw(withdraw_intervals, 0) + "]";
+    BOOST_CHECK_EQUAL(err.withdraw_interval_seconds, vest.set_params(issuer, _vesting_sym, params));
+
+    params = "[" + vest.delegation(0, delegation_min_remainder, delegation_min_time, delegation_max_interest, delegation_return_time) + "]";
+    BOOST_CHECK_EQUAL(err.delegation_min_amount, vest.set_params(issuer, _vesting_sym, params));
+
+    params = "[" + vest.delegation(delegation_min_amount, 0, delegation_min_time, delegation_max_interest, delegation_return_time) + "]";
+    BOOST_CHECK_EQUAL(err.delegation_min_remainder, vest.set_params(issuer, _vesting_sym, params));
+
+    params = "[" + vest.delegation(delegation_min_amount, delegation_min_remainder, delegation_min_time, 10001, delegation_return_time) + "]";
+    BOOST_CHECK_EQUAL(err.delegation_max_interest, vest.set_params(issuer, _vesting_sym, params));
+
+    params = "[" + vest.delegation(delegation_min_amount, delegation_min_remainder, delegation_min_time, delegation_max_interest, 0) + "]";
+    BOOST_CHECK_EQUAL(err.delegation_return_time, vest.set_params(issuer, _vesting_sym, params));
+
+
+} FC_LOG_AND_RETHROW()
+
 BOOST_FIXTURE_TEST_CASE(create_vesting, golos_vesting_tester) try {
     BOOST_TEST_MESSAGE("Test creating vesting");
     auto issuer = N(issuer);
@@ -113,7 +183,7 @@ BOOST_FIXTURE_TEST_CASE(create_vesting, golos_vesting_tester) try {
 
     BOOST_TEST_MESSAGE("--- fails when not issuer");
     BOOST_CHECK_EQUAL(success(), token.create(issuer, token.make_asset(100000)));
-    BOOST_CHECK_EQUAL(err.not_issuer, vest.create_vesting(N(sania)));
+    BOOST_CHECK_EQUAL(err.issuer_not_autority, vest.create_vesting(N(sania)));
     // TODO: test issuers list
 
     BOOST_TEST_MESSAGE("--- succeed in normal conditions");
@@ -135,7 +205,10 @@ BOOST_FIXTURE_TEST_CASE(buy_vesting, golos_vesting_tester) try {
 
 BOOST_FIXTURE_TEST_CASE(convert, golos_vesting_tester) try {
     BOOST_TEST_MESSAGE("Test converting vesting to token");
+
     prepare_balances();
+    init_params();
+
     BOOST_CHECK_EQUAL(success(), vest.timeout(cfg::vesting_name));
 
     BOOST_TEST_MESSAGE("--- check that no convert object exists before start convering");
@@ -145,15 +218,18 @@ BOOST_FIXTURE_TEST_CASE(convert, golos_vesting_tester) try {
     auto start_convert = [&](auto amount, auto precision, auto name) {
         return vest.convert_vesting(N(sania), N(sania), asset(amount, symbol(precision, name)));
     };
-    BOOST_CHECK_EQUAL(err.unknown_asset, start_convert(1e6, _vesting_precision, "GLS"));
+    BOOST_CHECK_EQUAL(err.vesting_params, start_convert(1e6, _vesting_precision, "GLS"));
     BOOST_CHECK_EQUAL(err.wrong_precision, start_convert(1e5, _vesting_precision-1, _token_name));
     BOOST_CHECK_EQUAL(err.wrong_precision, start_convert(1e7, _vesting_precision+1, _token_name));
 
     BOOST_TEST_MESSAGE("--- succeed if start converting with correct asset");
-    BOOST_CHECK_EQUAL(success(), vest.convert_vesting(N(sania), N(sania), _one_per_interval));
-    auto steps = cfg::vesting_withdraw.intervals;
+
+    BOOST_CHECK_EQUAL(success(), vest.convert_vesting(N(sania), N(sania), vest.make_asset(withdraw_intervals)));
+
+    const auto steps = withdraw_intervals;
     BOOST_CHECK_EQUAL(vest.get_convert_obj(N(sania))["number_of_payments"], steps);
 
+    const int64_t _blocks_in_interval = golos::seconds_to_blocks(withdraw_interval_seconds);
     BOOST_TEST_MESSAGE("--- skip " + std::to_string(_blocks_in_interval) + " blocks and check same balance");
     produce_blocks(_blocks_in_interval);
     // note: deferred tx will be executed at current block, but after normal txs,
@@ -188,15 +264,20 @@ BOOST_FIXTURE_TEST_CASE(convert, golos_vesting_tester) try {
 
 BOOST_FIXTURE_TEST_CASE(cancel_convert, golos_vesting_tester) try {
     BOOST_TEST_MESSAGE("Test canceling convert vesting to token");
+
     prepare_balances();
+    init_params();
+
     BOOST_CHECK_EQUAL(success(), vest.timeout(cfg::vesting_name));
 
     BOOST_TEST_CHECK(vest.get_convert_obj(N(sania)).is_null());
-    BOOST_CHECK_EQUAL(success(), vest.convert_vesting(N(sania), N(sania), _one_per_interval));
-    auto steps = cfg::vesting_withdraw.intervals;
+    BOOST_CHECK_EQUAL(success(), vest.convert_vesting(N(sania), N(sania), vest.make_asset(withdraw_intervals)));
+    auto steps = withdraw_intervals;
     BOOST_CHECK_EQUAL(vest.get_convert_obj(N(sania))["number_of_payments"], steps);
 
     BOOST_TEST_MESSAGE("--- check 1st withdrawal");
+    const int64_t _blocks_in_interval = golos::seconds_to_blocks(withdraw_interval_seconds);
+
     produce_blocks(_blocks_in_interval + 1);
     BOOST_CHECK_EQUAL(vest.get_convert_obj(N(sania))["number_of_payments"], steps - 1);
     CHECK_MATCHING_OBJECT(vest.get_balance(N(sania)), vest.make_balance(99));
@@ -215,11 +296,13 @@ BOOST_FIXTURE_TEST_CASE(cancel_convert, golos_vesting_tester) try {
 
 BOOST_FIXTURE_TEST_CASE(delegate_vesting, golos_vesting_tester) try {
     BOOST_TEST_MESSAGE("Test delegating vesting shares");
+
     prepare_balances();
+    init_params();
+
     const int divider = vest.make_asset(1).get_amount();
     const auto min_fract = 1. / divider;
-    const int min_step = cfg::delegation.min_amount / divider;
-    const int min_remainder = cfg::delegation.min_remainder / divider;
+    const int min_remainder = delegation_min_remainder / divider;
     const auto amount = vest.make_asset(min_remainder);
 
     BOOST_TEST_MESSAGE("--- fail when delegate to self");
@@ -244,35 +327,36 @@ BOOST_FIXTURE_TEST_CASE(delegate_vesting, golos_vesting_tester) try {
     BOOST_CHECK_EQUAL(err.delegation_no_funds2, vest.delegate_vesting(N(sania), N(vania), vest.make_asset(min_remainder+1)));
     BOOST_TEST_MESSAGE("--- succeed when withdraval counted");
     BOOST_CHECK_EQUAL(success(), vest.delegate_vesting(N(sania), N(vania), amount));
-    // BOOST_CHECK_EQUAL(success(), vest.delegate_vesting(N(sania), N(issuer), amount));    // TODO: fix: sending to issuer instead of vania fails
-    // TODO: check delegation to account without balance
-    // TODO: check change delegation
-    // TODO: check min step
-    // TODO: check min remainder
-    // TODO: check delegation object
-    // TODO: check battery limitation
+//    // BOOST_CHECK_EQUAL(success(), vest.delegate_vesting(N(sania), N(issuer), amount));    // TODO: fix: sending to issuer instead of vania fails
+//    // TODO: check delegation to account without balance
+//    // TODO: check change delegation
+//    // TODO: check min step
+//    // TODO: check min remainder
+//    // TODO: check delegation object
+//    // TODO: check battery limitation
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE(undelegate_vesting, golos_vesting_tester) try {
     BOOST_TEST_MESSAGE("Test un-delegating vesting shares");
-    prepare_balances();
 
-    // undelegation looks broken due composite index used in smart-contract
+    prepare_balances();
+    init_params();
 
     const int divider = vest.make_asset(1).get_amount();
-    const int min_step = cfg::delegation.min_amount / divider;
-    const int min_remainder = cfg::delegation.min_remainder / divider;
+    const int min_step = delegation_min_amount / divider;
+    const int min_remainder = delegation_min_remainder / divider;
     const int amount = min_step + min_remainder;
+
     BOOST_CHECK_EQUAL(success(), vest.delegate_vesting(N(sania), N(pasha), vest.make_asset(amount)));
     CHECK_MATCHING_OBJECT(vest.get_balance(N(sania)), vest.make_balance(100, amount));
     CHECK_MATCHING_OBJECT(vest.get_balance(N(pasha)), vest.make_balance(100, 0, amount));
     produce_block();
 
-    if (cfg::delegation.min_time > 0) {
+    if (delegation_min_time > 0) {
         // TODO: test it when config allowed to be changed with `ctrl`
         BOOST_TEST_MESSAGE("--- fail when undelegate earlier than min_time");
         BOOST_CHECK_EQUAL(err.tokens_frozen, vest.undelegate_vesting(N(sania), N(pasha), vest.make_asset(min_step)));
-        produce_blocks(golos::seconds_to_blocks(cfg::delegation.min_time));
+        produce_blocks(golos::seconds_to_blocks(delegation_min_time));
     }
 
     BOOST_TEST_MESSAGE("--- fail when undelegate more than delegated");
@@ -292,7 +376,7 @@ BOOST_FIXTURE_TEST_CASE(undelegate_vesting, golos_vesting_tester) try {
 
     BOOST_TEST_MESSAGE("--- wait delegation return block and check that balance is the same");
     BOOST_CHECK_EQUAL(success(), vest.timeout(cfg::vesting_name));
-    produce_blocks(golos::seconds_to_blocks(cfg::delegation.return_time - cfg::delegation.min_time));      // Note: it's return + 1 block here, check, why delayed
+    produce_blocks(golos::seconds_to_blocks(delegation_return_time - delegation_min_time));      // Note: it's return + 1 block here, check, why delayed
     CHECK_MATCHING_OBJECT(vest.get_balance(N(sania)), vest.make_balance(100, amount));
     CHECK_MATCHING_OBJECT(vest.get_balance(N(pasha)), vest.make_balance(100, 0, amount - min_step));
 
@@ -303,7 +387,6 @@ BOOST_FIXTURE_TEST_CASE(undelegate_vesting, golos_vesting_tester) try {
     // TODO: check delegation and return objects
     // TODO: check step, remainder
     // TODO: check min time, return time
-
 } FC_LOG_AND_RETHROW()
 
 BOOST_AUTO_TEST_SUITE_END()
