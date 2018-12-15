@@ -3,7 +3,6 @@
 #include <eosiolib/transaction.hpp>
 #include <eosio.token/eosio.token.hpp>
 
-
 namespace golos {
 
 
@@ -215,15 +214,16 @@ void vesting::delegate_vesting(name sender, name recipient, asset quantity, uint
     tables::account_table account_sender(_self, sender.value);
     auto balance_sender = account_sender.find(sname);
     eosio_assert(balance_sender != account_sender.end(), "Not found token");
-
+    auto user_balance = balance_sender->available_vesting();
+    
     tables::convert_table convert_tbl(_self, sname);
     auto convert_obj = convert_tbl.find(sender.value);
     if (convert_obj != convert_tbl.end()) {
         auto remains_int = convert_obj->payout_part * convert_obj->number_of_payments;
         auto remains_fract = convert_obj->balance_amount - convert_obj->payout_part * withdraw_params.intervals;
-        auto user_balance = balance_sender->available_vesting() - (remains_int + remains_fract);
-        eosio_assert(user_balance >= quantity, "insufficient funds for delegation");
+        user_balance -= (remains_int + remains_fract);
     }
+    eosio_assert(user_balance >= quantity, "insufficient funds for delegation");
 
     account_sender.modify(balance_sender, sender, [&](auto& item){
         item.delegate_vesting += quantity;

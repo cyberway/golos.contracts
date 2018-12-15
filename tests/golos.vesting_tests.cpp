@@ -30,15 +30,16 @@ public:
         , token({this, cfg::token_name, _token_sym})
     {
         create_accounts({N(sania), N(pasha), N(tania), N(vania), N(issuer), N(notify.acc),
-            _code, cfg::token_name, cfg::control_name, cfg::emission_name});
+            _code, cfg::token_name, cfg::control_name, cfg::emission_name, cfg::publish_name, cfg::charge_name});
         produce_blocks(2);
 
         install_contract(_code, contracts::vesting_wasm(), contracts::vesting_abi());
         install_contract(cfg::token_name, contracts::token_wasm(), contracts::token_abi());
+        install_contract(cfg::charge_name, contracts::charge_wasm(), contracts::charge_abi());
     }
 
     void prepare_balances(int supply = 1e5, int issue1 = 500, int issue2 = 500, int buy1 = 100, int buy2 = 100) {
-        BOOST_CHECK_EQUAL(success(), token.create(N(issuer), token.make_asset(supply)));
+        BOOST_CHECK_EQUAL(success(), token.create(N(issuer), token.make_asset(supply), {cfg::charge_name, cfg::publish_name}));
         BOOST_CHECK_EQUAL(success(), token.issue(N(issuer), N(sania), token.make_asset(issue1), "issue tokens sania"));
         BOOST_CHECK_EQUAL(success(), token.issue(N(issuer), N(pasha), token.make_asset(issue2), "issue tokens pasha"));
 
@@ -317,6 +318,9 @@ BOOST_FIXTURE_TEST_CASE(delegate_vesting, golos_vesting_tester) try {
     BOOST_CHECK_EQUAL(err.tokens_lt0, vest.delegate_vesting(N(sania), N(pasha), vest.make_asset(0)));
     BOOST_CHECK_EQUAL(err.delegation_no_funds, vest.delegate_vesting(N(sania), N(pasha), vest.make_asset(min_fract)));
     BOOST_CHECK_EQUAL(err.delegated_withdraw, vest.delegate_vesting(N(sania), N(pasha), vest.make_asset(min_remainder - min_fract)));   //TODO: error must be same
+
+    BOOST_TEST_MESSAGE("--- insufficient funds assert");
+    BOOST_CHECK_EQUAL(err.delegation_no_funds2, vest.delegate_vesting(N(sania), N(pasha), vest.make_asset(10000)));
 
     BOOST_TEST_MESSAGE("--- succeed when correct arguments for both payout strategies");
     BOOST_CHECK_EQUAL(success(), vest.delegate_vesting(N(sania), N(pasha), amount, 0, 0));  // amount = min_remainder
