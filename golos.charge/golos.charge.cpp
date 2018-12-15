@@ -58,7 +58,7 @@ void charge::useandstore(name user, symbol_code token_code, uint8_t charge_id, i
     auto new_val = consume_charge(issuer, user, token_code, charge_id, price_arg);
     
     storedvals storedvals_table(_self, user.value);
-    auto storedvals_index = storedvals_table.get_index<N(symbolstamp)>();
+    auto storedvals_index = storedvals_table.get_index<"symbolstamp"_n>();
     auto k = stored::get_key(token_code, charge_id, stamp_id);
     auto itr = storedvals_index.find(k);
     if (itr != storedvals_index.end())
@@ -74,7 +74,7 @@ void charge::useandstore(name user, symbol_code token_code, uint8_t charge_id, i
 void charge::removestored(name user, symbol_code token_code, uint8_t charge_id, int64_t stamp_id) {
     require_auth(name(token::get_issuer(config::token_name, token_code)));
     storedvals storedvals_table(_self, user.value);
-    auto storedvals_index = storedvals_table.get_index<N(symbolstamp)>();
+    auto storedvals_index = storedvals_table.get_index<"symbolstamp"_n>();
     auto itr = storedvals_index.find(stored::get_key(token_code, charge_id, stamp_id));
     eosio_assert(itr != storedvals_index.end(), "itr == storedvals_index.end()");
     storedvals_index.erase(itr);

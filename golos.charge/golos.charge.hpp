@@ -9,7 +9,7 @@
 #include <eosiolib/asset.hpp>
 #include <eosiolib/eosio.hpp>
 #include <string>
-#include "config.hpp"
+#include <common/config.hpp>
 
 namespace golos {
 using namespace eosio;
@@ -22,7 +22,7 @@ public:
     using contract::contract;    
     static inline int64_t get_stored(name code, name user, symbol_code token_code, uint8_t charge_id, uint64_t stamp_id) {
         storedvals storedvals_table(code, user.value);
-        auto storedvals_index = storedvals_table.get_index<N(symbolstamp)>();
+        auto storedvals_index = storedvals_table.get_index<"symbolstamp"_n>();
         auto itr = storedvals_index.find(stored::get_key(token_code, charge_id, stamp_id));
         return itr != storedvals_index.end() ? from_fixp(FP(itr->value)) : -1; //charge can't be negative
     }
@@ -81,10 +81,10 @@ private:
         }
     };
 
-    using balances = eosio::multi_index<N(balances), balance>;
-    using restorers = eosio::multi_index<N(restorers), restorer>;
-    using stored_key_idx = indexed_by<N(symbolstamp), const_mem_fun<stored, uint128_t, &stored::key> >;
-    using storedvals = eosio::multi_index<N(storedvals), stored, stored_key_idx>;
+    using balances = eosio::multi_index<"balances"_n, balance>;
+    using restorers = eosio::multi_index<"restorers"_n, restorer>;
+    using stored_key_idx = indexed_by<"symbolstamp"_n, const_mem_fun<stored, uint128_t, &stored::key> >;
+    using storedvals = eosio::multi_index<"toredvals"_n, stored, stored_key_idx>;
     
     fixp_t calc_value(name user, symbol_code token_code, balances& balances_table, balances::const_iterator& itr, fixp_t price) const;
 
