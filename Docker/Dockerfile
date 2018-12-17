@@ -10,6 +10,7 @@ ADD https://api.github.com/repos/GolosChain/golos-smart/git/refs/heads/$branch /
 RUN git clone -b $branch https://github.com/GolosChain/golos-smart.git --recursive
 
 RUN cd golos-smart/cyberway.contracts \
+    && echo ":$(git rev-parse HEAD)" > version \
     && cmake -H. -B"build" \
         -GNinja \
         -DCMAKE_BUILD_TYPE=Release \
@@ -34,8 +35,10 @@ RUN apt-get update \
     && DEBIAN_FRONTEND=noninteractive apt-get -y install openssl ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
+COPY --from=builder /golos-smart/version /opt/golos.contracts/version
 COPY --from=builder /opt/golos.contracts/ /opt/golos.contracts/
 COPY --from=builder /golos-smart/build/tests/unit_test /opt/golos.contracts/unit_test
 
+COPY --from=builder /golos-smart/cyberway.contracts/version /opt/cyberway.contracts/version
 COPY --from=builder /opt/cyberway.contracts/ /opt/cyberway.contracts/
 COPY --from=builder /golos-smart/cyberway.contracts/build/tests/unit_test /opt/cyberway.contracts/unit_test
