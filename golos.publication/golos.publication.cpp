@@ -643,6 +643,7 @@ void publication::set_limit(std::string act_str, symbol_code token_code, uint8_t
     eosio_assert(price < 0 || golos::charge::exist(config::charge_name, token_code, charge_id), "publication::set_limit: charge doesn't exist");
     auto act = limitparams::act_from_str(act_str);
     eosio_assert(act != limitparams::VOTE || charge_id == 0, "publication::set_limit: charge_id for VOTE should be 0");
+    //? should we require cutoff to be _100percent if act == VOTE (to synchronize with vesting)?
     eosio_assert(act != limitparams::POSTBW || min_vesting == 0, "publication::set_limit: min_vesting for POSTBW should be 0");    
     golos::upsert_tbl<limit_table>(_self, _self.value, _self, act, [&](bool exists) {
         return [&](limitparams& item) {

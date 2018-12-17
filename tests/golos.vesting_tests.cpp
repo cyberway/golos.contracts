@@ -1,35 +1,37 @@
 #include "golos_tester.hpp"
 #include "golos.vesting_test_api.hpp"
+#include "golos.charge_test_api.hpp"
 #include "eosio.token_test_api.hpp"
 #include "contracts.hpp"
 #include "../golos.vesting/config.hpp"
-
 
 namespace cfg = golos::config;
 using namespace eosio::testing;
 using namespace eosio::chain;
 using namespace fc;
 
-
 static const auto _token_name = "GOLOS";
 static const auto _token_precision = 3;
 static const auto _vesting_precision = 6;
 static const auto _token_sym = symbol(_token_precision, _token_name);
 static const auto _vesting_sym = symbol(_vesting_precision, _token_name);
+static const auto default_vesting_amount = 100;
 
 class golos_vesting_tester : public golos_tester {
 protected:
     golos_vesting_api vest;
     eosio_token_api token;
-
+    golos_charge_api charge;
 public:
 
     golos_vesting_tester()
         : golos_tester(cfg::vesting_name)
         , vest({this, cfg::vesting_name, _vesting_sym})
         , token({this, cfg::token_name, _token_sym})
+        , charge({this, cfg::charge_name, _token_sym})
+        
     {
-        create_accounts({N(sania), N(pasha), N(tania), N(vania), N(issuer), N(notify.acc),
+        create_accounts({N(sania), N(pasha), N(tania), N(vania), N(notify.acc),
             _code, cfg::token_name, cfg::control_name, cfg::emission_name, cfg::publish_name, cfg::charge_name});
         produce_blocks(2);
 
@@ -38,10 +40,10 @@ public:
         install_contract(cfg::charge_name, contracts::charge_wasm(), contracts::charge_abi());
     }
 
-    void prepare_balances(int supply = 1e5, int issue1 = 500, int issue2 = 500, int buy1 = 100, int buy2 = 100) {
-        BOOST_CHECK_EQUAL(success(), token.create(N(issuer), token.make_asset(supply), {cfg::charge_name, cfg::publish_name}));
-        BOOST_CHECK_EQUAL(success(), token.issue(N(issuer), N(sania), token.make_asset(issue1), "issue tokens sania"));
-        BOOST_CHECK_EQUAL(success(), token.issue(N(issuer), N(pasha), token.make_asset(issue2), "issue tokens pasha"));
+    void prepare_balances(int supply = 1e5, int issue1 = 500, int issue2 = 500, int buy1 = default_vesting_amount, int buy2 = default_vesting_amount) {
+        BOOST_CHECK_EQUAL(success(), token.create(cfg::emission_name, token.make_asset(supply), {cfg::charge_name, cfg::publish_name}));
+        BOOST_CHECK_EQUAL(success(), token.issue(cfg::emission_name, N(sania), token.make_asset(issue1), "issue tokens sania"));
+        BOOST_CHECK_EQUAL(success(), token.issue(cfg::emission_name, N(pasha), token.make_asset(issue2), "issue tokens pasha"));
 
         BOOST_CHECK_EQUAL(success(), vest.open(N(sania)));
         BOOST_CHECK_EQUAL(success(), vest.open(N(pasha)));
@@ -49,7 +51,7 @@ public:
         BOOST_CHECK_EQUAL(success(), vest.open(N(vania)));
         produce_block();
 
-        BOOST_CHECK_EQUAL(success(), vest.create_vesting(N(issuer)));
+        BOOST_CHECK_EQUAL(success(), vest.create_vesting(cfg::emission_name));
         BOOST_CHECK_EQUAL(success(), token.transfer(N(sania), cfg::vesting_name, token.make_asset(buy1), "buy vesting"));
         BOOST_CHECK_EQUAL(success(), token.transfer(N(pasha), cfg::vesting_name, token.make_asset(buy2), "buy vesting"));
         produce_block();
@@ -60,9 +62,8 @@ public:
         auto vesting_amount = vest.vesting_amount(vesting_min_amount);
         auto delegation = vest.delegation(delegation_min_amount, delegation_min_remainder, delegation_min_time, delegation_max_interest, delegation_return_time);
 
-        auto issuer = N(issuer);
         auto params = "[" + vesting_withdraw + "," + vesting_amount + "," + delegation + "]";
-        BOOST_CHECK_EQUAL(success(), vest.set_params(issuer, _vesting_sym, params));
+        BOOST_CHECK_EQUAL(success(), vest.set_params(cfg::emission_name, _vesting_sym, params));
     }
 
 protected:
@@ -92,6 +93,8 @@ protected:
         const string delegation_min_remainder  = amsg("delegation min_remainder <= 0");
         const string delegation_max_interest   = amsg("delegation max_interest > 10000");
         const string delegation_return_time    = amsg("delegation return_time <= 0");
+
+        const string cutoff = amsg("not enough power");
     } err;
 
     const uint32_t withdraw_intervals = 13;
@@ -110,7 +113,7 @@ BOOST_FIXTURE_TEST_CASE(token_tests, golos_vesting_tester) try {
     // TODO: actually tests token, remove?
     BOOST_TEST_MESSAGE("Test creating and issue token");
     BOOST_TEST_MESSAGE("--- create token");
-    auto issuer = N(issuer);
+    auto issuer = cfg::emission_name;
     auto stats = mvo()
         ("supply", token.asset_str(0))
         ("max_supply", token.asset_str(100000))
@@ -133,7 +136,7 @@ BOOST_FIXTURE_TEST_CASE(set_params, golos_vesting_tester) try {
     BOOST_TEST_MESSAGE("--- prepare");
     produce_block();
 
-    auto issuer = N(issuer);
+    auto issuer = cfg::emission_name;
     BOOST_TEST_MESSAGE("--- create token GOLOS");
     BOOST_CHECK_EQUAL(success(), token.create(issuer, token.make_asset(100000)));
 
@@ -178,7 +181,7 @@ BOOST_FIXTURE_TEST_CASE(set_params, golos_vesting_tester) try {
 
 BOOST_FIXTURE_TEST_CASE(create_vesting, golos_vesting_tester) try {
     BOOST_TEST_MESSAGE("Test creating vesting");
-    auto issuer = N(issuer);
+    auto issuer = cfg::emission_name;
     BOOST_TEST_MESSAGE("--- fail on non-existing token");
     BOOST_CHECK_EQUAL(err.key_not_found, vest.create_vesting(issuer));
 
@@ -300,11 +303,11 @@ BOOST_FIXTURE_TEST_CASE(delegate_vesting, golos_vesting_tester) try {
 
     prepare_balances();
     init_params();
-
     const int divider = vest.make_asset(1).get_amount();
     const auto min_fract = 1. / divider;
     const int min_remainder = delegation_min_remainder / divider;
     const auto amount = vest.make_asset(min_remainder);
+    const auto charge_prop = 0.7;
 
     BOOST_TEST_MESSAGE("--- fail when delegate to self");
     BOOST_CHECK_EQUAL(err.self_delegate, vest.delegate_vesting(N(sania), N(sania), amount));
@@ -331,6 +334,12 @@ BOOST_FIXTURE_TEST_CASE(delegate_vesting, golos_vesting_tester) try {
     BOOST_CHECK_EQUAL(err.delegation_no_funds2, vest.delegate_vesting(N(sania), N(vania), vest.make_asset(min_remainder+1)));
     BOOST_TEST_MESSAGE("--- succeed when withdraval counted");
     BOOST_CHECK_EQUAL(success(), vest.delegate_vesting(N(sania), N(vania), amount));
+    
+    BOOST_TEST_MESSAGE("--- charge limit test");
+    BOOST_CHECK_EQUAL(success(), charge.use(cfg::emission_name, N(pasha), 0, charge_prop * cfg::_100percent, cfg::_100percent));
+    BOOST_CHECK_EQUAL(err.cutoff, vest.delegate_vesting(N(pasha), N(vania), vest.make_asset(default_vesting_amount * (1.01 - charge_prop))));
+    BOOST_CHECK_EQUAL(success(), vest.delegate_vesting(N(pasha), N(vania), vest.make_asset(default_vesting_amount * (0.99 - charge_prop))));
+
 //    // BOOST_CHECK_EQUAL(success(), vest.delegate_vesting(N(sania), N(issuer), amount));    // TODO: fix: sending to issuer instead of vania fails
 //    // TODO: check delegation to account without balance
 //    // TODO: check change delegation

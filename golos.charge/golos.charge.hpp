@@ -31,7 +31,7 @@ public:
         restorers restorers_table(code, code.value);
         return restorers_table.find(symbol(token_code, charge_id).raw()) != restorers_table.end();
     }
-
+    [[eosio::action]] void check(name user, symbol_code token_code, uint8_t charge_id, int64_t cutoff);
     [[eosio::action]] void use(name user, symbol_code token_code, uint8_t charge_id, int64_t price, int64_t cutoff, int64_t vesting_price);
     [[eosio::action]] void useandstore(name user, symbol_code token_code, uint8_t charge_id, int64_t stamp_id, int64_t price);
     [[eosio::action]] void removestored(name user, symbol_code token_code, uint8_t charge_id, int64_t stamp_id);

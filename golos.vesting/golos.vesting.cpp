@@ -2,6 +2,7 @@
 #include "config.hpp"
 #include <eosiolib/transaction.hpp>
 #include <eosio.token/eosio.token.hpp>
+#include <golos.charge/golos.charge.hpp>
 
 namespace golos {
 
@@ -209,12 +210,13 @@ void vesting::delegate_vesting(name sender, name recipient, asset quantity, uint
     eosio_assert(quantity.amount > 0, "the number of tokens should not be less than 0");
     eosio_assert(quantity.amount >= amount_params.min_amount, "Insufficient funds for delegation");
     eosio_assert(interest_rate <= delegation_params.max_interest, "Exceeded the percentage of delegated vesting");
-
-    auto sname = quantity.symbol.code().raw();
+    
+    auto token_code = quantity.symbol.code();
+    auto sname = token_code.raw();
     tables::account_table account_sender(_self, sender.value);
     auto balance_sender = account_sender.find(sname);
     eosio_assert(balance_sender != account_sender.end(), "Not found token");
-    auto user_balance = balance_sender->available_vesting();
+    auto user_balance = balance_sender->vesting;
     
     tables::convert_table convert_tbl(_self, sname);
     auto convert_obj = convert_tbl.find(sender.value);
@@ -223,7 +225,13 @@ void vesting::delegate_vesting(name sender, name recipient, asset quantity, uint
         auto remains_fract = convert_obj->balance_amount - convert_obj->payout_part * withdraw_params.intervals;
         user_balance -= (remains_int + remains_fract);
     }
-    eosio_assert(user_balance >= quantity, "insufficient funds for delegation");
+    auto deleg_after = quantity + balance_sender->delegate_vesting;
+    eosio_assert(user_balance >= deleg_after, "insufficient funds for delegation");
+    int64_t deleg_prop = user_balance.amount ? 
+        (static_cast<int128_t>(deleg_after.amount) * config::_100percent) / user_balance.amount : 0;
+    
+    INLINE_ACTION_SENDER(charge, check) (config::charge_name, {_self, config::active_name}, 
+        {sender, token_code, 0, config::_100percent - deleg_prop});
 
     account_sender.modify(balance_sender, sender, [&](auto& item){
         item.delegate_vesting += quantity;

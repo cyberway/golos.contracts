@@ -12,7 +12,6 @@ fixp_t charge::consume_charge(name issuer, name user, symbol_code token_code, ui
     eosio_assert(cutoff_arg < 0 || price_arg <= cutoff_arg, "price > cutoff");
     eosio_assert(price_arg <= max_arg, "price > max_input");
     eosio_assert(cutoff_arg < 0 || cutoff_arg <= max_arg, "cutoff > max_input");
-    require_auth(issuer);
     fixp_t price = to_fixp(price_arg);
     
     auto charge_symbol = symbol(token_code, charge_id);
@@ -40,7 +39,7 @@ fixp_t charge::consume_charge(name issuer, name user, symbol_code token_code, ui
         return new_val;
     }
     if (new_val > 0)
-        balances_table.modify(*itr, issuer, [&]( auto &item ) {
+        balances_table.modify(*itr, name(), [&]( auto &item ) {
             item.last_update = current_time();
             item.value = new_val.data();
         });
@@ -50,11 +49,19 @@ fixp_t charge::consume_charge(name issuer, name user, symbol_code token_code, ui
 }
 
 void charge::use(name user, symbol_code token_code, uint8_t charge_id, int64_t price_arg, int64_t cutoff_arg, int64_t vesting_price) {
-    consume_charge(token::get_issuer(config::token_name, token_code), user, token_code, charge_id, price_arg, cutoff_arg, vesting_price);
+    auto issuer = token::get_issuer(config::token_name, token_code);
+    require_auth(issuer);
+    consume_charge(issuer, user, token_code, charge_id, price_arg, cutoff_arg, vesting_price);
+}
+
+void charge::check(name user, symbol_code token_code, uint8_t charge_id, int64_t cutoff_arg) {
+    //require_auth(anyone); this action can update the value, but only by a predetermined restorer
+    consume_charge(token::get_issuer(config::token_name, token_code), user, token_code, charge_id, 0, cutoff_arg, 0);
 }
 
 void charge::useandstore(name user, symbol_code token_code, uint8_t charge_id, int64_t stamp_id, int64_t price_arg) {
     auto issuer = token::get_issuer(config::token_name, token_code);
+    require_auth(issuer);
     auto new_val = consume_charge(issuer, user, token_code, charge_id, price_arg);
     
     storedvals storedvals_table(_self, user.value);
@@ -141,11 +148,12 @@ fixp_t charge::calc_value(name user, symbol_code token_code, balances& balances_
                 {fixp_t(0), FP(restorer_itr->max_vesting)}, 
                 {fixp_t(0), FP(restorer_itr->max_elapsed)}
             });
+        eosio_assert(restored >= fixp_t(0), "charge::calc_value restored < 0");
     }
     
     return std::max(fp_cast<fixp_t>((elap_t(FP(itr->value)) - elap_t(restored)) + elap_t(price)), fixp_t(0));
 }
-EOSIO_DISPATCH(charge, (use)(useandstore)(removestored)(setrestorer) )
+EOSIO_DISPATCH(charge, (use)(check)(useandstore)(removestored)(setrestorer) )
 
 } /// namespace golos
 
