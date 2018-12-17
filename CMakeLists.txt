@@ -38,6 +38,7 @@ add_subdirectory(golos.vesting)
 add_subdirectory(golos.publication)
 add_subdirectory(golos.charge)
 add_subdirectory(golos.social)
+add_subdirectory(golos.referral)
 
 if (APPLE)
    set(OPENSSL_ROOT "/usr/local/opt/openssl")
@@ -46,4 +47,4 @@ elseif (UNIX)
 endif()
 set(SECP256K1_ROOT "/usr/local")
 
-include(UnitTestsExternalProject.txt)
+#include(UnitTestsExternalProject.txt)

@@ -12,18 +12,24 @@ public:
     using contract::contract;
 
     [[eosio::action]]
-    void crtreferral(name referrer, name referral, uint32_t percent, uint64_t expire, uint64_t breakout);
+    void addreferral(name referrer, name referral, uint32_t percent, uint64_t expire, uint64_t breakout);
 
 private:
     struct obj_referral {
+        uint64_t id;
+        name referrer;
         name referral;
         uint32_t percent;
         uint64_t expire;
         uint64_t breakout;
 
-        uint64_t primary_key()const { return referral.value; }
+        uint64_t primary_key()const { return id; }
+        uint64_t referrer_key()const { return referrer.value; }
+        uint64_t referral_key()const { return referral.value; }
     };
-    using referrals = eosio::multi_index<"referrals"_n, obj_referral>;
+    using referrals = eosio::multi_index< "referrals"_n, obj_referral,
+                      eosio::indexed_by< "referrerkey"_n, eosio::const_mem_fun<obj_referral, uint64_t, &obj_referral::referrer_key> >,
+                      eosio::indexed_by< "referralkey"_n, eosio::const_mem_fun<obj_referral, uint64_t, &obj_referral::referral_key> >>;
 
 };
 

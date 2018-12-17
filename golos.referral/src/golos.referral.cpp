@@ -4,11 +4,11 @@ namespace golos {
 
 using namespace eosio;
 
-void referral::crtreferral(name referrer, name referral, uint32_t percent,
+void referral::addreferral(name referrer, name referral, uint32_t percent,
                            uint64_t expire, uint64_t breakout) {
     require_auth(referrer);
 
-    referrals referrals_table(_self, referrer.value);
+    referrals referrals_table(_self, _self.value);
     auto it_referral = referrals_table.find(referral.value);
     eosio_assert(it_referral == referrals_table.end(), "This referral exits");
 
@@ -18,6 +18,8 @@ void referral::crtreferral(name referrer, name referral, uint32_t percent,
     eosio_assert(percent > 100, "percentages above 100%");
 
     referrals_table.emplace(referrer, [&]( auto &item ) {
+        item.id = referrals_table.available_primary_key();
+        item.referrer = referrer;
         item.referral = referral;
         item.percent  = percent;
         item.expire   = expire;
@@ -27,4 +29,4 @@ void referral::crtreferral(name referrer, name referral, uint32_t percent,
 
 }
 
-EOSIO_DISPATCH(golos::referral, (crtreferral));
+EOSIO_DISPATCH(golos::referral, (addreferral));
