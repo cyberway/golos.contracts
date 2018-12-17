@@ -13,3 +13,6 @@ set_target_properties(golos.vesting.wasm
 
 file(GLOB ABI_FILES "*.abi")
 configure_file("${ABI_FILES}" "${CMAKE_CURRENT_BINARY_DIR}" COPYONLY)
+
+install (TARGETS golos.vesting.wasm DESTINATION ${CMAKE_INSTALL_PREFIX}/golos.vesting/)
+install (FILES ${CMAKE_CURRENT_BINARY_DIR}/golos.vesting.abi DESTINATION ${CMAKE_INSTALL_PREFIX}/golos.vesting/)

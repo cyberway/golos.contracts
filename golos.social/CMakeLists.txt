@@ -10,3 +10,6 @@ set_target_properties(golos.social.wasm
 
 file(GLOB ABI_FILES "*.abi")
 configure_file("${ABI_FILES}" "${CMAKE_CURRENT_BINARY_DIR}" COPYONLY)
+
+install (TARGETS golos.social.wasm DESTINATION ${CMAKE_INSTALL_PREFIX}/golos.social/)
+install (FILES ${CMAKE_CURRENT_BINARY_DIR}/golos.social.abi DESTINATION ${CMAKE_INSTALL_PREFIX}/golos.social/)

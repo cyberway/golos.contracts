@@ -12,3 +12,6 @@ set_target_properties(golos.publication.wasm
 
 file(GLOB ABI_FILES "*.abi")
 configure_file("${ABI_FILES}" "${CMAKE_CURRENT_BINARY_DIR}" COPYONLY)
+
+install (TARGETS golos.publication.wasm DESTINATION ${CMAKE_INSTALL_PREFIX}/golos.publication/)
+install (FILES ${CMAKE_CURRENT_BINARY_DIR}/golos.publication.abi DESTINATION ${CMAKE_INSTALL_PREFIX}/golos.publication/)

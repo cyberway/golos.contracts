@@ -12,3 +12,6 @@ set_target_properties(golos.ctrl.wasm
    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
 
 configure_file("${CMAKE_CURRENT_SOURCE_DIR}/abi/golos.ctrl.abi" "${CMAKE_CURRENT_BINARY_DIR}" COPYONLY)
+
+install (TARGETS golos.ctrl.wasm DESTINATION ${CMAKE_INSTALL_PREFIX}/golos.ctrl/)
+install (FILES ${CMAKE_CURRENT_BINARY_DIR}/golos.ctrl.abi DESTINATION ${CMAKE_INSTALL_PREFIX}/golos.ctrl/)

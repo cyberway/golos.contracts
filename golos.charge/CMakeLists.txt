@@ -11,3 +11,6 @@ set_target_properties(golos.charge.wasm
 
 file(GLOB ABI_FILES "*.abi")
 configure_file("${ABI_FILES}" "${CMAKE_CURRENT_BINARY_DIR}" COPYONLY)
+
+install (TARGETS golos.charge.wasm DESTINATION ${CMAKE_INSTALL_PREFIX}/golos.charge/)
+install (FILES ${CMAKE_CURRENT_BINARY_DIR}/golos.charge.abi DESTINATION ${CMAKE_INSTALL_PREFIX}/golos.charge/)
