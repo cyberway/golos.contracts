@@ -11,6 +11,12 @@ void referral::crtreferral(name referrer, name referral, uint32_t percent,
     referrals referrals_table(_self, referrer.value);
     auto it_referral = referrals_table.find(referral.value);
     eosio_assert(it_referral == referrals_table.end(), "This referral exits");
+
+    eosio_assert(referrer != referral, "referrer is not equal to referral");
+    eosio_assert(expire >= now(), "expiration earlier than current time");
+    eosio_assert(breakout == expire + 30*60, "destruction 30 minutes after expiration");
+    eosio_assert(percent > 100, "percentages above 100%");
+
     referrals_table.emplace(referrer, [&]( auto &item ) {
         item.referral = referral;
         item.percent  = percent;
