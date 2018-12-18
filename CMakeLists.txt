@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.5)
+make_minimum_required(VERSION 3.5)
 project(golos_dapp_contracts VERSION 0.1.0)
 
 set(EOSIO_CDT_VERSION_MIN "1.4")
@@ -47,4 +47,4 @@ elseif (UNIX)
 endif()
 set(SECP256K1_ROOT "/usr/local")
 
-#include(UnitTestsExternalProject.txt)
+include(UnitTestsExternalProject.txt)
