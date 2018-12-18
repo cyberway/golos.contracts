@@ -2,7 +2,7 @@
 #include <eosiolib/eosio.hpp>
 #include <eosiolib/asset.hpp>
 #include <eosiolib/time.hpp>
-
+#include "parameters.hpp"
 
 namespace golos {
 
@@ -11,6 +11,12 @@ using namespace eosio;
 class referral: public contract {
 public:
     using contract::contract;
+
+    [[eosio::action]]
+    void validateprms(std::vector<referral_params>);
+
+    [[eosio::action]]
+    void setparams(std::vector<referral_params>);
 
     [[eosio::action]]
     void addreferral(name referrer, name referral, uint32_t percent, uint64_t expire, asset breakout);

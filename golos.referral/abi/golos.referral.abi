@@ -1,5 +1,15 @@
 {
     "version": "cyberway::abi/1.1",
+    "variants": [
+        {
+          "name": "referral_param",
+          "types": [
+                "breakout_parametrs",
+                "expire_parametrs",
+                "persent_parametrs"
+            ]
+        }
+    ],
     "structs": [
         {
             "name": "addreferral",
@@ -23,12 +33,62 @@
                 {"type": "uint64", "name": "expire"},
                 {"type": "asset", "name": "breakout"}
             ]
+        },
+        {
+           "name": "breakout_parametrs",
+           "base": "",
+           "fields": [
+              {"name": "min_breakout", "type": "asset"},
+              {"name": "max_breakout", "type": "asset"}
+           ]
+        },
+        {
+           "name": "expire_parametrs",
+           "base": "",
+           "fields": [
+              {"name": "min_expire", "type": "uint64"},
+              {"name": "max_expire", "type": "uint64"}
+           ]
+        },
+        {
+           "name": "persent_parametrs",
+           "base": "",
+           "fields": [
+              {"name": "max_perсent", "type": "uint32"}
+           ]
+        },
+        {
+           "name": "referral_state",
+           "base": "",
+           "fields": [
+              {"name": "id", "type": "uint64"},
+              {"name": "breakout_params", "type": "breakout_parametrs"},
+              {"name": "expire_params",   "type": "expire_parametrs"},
+              {"name": "persent_params",  "type": "persent_parametrs"}
+           ]
+        },
+        {
+           "name": "setparams",
+           "base": "",
+           "fields": [
+              {"name": "params", "type": "referral_param[]"}
+           ]
         }
     ],
     "actions": [
         {
             "name": "addreferral",
             "type": "addreferral",
+            "ricardian_contract": ""
+        },
+        {
+            "name": "validateprms",
+            "type": "setparams",
+            "ricardian_contract": ""
+        },
+        {
+            "name": "setparams",
+            "type": "setparams",
             "ricardian_contract": ""
         }
     ],
