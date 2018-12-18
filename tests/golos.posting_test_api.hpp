@@ -128,6 +128,30 @@ struct golos_posting_api: base_contract_api {
             ("permlink", permlink)
         );
     }
+    action_result set_params(std::string json_params) {
+        return push(N(setparams), _code, args()
+            ("params", json_str_to_obj(json_params)));
+    }
+
+    variant get_params() const {
+        return base_contract_api::get_struct(_code, N(pstngparams), N(pstngparams), "posting_state");
+    }
+
+    string get_str_vote_changes(uint8_t max_vote_changes) {
+        return string("['st_max_vote_changes', {'value':'") + std::to_string(max_vote_changes) + "'}]";
+    }
+
+    string get_str_cashout_window(uint32_t window, uint32_t upvote_lockout) {
+        return string("['st_cashout_window', {'window':'") + std::to_string(window) + "','upvote_lockout':'" + std::to_string(upvote_lockout) + "'}]";
+    }
+
+    string get_str_beneficiaries(uint8_t max_beneficiaries) {
+        return string("['st_max_beneficiaries', {'value':'") + std::to_string(max_beneficiaries) + "'}]";
+    }
+
+    string get_str_comment_depth(uint16_t max_comment_depth) {
+        return string("['st_max_comment_depth', {'value':'") + std::to_string(max_comment_depth) + "'}]";
+    }  
 
     //// posting tables
     variant get_message(account_name acc, uint64_t id) {
