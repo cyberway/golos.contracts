@@ -1,5 +1,6 @@
 #pragma once
 #include <eosiolib/eosio.hpp>
+#include <eosiolib/asset.hpp>
 #include <eosiolib/time.hpp>
 
 
@@ -12,7 +13,7 @@ public:
     using contract::contract;
 
     [[eosio::action]]
-    void addreferral(name referrer, name referral, uint32_t percent, uint64_t expire, uint64_t breakout);
+    void addreferral(name referrer, name referral, uint32_t percent, uint64_t expire, asset breakout);
 
 private:
     struct obj_referral {
@@ -21,9 +22,9 @@ private:
         name referral;
         uint32_t percent;
         uint64_t expire;
-        uint64_t breakout;
+        asset breakout;
 
-        uint64_t primary_key()const { return id; }
+        uint64_t primary_key()const  { return id; }
         uint64_t referrer_key()const { return referrer.value; }
         uint64_t referral_key()const { return referral.value; }
     };
