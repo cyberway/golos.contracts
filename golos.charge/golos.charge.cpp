@@ -1,6 +1,4 @@
 #include "golos.charge.hpp"
-#include <eosio.token/eosio.token.hpp>
-#include <golos.vesting/golos.vesting.hpp>
 
 namespace golos {
 using namespace eosio;
@@ -17,7 +15,7 @@ fixp_t charge::consume_charge(name issuer, name user, symbol_code token_code, ui
     auto charge_symbol = symbol(token_code, charge_id);
     balances balances_table(_self, user.value);
     balances::const_iterator itr = balances_table.find(charge_symbol.raw());
-    auto new_val = calc_value(user, token_code, balances_table, itr, price);
+    auto new_val = (itr != balances_table.end()) ? calc_value(_self, user, token_code, *itr, price) : price;
     if(cutoff_arg > 0 && new_val > to_fixp(cutoff_arg)) {
         eosio_assert(vesting_price > 0, "not enough power");
         auto user_vesting = golos::vesting::get_account_unlocked_vesting(config::vesting_name, user, token_code);
@@ -52,11 +50,6 @@ void charge::use(name user, symbol_code token_code, uint8_t charge_id, int64_t p
     auto issuer = token::get_issuer(config::token_name, token_code);
     require_auth(issuer);
     consume_charge(issuer, user, token_code, charge_id, price_arg, cutoff_arg, vesting_price);
-}
-
-void charge::check(name user, symbol_code token_code, uint8_t charge_id, int64_t cutoff_arg) {
-    //require_auth(anyone); this action can update the value, but only by a predetermined restorer
-    consume_charge(token::get_issuer(config::token_name, token_code), user, token_code, charge_id, 0, cutoff_arg, 0);
 }
 
 void charge::useandstore(name user, symbol_code token_code, uint8_t charge_id, int64_t stamp_id, int64_t price_arg) {
@@ -124,36 +117,7 @@ void charge::setrestorer(symbol_code token_code, uint8_t charge_id, std::string 
              item.max_elapsed = to_fixp(max_elapsed).data();
         });
 }
-
-fixp_t charge::calc_value(name user, symbol_code token_code, balances& balances_table, balances::const_iterator& itr, fixp_t price) const {
-    if (itr == balances_table.end())
-        return price;
-    auto cur_time = current_time();
-    eosio_assert(cur_time >= itr->last_update, "LOGIC ERROR! charge::calc_value: cur_time < itr->last_update");
-    fixp_t restored = fixp_t(0);
-    if (cur_time > itr->last_update) {
-        
-        restorers restorers_table(_self, _self.value);
-        auto restorer_itr = restorers_table.find(itr->charge_symbol);
-        eosio_assert(restorer_itr != restorers_table.end(), "charge::calc_value restorer_itr == restorers_table.end()");
-        atmsp::machine<fixp_t> machine;
-        
-        int64_t elapsed_seconds = static_cast<int64_t>((cur_time - itr->last_update) / eosio::seconds(1).count());        
-        auto prev = FP(itr->value);
-        int64_t vesting = golos::vesting::get_account_effective_vesting(config::vesting_name, user, token_code).amount;
-        restorer_itr->func.to_machine(machine);
-        restored = machine.run(
-            {prev, fp_cast<fixp_t>(vesting, false), fp_cast<fixp_t>(elapsed_seconds, false)}, {
-                {fixp_t(0), FP(restorer_itr->max_prev)}, 
-                {fixp_t(0), FP(restorer_itr->max_vesting)}, 
-                {fixp_t(0), FP(restorer_itr->max_elapsed)}
-            });
-        eosio_assert(restored >= fixp_t(0), "charge::calc_value restored < 0");
-    }
-    
-    return std::max(fp_cast<fixp_t>((elap_t(FP(itr->value)) - elap_t(restored)) + elap_t(price)), fixp_t(0));
-}
-EOSIO_DISPATCH(charge, (use)(check)(useandstore)(removestored)(setrestorer) )
+EOSIO_DISPATCH(charge, (use)(useandstore)(removestored)(setrestorer) )
 
 } /// namespace golos
 

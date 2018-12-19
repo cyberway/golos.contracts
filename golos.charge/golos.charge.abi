@@ -119,28 +119,6 @@
     ]
   },
   {
-    "name": "check",
-    "base": "",
-    "fields": [
-        {
-            "name": "user",
-            "type": "name"
-        },
-        {
-            "name": "token_code",
-            "type": "symbol_code"
-        },
-        {
-            "name": "charge_id",
-            "type": "uint8"
-        },
-        {
-            "name": "cutoff",
-            "type": "int64"
-        }
-    ]
-  },
-  {
     "name": "useandstore",
     "base": "",
     "fields": [
@@ -279,10 +257,6 @@
   {
     "name": "useandstore",
     "type": "useandstore"
-  },
-  {
-    "name": "check",
-    "type": "check"
   },
   {
     "name": "removestored",

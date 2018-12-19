@@ -94,7 +94,7 @@ protected:
         const string delegation_max_interest   = amsg("delegation max_interest > 10000");
         const string delegation_return_time    = amsg("delegation return_time <= 0");
 
-        const string cutoff = amsg("not enough power");
+        const string cutoff = amsg("can't delegate, not enough power");
     } err;
 
     const uint32_t withdraw_intervals = 13;
@@ -338,7 +338,7 @@ BOOST_FIXTURE_TEST_CASE(delegate_vesting, golos_vesting_tester) try {
     BOOST_TEST_MESSAGE("--- charge limit test");
     BOOST_CHECK_EQUAL(success(), charge.use(cfg::emission_name, N(pasha), 0, charge_prop * cfg::_100percent, cfg::_100percent));
     BOOST_CHECK_EQUAL(err.cutoff, vest.delegate_vesting(N(pasha), N(vania), vest.make_asset(default_vesting_amount * (1.01 - charge_prop))));
-    BOOST_CHECK_EQUAL(success(), vest.delegate_vesting(N(pasha), N(vania), vest.make_asset(default_vesting_amount * (0.99 - charge_prop))));
+    BOOST_CHECK_EQUAL(success(), vest.delegate_vesting(N(pasha), N(vania), vest.make_asset(default_vesting_amount * (1.0 - charge_prop))));
 
 //    // BOOST_CHECK_EQUAL(success(), vest.delegate_vesting(N(sania), N(issuer), amount));    // TODO: fix: sending to issuer instead of vania fails
 //    // TODO: check delegation to account without balance

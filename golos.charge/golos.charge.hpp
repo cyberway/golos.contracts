@@ -10,6 +10,8 @@
 #include <eosiolib/eosio.hpp>
 #include <string>
 #include <common/config.hpp>
+#include <eosio.token/eosio.token.hpp>
+#include <golos.vesting/golos.vesting.hpp>
 
 namespace golos {
 using namespace eosio;
@@ -31,7 +33,6 @@ public:
         restorers restorers_table(code, code.value);
         return restorers_table.find(symbol(token_code, charge_id).raw()) != restorers_table.end();
     }
-    [[eosio::action]] void check(name user, symbol_code token_code, uint8_t charge_id, int64_t cutoff);
     [[eosio::action]] void use(name user, symbol_code token_code, uint8_t charge_id, int64_t price, int64_t cutoff, int64_t vesting_price);
     [[eosio::action]] void useandstore(name user, symbol_code token_code, uint8_t charge_id, int64_t stamp_id, int64_t price);
     [[eosio::action]] void removestored(name user, symbol_code token_code, uint8_t charge_id, int64_t stamp_id);
@@ -84,10 +85,40 @@ private:
     using balances = eosio::multi_index<"balances"_n, balance>;
     using restorers = eosio::multi_index<"restorers"_n, restorer>;
     using stored_key_idx = indexed_by<"symbolstamp"_n, const_mem_fun<stored, uint128_t, &stored::key> >;
-    using storedvals = eosio::multi_index<"toredvals"_n, stored, stored_key_idx>;
+    using storedvals = eosio::multi_index<"storedvals"_n, stored, stored_key_idx>;
     
-    fixp_t calc_value(name user, symbol_code token_code, balances& balances_table, balances::const_iterator& itr, fixp_t price) const;
-
+    static inline fixp_t calc_value(name code, name user, symbol_code token_code, const balance& user_balance, fixp_t price) {
+        auto cur_time = current_time();
+        eosio_assert(cur_time >= user_balance.last_update, "LOGIC ERROR! charge::calc_value: cur_time < user_balance.last_update");
+        fixp_t restored = fixp_t(0);
+        if (cur_time > user_balance.last_update) {
+            
+            restorers restorers_table(code, code.value);
+            auto restorer_itr = restorers_table.find(user_balance.charge_symbol);
+            eosio_assert(restorer_itr != restorers_table.end(), "charge::calc_value restorer_itr == restorers_table.end()");
+            atmsp::machine<fixp_t> machine;
+            
+            int64_t elapsed_seconds = static_cast<int64_t>((cur_time - user_balance.last_update) / eosio::seconds(1).count());        
+            auto prev = FP(user_balance.value);
+            int64_t vesting = golos::vesting::get_account_effective_vesting(config::vesting_name, user, token_code).amount;
+            restorer_itr->func.to_machine(machine);
+            restored = machine.run(
+                {prev, fp_cast<fixp_t>(vesting, false), fp_cast<fixp_t>(elapsed_seconds, false)}, {
+                    {fixp_t(0), FP(restorer_itr->max_prev)}, 
+                    {fixp_t(0), FP(restorer_itr->max_vesting)}, 
+                    {fixp_t(0), FP(restorer_itr->max_elapsed)}
+                });
+            eosio_assert(restored >= fixp_t(0), "charge::calc_value restored < 0");
+        }
+        
+        return std::max(fp_cast<fixp_t>((elap_t(FP(user_balance.value)) - elap_t(restored)) + elap_t(price)), fixp_t(0));
+    }
+public:
+    static inline int64_t get_current_value(name code, name user, symbol_code token_code, uint8_t charge_id = 0) {
+        balances balances_table(code, user.value);
+        balances::const_iterator itr = balances_table.find(symbol(token_code, charge_id).raw());
+        return (itr != balances_table.end()) ? from_fixp(calc_value(code, user, token_code, *itr, fixp_t(0))) : 0;
+    }
 };
 
 } /// namespace eosio

@@ -229,9 +229,8 @@ void vesting::delegate_vesting(name sender, name recipient, asset quantity, uint
     eosio_assert(user_balance >= deleg_after, "insufficient funds for delegation");
     int64_t deleg_prop = user_balance.amount ? 
         (static_cast<int128_t>(deleg_after.amount) * config::_100percent) / user_balance.amount : 0;
-    
-    INLINE_ACTION_SENDER(charge, check) (config::charge_name, {_self, config::active_name}, 
-        {sender, token_code, 0, config::_100percent - deleg_prop});
+    eosio_assert(charge::get_current_value(config::charge_name, sender, token_code) <= config::_100percent - deleg_prop,
+        "can't delegate, not enough power");
 
     account_sender.modify(balance_sender, sender, [&](auto& item){
         item.delegate_vesting += quantity;
