@@ -11,18 +11,6 @@
                 {"type": "uint64", "name": "expire"},
                 {"type": "asset", "name": "breakout"}
             ]
-        },
-        {
-            "name": "referrals",
-            "base": "",
-            "fields": [
-                {"type": "uint64", "name": "id"},
-                {"type": "name", "name": "referrer"},
-                {"type": "name", "name": "referral"},
-                {"type": "uint32", "name": "percent"},
-                {"type": "uint64", "name": "expire"},
-                {"type": "asset", "name": "breakout"}
-            ]
         }
     ],
     "actions": [
@@ -35,12 +23,23 @@
     "tables": [
         {
             "name": "referrals",
-            "type": "referrals",
-            "indexes" : [{
-                "name": "primary",
-                "unique": true,
-                "orders": [{"field": "id", "order": "asc"}]
-            }]
+            "type": "addreferral",
+            "indexes" : [
+                {
+                    "name": "primary",
+                    "unique": true,
+                    "orders": [
+                        {"field": "referral", "order": "asc"}
+                    ]
+                },
+                {
+                    "name": "referrerkey",
+                    "unique": false,
+                    "orders": [
+                        {"field": "referrer", "order": "asc"}
+                    ]
+                }
+            ]
         }
     ],
     "ricardian_clauses": [],
