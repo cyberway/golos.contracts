@@ -3,7 +3,6 @@
 #include "golos.vesting_test_api.hpp"
 #include "eosio.token_test_api.hpp"
 #include "../golos.publication/types.h"
-#include "../golos.publication/config.hpp"
 #include "contracts.hpp"
 
 using namespace golos;
@@ -173,13 +172,13 @@ BOOST_FIXTURE_TEST_CASE(set_params, golos_publication_tester) try {
     init_params();
 
     auto obj_params = post.get_params();
-    BOOST_TEST_MESSAGE("--- " + fc::json::to_string(obj_params));
+    BOOST_TEST_MESSAGE("--- all params were initialized successful");
 
-    BOOST_TEST_CHECK(obj_params["max_vote_changes"]["value"] == post.max_vote_changes);
-    BOOST_TEST_CHECK(obj_params["cashout_window"]["window"] == post.window);
-    BOOST_TEST_CHECK(obj_params["cashout_window"]["upvote_lockout"] == post.upvote_lockout);
-    BOOST_TEST_CHECK(obj_params["max_beneficiaries"]["value"] == post.max_beneficiaries);
-    BOOST_TEST_CHECK(obj_params["max_comment_depth"]["value"] == post.max_comment_depth);
+    BOOST_CHECK_EQUAL(obj_params["max_vote_changes"]["value"] == post.max_vote_changes);
+    BOOST_CHECK_EQUAL(obj_params["cashout_window"]["window"] == post.window);
+    BOOST_CHECK_EQUAL(obj_params["cashout_window"]["upvote_lockout"] == post.upvote_lockout);
+    BOOST_CHECK_EQUAL(obj_params["max_beneficiaries"]["value"] == post.max_beneficiaries);
+    BOOST_CHECK_EQUAL(obj_params["max_comment_depth"]["value"] == post.max_comment_depth);
 
     auto params = "[" + post.get_str_cashout_window(0, post.upvote_lockout) + "]";
     BOOST_CHECK_EQUAL(err.window_less_0, post.set_params(params));
