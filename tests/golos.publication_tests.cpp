@@ -106,10 +106,10 @@ public:
     }
 
     void init_params() {
-        auto vote_changes = post.get_str_vote_changes(max_vote_changes);
-        auto cashout_window = post.get_str_cashout_window(window, upvote_lockout);
-        auto beneficiaries = post.get_str_beneficiaries(max_beneficiaries);
-        auto comment_depth = post.get_str_comment_depth(max_comment_depth);
+        auto vote_changes = post.get_str_vote_changes(post.max_vote_changes);
+        auto cashout_window = post.get_str_cashout_window(post.window, post.upvote_lockout);
+        auto beneficiaries = post.get_str_beneficiaries(post.max_beneficiaries);
+        auto comment_depth = post.get_str_comment_depth(post.max_comment_depth);
 
         auto params = "[" + vote_changes + "," + cashout_window + "," + beneficiaries + "," + comment_depth + "]";
         BOOST_CHECK_EQUAL(success(), post.set_params(params)); 
@@ -157,12 +157,6 @@ protected:
         const string wndw_less_upvt_lckt   = amsg("Cashout window can't be less than upvote lockout.");
         const string max_cmmnt_dpth_less_0 = amsg("Max comment depth must be greater than 0.");
     } err;
-
-    const uint8_t max_vote_changes = 5;
-    const uint32_t window = 120;
-    const uint32_t upvote_lockout = 15;
-    const uint8_t max_beneficiaries = 64;
-    const uint16_t max_comment_depth = 127;
 };
 
 
@@ -181,16 +175,16 @@ BOOST_FIXTURE_TEST_CASE(set_params, golos_publication_tester) try {
     auto obj_params = post.get_params();
     BOOST_TEST_MESSAGE("--- " + fc::json::to_string(obj_params));
 
-    BOOST_TEST_CHECK(obj_params["max_vote_changes"]["value"] == max_vote_changes);
-    BOOST_TEST_CHECK(obj_params["cashout_window"]["window"] == window);
-    BOOST_TEST_CHECK(obj_params["cashout_window"]["upvote_lockout"] == upvote_lockout);
-    BOOST_TEST_CHECK(obj_params["max_beneficiaries"]["value"] == max_beneficiaries);
-    BOOST_TEST_CHECK(obj_params["max_comment_depth"]["value"] == max_comment_depth);
+    BOOST_TEST_CHECK(obj_params["max_vote_changes"]["value"] == post.max_vote_changes);
+    BOOST_TEST_CHECK(obj_params["cashout_window"]["window"] == post.window);
+    BOOST_TEST_CHECK(obj_params["cashout_window"]["upvote_lockout"] == post.upvote_lockout);
+    BOOST_TEST_CHECK(obj_params["max_beneficiaries"]["value"] == post.max_beneficiaries);
+    BOOST_TEST_CHECK(obj_params["max_comment_depth"]["value"] == post.max_comment_depth);
 
-    auto params = "[" + post.get_str_cashout_window(0, upvote_lockout) + "]";
+    auto params = "[" + post.get_str_cashout_window(0, post.upvote_lockout) + "]";
     BOOST_CHECK_EQUAL(err.window_less_0, post.set_params(params));
 
-    params = "[" + post.get_str_cashout_window(5, upvote_lockout) + "]";
+    params = "[" + post.get_str_cashout_window(5, post.upvote_lockout) + "]";
     BOOST_CHECK_EQUAL(err.wndw_less_upvt_lckt, post.set_params(params));
 
     params = "[" + post.get_str_comment_depth(0) + "]";
@@ -211,7 +205,7 @@ BOOST_FIXTURE_TEST_CASE(create_message, golos_publication_tester) try {
     check_equal_content(post.get_content(N(brucelee), id), _test_content);
 
     BOOST_TEST_MESSAGE("--- checking that message wasn't closed.");
-    produce_blocks(seconds_to_blocks(window));
+    produce_blocks(seconds_to_blocks(post.window));
     auto msg = post.get_message(N(brucelee), id);
     BOOST_CHECK_EQUAL(msg["closed"].as<bool>(), false);
 
@@ -293,20 +287,20 @@ BOOST_FIXTURE_TEST_CASE(upvote, golos_publication_tester) try {
     BOOST_CHECK_EQUAL(success(), vote_brucelee(cfg::_100percent));
 
     BOOST_TEST_MESSAGE("--- succeed max_vote_changes revotes and fail on next vote");
-    for (auto i = 0; i < max_vote_changes; i++) {
+    for (auto i = 0; i < post.max_vote_changes; i++) {
         BOOST_CHECK_EQUAL(success(), vote_jackie(i+1));
         produce_block();
     }
     _vote = mvo(_vote)("id", 1)("voter", "jackiechan");
-    CHECK_MATCHING_OBJECT(post.get_vote(N(brucelee), 1), mvo(_vote)("count", max_vote_changes));
+    CHECK_MATCHING_OBJECT(post.get_vote(N(brucelee), 1), mvo(_vote)("count", post.max_vote_changes));
     BOOST_CHECK_EQUAL(err.no_revote, vote_jackie(cfg::_100percent));
-    produce_blocks(seconds_to_blocks(window - upvote_lockout) - max_vote_changes - 1);
+    produce_blocks(seconds_to_blocks(post.window - post.upvote_lockout) - post.max_vote_changes - 1);
     BOOST_CHECK_EQUAL(err.no_revote, vote_jackie(cfg::_100percent));
 
     BOOST_TEST_MESSAGE("--- fail while upvote lockout");
     produce_block();
     BOOST_CHECK_EQUAL(err.upvote_near_close, vote_jackie(cfg::_100percent));
-    produce_blocks(seconds_to_blocks(upvote_lockout) - 1);
+    produce_blocks(seconds_to_blocks(post.upvote_lockout) - 1);
     BOOST_CHECK_EQUAL(err.upvote_near_close, vote_jackie(cfg::_100percent));
 
     BOOST_TEST_MESSAGE("--- succeed vote after cashout");
@@ -343,16 +337,16 @@ BOOST_FIXTURE_TEST_CASE(downvote, golos_publication_tester) try {
     BOOST_CHECK_EQUAL(success(), vote_brucelee(cfg::_100percent));
 
     BOOST_TEST_MESSAGE("--- succeed max_vote_changes revotes and fail on next vote");
-    for (auto i = 0; i < max_vote_changes; i++) {
+    for (auto i = 0; i < post.max_vote_changes; i++) {
         BOOST_CHECK_EQUAL(success(), vote_jackie(i+1));
         produce_block();
     }
     _vote = mvo(_vote)("id", 1)("voter", "jackiechan");
-    CHECK_MATCHING_OBJECT(post.get_vote(N(brucelee), 1), mvo(_vote)("count", max_vote_changes));
+    CHECK_MATCHING_OBJECT(post.get_vote(N(brucelee), 1), mvo(_vote)("count", post.max_vote_changes));
     BOOST_CHECK_EQUAL(err.no_revote, vote_jackie(cfg::_100percent));
 
     BOOST_TEST_MESSAGE("--- succeed vote after cashout");
-    produce_blocks(seconds_to_blocks(window) - max_vote_changes - 1);
+    produce_blocks(seconds_to_blocks(post.window) - post.max_vote_changes - 1);
     BOOST_CHECK_EQUAL(err.no_revote, vote_jackie(cfg::_100percent));
     produce_block();
     BOOST_CHECK_EQUAL(success(), vote_jackie(cfg::_100percent));
@@ -415,7 +409,7 @@ BOOST_FIXTURE_TEST_CASE(nesting_level_test, golos_publication_tester) try {
     init_params();
     BOOST_CHECK_EQUAL(success(), post.create_msg(N(brucelee), "permlink0"));
     size_t i = 0;
-    for (; i < max_comment_depth; i++) {
+    for (; i < post.max_comment_depth; i++) {
         BOOST_CHECK_EQUAL(success(), post.create_msg(
             N(brucelee), "permlink" + std::to_string(i+1),
             N(brucelee), "permlink" + std::to_string(i)));
@@ -430,7 +424,7 @@ BOOST_FIXTURE_TEST_CASE(comments_cashout_time_test, golos_publication_tester) tr
     init();
     init_params();
     BOOST_CHECK_EQUAL(success(), post.create_msg(N(brucelee), "permlink"));
-    auto need_blocks = seconds_to_blocks(window);
+    auto need_blocks = seconds_to_blocks(post.window);
     auto wait_blocks = 5;
     produce_blocks(wait_blocks);
     need_blocks -= wait_blocks;

@@ -182,6 +182,11 @@ struct golos_posting_api: base_contract_api {
         return make_mvo_fn(fn.str, fn.maxarg);
     }
 
+    const uint8_t max_vote_changes = 5;
+    const uint32_t window = 120;
+    const uint32_t upvote_lockout = 15;
+    const uint8_t max_beneficiaries = 64;
+    const uint16_t max_comment_depth = 127;
 };
 
 
