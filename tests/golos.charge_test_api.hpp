@@ -37,15 +37,6 @@ struct golos_charge_api: base_contract_api {
         );
     }
     
-    action_result check(name user, uint8_t charge_id, int64_t cutoff) {
-        return push(N(check), user, args()
-            ("user", user)
-            ("token_code", _symbol.to_symbol_code())
-            ("charge_id", charge_id)
-            ("cutoff", cutoff)
-        );
-    }
-    
     action_result use_and_store(name issuer, name user, uint8_t charge_id, int64_t stamp_id, int64_t price) {
         return push(N(useandstore), issuer, args()
             ("user", user)
