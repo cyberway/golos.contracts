@@ -30,8 +30,8 @@ protected:
 
     // TODO: make contract error messages more clear
     struct errors: contract_error_messages {
-        const string referral_exist = amsg("This referral exits");
-        const string referral_equal = amsg("referrer is not equal to referral");
+        const string referral_exist = amsg("A referral with the same name already exists");
+        const string referral_equal = amsg("referral can not be referrer");
         const string min_expire     = amsg("expire < current block time");
         const string max_expire     = amsg("expire > current block time + max_expire");
         const string min_breakout   = amsg("breakout <= min_breakout");
@@ -44,8 +44,6 @@ BOOST_AUTO_TEST_SUITE(golos_referral_tests)
 
  BOOST_FIXTURE_TEST_CASE(create_referral_tests, golos_referral_tester) try {
      BOOST_TEST_MESSAGE("Test creating referral");
-     BOOST_TEST_MESSAGE("--- create referral");
-
      auto time_now = static_cast<uint32_t>(time(nullptr));
 
      BOOST_CHECK_EQUAL(err.referral_equal, referral.create_referral(N(issuer), N(issuer), time_now, 0, asset(10000, symbol(4, "GLS"))));
