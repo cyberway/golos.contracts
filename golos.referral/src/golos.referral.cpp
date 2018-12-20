@@ -13,7 +13,7 @@ void referral::addreferral(name referrer, name referral, uint32_t percent,
     auto it_referral = referrals.find(referral.value);
     eosio_assert(it_referral == referrals.end(), "A referral with the same name already exists");
 
-    eosio_assert(referrer != referral, "referrer is not equal to referral");
+    eosio_assert(referrer != referral, "referral can not be referrer");
 
     const auto min_expire = now();
     const auto max_expire = now() + config::max_expire;
