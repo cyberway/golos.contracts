@@ -1,6 +1,6 @@
 #pragma once
 #include "test_api_helper.hpp"
-#include <common/config.hpp> // For ""_n
+#include "../golos.social/types.h"
 
 namespace eosio { namespace testing {
 
@@ -40,6 +40,19 @@ struct golos_social_api: base_contract_api {
         );
     }
 
+    action_result updatemeta(account_name account, accountmeta meta) {
+        return push("updatemeta"_n, account, args()
+            ("account", account)
+            ("meta", meta)
+        );
+    }
+
+    action_result deletemeta(account_name account) {
+        return push("deletemeta"_n, account, args()
+            ("account", account)
+        );
+    }
+
     //// social tables
     std::vector<variant> get_pinblocks(account_name pinner_blocker) {
         return _tester->get_all_chaindb_rows(_code, pinner_blocker, N(pinblock), false);
@@ -47,6 +60,10 @@ struct golos_social_api: base_contract_api {
 
     variant get_reputation(account_name acc) {
         return _tester->get_chaindb_singleton(_code, acc, "reputation"_n, "get reputation");
+    }
+
+    variant get_accountmeta(account_name acc) {
+        return _tester->get_chaindb_singleton(_code, acc, "accountmeta"_n, "get accountmeta");
     }
 };
 

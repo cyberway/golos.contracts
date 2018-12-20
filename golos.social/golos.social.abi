@@ -36,6 +36,132 @@
     ]
   },
   {
+    "name": "accountmeta",
+    "base": "",
+    "fields": [
+      {
+        "name": "type",
+        "type": "string?"
+      },
+      {
+        "name": "app",
+        "type": "string?"
+      },
+      {
+        "name": "email",
+        "type": "string?"
+      },
+      {
+        "name": "phone",
+        "type": "string?"
+      },
+      {
+        "name": "facebook",
+        "type": "string?"
+      },
+      {
+        "name": "instagram",
+        "type": "string?"
+      },
+      {
+        "name": "telegram",
+        "type": "string?"
+      },
+      {
+        "name": "vk",
+        "type": "string?"
+      },
+      {
+        "name": "website",
+        "type": "string?"
+      },
+      {
+        "name": "first_name",
+        "type": "string?"
+      },
+      {
+        "name": "last_name",
+        "type": "string?"
+      },
+      {
+        "name": "name",
+        "type": "string?"
+      },
+      {
+        "name": "birth_date",
+        "type": "string?"
+      },
+      {
+        "name": "gender",
+        "type": "string?"
+      },
+      {
+        "name": "location",
+        "type": "string?"
+      },
+      {
+        "name": "city",
+        "type": "string?"
+      },
+      {
+        "name": "about",
+        "type": "string?"
+      },
+      {
+        "name": "occupation",
+        "type": "string?"
+      },
+      {
+        "name": "i_can",
+        "type": "string?"
+      },
+      {
+        "name": "looking_for",
+        "type": "string?"
+      },
+      {
+        "name": "business_category",
+        "type": "string?"
+      },
+      {
+        "name": "background_image",
+        "type": "string?"
+      },
+      {
+        "name": "cover_image",
+        "type": "string?"
+      },
+      {
+        "name": "profile_image",
+        "type": "string?"
+      },
+      {
+        "name": "user_image",
+        "type": "string?"
+      },
+      {
+        "name": "ico_address",
+        "type": "string?"
+      },
+      {
+        "name": "target_date",
+        "type": "string?"
+      },
+      {
+        "name": "target_plan",
+        "type": "string?"
+      },
+      {
+        "name": "target_point_a",
+        "type": "string?"
+      },
+      {
+        "name": "target_point_b",
+        "type": "string?"
+      }
+    ]
+  },
+  {
     "name": "pin",
     "base": "",
     "fields": [
@@ -80,6 +206,30 @@
         "type": "int64"
       }
     ]
+  },
+  {
+    "name": "updatemeta",
+    "base": "",
+    "fields": [
+      {
+        "name": "account",
+        "type": "name"
+      },
+      {
+        "name": "meta",
+        "type": "accountmeta"
+      }
+    ]
+  },
+  {
+    "name": "deletemeta",
+    "base": "",
+    "fields": [
+      {
+        "name": "account",
+        "type": "name"
+      }
+    ]
   }
   ],
   "actions": [
@@ -102,6 +252,14 @@
   {
     "name": "changereput",
     "type": "changereput"
+  },
+  {
+    "name": "updatemeta",
+    "type": "updatemeta"
+  },
+  {
+    "name": "deletemeta",
+    "type": "deletemeta"
   }
   ],
   "tables": [

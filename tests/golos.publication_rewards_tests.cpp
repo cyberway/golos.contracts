@@ -352,7 +352,7 @@ public:
         for (auto itr_p = _state.pools.begin(); itr_p != _state.pools.end(); itr_p++) {
             auto& p = *itr_p;
             for (auto itr_m = p.messages.begin(); itr_m != p.messages.end();) {
-                if ((cur_time().to_seconds() - itr_m->created) > cfg::cashout_window) {
+                if ((cur_time().to_seconds() - itr_m->created) > post.window) {
                     auto m = *itr_m;
                     double pool_rsharesfn_sum = p.get_rsharesfn_sum();
 

@@ -29,6 +29,13 @@ else()
    set(TEST_BUILD_TYPE ${CMAKE_BUILD_TYPE})
 endif()
 
+macro(add_contract_with_abi TARGET ABIFILE)
+   add_executable( ${TARGET}.wasm ${ARGN} )
+   target_compile_options( ${TARGET}.wasm PUBLIC -abigen -std=c++17)
+   configure_file(${ABIFILE} ${CMAKE_CURRENT_BINARY_DIR}/${TARGET}.abi COPYONLY)
+   install (TARGETS ${TARGET}.wasm DESTINATION ${CMAKE_INSTALL_PREFIX}/${TARGET}/)
+   install (FILES ${CMAKE_CURRENT_BINARY_DIR}/${TARGET}.abi DESTINATION ${CMAKE_INSTALL_PREFIX}/${TARGET}/)
+endmacro()
 
 # include_directories(AFTER ${BOOST_ROOT}/include)
 add_subdirectory(golos.ctrl)
