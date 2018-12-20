@@ -699,6 +699,24 @@
             "type": "forumprops"
         }
     ]
+  },
+  {
+    "name": "reblog",
+    "base": "",
+    "fields": [
+        {
+            "name": "rebloger",
+            "type": "name"
+        },
+        {
+            "name": "author",
+            "type": "name"
+        },
+        {
+            "name": "permlink",
+            "type": "string"
+        }
+    ]
   }
   ],
   "actions": [
@@ -749,6 +767,10 @@
   {
     "name": "setprops",
     "type": "setprops"
+  },
+  {
+    "name": "reblog",
+    "type": "reblog"
   }
   ],
   "tables": [

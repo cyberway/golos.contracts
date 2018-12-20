@@ -17,6 +17,9 @@ public:
 
     void changereput(name voter, name author, int64_t rshares);
 
+    void updatemeta(name account, accountmeta meta);
+    void deletemeta(name account);
+
     static inline bool is_blocking(name code, name blocker, name blocking) {
         tables::pinblock_table table(code, blocker.value);
         auto itr = table.find(blocking.value);

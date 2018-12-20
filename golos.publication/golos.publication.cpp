@@ -46,6 +46,8 @@ extern "C" {
             execute_action(&publication::set_params);
         if (NN(setprops) == action)
             execute_action(&publication::setprops);
+        if (NN(reblog) == action)
+            execute_action(&publication::reblog);
     }
 #undef NN
 }
@@ -641,6 +643,7 @@ void publication::set_limit(std::string act_str, symbol_code token_code, uint8_t
     eosio_assert(price < 0 || golos::charge::exist(config::charge_name, token_code, charge_id), "publication::set_limit: charge doesn't exist");
     auto act = limitparams::act_from_str(act_str);
     eosio_assert(act != limitparams::VOTE || charge_id == 0, "publication::set_limit: charge_id for VOTE should be 0");
+    //? should we require cutoff to be _100percent if act == VOTE (to synchronize with vesting)?
     eosio_assert(act != limitparams::POSTBW || min_vesting == 0, "publication::set_limit: min_vesting for POSTBW should be 0");    
     golos::upsert_tbl<limit_table>(_self, _self.value, _self, act, [&](bool exists) {
         return [&](limitparams& item) {
@@ -735,4 +738,12 @@ void publication::set_params(std::vector<posting_params> params) {
     param_helper::check_params(params, cfg.exists());
     param_helper::set_parameters<posting_params_setter>(params, cfg, _self);
 }
+
+void publication::reblog(name rebloger, name author, std::string permlink) {
+    tables::message_table message_table(_self, author.value);
+    auto message_id = hash64(permlink);
+    eosio_assert(message_table.find(message_id) != message_table.end(), 
+            "You can't reblog, because this message doesn't exist.");
+}
+
 } // golos

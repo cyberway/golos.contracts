@@ -271,5 +271,36 @@ BOOST_FIXTURE_TEST_CASE(golos_reputation_test, golos_social_tester) try {
 
 } FC_LOG_AND_RETHROW()
 
+BOOST_FIXTURE_TEST_CASE(golos_accountmeta_test, golos_social_tester) try {
+    BOOST_TEST_MESSAGE("Simple golos accountmeta test");
+
+    accountmeta meta;
+
+    BOOST_TEST_MESSAGE("--- hack attempt: erin wants to update dave's meta");
+    meta.first_name = "Fool";
+    auto hack_attempt = social.push("updatemeta"_n, "erin"_n, social.args()
+        ("account", "dave"_n)
+        ("meta", meta)
+    );
+    BOOST_CHECK_NE(success(), hack_attempt);
+    produce_block();
+
+    BOOST_TEST_MESSAGE("--- updatemeta: dave");
+    meta.first_name = "Dave";
+    BOOST_CHECK_EQUAL(success(), social.updatemeta("dave"_n, meta));
+    produce_block();
+
+    BOOST_TEST_MESSAGE("--- hack attempt: erin wants to delete dave's meta");
+    hack_attempt = social.push("deletemeta"_n, "erin"_n, social.args()
+        ("account", "dave"_n)
+    );
+    BOOST_CHECK_NE(success(), hack_attempt);
+    produce_block();
+
+    BOOST_TEST_MESSAGE("--- deletemeta: dave");
+    BOOST_CHECK_EQUAL(success(), social.deletemeta("dave"_n));
+    produce_block();
+} FC_LOG_AND_RETHROW()
+
 
 BOOST_AUTO_TEST_SUITE_END()
