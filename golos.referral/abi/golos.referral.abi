@@ -1,6 +1,5 @@
 {
     "version": "cyberway::abi/1.1",
-<<<<<<< HEAD
     "variants": [
         {
           "name": "referral_param",
@@ -11,26 +10,11 @@
             ]
         }
     ],
-=======
->>>>>>> develop
     "structs": [
         {
             "name": "addreferral",
             "base": "",
             "fields": [
-                {"type": "name", "name": "referrer"},
-                {"type": "name", "name": "referral"},
-                {"type": "uint32", "name": "percent"},
-                {"type": "uint64", "name": "expire"},
-                {"type": "asset", "name": "breakout"}
-            ]
-<<<<<<< HEAD
-        },
-        {
-            "name": "referrals",
-            "base": "",
-            "fields": [
-                {"type": "uint64", "name": "id"},
                 {"type": "name", "name": "referrer"},
                 {"type": "name", "name": "referral"},
                 {"type": "uint32", "name": "percent"},
@@ -77,8 +61,6 @@
            "fields": [
               {"name": "params", "type": "referral_param[]"}
            ]
-=======
->>>>>>> develop
         }
     ],
     "actions": [
@@ -86,7 +68,6 @@
             "name": "addreferral",
             "type": "addreferral",
             "ricardian_contract": ""
-<<<<<<< HEAD
         },
         {
             "name": "validateprms",
@@ -97,21 +78,11 @@
             "name": "setparams",
             "type": "setparams",
             "ricardian_contract": ""
-=======
->>>>>>> develop
         }
     ],
     "tables": [
         {
             "name": "referrals",
-<<<<<<< HEAD
-            "type": "referrals",
-            "indexes" : [{
-                "name": "primary",
-                "unique": true,
-                "orders": [{"field": "id", "order": "asc"}]
-            }]
-=======
             "type": "addreferral",
             "indexes" : [
                 {
@@ -129,7 +100,6 @@
                     ]
                 }
             ]
->>>>>>> develop
         }
     ],
     "ricardian_clauses": [],

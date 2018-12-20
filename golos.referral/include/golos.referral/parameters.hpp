@@ -22,16 +22,13 @@ struct breakout_parametrs : parameter {
 using breakout_param = param_wrapper<breakout_parametrs,2>;
 
 struct expire_parametrs : parameter {
-   uint64_t min_expire;
    uint64_t max_expire;
 
    void validate() const override {
-        eosio_assert(min_expire <= max_expire, "min_expire > max_breakout");
-        eosio_assert(min_expire >= 0, "min_breakout < 0");
         eosio_assert(max_expire >= 0, "max_breakout < 0");
    }
 };
-using expire_param = param_wrapper<expire_parametrs,2>;
+using expire_param = param_wrapper<expire_parametrs,1>;
 
 struct persent_parametrs : parameter {
    uint32_t max_perсent;
@@ -42,7 +39,7 @@ struct persent_parametrs : parameter {
 };
 using persent_param = param_wrapper<persent_parametrs,1>;
 
-using referral_params = std::variant<breakout_parametrs, expire_parametrs, persent_parametrs>;
+using referral_params = std::variant<breakout_param, expire_param, persent_param>;
 
 struct [[eosio::table]] referral_state {
     breakout_param breakout_params;
