@@ -28,6 +28,8 @@ struct contracts {
     static std::vector<char>    reward_calcs_abi()  { return read_abi (golos_contracts + "/reward_calcs/reward_calcs.abi"); }
     static std::vector<uint8_t> social_wasm() { return read_wasm(golos_contracts + "/golos.social/golos.social.wasm"); }
     static std::vector<char>    social_abi()  { return read_abi (golos_contracts + "/golos.social/golos.social.abi"); }
+    static std::vector<uint8_t> referral_wasm() { return read_wasm(golos_contracts + "/golos.referral/golos.referral.wasm"); }
+    static std::vector<char>    referral_abi()  { return read_abi (golos_contracts + "/golos.referral/golos.referral.abi"); }
 
 
     static std::vector<uint8_t> system_wasm() { return read_wasm(cyberway_contracts + "/eosio.system/eosio.system.wasm"); }

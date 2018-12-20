@@ -1,0 +1,47 @@
+{
+    "version": "cyberway::abi/1.1",
+    "structs": [
+        {
+            "name": "addreferral",
+            "base": "",
+            "fields": [
+                {"type": "name", "name": "referrer"},
+                {"type": "name", "name": "referral"},
+                {"type": "uint32", "name": "percent"},
+                {"type": "uint64", "name": "expire"},
+                {"type": "asset", "name": "breakout"}
+            ]
+        }
+    ],
+    "actions": [
+        {
+            "name": "addreferral",
+            "type": "addreferral",
+            "ricardian_contract": ""
+        }
+    ],
+    "tables": [
+        {
+            "name": "referrals",
+            "type": "addreferral",
+            "indexes" : [
+                {
+                    "name": "primary",
+                    "unique": true,
+                    "orders": [
+                        {"field": "referral", "order": "asc"}
+                    ]
+                },
+                {
+                    "name": "referrerkey",
+                    "unique": false,
+                    "orders": [
+                        {"field": "referrer", "order": "asc"}
+                    ]
+                }
+            ]
+        }
+    ],
+    "ricardian_clauses": [],
+    "abi_extensions": []
+}
