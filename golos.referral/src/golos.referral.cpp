@@ -11,7 +11,7 @@ void referral::addreferral(name referrer, name referral, uint32_t percent,
 
     referrals_table referrals(_self, _self.value);
     auto it_referral = referrals.find(referral.value);
-    eosio_assert(it_referral == referrals.end(), "This referral exits");
+    eosio_assert(it_referral == referrals.end(), "A referral with the same name already exists");
 
     eosio_assert(referrer != referral, "referrer is not equal to referral");
 
