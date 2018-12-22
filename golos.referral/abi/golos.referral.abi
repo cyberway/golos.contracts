@@ -6,7 +6,7 @@
           "types": [
                 "breakout_parametrs",
                 "expire_parametrs",
-                "persent_parametrs"
+                "percent_parametrs"
             ]
         }
     ],
@@ -34,12 +34,11 @@
            "name": "expire_parametrs",
            "base": "",
            "fields": [
-              {"name": "min_expire", "type": "uint64"},
               {"name": "max_expire", "type": "uint64"}
            ]
         },
         {
-           "name": "persent_parametrs",
+           "name": "percent_parametrs",
            "base": "",
            "fields": [
               {"name": "max_perсent", "type": "uint32"}
@@ -52,7 +51,7 @@
               {"name": "id", "type": "uint64"},
               {"name": "breakout_params", "type": "breakout_parametrs"},
               {"name": "expire_params",   "type": "expire_parametrs"},
-              {"name": "persent_params",  "type": "persent_parametrs"}
+              {"name": "percent_params",  "type": "percent_parametrs"}
            ]
         },
         {
@@ -97,6 +96,19 @@
                     "unique": false,
                     "orders": [
                         {"field": "referrer", "order": "asc"}
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "refparams",
+            "type": "referral_state",
+            "indexes" : [
+                {
+                    "name": "primary",
+                    "unique": true,
+                    "orders": [
+                        {"field": "id", "order": "asc"}
                     ]
                 }
             ]

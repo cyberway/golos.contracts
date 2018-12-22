@@ -15,8 +15,8 @@ struct referral_params_setter: set_params_visitor<referral_state> {
        return set_param(p, &referral_state::expire_params);
    }
 
-    bool operator()(const persent_param& p) {
-       return set_param(p, &referral_state::persent_params);
+    bool operator()(const percent_param& p) {
+       return set_param(p, &referral_state::percent_params);
    }
 };
 
@@ -41,6 +41,8 @@ void referral::addreferral(name referrer, name referral, uint32_t percent,
     eosio_assert(referrer != referral, "referral can not be referrer");
 
     referral_params_singleton cfg(_self, _self.value);
+
+    print("current tume: ",uint64_t(now()));
     
     const auto min_expire = now();
     const auto max_expire = now() + cfg.get().expire_params.max_expire;
@@ -48,7 +50,7 @@ void referral::addreferral(name referrer, name referral, uint32_t percent,
     eosio_assert(expire   <= max_expire, "expire > current block time + max_expire");
     eosio_assert(breakout >  cfg.get().breakout_params.min_breakout, "breakout <= min_breakout");
     eosio_assert(breakout <= cfg.get().breakout_params.max_breakout, "breakout > max_breakout");
-    eosio_assert(percent  <= cfg.get().persent_params.max_perсent, "specified parameter is greater than limit");
+    eosio_assert(percent  <= cfg.get().percent_params.max_perсent, "specified parameter is greater than limit");
  
     referrals.emplace(referrer, [&]( auto &item ) {
         item.referral = referral;
@@ -61,4 +63,4 @@ void referral::addreferral(name referrer, name referral, uint32_t percent,
 
 }
 
-EOSIO_DISPATCH(golos::referral, (addreferral));
+EOSIO_DISPATCH(golos::referral, (addreferral)(validateprms)(setparams));
