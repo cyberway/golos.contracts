@@ -98,14 +98,15 @@ BOOST_AUTO_TEST_SUITE(golos_referral_tests)
      BOOST_CHECK_EQUAL(err.min_expire, referral.create_referral(N(issuer), N(sania), time_now, 0, asset(10000, symbol(4, "GLS"))));
      BOOST_CHECK_EQUAL(err.max_expire, referral.create_referral(N(issuer), N(sania), time_now + 5 /*5 sec*/, 999999999999, asset(10000, symbol(4, "GLS"))));
 
-     BOOST_CHECK_EQUAL(err.min_breakout, referral.create_referral(N(issuer), N(sania), 500, 1577836815, asset(0, symbol(4, "GLS"))));
-     BOOST_CHECK_EQUAL(err.max_breakout, referral.create_referral(N(issuer), N(sania), 500, 1577836815, asset(110000, symbol(4, "GLS"))));
+     const uint64_t time_expire_in_test = 1577836815;
+     BOOST_CHECK_EQUAL(err.min_breakout, referral.create_referral(N(issuer), N(sania), 500, time_expire_in_test, asset(0, symbol(4, "GLS"))));
+     BOOST_CHECK_EQUAL(err.max_breakout, referral.create_referral(N(issuer), N(sania), 500, time_expire_in_test, asset(110000, symbol(4, "GLS"))));
 
-     BOOST_CHECK_EQUAL(err.persent, referral.create_referral(N(issuer), N(sania), 9500, 1577836815, asset(50000, symbol(4, "GLS"))));
+     BOOST_CHECK_EQUAL(err.persent, referral.create_referral(N(issuer), N(sania), 9500, time_expire_in_test, asset(50000, symbol(4, "GLS"))));
 
-     BOOST_CHECK_EQUAL(success(), referral.create_referral(N(issuer), N(sania), 500, 1577836815, asset(50000, symbol(4, "GLS"))));
+     BOOST_CHECK_EQUAL(success(), referral.create_referral(N(issuer), N(sania), 500, time_expire_in_test, asset(50000, symbol(4, "GLS"))));
 
-     BOOST_CHECK_EQUAL(err.referral_exist, referral.create_referral(N(issuer), N(sania), 500, 1577836815, asset(50000, symbol(4, "GLS"))));
+     BOOST_CHECK_EQUAL(err.referral_exist, referral.create_referral(N(issuer), N(sania), 500, time_expire_in_test, asset(50000, symbol(4, "GLS"))));
 
  } FC_LOG_AND_RETHROW()
 
