@@ -37,14 +37,23 @@ struct percent_parametrs : parameter {
 };
 using percent_param = param_wrapper<percent_parametrs,1>;
 
-using referral_params = std::variant<breakout_param, expire_param, percent_param>;
+struct delay_parametrs : parameter {
+   uint32_t delay_clear_old_ref;
+
+   void validate() const override {
+   }
+};
+using delay_param = param_wrapper<delay_parametrs,1>;
+
+using referral_params = std::variant<breakout_param, expire_param, percent_param, delay_param>;
 
 struct [[eosio::table]] referral_state {
     breakout_param breakout_params;
     expire_param   expire_params;
     percent_param  percent_params;
+    delay_param    delay_params;
 
-    static constexpr int params_count = 3;
+    static constexpr int params_count = 4;
 };
 using referral_params_singleton = eosio::singleton<"refparams"_n, referral_state>;
 
