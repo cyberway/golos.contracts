@@ -8,19 +8,14 @@ using namespace eosio::testing;
 using namespace eosio::chain;
 using namespace fc;
 
-
-class golos_referral_tester : public golos_tester {
-protected:
-    golos_referral_api referral;
-
+class golos_referral_tester : public extended_tester {
 public:
-
     golos_referral_tester()
-        : golos_tester(cfg::referral_name)
-        , referral({this, cfg::referral_name})
+        : extended_tester(cfg::referral_name)
+        , referral( {this, cfg::referral_name} )
     {
         create_accounts({N(sania), N(pasha), N(tania), N(vania), N(issuer), _code});
-        produce_blocks(2);
+        step(2);
 
         install_contract(_code, contracts::referral_wasm(), contracts::referral_abi());
     }
@@ -55,6 +50,8 @@ protected:
     const asset max_breakout = asset(100000, symbol(4,"GLS"));
     const uint64_t max_expire = 600; // 600 sec
     const uint32_t max_persent = 5000; // 50.00%
+
+    golos_referral_api referral;
 };
 
 BOOST_AUTO_TEST_SUITE(golos_referral_tests)
@@ -62,13 +59,13 @@ BOOST_AUTO_TEST_SUITE(golos_referral_tests)
  BOOST_FIXTURE_TEST_CASE(set_params, golos_referral_tester) try {
      BOOST_TEST_MESSAGE("Test vesting parameters");
      BOOST_TEST_MESSAGE("--- prepare");
-     produce_block();
+     step();
 
      BOOST_TEST_MESSAGE("--- check that global params not exist");
      BOOST_TEST_CHECK(referral.get_params().is_null());
 
      init_params();
-     produce_block();
+     step();
 
      auto obj_params = referral.get_params();
      BOOST_TEST_MESSAGE("--- " + fc::json::to_string(obj_params));
@@ -98,15 +95,15 @@ BOOST_AUTO_TEST_SUITE(golos_referral_tests)
      BOOST_CHECK_EQUAL(err.min_expire, referral.create_referral(N(issuer), N(sania), time_now, 0, asset(10000, symbol(4, "GLS"))));
      BOOST_CHECK_EQUAL(err.max_expire, referral.create_referral(N(issuer), N(sania), time_now + 5 /*5 sec*/, 999999999999, asset(10000, symbol(4, "GLS"))));
 
-     const uint64_t time_expire_in_test = 1577836815;
-     BOOST_CHECK_EQUAL(err.min_breakout, referral.create_referral(N(issuer), N(sania), 500, time_expire_in_test, asset(0, symbol(4, "GLS"))));
-     BOOST_CHECK_EQUAL(err.max_breakout, referral.create_referral(N(issuer), N(sania), 500, time_expire_in_test, asset(110000, symbol(4, "GLS"))));
+     auto expire = 8; // sec
+     BOOST_CHECK_EQUAL(err.min_breakout, referral.create_referral(N(issuer), N(sania), 500, cur_time().to_seconds() + expire, asset(0, symbol(4, "GLS"))));
+     BOOST_CHECK_EQUAL(err.max_breakout, referral.create_referral(N(issuer), N(sania), 500, cur_time().to_seconds() + expire, asset(110000, symbol(4, "GLS"))));
 
-     BOOST_CHECK_EQUAL(err.persent, referral.create_referral(N(issuer), N(sania), 9500, time_expire_in_test, asset(50000, symbol(4, "GLS"))));
+     BOOST_CHECK_EQUAL(err.persent, referral.create_referral(N(issuer), N(sania), 9500, cur_time().to_seconds() + expire, asset(50000, symbol(4, "GLS"))));
 
-     BOOST_CHECK_EQUAL(success(), referral.create_referral(N(issuer), N(sania), 500, time_expire_in_test, asset(50000, symbol(4, "GLS"))));
+     BOOST_CHECK_EQUAL(success(), referral.create_referral(N(issuer), N(sania), 500, cur_time().to_seconds() + expire, asset(50000, symbol(4, "GLS"))));
 
-     BOOST_CHECK_EQUAL(err.referral_exist, referral.create_referral(N(issuer), N(sania), 500, time_expire_in_test, asset(50000, symbol(4, "GLS"))));
+     BOOST_CHECK_EQUAL(err.referral_exist, referral.create_referral(N(issuer), N(sania), 500, cur_time().to_seconds() + expire, asset(50000, symbol(4, "GLS"))));
 
  } FC_LOG_AND_RETHROW()
 
