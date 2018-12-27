@@ -1,5 +1,15 @@
 {
     "version": "cyberway::abi/1.1",
+    "variants": [
+        {
+          "name": "referral_param",
+          "types": [
+                "breakout_parametrs",
+                "expire_parametrs",
+                "percent_parametrs"
+            ]
+        }
+    ],
     "structs": [
         {
             "name": "addreferral",
@@ -11,12 +21,61 @@
                 {"type": "uint64", "name": "expire"},
                 {"type": "asset", "name": "breakout"}
             ]
+        },
+        {
+           "name": "breakout_parametrs",
+           "base": "",
+           "fields": [
+              {"name": "min_breakout", "type": "asset"},
+              {"name": "max_breakout", "type": "asset"}
+           ]
+        },
+        {
+           "name": "expire_parametrs",
+           "base": "",
+           "fields": [
+              {"name": "max_expire", "type": "uint64"}
+           ]
+        },
+        {
+           "name": "percent_parametrs",
+           "base": "",
+           "fields": [
+              {"name": "max_perсent", "type": "uint32"}
+           ]
+        },
+        {
+           "name": "referral_state",
+           "base": "",
+           "fields": [
+              {"name": "id", "type": "uint64"},
+              {"name": "breakout_params", "type": "breakout_parametrs"},
+              {"name": "expire_params",   "type": "expire_parametrs"},
+              {"name": "percent_params",  "type": "percent_parametrs"}
+           ]
+        },
+        {
+           "name": "setparams",
+           "base": "",
+           "fields": [
+              {"name": "params", "type": "referral_param[]"}
+           ]
         }
     ],
     "actions": [
         {
             "name": "addreferral",
             "type": "addreferral",
+            "ricardian_contract": ""
+        },
+        {
+            "name": "validateprms",
+            "type": "setparams",
+            "ricardian_contract": ""
+        },
+        {
+            "name": "setparams",
+            "type": "setparams",
             "ricardian_contract": ""
         }
     ],
@@ -37,6 +96,19 @@
                     "unique": false,
                     "orders": [
                         {"field": "referrer", "order": "asc"}
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "refparams",
+            "type": "referral_state",
+            "indexes" : [
+                {
+                    "name": "primary",
+                    "unique": true,
+                    "orders": [
+                        {"field": "id", "order": "asc"}
                     ]
                 }
             ]
