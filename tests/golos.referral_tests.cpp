@@ -24,8 +24,9 @@ public:
         auto breakout_parametrs = referral.breakout_parametrs(min_breakout, max_breakout);
         auto expire_parametrs   = referral.expire_parametrs(max_expire);
         auto percent_parametrs  = referral.percent_parametrs(max_persent);
+        auto delay_parametrs    = referral.delay_parametrs(delay_clear_old_ref);
 
-        auto params = "[" + breakout_parametrs + "," + expire_parametrs + "," + percent_parametrs + "]";
+        auto params = "[" + breakout_parametrs + "," + expire_parametrs + "," + percent_parametrs + "," + delay_parametrs + "]";
         BOOST_CHECK_EQUAL(success(), referral.set_params(cfg::referral_name, params));
     }
 
@@ -50,6 +51,7 @@ protected:
     const asset max_breakout = asset(100000, symbol(4,"GLS"));
     const uint64_t max_expire = 600; // 600 sec
     const uint32_t max_persent = 5000; // 50.00%
+    const uint32_t delay_clear_old_ref = 650; // 650 sec
 
     golos_referral_api referral;
 };
@@ -89,6 +91,8 @@ BOOST_AUTO_TEST_SUITE(golos_referral_tests)
      BOOST_TEST_MESSAGE("Test creating referral");
 
      init_params();
+     step();
+
      auto time_now = static_cast<uint32_t>(time(nullptr));
      BOOST_CHECK_EQUAL(err.referral_equal, referral.create_referral(N(issuer), N(issuer), time_now, 0, asset(10000, symbol(4, "GLS"))));
 
@@ -106,5 +110,32 @@ BOOST_AUTO_TEST_SUITE(golos_referral_tests)
      BOOST_CHECK_EQUAL(err.referral_exist, referral.create_referral(N(issuer), N(sania), 500, cur_time().to_seconds() + expire, asset(50000, symbol(4, "GLS"))));
 
  } FC_LOG_AND_RETHROW()
+
+BOOST_FIXTURE_TEST_CASE(close_referral_tests, golos_referral_tester) try {
+    BOOST_TEST_MESSAGE("Test close referral");
+
+    init_params();
+
+    auto obj_params = referral.get_params();
+    BOOST_TEST_MESSAGE("--- " + fc::json::to_string(obj_params));
+    BOOST_TEST_CHECK(obj_params["breakout_params"]["min_breakout"].as<asset>() == min_breakout);
+    BOOST_TEST_CHECK(obj_params["breakout_params"]["max_breakout"].as<asset>() == max_breakout);
+    BOOST_TEST_CHECK(obj_params["expire_params"]["max_expire"].as<uint64_t>() == max_expire);
+    BOOST_TEST_CHECK(obj_params["percent_params"]["max_perсent"].as<uint32_t>() == max_persent);
+
+
+    auto expire = 8; // sec
+    BOOST_CHECK_EQUAL(success(), referral.create_referral(N(issuer), N(sania), 500, cur_time().to_seconds() + expire, asset(50000, symbol(4, "GLS"))));
+    BOOST_CHECK_EQUAL(success(), referral.close_old_referrals(cur_time().to_seconds()));
+
+    auto v_referrals = referral.get_referrals();
+    BOOST_TEST_CHECK(v_referrals.size() == 1);
+    BOOST_TEST_CHECK(v_referrals.at(0)["refferal"].as<uint64_t>() == N(sania));
+    BOOST_TEST_CHECK(v_referrals.at(0)["referrer"].as<uint64_t>() == N(issuer));
+    step(220);
+
+    v_referrals = referral.get_referrals();
+    BOOST_TEST_CHECK(v_referrals.size() == 0);
+} FC_LOG_AND_RETHROW()
 
 BOOST_AUTO_TEST_SUITE_END()

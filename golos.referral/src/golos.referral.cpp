@@ -46,6 +46,7 @@ void referral::addreferral(name referrer, name referral, uint32_t percent,
     eosio_assert(referrer != referral, "referral can not be referrer");
 
     referral_params_singleton cfg(_self, _self.value);
+    eosio_assert(cfg.exists(), "not found parametrs");
     
     const auto min_expire = now();
     const auto max_expire = now() + cfg.get().expire_params.max_expire;

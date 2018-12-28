@@ -49,7 +49,7 @@
            "name": "delay_parametrs",
            "base": "",
            "fields": [
-              {"name": "max_perсent", "type": "uint32"}
+              {"name": "delay_clear_old_ref", "type": "uint32"}
            ]
         },
         {

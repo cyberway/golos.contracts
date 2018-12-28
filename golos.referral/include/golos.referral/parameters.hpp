@@ -40,8 +40,7 @@ using percent_param = param_wrapper<percent_parametrs,1>;
 struct delay_parametrs : parameter {
    uint32_t delay_clear_old_ref;
 
-   void validate() const override {
-   }
+   void validate() const override {}
 };
 using delay_param = param_wrapper<delay_parametrs,1>;
 
