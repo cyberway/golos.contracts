@@ -1,6 +1,6 @@
 ARG buildtype=stable
-FROM local/cyberway:$buildtype as cyberway
-FROM local/cyberway.cdt:$buildtype as cdt
+FROM cyberway/cyberway:$buildtype as cyberway
+FROM cyberway/cyberway.cdt:$buildtype as cdt
 
 FROM cyberway/builder:$buildtype as builder
 COPY --from=cdt /opt/cyberway.cdt /opt/cyberway.cdt
