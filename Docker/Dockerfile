@@ -1,7 +1,8 @@
-FROM cyberway/cyberway:latest as cyberway
-FROM cyberway/cyberway.cdt:latest as cdt
+ARG buildtype=stable
+FROM local/cyberway:$buildtype as cyberway
+FROM local/cyberway.cdt:$buildtype as cdt
 
-FROM cyberway/builder:latest as builder
+FROM cyberway/builder:$buildtype as builder
 COPY --from=cdt /opt/cyberway.cdt /opt/cyberway.cdt
 COPY --from=cyberway /opt/cyberway /opt/cyberway
 
