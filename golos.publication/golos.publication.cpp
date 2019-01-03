@@ -5,6 +5,7 @@
 #include <golos.social/golos.social.hpp>
 #include <golos.vesting/golos.vesting.hpp>
 #include <golos.charge/golos.charge.hpp>
+#include <include/golos.referral/golos.referral.hpp>
 #include <common/upsert.hpp>
 #include "utils.hpp"
 
@@ -132,6 +133,24 @@ void publication::create_message(name account, std::string permlink,
             .account = ben.first,
             .deductprcnt = static_cast<base_t>(get_limit_prop(ben.second).data())
         });
+
+    auto obj_referral = golos::referral::account_referrer( config::referral_name, account );
+    if ( !obj_referral.is_empty() ) {
+        auto& referrer = obj_referral.referrer;
+        const auto& itr = std::find_if( beneficiaries.begin(), beneficiaries.end(), 
+                                            [&referrer] (const structures::beneficiary& benef) {
+                                            return benef.account == referrer;
+                                        }
+                                      );
+
+        eosio_assert( itr == beneficiaries.end(), "Comment already has referrer as a referrer-beneficiary." );
+
+        beneficiaries.reserve(benefic_map.size() + 1);
+        beneficiaries.emplace_back(structures::beneficiary{
+            .account = obj_referral.referrer,
+            .deductprcnt = obj_referral.percent
+        });
+    }
 
     auto cur_time = current_time();
     atmsp::machine<fixp_t> machine;
