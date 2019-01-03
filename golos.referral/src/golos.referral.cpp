@@ -74,8 +74,10 @@ void referral::closeoldref(uint64_t hash) {
     referrals_table referrals(_self, _self.value);
     auto index_expire = referrals.get_index<"expirekey"_n>(); 
     auto it_index_expire = index_expire.begin();
-    while (it_index_expire->expire < now()) {
-        it_index_expire = index_expire.erase(it_index_expire);
+    while ( it_index_expire != index_expire.end() ) {
+        if ( it_index_expire->expire < now() ) {
+            it_index_expire = index_expire.erase(it_index_expire);
+        } else break;
     }
 
     transaction trx;

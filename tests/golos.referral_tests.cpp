@@ -123,15 +123,14 @@ BOOST_FIXTURE_TEST_CASE(close_referral_tests, golos_referral_tester) try {
     BOOST_TEST_CHECK(obj_params["expire_params"]["max_expire"].as<uint64_t>() == max_expire);
     BOOST_TEST_CHECK(obj_params["percent_params"]["max_perсent"].as<uint32_t>() == max_persent);
 
-
     auto expire = 8; // sec
     BOOST_CHECK_EQUAL(success(), referral.create_referral(N(issuer), N(sania), 500, cur_time().to_seconds() + expire, asset(50000, symbol(4, "GLS"))));
     BOOST_CHECK_EQUAL(success(), referral.close_old_referrals(cur_time().to_seconds()));
 
     auto v_referrals = referral.get_referrals();
     BOOST_TEST_CHECK(v_referrals.size() == 1);
-    BOOST_TEST_CHECK(v_referrals.at(0)["refferal"].as<uint64_t>() == N(sania));
-    BOOST_TEST_CHECK(v_referrals.at(0)["referrer"].as<uint64_t>() == N(issuer));
+    BOOST_TEST_CHECK(v_referrals.at(0)["referral"].as<name>() == N(sania));
+    BOOST_TEST_CHECK(v_referrals.at(0)["referrer"].as<name>() == N(issuer));
     step(220);
 
     v_referrals = referral.get_referrals();
