@@ -79,6 +79,26 @@ public:
     std::vector<fc::variant> get_all_chaindb_rows(name code, uint64_t scope, name tbl, bool strict) const;
 };
 
+class extended_tester : public golos_tester {
+    using golos_tester::golos_tester;
+    fc::microseconds _cur_time;
+    void update_cur_time() { _cur_time = control->head_block_time().time_since_epoch();};
+
+protected:
+    const fc::microseconds& cur_time()const { return _cur_time; };
+
+public:
+    void step(uint32_t n = 1) {
+        produce_blocks(n);
+        update_cur_time();
+    }
+
+    void run(const fc::microseconds& t) {
+        _produce_block(t);  // it produces only 1 block. this can cause expired transactions. use step() to push current txs into blockchain
+        update_cur_time();
+    }
+};
+
 
 }} // eosio::tesing
 

@@ -4,28 +4,8 @@
 
 namespace eosio { namespace testing {
 
-class extended_tester : public golos_tester {
-    using golos_tester::golos_tester;
-    fc::microseconds _cur_time;
-    void update_cur_time() { _cur_time = control->head_block_time().time_since_epoch();};
-
-protected:
-    const fc::microseconds& cur_time()const { return _cur_time; };
-
-public:
-    void step(uint32_t n = 1) {
-        produce_blocks(n);
-        update_cur_time();
-    }
-
-    void run(const fc::microseconds& t) {
-        _produce_block(t);  // it produces only 1 block. this can cause expired transactions. use step() to push current txs into blockchain
-        update_cur_time();
-    }
-};
-
 struct golos_referral_api: base_contract_api {
-    golos_referral_api(extended_tester* tester, name code)
+    golos_referral_api(golos_tester* tester, name code)
         :   base_contract_api(tester, code) {}
 
     //// referral actions

@@ -30,26 +30,6 @@ std::string func_str = std::to_string(_m) + " / ((" + std::to_string(_2s) + " / 
 auto func = [](double x){ return static_cast<double>(_m) / ((static_cast<double>(_2s) / std::max(x, 0.000000000001)) + 1.0); };
 }
 
-class extended_tester : public golos_tester {
-    using golos_tester::golos_tester;
-    fc::microseconds _cur_time;
-    void update_cur_time() { _cur_time = control->head_block_time().time_since_epoch();};
-
-protected:
-    const fc::microseconds& cur_time()const { return _cur_time; };
-
-public:
-    void step(uint32_t n = 1) {
-        produce_blocks(n);
-        update_cur_time();
-    }
-
-    void run(const fc::microseconds& t) {
-        _produce_block(t);  // it produces only 1 block. this can cause expired transactions. use step() to push current txs into blockchain
-        update_cur_time();
-    }
-};
-
 
 class reward_calcs_tester : public extended_tester {
     symbol _token_symbol;

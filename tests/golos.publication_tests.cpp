@@ -1,6 +1,7 @@
 #include "golos_tester.hpp"
 #include "golos.posting_test_api.hpp"
 #include "golos.vesting_test_api.hpp"
+#include "golos.referral_test_api.hpp"
 #include "eosio.token_test_api.hpp"
 #include "../golos.publication/types.h"
 #include "contracts.hpp"
@@ -27,32 +28,35 @@ FC_REFLECT(structures::tags, (tag))
 FC_REFLECT(structures::beneficiaries, (account)(deductprcnt))
 
 
-class golos_publication_tester : public golos_tester {
+class golos_publication_tester : public extended_tester {
 protected:
     symbol _sym;
     golos_posting_api post;
     golos_vesting_api vest;
+    golos_referral_api referral;
     eosio_token_api token;
 
     std::vector<account_name> _users;
 public:
 
     golos_publication_tester()
-        : golos_tester(N(golos.pub))
-        , _sym(0, "DUMMY")
+        : extended_tester(N(golos.pub))
+        , _sym(4, "GLS")
         , post({this, _code, _sym})
         , vest({this, cfg::vesting_name, _sym})
         , token({this, cfg::token_name, _sym})
+        , referral({this, cfg::referral_name})
         , _users{_code, N(jackiechan), N(brucelee), N(chucknorris)} {
 
-        produce_block();
+        step();
         create_accounts(_users);
-        create_accounts({cfg::token_name, cfg::vesting_name, cfg::emission_name, N(dan.larimer)});
-        produce_block();
+        create_accounts({cfg::token_name, cfg::vesting_name, cfg::emission_name, cfg::referral_name, N(dan.larimer)});
+        step();
 
         install_contract(_code, contracts::posting_wasm(), contracts::posting_abi());
         install_contract(cfg::vesting_name, contracts::vesting_wasm(), contracts::vesting_abi());
         install_contract(cfg::token_name, contracts::token_wasm(), contracts::token_abi());
+        install_contract(cfg::referral_name, contracts::referral_wasm(), contracts::referral_abi());
     }
 
     void init() {
@@ -64,10 +68,25 @@ public:
         BOOST_CHECK_EQUAL(success(), post.set_limit("comment"));
         BOOST_CHECK_EQUAL(success(), post.set_limit("vote"));
         BOOST_CHECK_EQUAL(success(), post.set_limit("post bandwidth"));
-        produce_block();
+        step();
         for (auto& u : _users) {
             BOOST_CHECK_EQUAL(success(), vest.open(u, _sym, u));
         }
+    }
+
+
+    void init_referral() {
+        const asset min_breakout = asset(10000,  _sym);
+        const asset max_breakout = asset(100000, _sym);
+        const uint64_t max_expire = 600; // 600 sec
+        const uint32_t max_persent = 5000; // 50.00%
+
+        auto breakout_parametrs = referral.breakout_parametrs(min_breakout, max_breakout);
+        auto expire_parametrs   = referral.expire_parametrs(max_expire);
+        auto percent_parametrs  = referral.percent_parametrs(max_persent);
+
+        auto params = "[" + breakout_parametrs + "," + expire_parametrs + "," + percent_parametrs + "]";
+        BOOST_CHECK_EQUAL(success(), referral.set_params(cfg::referral_name, params));
     }
 
     void check_equal_post(const variant& a, const variant& b) {
@@ -164,7 +183,7 @@ BOOST_AUTO_TEST_SUITE(golos_publication_tests)
 BOOST_FIXTURE_TEST_CASE(set_params, golos_publication_tester) try {
     BOOST_TEST_MESSAGE("Test posting parameters");
     
-    produce_block();
+    step();
     
     BOOST_TEST_MESSAGE("--- check that global params not exist");
     BOOST_TEST_CHECK(post.get_params().is_null());
@@ -194,13 +213,25 @@ BOOST_FIXTURE_TEST_CASE(create_message, golos_publication_tester) try {
     BOOST_TEST_MESSAGE("Create message testing.");
     init();
     init_params();
+    init_referral();
+
     BOOST_CHECK_EQUAL(success(), post.create_msg(N(brucelee), "permlink"));
+
+    auto expire = 8; // sec
+    BOOST_CHECK_EQUAL(success(), referral.create_referral(N(dan.larimer), N(chucknorris), 500,
+                                                      cur_time().to_seconds() + expire,
+                                                      asset(50000, _sym)));
 
     BOOST_TEST_MESSAGE("--- checking that another user can create a message with the same permlink.");
     BOOST_CHECK_EQUAL(success(), post.create_msg(N(chucknorris), "permlink"));
 
     auto id = hash64("permlink");
-    check_equal_post(post.get_message(N(brucelee), id), _test_msg);
+
+    auto post_chucknorris = post.get_message(N(brucelee), id);
+    auto size_ben = post_chucknorris["beneficiaries"].size();
+    BOOST_CHECK_EQUAL( post_chucknorris["beneficiaries"][size_ben - 1].as<structures::beneficiaries>().account, N(dan.larimer) );
+
+//    check_equal_post(post.get_message(N(brucelee), id), _test_msg);
     check_equal_content(post.get_content(N(brucelee), id), _test_content);
 
     BOOST_TEST_MESSAGE("--- checking that message wasn't closed.");
@@ -209,7 +240,7 @@ BOOST_FIXTURE_TEST_CASE(create_message, golos_publication_tester) try {
     BOOST_CHECK_EQUAL(msg["closed"].as<bool>(), false);
 
     BOOST_TEST_MESSAGE("--- checking that message was closed.");
-    produce_block();
+    step();
     msg = post.get_message(N(brucelee), id);
     BOOST_CHECK_EQUAL(msg["closed"].as<bool>(), true);
 
@@ -275,7 +306,7 @@ BOOST_FIXTURE_TEST_CASE(upvote, golos_publication_tester) try {
     BOOST_CHECK_EQUAL(success(), vote_brucelee(123));
     auto _vote = mvo()("id",0)("message_id",hash64(permlink))("voter","brucelee")("count",1);   // TODO: time
     CHECK_MATCHING_OBJECT(post.get_vote(N(brucelee), 0), _vote);
-    produce_block();
+    step();
 
     BOOST_TEST_MESSAGE("--- fail on same or wrong weight");
     BOOST_CHECK_EQUAL(err.vote_same_weight, vote_brucelee(123));
@@ -288,7 +319,7 @@ BOOST_FIXTURE_TEST_CASE(upvote, golos_publication_tester) try {
     BOOST_TEST_MESSAGE("--- succeed max_vote_changes revotes and fail on next vote");
     for (auto i = 0; i < post.max_vote_changes; i++) {
         BOOST_CHECK_EQUAL(success(), vote_jackie(i+1));
-        produce_block();
+        step();
     }
     _vote = mvo(_vote)("id", 1)("voter", "jackiechan");
     CHECK_MATCHING_OBJECT(post.get_vote(N(brucelee), 1), mvo(_vote)("count", post.max_vote_changes));
@@ -297,13 +328,13 @@ BOOST_FIXTURE_TEST_CASE(upvote, golos_publication_tester) try {
     BOOST_CHECK_EQUAL(err.no_revote, vote_jackie(cfg::_100percent));
 
     BOOST_TEST_MESSAGE("--- fail while upvote lockout");
-    produce_block();
+    step();
     BOOST_CHECK_EQUAL(err.upvote_near_close, vote_jackie(cfg::_100percent));
     produce_blocks(seconds_to_blocks(post.upvote_lockout) - 1);
     BOOST_CHECK_EQUAL(err.upvote_near_close, vote_jackie(cfg::_100percent));
 
     BOOST_TEST_MESSAGE("--- succeed vote after cashout");
-    produce_block();
+    step();
     BOOST_CHECK_EQUAL(success(), vote_jackie(cfg::_100percent));
     CHECK_MATCHING_OBJECT(post.get_vote(N(brucelee), 1), mvo(_vote)("count", -1));
 } FC_LOG_AND_RETHROW()
@@ -325,7 +356,7 @@ BOOST_FIXTURE_TEST_CASE(downvote, golos_publication_tester) try {
     BOOST_CHECK_EQUAL(success(), vote_brucelee(123));
     auto _vote = mvo()("id",0)("message_id",hash64(permlink))("voter","brucelee")("count",1);   // TODO: time
     CHECK_MATCHING_OBJECT(post.get_vote(N(brucelee), 0), _vote);
-    produce_block();
+    step();
 
     BOOST_TEST_MESSAGE("--- fail on same or wrong weight");
     BOOST_CHECK_EQUAL(err.vote_same_weight, vote_brucelee(123));
@@ -338,7 +369,7 @@ BOOST_FIXTURE_TEST_CASE(downvote, golos_publication_tester) try {
     BOOST_TEST_MESSAGE("--- succeed max_vote_changes revotes and fail on next vote");
     for (auto i = 0; i < post.max_vote_changes; i++) {
         BOOST_CHECK_EQUAL(success(), vote_jackie(i+1));
-        produce_block();
+        step();
     }
     _vote = mvo(_vote)("id", 1)("voter", "jackiechan");
     CHECK_MATCHING_OBJECT(post.get_vote(N(brucelee), 1), mvo(_vote)("count", post.max_vote_changes));
@@ -347,7 +378,7 @@ BOOST_FIXTURE_TEST_CASE(downvote, golos_publication_tester) try {
     BOOST_TEST_MESSAGE("--- succeed vote after cashout");
     produce_blocks(seconds_to_blocks(post.window) - post.max_vote_changes - 1);
     BOOST_CHECK_EQUAL(err.no_revote, vote_jackie(cfg::_100percent));
-    produce_block();
+    step();
     BOOST_CHECK_EQUAL(success(), vote_jackie(cfg::_100percent));
     CHECK_MATCHING_OBJECT(post.get_vote(N(brucelee), 1), mvo(_vote)("count", -1));
 } FC_LOG_AND_RETHROW()
@@ -361,13 +392,13 @@ BOOST_FIXTURE_TEST_CASE(unvote, golos_publication_tester) try {
     // TODO: test fail on initial unvote
     BOOST_CHECK_EQUAL(success(), post.create_msg(N(brucelee), "permlink"));
     BOOST_CHECK_EQUAL(success(), post.upvote(N(brucelee), N(brucelee), "permlink", 123));
-    produce_block();
+    step();
     BOOST_CHECK_EQUAL(success(), post.unvote(N(brucelee), N(brucelee), "permlink"));
-    produce_block();
+    step();
     BOOST_CHECK_EQUAL(success(), post.downvote(N(brucelee), N(brucelee), "permlink", 333));
-    produce_block();
+    step();
     BOOST_CHECK_EQUAL(success(), post.unvote(N(brucelee), N(brucelee), "permlink"));
-    produce_block();
+    step();
 
     BOOST_CHECK_EQUAL(err.vote_same_weight, post.unvote(N(brucelee), N(brucelee), "permlink"));
 } FC_LOG_AND_RETHROW()
@@ -379,11 +410,11 @@ BOOST_FIXTURE_TEST_CASE(mixed_vote_test, golos_publication_tester) try {
     BOOST_TEST_MESSAGE("--- test that each vote type increases votes count");
     BOOST_CHECK_EQUAL(success(), post.create_msg(N(brucelee), "permlink"));
     BOOST_CHECK_EQUAL(success(), post.downvote(N(brucelee), N(brucelee), "permlink", 123));
-    produce_block();
+    step();
     BOOST_CHECK_EQUAL(success(), post.unvote(N(brucelee), N(brucelee), "permlink"));
-    produce_block();
+    step();
     BOOST_CHECK_EQUAL(success(), post.upvote(N(brucelee), N(brucelee), "permlink", 321));
-    produce_block();
+    step();
 
     auto vote = post.get_vote(N(brucelee), 0);
     BOOST_CHECK_EQUAL(vote["count"].as<uint64_t>(), 3);
@@ -397,7 +428,7 @@ BOOST_FIXTURE_TEST_CASE(delete_post_with_vote_test, golos_publication_tester) tr
     BOOST_CHECK_EQUAL(success(), post.create_msg(N(chucknorris), "downvote-me"));
     BOOST_CHECK_EQUAL(success(), post.upvote(N(chucknorris), N(brucelee), "upvote-me", 321));
     BOOST_CHECK_EQUAL(success(), post.downvote(N(brucelee), N(chucknorris), "downvote-me", 123));
-    produce_block();
+    step();
     BOOST_CHECK_EQUAL(success(), post.delete_msg(N(chucknorris), "downvote-me"));
     // BOOST_CHECK_EQUAL(err.delete_rshares, post.delete_msg(N(brucelee), "upvote-me"));    // TODO:
 } FC_LOG_AND_RETHROW()
@@ -436,14 +467,14 @@ BOOST_FIXTURE_TEST_CASE(comments_cashout_time_test, golos_publication_tester) tr
     BOOST_CHECK_EQUAL(post.get_message(N(brucelee), hash64("permlink"))["closed"].as<bool>(), false);
     BOOST_CHECK_EQUAL(post.get_message(N(chucknorris), hash64("comment_permlink"))["closed"].as<bool>(), false);
     
-    produce_block();
+    step();
     
     BOOST_TEST_MESSAGE("--- checking that messages was closed.");
     BOOST_CHECK_EQUAL(post.get_message(N(brucelee), hash64("permlink"))["closed"].as<bool>(), true);
     BOOST_CHECK_EQUAL(post.get_message(N(chucknorris), hash64("comment_permlink"))["closed"].as<bool>(), true);
     
     BOOST_CHECK_EQUAL(success(), post.create_msg(N(jackiechan), "sorry guys i'm late", N(brucelee), "permlink"));
-    produce_block();
+    step();
     
     BOOST_TEST_MESSAGE("--- checking that closed message comment was closed.");
     BOOST_CHECK_EQUAL(post.get_message(N(jackiechan), hash64("sorry guys i'm late"))["closed"].as<bool>(), true);

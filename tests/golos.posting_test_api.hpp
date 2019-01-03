@@ -4,7 +4,6 @@
 
 namespace eosio { namespace testing {
 
-
 struct golos_posting_api: base_contract_api {
     golos_posting_api(golos_tester* tester, name code, symbol sym)
     :   base_contract_api(tester, code)
