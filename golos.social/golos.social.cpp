@@ -48,6 +48,19 @@ void social::unpin(name pinner, name pinning) {
     });
 }
 
+void social::removepin(name pinner, name pinning) {
+    require_auth(pinner);
+
+    eosio_assert(pinner != pinning, "You cannot unpin yourself");
+
+    tables::pinblock_table table(_self, pinner.value);
+    auto itr = table.find(pinning.value);
+    bool item_exists = (itr != table.end());
+
+    eosio_assert(item_exists && itr->pinning, "You have not pinned this account");
+    table.erase(itr);
+}
+
 void social::block(name blocker, name blocking) {
     require_auth(blocker);
 

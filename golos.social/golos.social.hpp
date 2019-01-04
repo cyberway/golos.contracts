@@ -11,6 +11,7 @@ private:
 public:
     void pin(name pinner, name pinning);
     void unpin(name pinner, name pinning);
+    void removepin(name pinner, name pinning);
 
     void block(name blocker, name blocking);
     void unblock(name blocker, name blocking);
