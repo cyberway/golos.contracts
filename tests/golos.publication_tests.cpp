@@ -2,6 +2,7 @@
 #include "golos.posting_test_api.hpp"
 #include "golos.vesting_test_api.hpp"
 #include "eosio.token_test_api.hpp"
+#include "golos.social_test_api.hpp"
 #include "../golos.publication/types.h"
 #include "contracts.hpp"
 
@@ -33,6 +34,7 @@ protected:
     golos_posting_api post;
     golos_vesting_api vest;
     eosio_token_api token;
+    golos_social_api social;
 
     std::vector<account_name> _users;
 public:
@@ -43,6 +45,7 @@ public:
         , post({this, _code, _sym})
         , vest({this, cfg::vesting_name, _sym})
         , token({this, cfg::token_name, _sym})
+        , social({this, cfg::social_name, _sym})
         , _users{_code, N(jackiechan), N(brucelee), N(chucknorris), N(gls.social), N(gls.referral)} {
 
         produce_block();
@@ -53,6 +56,7 @@ public:
         install_contract(_code, contracts::posting_wasm(), contracts::posting_abi());
         install_contract(cfg::vesting_name, contracts::vesting_wasm(), contracts::vesting_abi());
         install_contract(cfg::token_name, contracts::token_wasm(), contracts::token_abi());
+        install_contract(cfg::social_name, contracts::social_wasm(), contracts::social_abi());
     }
 
     void init() {
