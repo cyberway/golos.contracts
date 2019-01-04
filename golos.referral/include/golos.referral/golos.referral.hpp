@@ -38,7 +38,7 @@ private:
         uint64_t expire_key()const { return expire; }
 
         bool is_empty() const {
-            auto status = referral != name() && referrer != name();
+            auto status = referral == name() && referrer == name();
             return status;
         }
     };

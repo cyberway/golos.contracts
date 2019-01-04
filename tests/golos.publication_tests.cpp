@@ -97,10 +97,12 @@ public:
         BOOST_CHECK_EQUAL(a["tokenprop"].as<uint64_t>(), b["tokenprop"].as<uint64_t>());
         auto a_ben = a["beneficiaries"];
         auto b_ben = b["beneficiaries"];
+
         BOOST_CHECK_EQUAL(a_ben.size(), b_ben.size());
         for (size_t i = 0, l = a_ben.size(); i < l; i++) {
             CHECK_EQUAL_OBJECTS(a_ben[i], b_ben[i]);
         }
+
         BOOST_CHECK_EQUAL(a["rewardweight"].as<uint64_t>(), b["rewardweight"].as<uint64_t>());
         CHECK_EQUAL_OBJECTS(a["state"], b["state"]);
         BOOST_CHECK_EQUAL(a["childcount"].as<uint64_t>(), b["childcount"].as<uint64_t>());
@@ -226,12 +228,11 @@ BOOST_FIXTURE_TEST_CASE(create_message, golos_publication_tester) try {
     BOOST_CHECK_EQUAL(success(), post.create_msg(N(chucknorris), "permlink"));
 
     auto id = hash64("permlink");
-
-    auto post_chucknorris = post.get_message(N(brucelee), id);
+    auto post_chucknorris = post.get_message(N(chucknorris), id);
     auto size_ben = post_chucknorris["beneficiaries"].size();
     BOOST_CHECK_EQUAL( post_chucknorris["beneficiaries"][size_ben - 1].as<structures::beneficiaries>().account, N(dan.larimer) );
 
-//    check_equal_post(post.get_message(N(brucelee), id), _test_msg);
+    check_equal_post(post.get_message(N(brucelee), id), _test_msg);
     check_equal_content(post.get_content(N(brucelee), id), _test_content);
 
     BOOST_TEST_MESSAGE("--- checking that message wasn't closed.");

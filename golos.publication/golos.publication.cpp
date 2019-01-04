@@ -125,15 +125,6 @@ void publication::create_message(name account, std::string permlink,
     }
     eosio_assert((benefic_map.size() <= max_beneficiaries_param.max_beneficiaries), "publication::create_message: benafic_map.size() > MAX_BENEFICIARIES");
 
-    //reusing a vector
-    beneficiaries.reserve(benefic_map.size());
-    beneficiaries.clear();
-    for(auto & ben : benefic_map)
-        beneficiaries.emplace_back(structures::beneficiary{
-            .account = ben.first,
-            .deductprcnt = static_cast<base_t>(get_limit_prop(ben.second).data())
-        });
-
     auto obj_referral = golos::referral::account_referrer( config::referral_name, account );
     if ( !obj_referral.is_empty() ) {
         auto& referrer = obj_referral.referrer;
@@ -145,12 +136,23 @@ void publication::create_message(name account, std::string permlink,
 
         eosio_assert( itr == beneficiaries.end(), "Comment already has referrer as a referrer-beneficiary." );
 
-        beneficiaries.reserve(benefic_map.size() + 1);
-        beneficiaries.emplace_back(structures::beneficiary{
-            .account = obj_referral.referrer,
-            .deductprcnt = obj_referral.percent
-        });
+        prop_sum += obj_referral.percent;
+        eosio_assert(prop_sum <= config::_100percent, "publication::create_message: prop_sum > 100%");
+        benefic_map[obj_referral.referrer] += obj_referral.percent;
     }
+
+    //reusing a vector
+    beneficiaries.reserve(benefic_map.size());
+    beneficiaries.clear();
+    for(auto & ben : benefic_map) {
+        print(ben.first);
+        beneficiaries.emplace_back(structures::beneficiary{
+                    .account = ben.first,
+                    .deductprcnt = static_cast<base_t>(get_limit_prop(ben.second).data())
+                });
+    }
+
+        
 
     auto cur_time = current_time();
     atmsp::machine<fixp_t> machine;

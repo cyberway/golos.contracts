@@ -63,8 +63,6 @@ void referral::addreferral(name referrer, name referral, uint32_t percent,
 
     referral_params_singleton cfg(_self, _self.value);
 
-    print("current tume: ",uint64_t(now()));
-    
     const auto min_expire = now();
     const auto max_expire = now() + cfg.get().expire_params.max_expire;
     eosio_assert(expire   >  min_expire, "expire < current block time");
