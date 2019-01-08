@@ -103,6 +103,16 @@ protected:
         _res.clear();
     }
 
+    void init_params() {
+        auto vote_changes = post.get_str_vote_changes(post.max_vote_changes);
+        auto cashout_window = post.get_str_cashout_window(post.window, post.upvote_lockout);
+        auto beneficiaries = post.get_str_beneficiaries(post.max_beneficiaries);
+        auto comment_depth = post.get_str_comment_depth(post.max_comment_depth);
+
+        auto params = "[" + vote_changes + "," + cashout_window + "," + beneficiaries + "," + comment_depth + "]";
+        BOOST_CHECK_EQUAL(success(), post.set_params(params));
+    } 
+
 public:
     reward_calcs_tester()
         : extended_tester(N(reward.calcs))
@@ -535,6 +545,7 @@ BOOST_FIXTURE_TEST_CASE(basic_tests, reward_calcs_tester) try {
     BOOST_TEST_MESSAGE("Basic publication_rewards tests");
     auto bignum = 500000000000;
     init(bignum, 500000);
+    init_params();
     step();
     BOOST_TEST_MESSAGE("--- setrules");
     BOOST_CHECK_EQUAL(err.not_monotonic,
@@ -623,6 +634,7 @@ BOOST_FIXTURE_TEST_CASE(timepenalty_test, reward_calcs_tester) try {
     BOOST_TEST_MESSAGE("Simple timepenalty test");
     auto bignum = 500000000000;
     init(bignum, 500000);
+    init_params();
     step();
 
     BOOST_CHECK_EQUAL(success(), setrules({"x", bignum}, {"x", bignum}, {"x/50", 50}, 2500,
@@ -650,6 +662,7 @@ BOOST_FIXTURE_TEST_CASE(limits_test, reward_calcs_tester) try {
     BOOST_TEST_MESSAGE("Simple limits test");
     auto bignum = 500000000000;
     init(bignum, 500000);
+    init_params();
 
     BOOST_CHECK_EQUAL(success(), setrules({"x", bignum}, {"sqrt(x)", bignum}, {"x / 1800", 1800},
         0, //curatorsprop
@@ -727,6 +740,7 @@ BOOST_FIXTURE_TEST_CASE(rshares_sum_overflow_test, reward_calcs_tester) try {
     auto bignum = 500000000000;
     auto fixp_max = std::numeric_limits<fixp_t>::max();
     init(bignum, fixp_max / 2);
+    init_params();
     step();
 
     BOOST_TEST_MESSAGE("--- setrules");
@@ -753,6 +767,7 @@ BOOST_FIXTURE_TEST_CASE(golos_curation_test, reward_calcs_tester) try {
     int64_t maxfp = std::numeric_limits<fixp_t>::max();
     auto bignum = 500000000000;
     init(bignum, 500000);
+    init_params();
     step();
     BOOST_TEST_MESSAGE("--- setrules");
     using namespace golos_curation;
