@@ -86,7 +86,7 @@ void vesting::setparams(symbol symbol, std::vector<vesting_params> params) {
     param_helper::set_parameters<vesting_params_setter>(params, cfg, name(token::get_issuer(config::token_name, symbol.code())));
 }
 
-void vesting::on_transfer(name from, name to, asset quantity, std::string memo) {
+void vesting:: on_transfer(name from, name to, asset quantity, std::string memo) {
     if (_self != to)
         return;
         
@@ -206,7 +206,7 @@ void vesting::delegate_vesting(name sender, name recipient, asset quantity, uint
     const auto &withdraw_params = cfg.get().vesting_withdraw_params;
 
     eosio_assert(sender != recipient, "You can not delegate to yourself");
-    eosio_assert(payout_strategy >= 0 && payout_strategy < 2, "not valid value payout_strategy");
+    eosio_assert(payout_strategy >= 0 && payout_strategy < enums::strategy::count_elements, "not valid value payout_strategy"); // TODO wiki "Possible logical errors" https://ru.wikipedia.org/wiki/Static_cast 
     eosio_assert(quantity.amount > 0, "the number of tokens should not be less than 0");
     eosio_assert(quantity.amount >= amount_params.min_amount, "Insufficient funds for delegation");
     eosio_assert(interest_rate <= delegation_params.max_interest, "Exceeded the percentage of delegated vesting");
@@ -236,13 +236,15 @@ void vesting::delegate_vesting(name sender, name recipient, asset quantity, uint
         item.delegate_vesting += quantity;
     });
 
+    auto strategy = static_cast<enums::strategy>(payout_strategy); // TODO 0 - to_delegator, 1 - to_delegated_vestings
+
     tables::delegate_table table(_self, sname);
     auto index_table = table.get_index<"unique"_n>();
     auto delegate_record = index_table.find(structures::delegate_record::unique_key(sender, recipient));
     if (delegate_record != index_table.end()) {
 
         eosio_assert(delegate_record->interest_rate == interest_rate, "interest_rate does not match");
-        eosio_assert(delegate_record->payout_strategy == payout_strategy, "payout_strategy does not match");
+        eosio_assert(delegate_record->payout_strategy == static_cast<uint8_t>(strategy), "payout_strategy does not match");
 
         index_table.modify(delegate_record, name(), [&](auto& item){
             item.quantity += quantity;
@@ -255,7 +257,7 @@ void vesting::delegate_vesting(name sender, name recipient, asset quantity, uint
             item.quantity = quantity;
             item.deductions.symbol = quantity.symbol;
             item.interest_rate = interest_rate;
-            item.payout_strategy = payout_strategy; // TODO 0 - to_delegator, 1 - to_delegated_vestings
+            item.payout_strategy = static_cast<uint8_t>(strategy); 
             item.return_date = time_point_sec(now() + delegation_params.min_time);
         });
     }

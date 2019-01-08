@@ -150,5 +150,14 @@ using index_payout_time = indexed_by<N(payouttime), const_mem_fun<structures::co
 using convert_table = multi_index<N(converttable), structures::convert_of_tokens, index_payout_time>;
 }
 
+namespace enums {
+    enum class strategy {
+        to_delegator,
+        to_delegated_vestings,
+
+        count_elements = 2
+    };
+}
+
 
 } // golos
