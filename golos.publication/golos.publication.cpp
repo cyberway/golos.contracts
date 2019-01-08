@@ -571,6 +571,12 @@ void publication::set_vote(name voter, name author, string permlink, int16_t wei
         set_and_run(machine, pool->rules.timepenalty.code, {fp_cast<fixp_t>(time_delta, false)}, {{fixp_t(0), FP(pool->rules.timepenalty.maxarg)}}),
         fixp_t(1)), fixp_t(0));
 
+    std::vector<structures::delegate_voter> delegators;
+    auto token_code = pool->state.funds.symbol.code();
+    auto list_delegate_voter = golos::vesting::get_list_delegate(config::vesting_name, voter, token_code);
+    for (auto record : list_delegate_voter) 
+        delegators.push_back( {record.sender, record.quantity} );
+
     vote_table.emplace(voter, [&]( auto &item ) {
         item.id = vote_table.available_primary_key();
         item.message_id = mssg_itr->id;
@@ -578,6 +584,7 @@ void publication::set_vote(name voter, name author, string permlink, int16_t wei
         item.weight = weight;
         item.time = cur_time;
         item.count = mssg_itr->closed ? -1 : (item.count + 1);
+        item.delegators = delegators;
         item.curatorsw = (fixp_t(sumcuratorsw_delta * curatorsw_factor)).data();
         item.rshares = rshares.data();
     });
