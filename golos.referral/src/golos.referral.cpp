@@ -1,4 +1,6 @@
 #include "golos.referral/golos.referral.hpp"
+#include <eosio.token/eosio.token.hpp>
+#include <golos.vesting/config.hpp>
 
 namespace golos {
 
@@ -61,6 +63,23 @@ void referral::addreferral(name referrer, name referral, uint32_t percent,
     });
 }
 
+void referral::transfer(name referral, asset quantity) {
+    require_auth(_self);
+    asset balance = eosio::token::get_balance(config::token_name, _self, quantity.symbol.code());
+    eosio_assert(balance.amount >= quantity.amount, "Insufficient funds in the gls.referral account.");
+
+    referrals_table referrals(_self, _self.value);
+    auto it_referral = referrals.find(referral.value);
+    eosio_assert(it_referral != referrals.end(), "A referral with this name doesn't exist.");
+    eosio_assert(it_referral->breakout.amount == quantity.amount, "Amount of funds doesn't equal.");
+
+    INLINE_ACTION_SENDER(eosio::token, transfer)
+        (config::token_name, {_self, config::active_name},
+        {_self, referral, quantity, ""});
+    
+    referrals.erase(it_referral);
 }
 
-EOSIO_DISPATCH(golos::referral, (addreferral)(validateprms)(setparams));
+}
+
+EOSIO_DISPATCH(golos::referral, (addreferral)(validateprms)(setparams)(transfer));

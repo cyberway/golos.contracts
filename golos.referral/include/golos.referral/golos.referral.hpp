@@ -20,6 +20,9 @@ public:
     [[eosio::action]]
     void addreferral(name referrer, name referral, uint32_t percent, uint64_t expire, asset breakout);
 
+    [[eosio::action]]
+    void transfer(name referral, asset quantity);
+
 private:
     struct obj_referral {
         name referrer;

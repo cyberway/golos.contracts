@@ -60,6 +60,14 @@
            "fields": [
               {"name": "params", "type": "referral_param[]"}
            ]
+        },
+        {
+           "name": "transfer",
+           "base": "",
+           "fields": [
+              {"name": "referral", "type": "name"},
+              {"name": "quantity", "type": "asset"}
+           ]
         }
     ],
     "actions": [
@@ -77,7 +85,13 @@
             "name": "setparams",
             "type": "setparams",
             "ricardian_contract": ""
+        },
+        {
+            "name": "transfer",
+            "type": "transfer",
+            "ricardian_contract": ""
         }
+
     ],
     "tables": [
         {
