@@ -14,12 +14,11 @@ services:
       - cyberway-mongodb-data:/data/db
     ports:
       - 127.0.0.1:27018:27017
-    networks:
-      - golos-contracts-net
 
 volumes:
  cyberway-mongodb-data:
    external: true
 
 networks:
-  golos-contracts-net:
+    default:
+       name: golos-tests_contracts-net
