@@ -206,7 +206,7 @@ void vesting::delegate_vesting(name sender, name recipient, asset quantity, uint
     const auto &withdraw_params = cfg.get().vesting_withdraw_params;
 
     eosio_assert(sender != recipient, "You can not delegate to yourself");
-    eosio_assert(payout_strategy >= 0 && payout_strategy < enums::strategy::count_elements, "not valid value payout_strategy"); // TODO wiki "Possible logical errors" https://ru.wikipedia.org/wiki/Static_cast 
+    eosio_assert(payout_strategy >= 0 && payout_strategy < static_cast<uint8_t>(enums::strategy::count_elements), "not valid value payout_strategy"); // TODO wiki "Possible logical errors" https://ru.wikipedia.org/wiki/Static_cast 
     eosio_assert(quantity.amount > 0, "the number of tokens should not be less than 0");
     eosio_assert(quantity.amount >= amount_params.min_amount, "Insufficient funds for delegation");
     eosio_assert(interest_rate <= delegation_params.max_interest, "Exceeded the percentage of delegated vesting");
