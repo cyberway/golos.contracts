@@ -155,15 +155,15 @@ struct golos_posting_api: base_contract_api {
 
     //// posting tables
     variant get_message(account_name acc, uint64_t id) {
-        return _tester->get_chaindb_struct(_code, acc, N(messagetable), id, "message");
+        return _tester->get_chaindb_struct(_code, acc, N(message), id, "message");
     }
 
     variant get_content(account_name acc, uint64_t id) {
-        return _tester->get_chaindb_struct(_code, acc, N(contenttable), id, "content");
+        return _tester->get_chaindb_struct(_code, acc, N(content), id, "content");
     }
 
     variant get_vote(account_name acc, uint64_t id) {
-        return _tester->get_chaindb_struct(_code, acc, N(votetable), id, "voteinfo");
+        return _tester->get_chaindb_struct(_code, acc, N(vote), id, "voteinfo");
     }
 
     std::vector<variant> get_reward_pools() {
@@ -171,7 +171,7 @@ struct golos_posting_api: base_contract_api {
     }
 
     std::vector<variant> get_messages(account_name user) {
-        return _tester->get_all_chaindb_rows(_code, user, N(messagetable), false);
+        return _tester->get_all_chaindb_rows(_code, user, N(message), false);
     }
 
     //// posting helpers

@@ -136,7 +136,7 @@ struct shash {          // ???
 namespace tables {
 using vesting_table = eosio::multi_index<N(vesting), structures::vesting_info>;
 
-using account_table = eosio::multi_index<N(balances), structures::user_balance>;
+using account_table = eosio::multi_index<N(accounts), structures::user_balance>;
 
 using index_sender = indexed_by<N(sender), const_mem_fun<structures::delegate_record, uint64_t, &structures::delegate_record::sender_key>>;
 using index_recipient = indexed_by<N(recipient), const_mem_fun<structures::delegate_record, uint64_t, &structures::delegate_record::recipient_key>>;

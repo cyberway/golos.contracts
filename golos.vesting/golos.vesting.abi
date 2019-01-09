@@ -370,7 +370,7 @@
       }]
     },
     {
-      "name": "balances",
+      "name": "accounts",
       "type": "user_balance",
       "indexes" : [{
           "name": "primary",
