@@ -1,0 +1,25 @@
+version: "2.1"
+
+services:
+  mongo:
+    container_name: mongo
+    image: mongo
+    restart: always
+    healthcheck:
+       test: mongo --eval 'db.getCollectionNames()'
+       interval: 2s
+       timeout: 2s
+       retries: 10
+    volumes:
+      - cyberway-mongodb-data:/data/db
+    ports:
+      - 127.0.0.1:27018:27017
+    networks:
+      - golos-contracts-net
+
+volumes:
+ cyberway-mongodb-data:
+   external: true
+
+networks:
+  golos-contracts-net:
