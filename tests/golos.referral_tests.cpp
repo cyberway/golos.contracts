@@ -124,7 +124,11 @@ BOOST_FIXTURE_TEST_CASE(close_referral_tests, golos_referral_tester) try {
     BOOST_TEST_CHECK(v_referrals.size() == 1);
     BOOST_TEST_CHECK(v_referrals.at(0)["referral"].as<name>() == N(sania));
     BOOST_TEST_CHECK(v_referrals.at(0)["referrer"].as<name>() == N(issuer));
-    step(delay_clear_old_ref);
+
+    step(delay_clear_old_ref / 3 + 1);
+    v_referrals = referral.get_referrals();
+    BOOST_TEST_CHECK(v_referrals.size() == 1);
+    step(2);
 
     v_referrals = referral.get_referrals();
     BOOST_TEST_CHECK(v_referrals.size() == 0);
