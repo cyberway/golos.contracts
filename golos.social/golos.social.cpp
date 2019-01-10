@@ -4,7 +4,7 @@ namespace golos {
 
 using namespace eosio;
 
-EOSIO_DISPATCH(social, (pin)(unpin)(removepin)(block)(unblock)(changereput)(updatemeta)(deletemeta))
+EOSIO_DISPATCH(social, (pin)(unpin)(block)(unblock)(changereput)(updatemeta)(deletemeta))
 
 void social::pin(name pinner, name pinning) {
     require_auth(pinner);
@@ -48,9 +48,7 @@ void social::unpin(name pinner, name pinning) {
     });
 }
 
-void social::removepin(name pinner, name pinning) {
-    require_auth(pinner);
-
+void social::remove_record(name pinner, name pinning) {
     eosio_assert(pinner != pinning, "You cannot unpin yourself");
 
     tables::pinblock_table table(_self, pinner.value);
