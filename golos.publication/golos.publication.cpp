@@ -123,8 +123,7 @@ void publication::create_message(name account, std::string permlink,
         eosio_assert(prop_sum <= config::_100percent, "publication::create_message: prop_sum > 100%");
         benefic_map[ben.account] += ben.deductprcnt; //several entries for one user? ok.
     }
-    eosio_assert((benefic_map.size() <= max_beneficiaries_param.max_beneficiaries), "publication::create_message: benafic_map.size() > MAX_BENEFICIARIES");
-
+    
     auto obj_referral = golos::referral::account_referrer( config::referral_name, account );
     if ( !obj_referral.is_empty() ) {
         auto& referrer = obj_referral.referrer;
@@ -144,15 +143,13 @@ void publication::create_message(name account, std::string permlink,
     //reusing a vector
     beneficiaries.reserve(benefic_map.size());
     beneficiaries.clear();
-    for(auto & ben : benefic_map) {
-        print(ben.first);
+    for(auto & ben : benefic_map) 
         beneficiaries.emplace_back(structures::beneficiary{
                     .account = ben.first,
                     .deductprcnt = static_cast<base_t>(get_limit_prop(ben.second).data())
                 });
-    }
 
-        
+    eosio_assert((benefic_map.size() <= max_beneficiaries_param.max_beneficiaries), "publication::create_message: benafic_map.size() > MAX_BENEFICIARIES");    
 
     auto cur_time = current_time();
     atmsp::machine<fixp_t> machine;
