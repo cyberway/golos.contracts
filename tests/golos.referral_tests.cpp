@@ -116,13 +116,6 @@ BOOST_FIXTURE_TEST_CASE(close_referral_tests, golos_referral_tester) try {
 
     init_params();
 
-    auto obj_params = referral.get_params();
-    BOOST_TEST_MESSAGE("--- " + fc::json::to_string(obj_params));
-    BOOST_TEST_CHECK(obj_params["breakout_params"]["min_breakout"].as<asset>() == min_breakout);
-    BOOST_TEST_CHECK(obj_params["breakout_params"]["max_breakout"].as<asset>() == max_breakout);
-    BOOST_TEST_CHECK(obj_params["expire_params"]["max_expire"].as<uint64_t>() == max_expire);
-    BOOST_TEST_CHECK(obj_params["percent_params"]["max_perсent"].as<uint32_t>() == max_persent);
-
     auto expire = 8; // sec
     BOOST_CHECK_EQUAL(success(), referral.create_referral(N(issuer), N(sania), 500, cur_time().to_seconds() + expire, asset(50000, symbol(4, "GLS"))));
     BOOST_CHECK_EQUAL(success(), referral.close_old_referrals(cur_time().to_seconds()));
@@ -131,7 +124,7 @@ BOOST_FIXTURE_TEST_CASE(close_referral_tests, golos_referral_tester) try {
     BOOST_TEST_CHECK(v_referrals.size() == 1);
     BOOST_TEST_CHECK(v_referrals.at(0)["referral"].as<name>() == N(sania));
     BOOST_TEST_CHECK(v_referrals.at(0)["referrer"].as<name>() == N(issuer));
-    step(220);
+    step(delay_clear_old_ref);
 
     v_referrals = referral.get_referrals();
     BOOST_TEST_CHECK(v_referrals.size() == 0);
