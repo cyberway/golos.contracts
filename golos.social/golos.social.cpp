@@ -46,6 +46,8 @@ void social::unpin(name pinner, name pinning) {
     table.modify(itr, name(), [&](auto& item){
         item.pinning = false;
     });
+
+    remove_record(pinner, pinning);
 }
 
 void social::remove_record(name pinner, name pinning) {
@@ -54,9 +56,10 @@ void social::remove_record(name pinner, name pinning) {
     tables::pinblock_table table(_self, pinner.value);
     auto itr = table.find(pinning.value);
     bool item_exists = (itr != table.end());
+    eosio_assert(item_exists, "You have not this account");
 
-    eosio_assert(item_exists && itr->pinning, "You have not pinned this account");
-    table.erase(itr);
+    if (!item_exists->pinning && !item_exists->blocking)
+        table.erase(itr);
 }
 
 void social::block(name blocker, name blocking) {
@@ -99,6 +102,8 @@ void social::unblock(name blocker, name blocking) {
     table.modify(itr, name(), [&](auto& item){
         item.blocking = false;
     });
+
+    remove_record(pinner, pinning);
 }
 
 void social::changereput(name voter, name author, int64_t rshares) {
