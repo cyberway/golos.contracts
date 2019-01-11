@@ -6,6 +6,25 @@ namespace golos {
 
 using namespace eosio;
 
+extern "C" {
+    void apply(uint64_t receiver, uint64_t code, uint64_t action) {
+        auto execute_action = [&](const auto fn) {
+            return eosio::execute_action(eosio::name(receiver), eosio::name(code), fn);
+        };
+#define NN(x) N(x).value
+        if (NN(transfer) == action && config::token_name.value == code)
+            execute_action(&referral::on_transfer);
+
+        else if (NN(addreferral) == action)
+            execute_action(&referral::addreferral);
+        else if (NN(validateprms) == action)
+            execute_action(&referral::validateprms);
+        else if (NN(setparams) == action)
+            execute_action(&referral::setparams);
+#undef NN
+    }
+}
+
 struct referral_params_setter: set_params_visitor<referral_state> {
     using set_params_visitor::set_params_visitor; // enable constructor
 
@@ -63,23 +82,23 @@ void referral::addreferral(name referrer, name referral, uint32_t percent,
     });
 }
 
-void referral::transfer(name referral, asset quantity) {
-    require_auth(_self);
-    asset balance = eosio::token::get_balance(config::token_name, _self, quantity.symbol.code());
-    eosio_assert(balance.amount >= quantity.amount, "Insufficient funds in the gls.referral account.");
+void referral::on_transfer(name from, name to, asset quantity, std::string memo) {
+    if(_self != to)
+        return;
+
+    if(token::get_issuer(config::token_name, quantity.symbol.code()) == from && to == name())
+        return;
 
     referrals_table referrals(_self, _self.value);
-    auto it_referral = referrals.find(referral.value);
+    auto it_referral = referrals.find(from.value);
     eosio_assert(it_referral != referrals.end(), "A referral with this name doesn't exist.");
     eosio_assert(it_referral->breakout.amount == quantity.amount, "Amount of funds doesn't equal.");
-
+    
     INLINE_ACTION_SENDER(eosio::token, transfer)
         (config::token_name, {_self, config::active_name},
-        {_self, referral, quantity, ""});
-    
+        {_self, it_referral->referrer, quantity, ""});
+
     referrals.erase(it_referral);
 }
 
 }
-
-EOSIO_DISPATCH(golos::referral, (addreferral)(validateprms)(setparams)(transfer));

@@ -48,7 +48,6 @@ protected:
         const string negative_maximum  = amsg("max_breakout < 0");
         const string limit_persent     = amsg("max_perсent > 100.00%");
 
-        const string insufficient_funds      = amsg("Insufficient funds in the gls.referral account.");
         const string referral_not_exist      = amsg("A referral with this name doesn't exist.");
         const string funds_not_equal         = amsg("Amount of funds doesn't equal.");
     } err;
@@ -122,14 +121,14 @@ BOOST_FIXTURE_TEST_CASE(transfer_tests, golos_referral_tester) try {
     auto time_now = static_cast<uint32_t>(time(nullptr));
     auto expire = 8;
 
-    BOOST_CHECK_EQUAL(success(), token.create(cfg::emission_name, token.make_asset(10)));
-    BOOST_CHECK_EQUAL(success(), referral.create_referral(N(issuer), N(vania), 500, cur_time().to_seconds() + expire, asset(100000, symbol(4, "GLS"))));
-    BOOST_CHECK_EQUAL(success(), token.issue(cfg::emission_name, cfg::referral_name, token.make_asset(5), "issue 5 tokens for gls.referral"));
-    BOOST_CHECK_EQUAL(err.insufficient_funds, referral.transfer(N(vania), token.make_asset(10)));
-    BOOST_CHECK_EQUAL(success(), token.issue(cfg::emission_name, cfg::referral_name, token.make_asset(5), "issue 5 tokens for gls.referral again"));
-    BOOST_CHECK_EQUAL(err.referral_not_exist, referral.transfer(N(tania), token.make_asset(10)));
-    BOOST_CHECK_EQUAL(err.funds_not_equal, referral.transfer(N(vania), token.make_asset(5)));
-    BOOST_CHECK_EQUAL(success(), referral.transfer(N(vania), token.make_asset(10)));
+    BOOST_CHECK_EQUAL(success(), referral.create_referral(N(issuer), cfg::referral_name, 500, cur_time().to_seconds() + expire, token.make_asset(10)));
+    BOOST_CHECK_EQUAL(success(), referral.create_referral(N(issuer), N(vania), 500, cur_time().to_seconds() + expire, token.make_asset(10)));
+    BOOST_CHECK_EQUAL(success(), token.create(cfg::emission_name, token.make_asset(10000)));
+    BOOST_CHECK_EQUAL(success(), token.issue(cfg::emission_name, N(vania), token.make_asset(30), "issue 30 tokens for vania"));
+    BOOST_CHECK_EQUAL(success(), token.issue(cfg::emission_name, N(tania), token.make_asset(30), "issue 30 tokens for tania"));
+    BOOST_CHECK_EQUAL(err.referral_not_exist, token.transfer(N(tania), cfg::referral_name, token.make_asset(10), ""));
+    BOOST_CHECK_EQUAL(err.funds_not_equal, token.transfer(N(vania), cfg::referral_name, token.make_asset(5), ""));
+    BOOST_CHECK_EQUAL(success(), token.transfer(N(vania), cfg::referral_name, token.make_asset(10), ""));
 } FC_LOG_AND_RETHROW()
 
 BOOST_AUTO_TEST_SUITE_END()

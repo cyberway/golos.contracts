@@ -50,13 +50,6 @@ struct golos_referral_api: base_contract_api {
              ("params", json_str_to_obj(json_params)));
      }
 
-     action_result transfer(name referral, asset quantity) {
-         return push(N(transfer), _code, args()
-             ("referral", referral)
-             ("quantity", quantity)
-         );
-     }
-
      variant get_params() const {
          return base_contract_api::get_struct(_code, N(refparams), N(refparams), "referral_state");
      }
