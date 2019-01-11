@@ -4,6 +4,7 @@ import re
 import pymongo
 from config import *
 import utils
+import datetime
 
 name_regex = "^[a-z1-5\.]{1,12}$|^[a-z1-5\.]{12}[a-j1-5\.]$"
 name_re = re.compile(name_regex)
@@ -31,7 +32,7 @@ def create_permission(doc, name, parent_id):
     permusage_id = cyberway.permusage.nextId()
     permusage = {
 	"id" : utils.UInt64(permusage_id),
-	"last_used" : doc["last_owner_update"].isoformat(),
+	"last_used" : doc["last_owner_update"],
 	"_SCOPE_" : "",
 	"_PAYER_" : "",
 	"_SIZE_" : utils.UInt64(16)
@@ -45,7 +46,7 @@ def create_permission(doc, name, parent_id):
 	"parent" : utils.UInt64(parent_id),
 	"owner" : doc["account"],
 	"name" : name,
-	"last_updated" : doc["last_owner_update"].isoformat(),
+	"last_updated" : doc["last_owner_update"],
 	"auth" : {
 	    "threshold" : utils.UInt64(1),
 	    "keys" : [
@@ -68,6 +69,7 @@ def create_permission(doc, name, parent_id):
 
 def create_account(doc):
     account_id = cyberway.account.nextId()
+    last_code_update = datetime.datetime.strptime("1970-01-01T00:00:00.000Z", "%Y-%m-%dT%H:%M:%S.000Z")
 
     account = {
         "id" : utils.UInt64(account_id),
@@ -75,9 +77,9 @@ def create_account(doc):
         "vm_type" : utils.UInt64(0),
         "vm_version" : utils.UInt64(0),
         "privileged" : False,
-        "last_code_update" : "1970-01-01T00:00:00.000",
+        "last_code_update" : last_code_update,
         "code_version" : "0000000000000000000000000000000000000000000000000000000000000000",
-        "creation_date" : doc["created"].isoformat(),
+        "creation_date" : doc["created"],
         "code" : "",
         "abi" : "",
         "_SCOPE_" : "",
