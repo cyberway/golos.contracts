@@ -119,16 +119,17 @@ BOOST_FIXTURE_TEST_CASE(close_referral_tests, golos_referral_tester) try {
     auto expire = 8; // sec
     BOOST_CHECK_EQUAL(success(), referral.create_referral(N(issuer), N(sania), 500, cur_time().to_seconds() + expire, asset(50000, symbol(4, "GLS"))));
     BOOST_CHECK_EQUAL(success(), referral.close_old_referrals(cur_time().to_seconds()));
+    step();
 
     auto v_referrals = referral.get_referrals();
     BOOST_TEST_CHECK(v_referrals.size() == 1);
     BOOST_TEST_CHECK(v_referrals.at(0)["referral"].as<name>() == N(sania));
     BOOST_TEST_CHECK(v_referrals.at(0)["referrer"].as<name>() == N(issuer));
 
-    step(delay_clear_old_ref / 3 + 1);
+    step( golos::seconds_to_blocks(delay_clear_old_ref) );
     v_referrals = referral.get_referrals();
     BOOST_TEST_CHECK(v_referrals.size() == 1);
-    step(2);
+    step();
 
     v_referrals = referral.get_referrals();
     BOOST_TEST_CHECK(v_referrals.size() == 0);
