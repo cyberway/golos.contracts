@@ -27,7 +27,7 @@ public:
     }
 
 private:
-    void removepin(name pinner, name pinning);
+    bool record_is_empty(structures::pinblock_record record);
 };
 
 } // golos

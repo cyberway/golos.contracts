@@ -242,10 +242,6 @@
     "type": "pin"
   },
   {
-    "name": "removepin",
-    "type": "pin"
-  },
-  {
     "name": "block",
     "type": "block"
   },
