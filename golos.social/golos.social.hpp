@@ -25,6 +25,9 @@ public:
         auto itr = table.find(blocking.value);
         return (itr != table.end() && itr->blocking);
     }
+
+private:
+    bool record_is_empty(structures::pinblock_record record);
 };
 
 } // golos

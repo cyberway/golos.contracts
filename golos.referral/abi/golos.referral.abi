@@ -6,7 +6,8 @@
           "types": [
                 "breakout_parametrs",
                 "expire_parametrs",
-                "percent_parametrs"
+                "percent_parametrs",
+                "delay_parametrs"
             ]
         }
     ],
@@ -45,13 +46,21 @@
            ]
         },
         {
+           "name": "delay_parametrs",
+           "base": "",
+           "fields": [
+              {"name": "delay_clear_old_ref", "type": "uint32"}
+           ]
+        },
+        {
            "name": "referral_state",
            "base": "",
            "fields": [
               {"name": "id", "type": "uint64"},
               {"name": "breakout_params", "type": "breakout_parametrs"},
               {"name": "expire_params",   "type": "expire_parametrs"},
-              {"name": "percent_params",  "type": "percent_parametrs"}
+              {"name": "percent_params",  "type": "percent_parametrs"},
+              {"name": "delay_params",    "type": "delay_parametrs"}
            ]
         },
         {
@@ -62,11 +71,10 @@
            ]
         },
         {
-           "name": "transfer",
+           "name": "hash",
            "base": "",
            "fields": [
-              {"name": "referral", "type": "name"},
-              {"name": "quantity", "type": "asset"}
+              {"name": "hash", "type": "uint64"}
            ]
         }
     ],
@@ -87,8 +95,8 @@
             "ricardian_contract": ""
         },
         {
-            "name": "transfer",
-            "type": "transfer",
+            "name": "closeoldref",
+            "type": "hash",
             "ricardian_contract": ""
         }
 
@@ -110,6 +118,13 @@
                     "unique": false,
                     "orders": [
                         {"field": "referrer", "order": "asc"}
+                    ]
+                },
+                {
+                    "name": "expirekey",
+                    "unique": false,
+                    "orders": [
+                        {"field": "expire", "order": "asc"}
                     ]
                 }
             ]

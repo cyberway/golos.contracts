@@ -13,7 +13,6 @@ public:
     void set_limit(std::string act, symbol_code token_code, uint8_t charge_id, int64_t price, int64_t cutoff, int64_t vesting_price, int64_t min_vesting);
     void set_rules(const funcparams& mainfunc, const funcparams& curationfunc, const funcparams& timepenalty,
         int64_t curatorsprop, int64_t maxtokenprop, symbol tokensymbol);
-    void setprops(const forumprops& props);
     void on_transfer(name from, name to, asset quantity, std::string memo);
     void create_message(name account, std::string permlink, name parentacc, std::string parentprmlnk,
         std::vector<structures::beneficiary> beneficiaries, int64_t tokenprop, bool vestpayment,

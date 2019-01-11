@@ -21,10 +21,8 @@ public:
         , vest({this, cfg::vesting_name, _sym})
         , token({this, cfg::token_name, _sym})
         , referral( {this, cfg::referral_name} )
-        , _users{N(sania), N(pasha), N(tania), N(vania), N(issuer)}
     {
-        create_accounts({N(sania), N(pasha), N(tania), N(vania), N(issuer), _code,
-                         cfg::publish_name, cfg::token_name, cfg::emission_name, cfg::vesting_name});
+        create_accounts({N(sania), N(pasha), N(tania), N(vania), N(issuer), _code});
         step(2);
 
         install_contract(_code, contracts::referral_wasm(), contracts::referral_abi());
@@ -37,8 +35,9 @@ public:
         auto breakout_parametrs = referral.breakout_parametrs(min_breakout, max_breakout);
         auto expire_parametrs   = referral.expire_parametrs(max_expire);
         auto percent_parametrs  = referral.percent_parametrs(max_persent);
+        auto delay_parametrs    = referral.delay_parametrs(delay_clear_old_ref);
 
-        auto params = "[" + breakout_parametrs + "," + expire_parametrs + "," + percent_parametrs + "]";
+        auto params = "[" + breakout_parametrs + "," + expire_parametrs + "," + percent_parametrs + "," + delay_parametrs + "]";
         BOOST_CHECK_EQUAL(success(), referral.set_params(cfg::referral_name, params));
         step();
     }
@@ -88,8 +87,6 @@ protected:
         const string negative_maximum  = amsg("max_breakout < 0");
         const string limit_persent     = amsg("max_perсent > 100.00%");
 
-<<<<<<< HEAD
-
         const string referral_not_exist      = amsg("A referral with this name doesn't exist.");
         const string funds_not_equal         = amsg("Amount of funds doesn't equal.");
         const string limit_percents          = amsg("publication::create_message: prop_sum > 100%");
@@ -100,6 +97,7 @@ protected:
     const asset max_breakout = asset(100000, _sym);
     const uint64_t max_expire = 600; // 600 sec
     const uint32_t max_persent = 5000; // 50.00%
+    const uint32_t delay_clear_old_ref = 650; // 650 sec
 
     eosio_token_api token;
     golos_posting_api post;
@@ -144,6 +142,8 @@ BOOST_AUTO_TEST_SUITE(golos_referral_tests)
      BOOST_TEST_MESSAGE("Test creating referral");
 
      init_params();
+     step();
+
      auto time_now = static_cast<uint32_t>(time(nullptr));
      BOOST_CHECK_EQUAL(err.referral_equal, referral.create_referral(N(issuer), N(issuer), time_now, 0, asset(10000, _sym)));
 
@@ -184,6 +184,30 @@ BOOST_FIXTURE_TEST_CASE(create_referral_message_tests, golos_referral_tester) tr
     BOOST_CHECK_EQUAL(err.referrer_benif, post.create_msg(N(pasha), "permlink", N(), "parentprmlnk", { beneficiary{N(issuer), 2000} }));
 
     BOOST_CHECK_EQUAL(success(), post.create_msg(N(pasha), "permlink", N(), "parentprmlnk", { beneficiary{N(tania), 2000} }));
+} FC_LOG_AND_RETHROW()
+
+BOOST_FIXTURE_TEST_CASE(close_referral_tests, golos_referral_tester) try {
+    BOOST_TEST_MESSAGE("Test close referral");
+
+    init_params();
+
+    auto expire = 8; // sec
+    BOOST_CHECK_EQUAL(success(), referral.create_referral(N(issuer), N(sania), 500, cur_time().to_seconds() + expire, asset(50000, symbol(4, "GLS"))));
+    BOOST_CHECK_EQUAL(success(), referral.close_old_referrals(cur_time().to_seconds()));
+    step();
+
+    auto v_referrals = referral.get_referrals();
+    BOOST_TEST_CHECK(v_referrals.size() == 1);
+    BOOST_TEST_CHECK(v_referrals.at(0)["referral"].as<name>() == N(sania));
+    BOOST_TEST_CHECK(v_referrals.at(0)["referrer"].as<name>() == N(issuer));
+
+    step( golos::seconds_to_blocks(delay_clear_old_ref) );
+    v_referrals = referral.get_referrals();
+    BOOST_TEST_CHECK(v_referrals.size() == 1);
+    step();
+
+    v_referrals = referral.get_referrals();
+    BOOST_TEST_CHECK(v_referrals.size() == 0);
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE(transfer_tests, golos_referral_tester) try {
