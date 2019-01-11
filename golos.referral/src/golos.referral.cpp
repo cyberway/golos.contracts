@@ -1,5 +1,6 @@
 #include "golos.referral/golos.referral.hpp"
 #include <eosio.token/eosio.token.hpp>
+#include <eosiolib/transaction.hpp>
 
 namespace golos {
 
@@ -20,6 +21,8 @@ extern "C" {
             execute_action(&referral::validateprms);
         else if (NN(setparams) == action)
             execute_action(&referral::setparams);
+        else if (NN(closeoldref) == action)
+            execute_action(&referral::closeoldref);
 #undef NN
     }
 }

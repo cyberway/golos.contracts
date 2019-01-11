@@ -21,8 +21,10 @@ public:
         , vest({this, cfg::vesting_name, _sym})
         , token({this, cfg::token_name, _sym})
         , referral( {this, cfg::referral_name} )
+        , _users{N(sania), N(pasha), N(tania), N(vania), N(issuer)}
     {
-        create_accounts({N(sania), N(pasha), N(tania), N(vania), N(issuer), _code});
+        create_accounts({N(sania), N(pasha), N(tania), N(vania), N(issuer), _code,
+                                cfg::publish_name, cfg::token_name, cfg::emission_name, cfg::vesting_name, cfg::social_name});
         step(2);
 
         install_contract(_code, contracts::referral_wasm(), contracts::referral_abi());
@@ -64,8 +66,11 @@ public:
         auto cashout_window = post.get_str_cashout_window(post.window, post.upvote_lockout);
         auto beneficiaries = post.get_str_beneficiaries(post.max_beneficiaries);
         auto comment_depth = post.get_str_comment_depth(post.max_comment_depth);
+        auto social_acc = post.get_str_social_acc(post.social_acc);
+        auto referral_acc = post.get_str_referral_acc(post.referral_acc);
 
-        auto params = "[" + vote_changes + "," + cashout_window + "," + beneficiaries + "," + comment_depth + "]";
+        auto params = "[" + vote_changes + "," + cashout_window + "," + beneficiaries + "," + comment_depth +
+            "," + social_acc + "," + referral_acc + "]";
         BOOST_CHECK_EQUAL(success(), post.set_params(params));
         step();
    }
@@ -157,6 +162,7 @@ BOOST_AUTO_TEST_SUITE(golos_referral_tests)
      BOOST_CHECK_EQUAL(err.persent, referral.create_referral(N(issuer), N(sania), 9500, cur_time().to_seconds() + expire, asset(50000, _sym)));
 
      BOOST_CHECK_EQUAL(success(), referral.create_referral(N(issuer), N(sania), 500, cur_time().to_seconds() + expire, asset(50000, _sym)));
+     step();
 
      BOOST_CHECK_EQUAL(err.referral_exist, referral.create_referral(N(issuer), N(sania), 500, cur_time().to_seconds() + expire, asset(50000, _sym)));
 

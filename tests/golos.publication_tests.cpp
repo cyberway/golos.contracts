@@ -57,6 +57,7 @@ public:
         install_contract(cfg::vesting_name, contracts::vesting_wasm(), contracts::vesting_abi());
         install_contract(cfg::token_name, contracts::token_wasm(), contracts::token_abi());
         install_contract(cfg::social_name, contracts::social_wasm(), contracts::social_abi());
+        install_contract(cfg::referral_name, contracts::referral_wasm(), contracts::referral_abi());
     }
 
     void init() {
