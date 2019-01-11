@@ -147,7 +147,7 @@ using index_date = indexed_by<N(date), const_mem_fun<structures::return_delegate
 using return_delegate_table = multi_index<N(rdelegate), structures::return_delegate, index_date>;
 
 using index_payout_time = indexed_by<N(payouttime), const_mem_fun<structures::convert_of_tokens, uint64_t, &structures::convert_of_tokens::payout_time_key>>;
-using convert_table = multi_index<N(converttable), structures::convert_of_tokens, index_payout_time>;
+using convert_table = multi_index<N(convert), structures::convert_of_tokens, index_payout_time>;
 }
 
 

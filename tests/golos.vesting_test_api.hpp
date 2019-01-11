@@ -122,7 +122,7 @@ struct golos_vesting_api: base_contract_api {
     }
 
     variant get_convert_obj(name from) {
-        return get_struct(_symbol.to_symbol_code().value, N(converttable), from, "convert_of_tokens");
+        return get_struct(_symbol.to_symbol_code().value, N(convert), from, "convert_of_tokens");
     }
 
     //// helpers

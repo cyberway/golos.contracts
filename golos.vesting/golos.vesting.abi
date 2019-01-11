@@ -416,7 +416,7 @@
       }]
     },
     {
-      "name": "converttable",
+      "name": "convert",
       "type": "convert_of_tokens",
       "indexes" : [{
           "name": "primary",

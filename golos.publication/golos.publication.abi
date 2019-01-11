@@ -847,7 +847,7 @@
     ]
   },
   {
-    "name": "limittable",
+    "name": "limit",
     "type": "limitparams",
     "indexes": [
        {
