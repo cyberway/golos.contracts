@@ -47,13 +47,12 @@ public:
 
         produce_block();
         create_accounts(_users);
-        create_accounts({cfg::token_name, cfg::vesting_name, cfg::emission_name, cfg::referral_name, N(dan.larimer)});
+        create_accounts({cfg::token_name, cfg::vesting_name, cfg::emission_name, N(dan.larimer)});
         produce_block();
 
         install_contract(_code, contracts::posting_wasm(), contracts::posting_abi());
         install_contract(cfg::vesting_name, contracts::vesting_wasm(), contracts::vesting_abi());
         install_contract(cfg::token_name, contracts::token_wasm(), contracts::token_abi());
-        install_contract(cfg::referral_name, contracts::referral_wasm(), contracts::referral_abi());
     }
 
     void init() {

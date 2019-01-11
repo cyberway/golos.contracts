@@ -88,10 +88,12 @@ protected:
         const string negative_maximum  = amsg("max_breakout < 0");
         const string limit_persent     = amsg("max_perсent > 100.00%");
 
+<<<<<<< HEAD
 
         const string referral_not_exist      = amsg("A referral with this name doesn't exist.");
         const string funds_not_equal         = amsg("Amount of funds doesn't equal.");
         const string limit_percents          = amsg("publication::create_message: prop_sum > 100%");
+		const string referrer_benif          = amsg("Comment already has referrer as a referrer-beneficiary.");
     } err;
 
     const asset min_breakout = asset(10000,  _sym);
@@ -173,10 +175,15 @@ BOOST_FIXTURE_TEST_CASE(create_referral_message_tests, golos_referral_tester) tr
     auto id = hash64("permlink");
     auto post_sania = post.get_message(N(sania), id);
     auto size_ben = post_sania["beneficiaries"].size();
+    BOOST_CHECK_EQUAL (post_sania["beneficiaries"].size(), 1);
     BOOST_CHECK_EQUAL( post_sania["beneficiaries"][size_ben - 1].as<beneficiary>().account, N(issuer) );
 
     BOOST_CHECK_EQUAL(success(), referral.create_referral(N(issuer), N(pasha), 5000, cur_time().to_seconds() + expire, asset(50000, _sym)));
     BOOST_CHECK_EQUAL(err.limit_percents, post.create_msg(N(pasha), "permlink", N(), "parentprmlnk", { beneficiary{N(tania), 7000} }));
+
+    BOOST_CHECK_EQUAL(err.referrer_benif, post.create_msg(N(pasha), "permlink", N(), "parentprmlnk", { beneficiary{N(issuer), 2000} }));
+
+    BOOST_CHECK_EQUAL(success(), post.create_msg(N(pasha), "permlink", N(), "parentprmlnk", { beneficiary{N(tania), 2000} }));
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE(transfer_tests, golos_referral_tester) try {
