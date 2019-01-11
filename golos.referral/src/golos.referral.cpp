@@ -1,4 +1,5 @@
 #include "golos.referral/golos.referral.hpp"
+#include <eosiolib/transaction.hpp>
 
 namespace golos {
 
@@ -17,6 +18,10 @@ struct referral_params_setter: set_params_visitor<referral_state> {
 
     bool operator()(const percent_param& p) {
        return set_param(p, &referral_state::percent_params);
+   }
+
+    bool operator()(const delay_param& p) {
+       return set_param(p, &referral_state::delay_params);
    }
 };
 
@@ -41,8 +46,7 @@ void referral::addreferral(name referrer, name referral, uint32_t percent,
     eosio_assert(referrer != referral, "referral can not be referrer");
 
     referral_params_singleton cfg(_self, _self.value);
-
-    print("current tume: ",uint64_t(now()));
+    eosio_assert(cfg.exists(), "not found parametrs");
     
     const auto min_expire = now();
     const auto max_expire = now() + cfg.get().expire_params.max_expire;
@@ -61,6 +65,27 @@ void referral::addreferral(name referrer, name referral, uint32_t percent,
     });
 }
 
+void referral::closeoldref(uint64_t hash) {
+    require_auth(_self);
+
+    referral_params_singleton cfg(_self, _self.value);
+    eosio_assert(cfg.exists(), "not found parametrs");
+
+    referrals_table referrals(_self, _self.value);
+    auto index_expire = referrals.get_index<"expirekey"_n>(); 
+    auto it_index_expire = index_expire.begin();
+    while ( it_index_expire != index_expire.end() ) {
+        if ( it_index_expire->expire < now() ) {
+            it_index_expire = index_expire.erase(it_index_expire);
+        } else break;
+    }
+
+    transaction trx;
+    trx.actions.emplace_back( action(permission_level(_self, config::active_name), _self, "closeoldref"_n, st_hash{now()}) );
+    trx.delay_sec = cfg.get().delay_params.delay_clear_old_ref;
+    trx.send(_self.value, _self);
 }
 
-EOSIO_DISPATCH(golos::referral, (addreferral)(validateprms)(setparams));
+}
+
+EOSIO_DISPATCH(golos::referral, (addreferral)(validateprms)(setparams)(closeoldref));
