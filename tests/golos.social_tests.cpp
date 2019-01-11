@@ -165,12 +165,6 @@ BOOST_FIXTURE_TEST_CASE(golos_blocked_commenting_test, golos_social_tester) try 
     auto bignum = 1000000;
     init(bignum, 10);
 
-    forumprops props;
-    props.social_contract = cfg::social_name;
-    BOOST_CHECK_EQUAL(success(), post.setprops(props));
-
-    produce_block();
-
     BOOST_TEST_MESSAGE("--- create post: dave");
     BOOST_CHECK_EQUAL(success(), post.create_msg("dave"_n, "permlink"));
     produce_block();
@@ -193,12 +187,6 @@ BOOST_FIXTURE_TEST_CASE(golos_reputation_test, golos_social_tester) try {
 
     auto bignum = 1000000;
     init(bignum, 10);
-
-    forumprops props;
-    props.social_contract = cfg::social_name;
-    BOOST_CHECK_EQUAL(success(), post.setprops(props));
-
-    produce_block();
 
     int perm_i = 1;
     std::string permlink;
