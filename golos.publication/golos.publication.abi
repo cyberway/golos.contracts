@@ -123,6 +123,20 @@
     ]
   },
   {
+    "name": "delegate_voter",
+    "base": "",
+    "fields": [
+      {
+        "name": "delegator",
+        "type": "name"
+      },
+      {
+        "name": "quantity",
+        "type": "asset"
+      }
+    ]
+  }
+  {
     "name": "content",
     "base": "",
     "fields": [
@@ -393,6 +407,10 @@
       {
         "name": "count",
         "type": "int64"
+      },
+      {
+        "name": "delegators",
+        "type": "delegate_voter[]"
       },
       {
         "name": "curatorsw",

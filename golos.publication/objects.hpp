@@ -73,6 +73,13 @@ struct message {
     }
 };
 
+struct delegate_voter {
+    delegate_voter() = default;
+
+    name delegator;
+    asset quantity;
+};
+
 struct voteinfo {
     voteinfo() = default;
 
@@ -82,6 +89,8 @@ struct voteinfo {
     int16_t weight;
     uint64_t time;
     int64_t count;
+
+    std::vector<delegate_voter> delegators;
 
     base_t curatorsw;
     base_t rshares;
