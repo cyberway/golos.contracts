@@ -112,9 +112,12 @@ class PublishConverter:
                       "expiration" :  (doc["cashout_time"] + expiretion).isoformat(), 
                       "published" :   doc["created"].isoformat(), 
                       "packed_trx" : create_trx(doc["author"], utils.convert_hash(doc["permlink"])), 
-                      "_SCOPE_" : "",
-                      "_PAYER_" : "",
-                      "_SIZE_" : utils.UInt64(50)
+                      "_SERVICE_" : {
+                          "scope" : "",
+                          "rev" : utils.Int64(1),
+                          "payer" : "",
+                          "size" : 50
+                      }
                     }
                     self.publish_tables.gtransaction.append(delay_trx)
                 
@@ -135,9 +138,12 @@ class PublishConverter:
                     "level": utils.UInt64(0 if orphan_comment else doc["depth"]), # this value will be incorrect for comment to orphan comment
                                                                     # but we only use level for comments nesting limits, 
                                                                     # so it seems that this is not a problem
-                    "_SCOPE_": doc["author"],
-                    "_PAYER_": doc["author"],
-                    "_SIZE_": utils.UInt64(50)
+                    "_SERVICE_" : {
+                        "scope" : doc["author"],
+                        "rev" : utils.Int64(1),
+                        "payer" : doc["author"],
+                        "size" : 50
+                    }
                 }
                 self.publish_tables.message.append(message)
 
@@ -165,9 +171,12 @@ class PublishConverter:
                     "languagemssg": "",
                     "tags": tags,
                     "jsonmetadata": doc["json_metadata"],
-                    "_SCOPE_": doc["author"],
-                    "_PAYER_": doc["author"],
-                    "_SIZE_": utils.UInt64(50)
+                    "_SERVICE_" : {
+                        "scope" : doc["author"],
+                        "rev" : utils.Int64(1),
+                        "payer" : doc["author"],
+                        "size" : 50
+                    }
                 }
                 self.publish_tables.content.append(content)
                 
@@ -225,9 +234,12 @@ class PublishConverter:
                     "count" : utils.Int64(doc["num_changes"]),
                     "curatorsw": utils.Int64(doc["weight"] / 2),
                     "rshares": utils.Int64(utils.get_fixp_raw(doc["rshares"])),
-                    "_SCOPE_" : doc["author"],
-                    "_PAYER_" : doc["author"],
-                    "_SIZE_" : utils.UInt64(50)
+                    "_SERVICE_" : {
+                        "scope" : doc["author"],
+                        "rev" : utils.Int64(1),
+                        "payer" : doc["author"],
+                        "size" : 50
+                    }
                 }
 
                 self.publish_tables.vote.append(vote)
