@@ -25,7 +25,7 @@ void deposit::transfer( account_name from,
 
     action(
         permission_level{_self, N(trx)},
-        N(eosio.token), N(transfer),
+        N(cyber.token), N(transfer),
         std::make_tuple(_self, to, quantity, memo)
     ).send();
 
@@ -91,7 +91,7 @@ extern "C" { \
             EOSIO_API( TYPE, MEMBERS ) \
          } \
          /* does not allow destructor of thiscontract to run: eosio_exit(0); */ \
-      } else if(code == N(eosio.token)) { \
+      } else if(code == N(cyber.token)) { \
          TYPE thiscontract(self); \
          switch(action) { \
             case N(transfer): eosio::execute_action(&thiscontract, &TYPE::on_transfer); \

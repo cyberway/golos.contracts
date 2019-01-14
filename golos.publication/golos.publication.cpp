@@ -1,7 +1,7 @@
 #include "golos.publication.hpp"
 #include <common/hash64.hpp>
 #include <eosiolib/transaction.hpp>
-#include <eosio.token/eosio.token.hpp>
+#include <cyber.token/cyber.token.hpp>
 #include <golos.social/golos.social.hpp>
 #include <golos.vesting/golos.vesting.hpp>
 #include <golos.charge/golos.charge.hpp>

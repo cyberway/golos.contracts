@@ -3,8 +3,8 @@
 #include <golos.vesting/golos.vesting.hpp>
 #include <common/parameter_ops.hpp>
 #include <common/dispatchers.hpp>
-#include <eosio.system/native.hpp>
-#include <eosio.token/eosio.token.hpp>
+#include <cyber.system/native.hpp>
+#include <cyber.token/cyber.token.hpp>
 #include <eosiolib/transaction.hpp>
 
 namespace golos {

@@ -1,7 +1,7 @@
 #include "golos_tester.hpp"
 #include "golos.posting_test_api.hpp"
 #include "golos.vesting_test_api.hpp"
-#include "eosio.token_test_api.hpp"
+#include "cyber.token_test_api.hpp"
 #include "../golos.publication/types.h"
 #include "contracts.hpp"
 
@@ -32,7 +32,7 @@ protected:
     symbol _sym;
     golos_posting_api post;
     golos_vesting_api vest;
-    eosio_token_api token;
+    cyber_token_api token;
 
     std::vector<account_name> _users;
 public:

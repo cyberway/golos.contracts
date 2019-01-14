@@ -2,7 +2,7 @@
 #include "golos_tester.hpp"
 #include "golos.posting_test_api.hpp"
 #include "golos.vesting_test_api.hpp"
-#include "eosio.token_test_api.hpp"
+#include "cyber.token_test_api.hpp"
 #include "golos.social_test_api.hpp"
 #include <common/config.hpp>
 #include "contracts.hpp"
@@ -22,7 +22,7 @@ class golos_social_tester : public golos_tester {
 protected:
     golos_posting_api post;
     golos_vesting_api vest;
-    eosio_token_api token;
+    cyber_token_api token;
     golos_social_api social;
 
     std::vector<account_name> _users;
