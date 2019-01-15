@@ -54,6 +54,11 @@ struct golos_referral_api: base_contract_api {
          return base_contract_api::get_struct(_code, N(refparams), N(refparams), "referral_state");
      }
 
+    variant get_referral(name referral) {
+        return _tester->get_chaindb_struct(_code, _code, N(referrals), referral, "obj_referral");
+    }
+
+
      string breakout_parametrs(asset min_breakout, asset max_breakout) {
          return string("['breakout_parametrs', {'min_breakout':'") + min_breakout.to_string() + "','max_breakout':'" + max_breakout.to_string() + "'}]";
      }
