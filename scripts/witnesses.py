@@ -36,12 +36,12 @@ def create_witness(doc, exist_accounts):
         "url" : doc["url"],
         "active" : True,
         "total_weight" : utils.UInt64(total_weight),
-    "_SERVICE_" : {
-        "scope" : "gls.ctrl",
-        "rev" : utils.Int64(1),
-        "payer" : doc["owner"],
-        "size" : 61
-    }
+        "_SERVICE_" : {
+            "scope" : "gls.ctrl",
+            "rev" : utils.Int64(1),
+            "payer" : doc["owner"],
+            "size" : 61
+        }
     }
     cyberway.witness.append(witness)
 

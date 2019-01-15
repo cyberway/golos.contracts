@@ -86,12 +86,12 @@ def create_account(doc):
         "creation_date" : doc["created"].isoformat(),
         "code" : "",
         "abi" : "",
-    "_SERVICE_" : {
-        "scope" : "",
-        "rev" : utils.Int64(1),
-        "payer" : "",
-        "size" : 65
-    }
+        "_SERVICE_" : {
+            "scope" : "",
+            "rev" : utils.Int64(1),
+            "payer" : "",
+            "size" : 65
+        }
     }
     cyberway.account.append(account)
 
@@ -102,12 +102,12 @@ def create_account(doc):
         "auth_sequence" : utils.UInt64(0),
         "code_sequence" : utils.UInt64(0),
         "abi_sequence" : utils.UInt64(0),
-    "_SERVICE_" : {
-        "scope" : "",
-        "rev" : utils.Int64(1),
-        "payer" : "",
-        "size" : 48
-    }
+        "_SERVICE_" : {
+            "scope" : "",
+            "rev" : utils.Int64(1),
+            "payer" : "",
+            "size" : 48
+        }
     }
     cyberway.accountseq.append(accountseq)
 
@@ -118,12 +118,12 @@ def create_account(doc):
         "net_weight" : utils.Int64(-1),
         "cpu_weight" : utils.Int64(-1),
         "ram_bytes" : utils.Int64(-1),
-    "_SERVICE_" : {
-        "scope" : "",
-        "rev" : utils.Int64(1),
-        "payer" : "",
-        "size" : 41
-    }
+        "_SERVICE_" : {
+            "scope" : "",
+            "rev" : utils.Int64(1),
+            "payer" : "",
+            "size" : 41
+        }
     }
     cyberway.reslimit.append(reslimit)
 
@@ -141,12 +141,12 @@ def create_account(doc):
             "consumed" : utils.UInt64(0)
         },
         "ram_usage" : utils.UInt64(2724),
-    "_SERVICE_" : {
-        "scope" : "",
-        "rev" : utils.Int64(1),
-        "payer" : "",
-        "size" : 64
-    }
+        "_SERVICE_" : {
+            "scope" : "",
+            "rev" : utils.Int64(1),
+            "payer" : "",
+            "size" : 64
+        }
     }
     cyberway.resusage.append(resusage)
 
