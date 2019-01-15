@@ -10,8 +10,8 @@ namespace golos {
 using namespace eosio;
 
 struct breakout_parametrs : parameter {
-   asset min_breakout = asset(0, symbol("GLS",4));
-   asset max_breakout = asset(0, symbol("GLS",4));
+   asset min_breakout = asset(0, symbol("GLS",3));
+   asset max_breakout = asset(0, symbol("GLS",3));
 
    void validate() const override {
         eosio_assert(min_breakout <= max_breakout, "min_breakout > max_breakout");
