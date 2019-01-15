@@ -1,6 +1,8 @@
 #pragma once
 
 #include <eosiolib/eosio.hpp>
+#include "types.h"
+#include <eosiolib/singleton.hpp>
 
 namespace golos {
 
@@ -22,14 +24,22 @@ struct pinblock_record {
     EOSLIB_SERIALIZE(pinblock_record, (account)(pinning)(blocking))
 };
 
+struct reputation_record {
+    reputation_record() = default;
+
+    int64_t reputation = 0;
+
+    EOSLIB_SERIALIZE(reputation_record, (reputation))
+};
+
 } // structures
 
 namespace tables {
 
 using namespace eosio;
 
-using pb_account_idx = indexed_by<"account"_n, const_mem_fun<structures::pinblock_record, uint64_t, &structures::pinblock_record::primary_key>>;
-using pinblock_table = multi_index<"pinblock"_n, structures::pinblock_record, pb_account_idx>;
+using pinblock_table = multi_index<"pinblock"_n, structures::pinblock_record>;
+using reputation_singleton = eosio::singleton<"reputation"_n, structures::reputation_record>;
 }
 
 

@@ -14,20 +14,31 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 from config import golos_curation_func_str
 from utils import fixp_max
 
+class Struct(object): pass
+
 args = None
 logFile = None
 
 unlockTimeout = 999999999
 
-golosAccounts = [
-    'gls.issuer',
-    'gls.ctrl',
-    'gls.emit',
-    'gls.vesting',
-    'gls.publish',
-    'gls.social',
-    'gls.worker',
+_golosAccounts = [
+    # name           contract
+    ('gls.issuer',   None),
+    ('gls.ctrl',     'golos.ctrl'),
+    ('gls.emit',     'golos.emit'),
+    ('gls.vesting',  'golos.vesting'),
+    ('gls.publish',  'golos.publication'),
+    ('gls.social',   'golos.social'),
+    ('gls.charge',   'golos.charge'),
+    ('gls.referral', 'golos.referral'),
+    ('gls.worker',   None),
 ]
+
+golosAccounts = []
+for (name, contract) in _golosAccounts:
+    acc = Struct()
+    (acc.name, acc.contract) = (name, contract)
+    golosAccounts.append(acc)
 
 def jsonArg(a):
     return " '" + json.dumps(a) + "' "
@@ -209,8 +220,8 @@ def importKeys():
             run(args.cleos + 'wallet import -n "golos" --private-key ' + key)
 
 def createGolosAccounts():
-    for a in golosAccounts:
-        createAccount('eosio', a, args.public_key)
+    for acc in golosAccounts:
+        createAccount('eosio', acc.name, args.public_key)
     updateAuth('gls.issuer',  'witn.major', 'active', [args.public_key], [])
     updateAuth('gls.issuer',  'witn.minor', 'active', [args.public_key], [])
     updateAuth('gls.issuer',  'witn.smajor', 'active', [args.public_key], [])
@@ -218,15 +229,13 @@ def createGolosAccounts():
     updateAuth('gls.ctrl',    'active', 'owner', [args.public_key], ['gls.ctrl@eosio.code'])
     updateAuth('gls.publish', 'active', 'owner', [args.public_key], ['gls.publish@eosio.code'])
     updateAuth('gls.vesting', 'active', 'owner', [args.public_key], ['gls.vesting@eosio.code'])
-    updateAuth('gls.social',  'active', 'owner', [args.public_key], ['gls.social@eosio.code'])
+    updateAuth('gls.social',  'active', 'owner', [args.public_key], ['gls.publish@eosio.code'])
     updateAuth('gls.emit',    'active', 'owner', [args.public_key], ['gls.emit@eosio.code'])
 
 def stepInstallContracts():
-    retry(args.cleos + 'set contract gls.ctrl ' + args.contracts_dir + 'golos.ctrl/')
-    retry(args.cleos + 'set contract gls.emit ' + args.contracts_dir + 'golos.emit/')
-    retry(args.cleos + 'set contract gls.vesting ' + args.contracts_dir + 'golos.vesting/')
-    retry(args.cleos + 'set contract gls.publish ' + args.contracts_dir + 'golos.publication/')
-    retry(args.cleos + 'set contract gls.social ' + args.contracts_dir + 'golos.social/')
+    for acc in golosAccounts:
+        if (acc.contract != None):
+            retry(args.cleos + 'set contract %s %s' % (acc.name, args.contracts_dir + acc.contract))
 
 def stepCreateTokens():
     retry(args.cleos + 'push action eosio.token create ' + jsonArg(["gls.issuer", intToToken(10000000000*10000)]) + ' -p eosio.token')
@@ -234,8 +243,8 @@ def stepCreateTokens():
     #totalAllocation = 10000000*10000 
     #retry(args.cleos + 'push action eosio.token issue ' + jsonArg(["gls.publish", intToToken(totalAllocation), "memo"]) + ' -p gls.publish')
     retry(args.cleos + 'push action gls.vesting createvest ' + jsonArg([args.vesting, 'gls.ctrl']) + '-p gls.issuer')
-    for a in golosAccounts:
-        openTokenBalance(a)
+    for acc in golosAccounts:
+        openTokenBalance(acc.name)
     sleep(1)
 
 def createCommunity():
@@ -293,6 +302,13 @@ def createCommunity():
             }]
         ]]) + '-p gls.ctrl')
 
+    cleos('push action gls.referral setparams ' + jsonArg([[
+        ['breakout_parametrs', {'min_breakout': intToToken(10000), 'max_breakout': intToToken(100000)}],
+        ['expire_parametrs', {'max_expire': 7*24*3600}],  # sec
+        ['percent_parametrs', {'max_percent': 5000}],     # 50.00%
+        ['delay_parametrs', {'delay_clear_old_ref': 1*24*3600}] # sec
+    ]]) + '-p gls.referral')
+
 def createWitnessAccounts():
     for i in range(firstWitness, firstWitness + numWitness):
         a = accounts[i]
@@ -302,26 +318,56 @@ def createWitnessAccounts():
         voteWitness('gls.ctrl', a['name'], a['name'], 10000)
         
 def initCommunity():
-    retry(args.cleos + 'push action gls.emit start ' + jsonArg([]) + '-p gls.emit')
+    retry(args.cleos + 'push action gls.publish setparams ' + jsonArg([[
+        ['st_max_vote_changes', {'value':5}],
+        ['st_cashout_window', {'window': 120, 'upvote_lockout': 15}],
+        ['st_max_beneficiaries', {'value': 64}],
+        ['st_max_comment_depth', {'value': 127}],
+        ['st_social_acc', {'value': 'gls.social'}],
+        ['st_referral_acc', {'value': ''}] # TODO Add referral contract to posting-settings
+    ]]) + '-p gls.publish')
+
     retry(args.cleos + 'push action gls.publish setrules ' + jsonArg({
         "mainfunc":{"str":"x","maxarg":fixp_max},
         "curationfunc":{"str":golos_curation_func_str,"maxarg":fixp_max},
         "timepenalty":{"str":"x/1800","maxarg":1800},
         "curatorsprop":2500,
         "maxtokenprop":5000,
-        "tokensymbol":args.token,
-        "lims":{
-            "restorers":["t / 3600"],
-            "limitedacts":[
-                {"chargenum":0, "restorernum": 0, "cutoffval":20000, "chargeprice":9900},
-                {"chargenum":0, "restorernum": 0, "cutoffval":30000, "chargeprice":1000},
-                {"chargenum":1, "restorernum": 0, "cutoffval":10000, "chargeprice":1000},
-                {"chargenum":0, "restorernum":-1, "cutoffval":10000, "chargeprice":   0}
-            ],
-            "vestingprices":[-1, -1],
-            "minvestings":[0, 0, 0]
-        }
+        "tokensymbol":args.token
     }) + '-p gls.publish')
+
+# TODO initialize the limits in the same way as in Golos
+#        "lims":{
+#            "restorers":["t / 3600"],
+#            "limitedacts":[
+#                {"chargenum":0, "restorernum": 0, "cutoffval":20000, "chargeprice":9900},
+#                {"chargenum":0, "restorernum": 0, "cutoffval":30000, "chargeprice":1000},
+#                {"chargenum":1, "restorernum": 0, "cutoffval":10000, "chargeprice":1000},
+#                {"chargenum":0, "restorernum":-1, "cutoffval":10000, "chargeprice":   0}
+#            ],
+#            "vestingprices":[-1, -1],
+#            "minvestings":[0, 0, 0]
+#        }
+#    }) + '-p gls.publish')
+    limits = [
+        # action            charge_id   price   cutoff  vest_price  min_vest
+        ("post",            0,          -1,     0,      0,          0),
+        ("comment",         0,          -1,     0,      0,          0),
+        ("vote",            0,          -1,     0,      0,          0),
+        ("post bandwidth",  0,          -1,     0,      0,          0),
+    ]
+    for (action, charge_id, price, cutoff, vest_price, min_vest) in limits:
+        retry(args.cleos + 'push action gls.publish setlimit ' + jsonArg({
+            "act": action,
+            "token_code": args.symbol,
+            "charge_id" : charge_id,
+            "price": price,
+            "cutoff": cutoff,
+            "vesting_price": vest_price,
+            "min_vesting": min_vest
+        }) + '-p gls.publish')
+
+    retry(args.cleos + 'push action gls.emit start ' + jsonArg([]) + '-p gls.emit')
 
 def addUsers():
     for i in range(0, firstWitness-1):

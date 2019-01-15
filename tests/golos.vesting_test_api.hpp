@@ -12,27 +12,11 @@ struct golos_vesting_api: base_contract_api {
     symbol _symbol;
 
     //// vesting actions
-    action_result create_vesting(name creator, std::vector<name> issuers = {}) {
-        return create_vesting(creator, _symbol, issuers, golos::config::control_name);
+    action_result create_vesting(name creator) {
+        return create_vesting(creator, _symbol, golos::config::control_name);
     }
-    action_result create_vesting(name creator, symbol vesting_symbol, std::vector<name> issuers = {}, name notify_acc = N(notify.acc)) {
-        if (issuers.size()) {
-            authority auth(1, {});
-            for (auto issuer : issuers) {
-                auth.accounts.emplace_back(permission_level_weight{.permission = {issuer, N(eosio.code)}, .weight = 1});
-            }
-            if (std::find(issuers.begin(), issuers.end(), creator) == issuers.end()) {
-                auth.accounts.emplace_back(permission_level_weight{.permission = {creator, N(eosio.code)}, .weight = 1});
-            }
-            std::sort(auth.accounts.begin(), auth.accounts.end(),
-                [](const permission_level_weight& l, const permission_level_weight& r) {
-                    return std::tie(l.permission.actor, l.permission.permission) <
-                        std::tie(r.permission.actor, r.permission.permission);
-                });
-            _tester->set_authority(creator, golos::config::invoice_name, auth, "owner");
-            _tester->link_authority(creator, _code, golos::config::invoice_name, N(retire));
-        }
-
+    action_result create_vesting(name creator, symbol vesting_symbol, name notify_acc = N(notify.acc)) {
+        _tester->link_authority(creator, _code, golos::config::invoice_name, N(retire));
         return push(N(createvest), creator, args()
             ("symbol", vesting_symbol)
             ("notify_acc", notify_acc)
@@ -90,6 +74,12 @@ struct golos_vesting_api: base_contract_api {
             ("recipient", recipient)
             ("quantity", quantity)
         );
+    }
+
+    action_result set_params(name creator, symbol symbol, std::string json_params) {
+        return push(N(setparams), creator, args()
+            ("symbol", symbol)
+            ("params", json_str_to_obj(json_params)));
     }
 
     action_result timeout(name signer) {
@@ -150,6 +140,25 @@ struct golos_vesting_api: base_contract_api {
             ("delegate_vesting", asset_str(delegated))
             ("received_vesting", asset_str(received))
             ("unlocked_limit", asset_str(unlocked));
+    }
+
+    variant get_params(symbol symbol) const {
+        return base_contract_api::get_struct(symbol.to_symbol_code().value, N(vstngparams), N(vstngparams), "vesting_state");
+    }
+
+    string vesting_withdraw(uint32_t intervals, uint32_t interval_seconds) {
+        return string("['vesting_withdraw', {'intervals':'") + std::to_string(intervals) + "','interval_seconds':'" + std::to_string(interval_seconds) + "'}]";
+    }
+
+    string vesting_amount(uint64_t min_amount) {
+        return string("['vesting_amount', {'min_amount':'") + std::to_string(min_amount) + "'}]";
+    }
+
+    string delegation(uint64_t min_amount, uint64_t min_remainder, uint32_t min_time,
+                      uint16_t max_interest, uint32_t return_time) {
+        return string("['delegation', {'min_amount':'") + std::to_string(min_amount) + "','min_remainder':'" + std::to_string(min_remainder) +
+                "','min_time':'" + std::to_string(min_time) + "','max_interest':'" + std::to_string(max_interest) +
+                "','return_time':'" + std::to_string(return_time) + "'}]";
     }
 
 };

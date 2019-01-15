@@ -4,7 +4,7 @@ namespace golos {
 
 using namespace eosio;
 
-EOSIO_DISPATCH(social, (pin)(unpin)(block)(unblock))
+EOSIO_DISPATCH(social, (pin)(unpin)(block)(unblock)(changereput)(updatemeta)(deletemeta))
 
 void social::pin(name pinner, name pinning) {
     require_auth(pinner);
@@ -46,6 +46,13 @@ void social::unpin(name pinner, name pinning) {
     table.modify(itr, name(), [&](auto& item){
         item.pinning = false;
     });
+
+    if (record_is_empty(*itr))
+        table.erase(itr);
+}
+
+bool social::record_is_empty(structures::pinblock_record record) {
+    return !record.pinning && !record.blocking;
 }
 
 void social::block(name blocker, name blocking) {
@@ -88,6 +95,40 @@ void social::unblock(name blocker, name blocking) {
     table.modify(itr, name(), [&](auto& item){
         item.blocking = false;
     });
+
+    if (record_is_empty(*itr))
+        table.erase(itr);
+}
+
+void social::changereput(name voter, name author, int64_t rshares) {
+    require_auth(_self);
+
+    tables::reputation_singleton voter_single(_self, voter.value);
+    auto voter_rep = voter_single.get_or_default();
+
+    tables::reputation_singleton author_single(_self, author.value);
+    auto author_rep = author_single.get_or_create(author);
+
+    // Rule #1: Must have non-negative reputation to affect another user's reputation
+    if (voter_rep.reputation < 0) {
+        return;
+    }
+
+    // Rule #2: If you are downvoяting another user, you must have more reputation than him
+    if (rshares < 0 && voter_rep.reputation <= author_rep.reputation) {
+        return;
+    }
+
+    author_rep.reputation += rshares;
+    author_single.set(author_rep, author);
+}
+
+void social::updatemeta(name account, accountmeta meta) {
+    require_auth(account);
+}
+
+void social::deletemeta(name account) {
+    require_auth(account);
 }
 
 

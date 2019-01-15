@@ -5,7 +5,8 @@ namespace golos {
 
 
 uint64_t hash64(const char* buf, size_t len) {
-    eosio::checksum256 hash = eosio::sha256(buf, len);
+    ::capi_checksum256 hash;
+    ::sha256(buf, len, &hash);
     return *(reinterpret_cast<const uint64_t *>(&hash));
 }
 

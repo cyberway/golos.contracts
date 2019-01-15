@@ -7,6 +7,12 @@ struct golos_charge_api: base_contract_api {
     :   base_contract_api(tester, code)
     ,   _symbol(sym) {}
     symbol _symbol;
+    
+    void link_invoice_permission(name issuer) {
+        _tester->link_authority(issuer, _code, golos::config::invoice_name, N(use));
+        _tester->link_authority(issuer, _code, golos::config::invoice_name, N(useandstore));
+        _tester->link_authority(issuer, _code, golos::config::invoice_name, N(removestored));
+    }
 
     action_result set_restorer(name issuer, uint8_t charge_id, std::string func_str,
         int64_t max_prev, int64_t max_vesting, int64_t max_elapsed) {
@@ -20,13 +26,14 @@ struct golos_charge_api: base_contract_api {
         );
     }
 
-    action_result use(name issuer, name user, uint8_t charge_id, int64_t price, int64_t cutoff) {
+    action_result use(name issuer, name user, uint8_t charge_id, int64_t price, int64_t cutoff, int64_t vesting_price = 0) {
         return push(N(use), issuer, args()
             ("user", user)
             ("token_code", _symbol.to_symbol_code())
             ("charge_id", charge_id)
             ("price", price)
             ("cutoff", cutoff)
+            ("vesting_price", vesting_price)
         );
     }
     
