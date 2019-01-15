@@ -44,8 +44,6 @@ extern "C" {
             execute_action(&publication::set_limit);
         if (NN(setparams) == action)
             execute_action(&publication::set_params);
-        if (NN(setprops) == action)
-            execute_action(&publication::setprops);
         if (NN(reblog) == action)
             execute_action(&publication::reblog);
     }
@@ -70,6 +68,14 @@ struct posting_params_setter: set_params_visitor<posting_state> {
     bool operator()(const max_comment_depth_prm& param) {
         return set_param(param, &posting_state::max_comment_depth_param);
     }
+    
+    bool operator()(const social_acc_prm& param) {
+        return set_param(param, &posting_state::social_acc_param);
+    }
+    
+    bool operator()(const referral_acc_prm& param) {
+        return set_param(param, &posting_state::referral_acc_param);
+    }
 };
 
 void publication::create_message(name account, std::string permlink,
@@ -88,12 +94,11 @@ void publication::create_message(name account, std::string permlink,
     const auto &cashout_window_param = cfg.get().cashout_window_param;
     const auto &max_beneficiaries_param = cfg.get().max_beneficiaries_param;
     const auto &max_comment_depth_param = cfg.get().max_comment_depth_param;
+    const auto &social_acc_param = cfg.get().social_acc_param;
 
     if (parentacc) {
-        tables::forumprops_singleton props_single(_self, _self.value);
-        auto props = props_single.get_or_default();
-        if (props.social_contract) {
-            eosio_assert(!social::is_blocking(props.social_contract, parentacc, account), "You are blocked by this account");
+        if (social_acc_param.account) {
+            eosio_assert(!social::is_blocking(social_acc_param.account, parentacc, account), "You are blocked by this account");
         }
     }
 
@@ -482,6 +487,7 @@ void publication::set_vote(name voter, name author, string permlink, int16_t wei
 
     posting_params_singleton cfg(_self, _self.value);
     const auto &max_vote_changes_param = cfg.get().max_vote_changes_param;
+    const auto &social_acc_param = cfg.get().social_acc_param;
 
     uint64_t id = hash64(permlink);
     tables::message_table message_table(_self, author.value);
@@ -571,6 +577,12 @@ void publication::set_vote(name voter, name author, string permlink, int16_t wei
         set_and_run(machine, pool->rules.timepenalty.code, {fp_cast<fixp_t>(time_delta, false)}, {{fixp_t(0), FP(pool->rules.timepenalty.maxarg)}}),
         fixp_t(1)), fixp_t(0));
 
+    std::vector<structures::delegate_voter> delegators;
+    auto token_code = pool->state.funds.symbol.code();
+    auto list_delegate_voter = golos::vesting::get_list_delegate(config::vesting_name, voter, token_code);
+    for (auto record : list_delegate_voter) 
+        delegators.push_back( {record.sender, record.quantity} );
+
     vote_table.emplace(voter, [&]( auto &item ) {
         item.id = vote_table.available_primary_key();
         item.message_id = mssg_itr->id;
@@ -578,16 +590,14 @@ void publication::set_vote(name voter, name author, string permlink, int16_t wei
         item.weight = weight;
         item.time = cur_time;
         item.count = mssg_itr->closed ? -1 : (item.count + 1);
+        item.delegators = delegators;
         item.curatorsw = (fixp_t(sumcuratorsw_delta * curatorsw_factor)).data();
         item.rshares = rshares.data();
     });
 
-    tables::forumprops_singleton props_single(_self, _self.value);
-    auto props = props_single.get_or_default();
-
-    if (props.social_contract) {
+    if (social_acc_param.account) {
         INLINE_ACTION_SENDER(golos::social, changereput)
-            (props.social_contract, {props.social_contract, config::active_name},
+            (social_acc_param.account, {social_acc_param.account, config::active_name},
             {voter, author, (rshares.data() >> 6)});
     }
 }
@@ -698,16 +708,6 @@ void publication::set_rules(const funcparams& mainfunc, const funcparams& curati
         item.state.rshares = (wdfp_t(0)).data();
         item.state.rsharesfn = (wdfp_t(0)).data();
     });
-}
-
-void publication::setprops(const forumprops& props) {
-    require_auth(_self);
-
-    tables::forumprops_singleton props_single(_self, _self.value);
-
-    structures::forumprops_record item(props);
-
-    props_single.set(item, _self);
 }
 
 structures::funcinfo publication::load_func(const funcparams& params, const std::string& name, const atmsp::parser<fixp_t>& pa, atmsp::machine<fixp_t>& machine, bool inc) {

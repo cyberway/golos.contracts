@@ -46,6 +46,13 @@ void social::unpin(name pinner, name pinning) {
     table.modify(itr, name(), [&](auto& item){
         item.pinning = false;
     });
+
+    if (record_is_empty(*itr))
+        table.erase(itr);
+}
+
+bool social::record_is_empty(structures::pinblock_record record) {
+    return !record.pinning && !record.blocking;
 }
 
 void social::block(name blocker, name blocking) {
@@ -88,6 +95,9 @@ void social::unblock(name blocker, name blocking) {
     table.modify(itr, name(), [&](auto& item){
         item.blocking = false;
     });
+
+    if (record_is_empty(*itr))
+        table.erase(itr);
 }
 
 void social::changereput(name voter, name author, int64_t rshares) {

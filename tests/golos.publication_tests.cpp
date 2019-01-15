@@ -2,6 +2,7 @@
 #include "golos.posting_test_api.hpp"
 #include "golos.vesting_test_api.hpp"
 #include "cyber.token_test_api.hpp"
+#include "golos.social_test_api.hpp"
 #include "../golos.publication/types.h"
 #include "contracts.hpp"
 
@@ -33,6 +34,7 @@ protected:
     golos_posting_api post;
     golos_vesting_api vest;
     cyber_token_api token;
+    golos_social_api social;
 
     std::vector<account_name> _users;
 public:
@@ -43,7 +45,8 @@ public:
         , post({this, _code, _sym})
         , vest({this, cfg::vesting_name, _sym})
         , token({this, cfg::token_name, _sym})
-        , _users{_code, N(jackiechan), N(brucelee), N(chucknorris)} {
+        , social({this, cfg::social_name, _sym})
+        , _users{_code, N(jackiechan), N(brucelee), N(chucknorris), N(gls.social), N(gls.referral)} {
 
         produce_block();
         create_accounts(_users);
@@ -53,6 +56,7 @@ public:
         install_contract(_code, contracts::posting_wasm(), contracts::posting_abi());
         install_contract(cfg::vesting_name, contracts::vesting_wasm(), contracts::vesting_abi());
         install_contract(cfg::token_name, contracts::token_wasm(), contracts::token_abi());
+        install_contract(cfg::social_name, contracts::social_wasm(), contracts::social_abi());
     }
 
     void init() {
@@ -109,8 +113,11 @@ public:
         auto cashout_window = post.get_str_cashout_window(post.window, post.upvote_lockout);
         auto beneficiaries = post.get_str_beneficiaries(post.max_beneficiaries);
         auto comment_depth = post.get_str_comment_depth(post.max_comment_depth);
+        auto social_acc = post.get_str_social_acc(post.social_acc);
+        auto referral_acc = post.get_str_referral_acc(post.referral_acc);
 
-        auto params = "[" + vote_changes + "," + cashout_window + "," + beneficiaries + "," + comment_depth + "]";
+        auto params = "[" + vote_changes + "," + cashout_window + "," + beneficiaries + "," + comment_depth + 
+            "," + social_acc + "," + referral_acc + "]";
         BOOST_CHECK_EQUAL(success(), post.set_params(params)); 
     } 
 
@@ -155,6 +162,8 @@ protected:
         const string window_less_0         = amsg("Cashout window must be greater than 0.");
         const string wndw_less_upvt_lckt   = amsg("Cashout window can't be less than upvote lockout.");
         const string max_cmmnt_dpth_less_0 = amsg("Max comment depth must be greater than 0.");
+        const string no_social_acc         = amsg("Social account doesn't exist.");
+        const string no_referral_acc       = amsg("Referral account doesn't exist.");
     } err;
 };
 
@@ -179,6 +188,8 @@ BOOST_FIXTURE_TEST_CASE(set_params, golos_publication_tester) try {
     BOOST_CHECK_EQUAL(obj_params["cashout_window"]["upvote_lockout"], post.upvote_lockout);
     BOOST_CHECK_EQUAL(obj_params["max_beneficiaries"]["value"], post.max_beneficiaries);
     BOOST_CHECK_EQUAL(obj_params["max_comment_depth"]["value"], post.max_comment_depth);
+    BOOST_CHECK_EQUAL(obj_params["social_acc"]["value"].as_string(), name{post.social_acc}.to_string());
+    BOOST_CHECK_EQUAL(obj_params["referral_acc"]["value"].as_string(), name{post.referral_acc}.to_string());
 
     auto params = "[" + post.get_str_cashout_window(0, post.upvote_lockout) + "]";
     BOOST_CHECK_EQUAL(err.window_less_0, post.set_params(params));
@@ -188,6 +199,12 @@ BOOST_FIXTURE_TEST_CASE(set_params, golos_publication_tester) try {
 
     params = "[" + post.get_str_comment_depth(0) + "]";
     BOOST_CHECK_EQUAL(err.max_cmmnt_dpth_less_0, post.set_params(params));
+    
+    params = "[" + post.get_str_social_acc(name()) + "]";
+    BOOST_CHECK_EQUAL(err.no_social_acc, post.set_params(params));
+    
+    params = "[" + post.get_str_referral_acc(name()) + "]";
+    BOOST_CHECK_EQUAL(err.no_referral_acc, post.set_params(params));
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE(create_message, golos_publication_tester) try {
