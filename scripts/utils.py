@@ -60,8 +60,8 @@ def get_golos_asset_amount(arg):
     return get_checked_int64(arg * pow(10, BALANCE_PRECISION))
     
 def convert_hash(param):
-    return int(hashlib.sha256(param.encode('ascii')).hexdigest()[16:32],16)
-
+    a=hashlib.sha256(param.encode('ascii')).hexdigest()[:16]
+    return int(a[14:16] + a[12:14] + a[10:12] + a[8:10] + a[6:8] + a[4:6] + a[2:4] + a[0:2], 16)
 
 def printProgressBar (iteration, total, prefix = '', suffix = '', decimals = 1, length = 100, fill = '█'):
     percent = ("{0:." + str(decimals) + "f}").format(100 * (iteration / float(total)))
