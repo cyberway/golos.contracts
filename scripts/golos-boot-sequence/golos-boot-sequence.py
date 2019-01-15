@@ -96,7 +96,7 @@ def intToVesting(value):
 # --------------------- EOSIO functions ---------------------------------------
 
 def transfer(sender, recipient, amount, memo=""):
-    retry(args.cleos + 'push action eosio.token transfer ' +
+    retry(args.cleos + 'push action cyber.token transfer ' +
         jsonArg([sender, recipient, amount, memo]) + '-p %s'%sender)
 
 def createAccount(creator, account, key):
@@ -134,11 +134,11 @@ def openVestingBalance(account):
         jsonArg([account, args.vesting, account]) + '-p %s'%account)
 
 def openTokenBalance(account):
-    retry(args.cleos + 'push action eosio.token open' +
+    retry(args.cleos + 'push action cyber.token open' +
         jsonArg([account, args.token, account]) + '-p %s'%account)
 
 def issueToken(account, amount):
-    retry(args.cleos + 'push action eosio.token issue ' + jsonArg([account, amount, "memo"]) + ' -p gls.issuer')
+    retry(args.cleos + 'push action cyber.token issue ' + jsonArg([account, amount, "memo"]) + ' -p gls.issuer')
 
 def buyVesting(account, amount):
     issueToken(account, amount)
@@ -229,10 +229,10 @@ def stepInstallContracts():
     retry(args.cleos + 'set contract gls.social ' + args.contracts_dir + 'golos.social/')
 
 def stepCreateTokens():
-    retry(args.cleos + 'push action eosio.token create ' + jsonArg(["gls.issuer", intToToken(10000000000*10000)]) + ' -p eosio.token')
+    retry(args.cleos + 'push action cyber.token create ' + jsonArg(["gls.issuer", intToToken(10000000000*10000)]) + ' -p cyber.token')
     #totalAllocation = allocateFunds(0, len(accounts))
     #totalAllocation = 10000000*10000 
-    #retry(args.cleos + 'push action eosio.token issue ' + jsonArg(["gls.publish", intToToken(totalAllocation), "memo"]) + ' -p gls.publish')
+    #retry(args.cleos + 'push action cyber.token issue ' + jsonArg(["gls.publish", intToToken(totalAllocation), "memo"]) + ' -p gls.publish')
     retry(args.cleos + 'push action gls.vesting createvest ' + jsonArg([args.vesting, 'gls.ctrl']) + '-p gls.issuer')
     for a in golosAccounts:
         openTokenBalance(a)

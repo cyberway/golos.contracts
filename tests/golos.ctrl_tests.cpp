@@ -1,7 +1,7 @@
 #include "golos_tester.hpp"
 #include "golos.ctrl_test_api.hpp"
 #include "golos.vesting_test_api.hpp"
-#include "eosio.token_test_api.hpp"
+#include "cyber.token_test_api.hpp"
 #include "contracts.hpp"
 #include "../golos.emit/include/golos.emit/config.hpp"
 
@@ -20,7 +20,7 @@ class golos_ctrl_tester : public golos_tester {
 protected:
     golos_ctrl_api ctrl;
     golos_vesting_api vest;
-    eosio_token_api token;
+    cyber_token_api token;
 
 public:
     golos_ctrl_tester()

@@ -27,7 +27,7 @@ static const auto charge_name = "gls.charge"_n;
 static const auto emission_name = "gls.emit"_n;
 static const auto workers_name = "gls.worker"_n;
 static const auto referral_name = "gls.referral"_n;
-static const auto token_name = "eosio.token"_n;
+static const auto token_name = "cyber.token"_n;
 static const auto internal_name = "eosio"_n;
 
 // permissions

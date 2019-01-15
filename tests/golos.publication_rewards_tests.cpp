@@ -3,7 +3,7 @@
 #include "golos_tester.hpp"
 #include "golos.posting_test_api.hpp"
 #include "golos.vesting_test_api.hpp"
-#include "eosio.token_test_api.hpp"
+#include "cyber.token_test_api.hpp"
 #include <math.h>
 #include "../golos.publication/types.h"
 #include "golos.charge_test_api.hpp"
@@ -56,7 +56,7 @@ class reward_calcs_tester : public extended_tester {
     golos_posting_api post;
     golos_vesting_api vest;
     golos_charge_api charge;
-    eosio_token_api token;
+    cyber_token_api token;
 
 protected:
     account_name _forum_name;
