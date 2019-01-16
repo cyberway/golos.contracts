@@ -76,15 +76,15 @@
         },
         {
             "name": "max_prev",
-            "type": "uint64"
+            "type": "int64"
         },
         {
             "name": "max_vesting",
-            "type": "uint64"
+            "type": "int64"
         },
         {
             "name": "max_elapsed",
-            "type": "uint64"
+            "type": "int64"
         }
     ]
   },
@@ -106,11 +106,15 @@
         },
         {
             "name": "price",
-            "type": "uint64"
+            "type": "int64"
         },
         {
             "name": "cutoff",
-            "type": "uint64"
+            "type": "int64"
+        },
+        {
+            "name": "vesting_price",
+            "type": "int64"
         }
     ]
   },
@@ -136,7 +140,7 @@
         },
         {
             "name": "price",
-            "type": "uint64"
+            "type": "int64"
         }
     ]
   },

@@ -1,5 +1,5 @@
 {
-  "version": "cyberway::abi/1.0",
+  "version": "cyberway::abi/1.1",
   "types": [
     {
       "new_type_name": "base_t",
@@ -18,6 +18,17 @@
       "type": "uint64"
     }
   ],
+  "variants": [{
+    "name": "posting_param",
+    "types": [
+      "st_max_vote_changes",
+      "st_cashout_window",
+      "st_max_beneficiaries",
+      "st_max_comment_depth",
+      "st_social_acc",
+      "st_referral_acc"
+    ]
+  }],
   "structs": [
   {
     "name": "value",
@@ -44,28 +55,6 @@
         {
             "name": "maxarg",
             "type": "base_t"
-        }
-    ]
-  },
-  {
-    "name": "limitsarg",
-    "base": "",
-    "fields": [
-        {
-            "name": "restorers",
-            "type": "string[]"
-        },
-        {
-            "name": "limitedacts",
-            "type": "limitedact[]"
-        },
-        {
-            "name": "vestingprices",
-            "type": "int64[]"
-        },
-        {
-            "name": "minvestings",
-            "type": "int64[]"
         }
     ]
   },
@@ -133,6 +122,20 @@
       }
     ]
   },
+  {
+    "name": "delegate_voter",
+    "base": "",
+    "fields": [
+      {
+        "name": "delegator",
+        "type": "name"
+      },
+      {
+        "name": "quantity",
+        "type": "asset"
+      }
+    ]
+  }
   {
     "name": "content",
     "base": "",
@@ -406,6 +409,10 @@
         "type": "int64"
       },
       {
+        "name": "delegators",
+        "type": "delegate_voter[]"
+      },
+      {
         "name": "curatorsw",
         "type": "base_t"
       },
@@ -413,78 +420,6 @@
         "name": "rshares",
         "type": "base_t"
       }
-    ]
-  },
-  {
-    "name": "limitedact",
-    "base": "",
-    "fields": [
-        {
-            "name": "chargenum",
-            "type": "uint8"
-        },
-        {
-            "name": "restorernum",
-            "type": "uint8"
-        },
-        {
-            "name": "cutoffval",
-            "type": "base_t"
-        },
-        {
-            "name": "chargeprice",
-            "type": "base_t"
-        }
-    ]
-  },
-  {
-    "name": "limits",
-    "base": "",
-    "fields": [
-        {
-            "name": "restorers",
-            "type": "bytecode[]"
-        },
-        {
-            "name": "limitedacts",
-            "type": "limitedact[]"
-        },
-        {
-            "name": "vestingprices",
-            "type": "int64[]"
-        },
-        {
-            "name": "minvestings",
-            "type": "int64[]"
-        }
-    ]
-  },
-  {
-    "name": "chargeinfo",
-    "base": "",
-    "fields": [
-        {
-            "name": "lastupdate",
-            "type": "uint64"
-        },
-        {
-            "name": "data",
-            "type": "base_t"
-        }
-    ]
-  },
-  {
-    "name": "usercharges",
-    "base": "",
-    "fields": [
-        {
-            "name": "poolcreated",
-            "type": "uint64"
-        },
-        {
-            "name": "vals",
-            "type": "chargeinfo[]"
-        }
     ]
   },
   {
@@ -562,12 +497,38 @@
             "type": "rewardrules"
         },
         {
-            "name": "lims",
-            "type": "limits"
-        },
-        {
             "name": "state",
             "type": "poolstate"
+        }
+    ]
+  },
+  {
+    "name": "limitparams",
+    "base": "",
+    "fields": [
+        {
+            "name": "act",
+            "type": "uint64"
+        },
+        {
+            "name": "charge_id",
+            "type": "uint8"
+        },
+        {
+            "name": "price",
+            "type": "int64"
+        },
+        {
+            "name": "cutoff",
+            "type": "int64"
+        },
+        {
+            "name": "vesting_price",
+            "type": "int64"
+        },
+        {
+            "name": "min_vesting",
+            "type": "int64"
         }
     ]
   },
@@ -579,6 +540,40 @@
         "name": "name",
         "type": "name"
       }
+    ]
+  },
+  {
+    "name": "setlimit",
+    "base": "",
+    "fields": [
+        {
+            "name": "act",
+            "type": "string"
+        },
+        {
+            "name": "token_code",
+            "type": "symbol_code"
+        },
+        {
+            "name": "charge_id",
+            "type": "uint8"
+        },
+        {
+            "name": "price",
+            "type": "int64"
+        },
+        {
+            "name": "cutoff",
+            "type": "int64"
+        },
+        {
+            "name": "vesting_price",
+            "type": "int64"
+        },
+        {
+            "name": "min_vesting",
+            "type": "int64"
+        }
     ]
   },
   {
@@ -609,9 +604,131 @@
             "name": "tokensymbol",
             "type": "symbol"
         }
+    ]
+  },
+  {
+    "name": "st_max_vote_changes",
+    "base": "",
+    "fields": [
+      {
+        "name": "value",
+        "type": "uint8"
+      }
+    ]
+  },
+  {
+    "name": "st_cashout_window",
+    "base": "",
+    "fields": [
+      {
+        "name": "window",
+        "type": "uint32"
+      },
+      {
+        "name": "upvote_lockout",
+        "type": "uint32"
+      }
+    ]
+  },
+  {
+    "name": "st_max_beneficiaries",
+    "base": "",
+    "fields": [
+      {
+        "name": "value",
+        "type": "uint8"
+      }
+    ]
+  },
+  {
+    "name": "st_max_comment_depth",
+    "base": "",
+    "fields": [
+      {
+        "name": "value",
+        "type": "uint16"
+      }
+    ]
+  },
+  {
+    "name": "st_social_acc",
+    "base": "",
+    "fields": [
+      {
+        "name": "value",
+        "type": "name"
+      }
+    ]
+  },
+  {
+    "name": "st_referral_acc",
+    "base": "",
+    "fields": [
+      {
+        "name": "value",
+        "type": "name"
+      }
+    ]
+  },
+  {
+    "name": "posting_state",
+    "base": "",
+    "fields": [
+      {
+        "name": "id",
+        "type": "uint64"
+      },
+      {
+        "name": "max_vote_changes",
+        "type": "st_max_vote_changes"
+      },
+      {
+        "name": "cashout_window",
+        "type": "st_cashout_window"
+      },
+      {
+        "name": "max_beneficiaries",
+        "type": "st_max_beneficiaries"
+      },
+      {
+        "name": "max_comment_depth",
+        "type": "st_max_comment_depth"
+      },
+      {
+        "name": "social_acc",
+        "type": "st_social_acc"
+      },
+      {
+        "name": "referral_acc",
+        "type": "st_referral_acc"
+      }
+    ]
+  },
+  {
+    "name": "setparams",
+    "base": "",
+    "fields": [
+      {
+        "name": "params",
+        "type": "posting_param[]"
+      }
+    ]
+  },
+  {
+    "name": "reblog",
+    "base": "",
+    "fields": [
         {
-            "name": "lims",
-            "type": "limitsarg"
+            "name": "rebloger",
+            "type": "name"
+        },
+        {
+            "name": "author",
+            "type": "name"
+        },
+        {
+            "name": "permlink",
+            "type": "string"
         }
     ]
   }
@@ -652,6 +769,18 @@
   {
     "name": "setrules",
     "type": "setrules"
+  },
+  {
+    "name": "setlimit",
+    "type": "setlimit"
+  },
+  {
+    "name": "setparams",
+    "type": "setparams"
+  },
+  {
+    "name": "reblog",
+    "type": "reblog"
   }
   ],
   "tables": [
@@ -715,14 +844,27 @@
     ]
   },
   {
-    "name": "charges",
-    "type": "usercharges",
+    "name": "limittable",
+    "type": "limitparams",
     "indexes": [
        {
           "name": "primary",
           "unique": "true",
           "orders": [
-              {"field": "poolcreated", "order": "asc"}
+              {"field": "act", "order": "asc"}
+          ]
+       }
+    ]
+  },
+  {
+    "name": "pstngparams",
+    "type": "posting_state",
+    "indexes": [
+       {
+          "name": "primary",
+          "unique": "true",
+          "orders": [
+              {"field": "id", "order": "asc"}
           ]
        }
     ]

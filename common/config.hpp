@@ -9,6 +9,7 @@
 #endif
 
 #ifdef UNIT_TEST_ENV
+#   include <eosio/chain/types.hpp>
 template <typename T, T... Str>
 inline eosio::chain::name operator ""_n() {
    return eosio::chain::name({Str...});
@@ -21,9 +22,11 @@ namespace golos { namespace config {
 static const auto control_name = "gls.ctrl"_n;
 static const auto social_name = "gls.social"_n;
 static const auto vesting_name = "gls.vesting"_n;
+static const auto publish_name = "gls.publish"_n;
 static const auto charge_name = "gls.charge"_n;
 static const auto emission_name = "gls.emit"_n;
 static const auto workers_name = "gls.worker"_n;
+static const auto referral_name = "gls.referral"_n;
 static const auto token_name = "eosio.token"_n;
 static const auto internal_name = "eosio"_n;
 

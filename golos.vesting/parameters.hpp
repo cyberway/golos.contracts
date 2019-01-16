@@ -36,11 +36,10 @@ struct delegation : parameter {
     uint32_t return_time;
 
     void validate() const override {
-        eosio_assert(min_amount > 0, "min_amount <= 0");
-        eosio_assert(min_remainder > 0, "min_remainder <= 0");
-        eosio_assert(min_time >= 0, "min_time < 0");
-        eosio_assert(max_interest <= 10000, "max_interest > 10000");
-        eosio_assert(return_time > 0, "return_time <= 0");
+        eosio_assert(min_amount > 0, "delegation min_amount <= 0");
+        eosio_assert(min_remainder > 0, "delegation min_remainder <= 0");
+        eosio_assert(max_interest <= 10000, "delegation max_interest > 10000");
+        eosio_assert(return_time > 0, "delegation return_time <= 0");
     }
 };
 using delegation_param = param_wrapper<delegation,5>;

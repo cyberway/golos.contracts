@@ -28,7 +28,7 @@ def create_witness(doc, exist_accounts):
             continue
         acc_list.append(vote["account"])
     for acc in acc_list:
-        total_weight += int(cyberway.vesting.table.find_one({"_SCOPE_":acc})["vesting"]["amount"].to_decimal())
+        total_weight += int(cyberway.vesting.table.find_one({"_SERVICE_.scope":acc})["vesting"]["amount"].to_decimal())
         
     witness = { 
         "name" : doc["owner"],
@@ -36,9 +36,12 @@ def create_witness(doc, exist_accounts):
         "url" : doc["url"],
         "active" : True,
         "total_weight" : utils.UInt64(total_weight),
-        "_SCOPE_" : 'gls.ctrl',
-        "_PAYER_" : doc["owner"], 
-        "_SIZE_" : utils.UInt64(61) 
+        "_SERVICE_" : {
+            "scope" : "gls.ctrl",
+            "rev" : utils.Int64(1),
+            "payer" : doc["owner"],
+            "size" : 61
+        }
     }
     cyberway.witness.append(witness)
 
@@ -46,9 +49,12 @@ def create_vote(account, witnesses_list):
     witnessvote = {
         "community" : "blog", 
         "witnesses" : witnesses_list, 
-        "_SCOPE_" : account, 
-        "_PAYER_" : account, 
-        "_SIZE_" : utils.UInt64(41) 
+        "_SERVICE_" : {
+            "scope" : account,
+            "rev" : utils.Int64(1),
+            "payer" : account,
+            "size" : 41
+        }
     }
     cyberway.witnessvote.append(witnessvote)
 

@@ -181,8 +181,8 @@ variant golos_tester::get_chaindb_singleton(name code, uint64_t scope, name tbl,
 
 vector<variant> golos_tester::get_all_chaindb_rows(name code, uint64_t scope, name tbl, bool strict) const {
     vector<variant> all;
-    auto cursor_ = _chaindb.lower_bound({code, scope, tbl, N(primary)}, nullptr, 0);
-    cyberway::chaindb::cursor_request cursor = {code, cursor_};
+    auto info = _chaindb.lower_bound({code, scope, tbl, N(primary)}, nullptr, 0);
+    cyberway::chaindb::cursor_request cursor = {code, info.cursor};
     auto v = _chaindb.value_at_cursor(cursor);
     if (strict) {
         BOOST_TEST_REQUIRE(!v.is_null());

@@ -1,13 +1,6 @@
-set(CMAKE_CXX_FLAGS " -abigen ${CMAKE_CXX_FLAGS} -std=c++17")
-add_executable(golos.config.wasm ${CMAKE_CURRENT_SOURCE_DIR}/src/golos.config.cpp)
+add_contract_with_abi(golos.config abi/golos.config.abi src/golos.config.cpp)
 target_include_directories(golos.config.wasm
    PUBLIC
    ${CMAKE_CURRENT_SOURCE_DIR}/include
    ${CMAKE_CURRENT_SOURCE_DIR}/../golos.emit/include
    ${CMAKE_CURRENT_SOURCE_DIR}/..)
-
-set_target_properties(golos.config.wasm
-   PROPERTIES
-   RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
-
-configure_file("${CMAKE_CURRENT_SOURCE_DIR}/abi/golos.config.abi" "${CMAKE_CURRENT_BINARY_DIR}" COPYONLY)

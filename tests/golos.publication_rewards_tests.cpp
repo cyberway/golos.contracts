@@ -71,23 +71,22 @@ protected:
         const string not_positive       = amsg("check positive failed for time penalty func");
         const string not_monotonic      = amsg("check monotonic failed for time penalty func");
         const string fp_cast_overflow   = amsg("fp_cast: overflow");
-
-        const string limit_no_power     = amsg("publication::apply_limits: can't post, not enough power");
-        const string limit_no_power_vest= amsg("publication::apply_limits: can't post, not enough power, vesting payment is disabled");
-
+        const string limit_no_power     = amsg("not enough power");
+        const string limit_no_vesting     = amsg("insufficient effective vesting amount");
         const string delete_upvoted     = amsg("Cannot delete a comment with net positive votes.");
     } err;
 
     void init(int64_t issuer_funds, int64_t user_vesting_funds) {
         auto total_funds = issuer_funds + _users.size() * user_vesting_funds;
-        BOOST_CHECK_EQUAL(success(), token.create(_issuer, asset(total_funds, _token_symbol)));
+        BOOST_CHECK_EQUAL(success(), token.create(_issuer, asset(total_funds, _token_symbol), {_issuer, cfg::charge_name, _forum_name}));
         step();
 
         BOOST_CHECK_EQUAL(success(), token.issue(_issuer, _issuer, asset(total_funds, _token_symbol), "HERE COULD BE YOUR ADVERTISEMENT"));
         step();
 
         BOOST_CHECK_EQUAL(success(), token.open(_forum_name, _token_symbol, _forum_name));
-        BOOST_CHECK_EQUAL(success(), vest.create_vesting(_issuer, _token_symbol, {_issuer, _forum_name}, cfg::control_name));
+        BOOST_CHECK_EQUAL(success(), vest.create_vesting(_issuer, _token_symbol, cfg::control_name));
+        charge.link_invoice_permission(_issuer);
         step();
 
         BOOST_CHECK_EQUAL(success(), vest.open(_forum_name, _token_symbol, _forum_name));
@@ -103,6 +102,16 @@ protected:
         _req.clear();
         _res.clear();
     }
+
+    void init_params() {
+        auto vote_changes = post.get_str_vote_changes(post.max_vote_changes);
+        auto cashout_window = post.get_str_cashout_window(post.window, post.upvote_lockout);
+        auto beneficiaries = post.get_str_beneficiaries(post.max_beneficiaries);
+        auto comment_depth = post.get_str_comment_depth(post.max_comment_depth);
+
+        auto params = "[" + vote_changes + "," + cashout_window + "," + beneficiaries + "," + comment_depth + "]";
+        BOOST_CHECK_EQUAL(success(), post.set_params(params));
+    } 
 
 public:
     reward_calcs_tester()
@@ -195,7 +204,26 @@ public:
             [](double, double, double){ return 0.0; }
         }
     ) {
-        auto ret =  post.set_rules(mainfunc, curationfunc, timepenalty, curatorsprop, MAXTOKENPROB, lims);
+        static const std::vector<std::string> act_strings{"post", "comment", "vote", "post bandwidth"};
+        static const int64_t max_arg = static_cast<int64_t>(std::numeric_limits<fixp_t>::max());
+        
+        BOOST_REQUIRE_EQUAL(act_strings.size(), lims.limitedacts.size());
+        for (size_t i = 0; i < act_strings.size(); i++) {
+            BOOST_REQUIRE_EQUAL(success(), charge.set_restorer(_issuer, lims.limitedacts[i].chargenum, 
+                lims.restorers[lims.limitedacts[i].restorernum], max_arg, max_arg, max_arg));
+            step();
+            BOOST_REQUIRE_EQUAL(success(), post.set_limit(
+                act_strings[i], 
+                lims.limitedacts[i].chargenum,
+                lims.limitedacts[i].chargeprice,
+                lims.limitedacts[i].cutoffval,
+                lims.vestingprices.size() > i ? lims.vestingprices[i] : 0,
+                lims.minvestings.size() > i ? lims.minvestings[i] : 0
+            ));
+            step();
+        }
+        
+        auto ret =  post.set_rules(mainfunc, curationfunc, timepenalty, curatorsprop, MAXTOKENPROB);
         if (ret == success()) {
             double unclaimed_funds = 0.0;
             for (auto& p : _state.pools) {
@@ -334,7 +362,7 @@ public:
         for (auto itr_p = _state.pools.begin(); itr_p != _state.pools.end(); itr_p++) {
             auto& p = *itr_p;
             for (auto itr_m = p.messages.begin(); itr_m != p.messages.end();) {
-                if ((cur_time().to_seconds() - itr_m->created) > cfg::cashout_window) {
+                if ((cur_time().to_seconds() - itr_m->created) > post.window) {
                     auto m = *itr_m;
                     double pool_rsharesfn_sum = p.get_rsharesfn_sum();
 
@@ -509,15 +537,6 @@ public:
         }
         return ret;
     }
-
-    action_result set_restorer(name user, unsigned char suffix, std::string func_str,
-        uint64_t max_prev, uint64_t max_vesting, uint64_t max_elapsed) {
-        return charge.set_restorer(user, suffix, func_str, max_prev, max_vesting, max_elapsed);
-    }
-
-    action_result use(name issuer, name user, unsigned char suffix, uint64_t price, uint64_t cutoff) {
-        return charge.use(issuer, user, suffix, price, cutoff);
-    }
 };
 
 BOOST_AUTO_TEST_SUITE(reward_calcs_tests)
@@ -526,6 +545,7 @@ BOOST_FIXTURE_TEST_CASE(basic_tests, reward_calcs_tester) try {
     BOOST_TEST_MESSAGE("Basic publication_rewards tests");
     auto bignum = 500000000000;
     init(bignum, 500000);
+    init_params();
     step();
     BOOST_TEST_MESSAGE("--- setrules");
     BOOST_CHECK_EQUAL(err.not_monotonic,
@@ -614,6 +634,7 @@ BOOST_FIXTURE_TEST_CASE(timepenalty_test, reward_calcs_tester) try {
     BOOST_TEST_MESSAGE("Simple timepenalty test");
     auto bignum = 500000000000;
     init(bignum, 500000);
+    init_params();
     step();
 
     BOOST_CHECK_EQUAL(success(), setrules({"x", bignum}, {"x", bignum}, {"x/50", 50}, 2500,
@@ -641,22 +662,23 @@ BOOST_FIXTURE_TEST_CASE(limits_test, reward_calcs_tester) try {
     BOOST_TEST_MESSAGE("Simple limits test");
     auto bignum = 500000000000;
     init(bignum, 500000);
+    init_params();
 
     BOOST_CHECK_EQUAL(success(), setrules({"x", bignum}, {"sqrt(x)", bignum}, {"x / 1800", 1800},
         0, //curatorsprop
         [](double x){ return x; }, [](double x){ return sqrt(x); }, [](double x){ return x / 1800.0; },
         {
-            .restorers = {"sqrt(v / 500000) * (t / 150)", "t / 250"},
+            .restorers = {"t / 250", "sqrt(v / 500000) * (t / 150)"},
             .limitedacts = {
-                {.chargenum = 0, .restorernum = 0,                 .cutoffval = 20000, .chargeprice = 9900}, //POST
-                {.chargenum = 0, .restorernum = 0,                 .cutoffval = 30000, .chargeprice = 1000}, //COMMENT
-                {.chargenum = 1, .restorernum = 1,                 .cutoffval = 10000, .chargeprice = 1000}, //VOTE
-                {.chargenum = 0, .restorernum = disabled_restorer, .cutoffval = 10000, .chargeprice = 0}},   //POST BW
+                {.chargenum = 1, .restorernum = 1, .cutoffval = 20000, .chargeprice = 9900}, //POST
+                {.chargenum = 1, .restorernum = 1, .cutoffval = 30000, .chargeprice = 1000}, //COMMENT
+                {.chargenum = 0, .restorernum = 0, .cutoffval = 10000, .chargeprice = 1000}, //VOTE
+                {.chargenum = 1, .restorernum = 1, .cutoffval = 10000, .chargeprice = 0}},   //POST BW
             .vestingprices = {150000, -1},
             .minvestings = {300000, 100000, 100000}
         }, {
-            [](double p, double v, double t){ return sqrt(v / 500000.0) * (t / 150.0); },
-            [](double p, double v, double t){ return t / 250.0; }
+            [](double p, double v, double t){ return t / 250.0; },
+            [](double p, double v, double t){ return sqrt(v / 500000.0) * (t / 150.0); }
         })
     );
 
@@ -673,7 +695,7 @@ BOOST_FIXTURE_TEST_CASE(limits_test, reward_calcs_tester) try {
     }
     BOOST_CHECK_EQUAL(err.limit_no_power, create_message(N(bob), "oops", N(bob), "permlink"));
     BOOST_CHECK_EQUAL(success(), create_message(N(bob), "I can pay for posting", N(), "", {}, 5000, true));
-    BOOST_CHECK_EQUAL(err.limit_no_power_vest,
+    BOOST_CHECK_EQUAL(err.limit_no_power,
         create_message(N(bob), "only if it is not a comment", N(bob), "permlink", {}, 5000, true));
     BOOST_CHECK_EQUAL(success(), addvote(N(alice), N(bob), "I can pay for posting", 10000));
     BOOST_CHECK_EQUAL(success(), addvote(N(bob), N(bob), "I can pay for posting", 10000)); //He can also vote
@@ -689,6 +711,27 @@ BOOST_FIXTURE_TEST_CASE(limits_test, reward_calcs_tester) try {
     run(seconds(45));   // TODO: remove magic number
     BOOST_CHECK_EQUAL(success(), create_message(N(bob), ":)"));
     check();
+    BOOST_CHECK_EQUAL(success(), setrules({"x", bignum}, {"sqrt(x)", bignum}, {"x / 1800", 1800},
+        0, //curatorsprop
+        [](double x){ return x; }, [](double x){ return sqrt(x); }, [](double x){ return x / 1800.0; },
+        {
+            .restorers = {"t"},
+            .limitedacts = {
+                {.chargenum = 0, .restorernum = 0, .cutoffval = 0, .chargeprice = 0}, //POST
+                {.chargenum = 0, .restorernum = 0, .cutoffval = 0, .chargeprice = 0}, //COMMENT
+                {.chargenum = 0, .restorernum = 0, .cutoffval = 0, .chargeprice = 0}, //VOTE
+                {.chargenum = 0, .restorernum = 0, .cutoffval = 0, .chargeprice = 0}},   //POST BW
+            .vestingprices = {-1, -1},
+            .minvestings = {400000, 0, 0}
+        }, {
+            [](double p, double v, double t){ return 0.0; },
+            [](double p, double v, double t){ return 0.0; }
+        })
+    );
+    check();
+    BOOST_CHECK_EQUAL(err.limit_no_vesting, create_message(N(bob), ":'("));
+    BOOST_CHECK_EQUAL(success(), create_message(N(bob1), ":D"));
+    check();
     show();
 } FC_LOG_AND_RETHROW()
 
@@ -697,6 +740,7 @@ BOOST_FIXTURE_TEST_CASE(rshares_sum_overflow_test, reward_calcs_tester) try {
     auto bignum = 500000000000;
     auto fixp_max = std::numeric_limits<fixp_t>::max();
     init(bignum, fixp_max / 2);
+    init_params();
     step();
 
     BOOST_TEST_MESSAGE("--- setrules");
@@ -723,6 +767,7 @@ BOOST_FIXTURE_TEST_CASE(golos_curation_test, reward_calcs_tester) try {
     int64_t maxfp = std::numeric_limits<fixp_t>::max();
     auto bignum = 500000000000;
     init(bignum, 500000);
+    init_params();
     step();
     BOOST_TEST_MESSAGE("--- setrules");
     using namespace golos_curation;
@@ -744,32 +789,6 @@ BOOST_FIXTURE_TEST_CASE(golos_curation_test, reward_calcs_tester) try {
         check();
     }
     run(seconds(170));
-    check();
-
-} FC_LOG_AND_RETHROW()
-
-BOOST_FIXTURE_TEST_CASE(charge_test, reward_calcs_tester) try {
-    init(1, 1);
-
-    BOOST_CHECK_EQUAL(success(), set_restorer(_issuer, 'c', "t",
-        10000, static_cast<uint64_t>(std::numeric_limits<fixp_t>::max() / fixp_t(10)), 60 * 60 * 24 * 40));
-    for (size_t i = 0; i < 10; i++) {
-        BOOST_TEST_MESSAGE("--- use_ " << i);
-        BOOST_CHECK_EQUAL(success(), use(_issuer, _users[0], 'c', 100, 1000));
-        check();
-    }
-    BOOST_TEST_MESSAGE("--- try to use");
-    BOOST_CHECK_EQUAL("assertion failure with message: new_val > cutoff", use(_issuer, _users[0], 'c', 100, 1000));
-    check();
-    BOOST_TEST_MESSAGE("--- waiting 900");
-    run(seconds(900));
-    BOOST_TEST_MESSAGE("--- try to use (cutoff == 1000)");
-    BOOST_CHECK_EQUAL("assertion failure with message: new_val > cutoff", use(_issuer, _users[0], 'c', 1000, 1000));
-    check();
-    BOOST_TEST_MESSAGE("--- waiting 100");
-    run(seconds(100));
-    BOOST_TEST_MESSAGE("--- use (cutoff == 1000)");
-    BOOST_CHECK_EQUAL(success(), use(_issuer, _users[0], 'c', 1000, 1000));
     check();
 
 } FC_LOG_AND_RETHROW()

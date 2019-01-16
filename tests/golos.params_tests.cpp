@@ -32,7 +32,7 @@ public:
         , token({this, cfg::token_name, _token})
     {
         create_accounts({cfg::emission_name, BLOG, N(witn1), N(witn2), N(witn3), N(witn4), N(witn5), _alice, _bob, //_carol,
-            cfg::control_name, cfg::vesting_name, cfg::token_name, cfg::workers_name});
+            cfg::control_name, cfg::vesting_name, cfg::token_name, cfg::workers_name, N(issuer)});
         produce_block();
 
         // TODO: maybe create separate parameters tester contract to reduce dependencies
@@ -99,8 +99,8 @@ public:
     }
 
     void prepare_balances() {
-        BOOST_CHECK_EQUAL(success(), token.create(BLOG, dasset(100500)));
-        BOOST_CHECK_EQUAL(success(), vest.create_vesting(BLOG, _token, {cfg::emission_name}));
+        BOOST_CHECK_EQUAL(success(), token.create(BLOG, dasset(100500), {cfg::emission_name}));
+        BOOST_CHECK_EQUAL(success(), vest.create_vesting(BLOG, _token));
         BOOST_CHECK_EQUAL(success(), vest.open(cfg::vesting_name, _token, cfg::vesting_name));
         vector<std::pair<uint64_t,double>> amounts = {
             {_alice, 800}, {_bob, 700},

@@ -17,11 +17,11 @@ class PublishConverter:
 
     def count_childcount(self):
         self.childcount_dict = {}
-        cursor = self.messages.find({}, {"childcount":1,"id":1,"_SCOPE_":1,"parent_id":1,"parentacc":1})
+        cursor = self.messages.find({}, {"childcount":1,"id":1,"_SERVICE_.scope":1,"parent_id":1,"parentacc":1})
         total = cursor.count()
         processed = 0
         for doc in cursor:
-            key = (doc["_SCOPE_"], int(doc["id"].to_decimal()))
+            key = (doc["_SERVICE_"]["scope"], int(doc["id"].to_decimal()))
             if not key in self.childcount_dict:
                 self.childcount_dict[key] = [0, int(doc["childcount"].to_decimal())]
             else:
@@ -50,7 +50,7 @@ class PublishConverter:
             processed += 1
             if data[0] != data[1]:
                 update_filter = {
-                    "$and":[{"id":utils.UInt64(key[1])}, {"_SCOPE_":key[0]}]
+                    "$and":[{"id":utils.UInt64(key[1])}, {"_SERVICE_.scope":key[0]}]
                 }
                 update_obj = {
                     "$set":{"childcount":utils.UInt64(data[0])}
