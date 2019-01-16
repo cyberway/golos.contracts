@@ -54,7 +54,7 @@ void referral::addreferral(name referrer, name referral, uint32_t percent,
     eosio_assert(expire   <= max_expire, "expire > current block time + max_expire");
     eosio_assert(breakout >  cfg.get().breakout_params.min_breakout, "breakout <= min_breakout");
     eosio_assert(breakout <= cfg.get().breakout_params.max_breakout, "breakout > max_breakout");
-    eosio_assert(percent  <= cfg.get().percent_params.max_perсent, "specified parameter is greater than limit");
+    eosio_assert(percent  <= cfg.get().percent_params.max_percent, "specified parameter is greater than limit");
  
     referrals.emplace(referrer, [&]( auto &item ) {
         item.referral = referral;

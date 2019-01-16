@@ -10,8 +10,8 @@ namespace golos {
 using namespace eosio;
 
 struct breakout_parametrs : parameter {
-   asset min_breakout = asset(0, symbol("GLS",4));
-   asset max_breakout = asset(0, symbol("GLS",4));
+   asset min_breakout = asset(0, symbol("GLS",3));
+   asset max_breakout = asset(0, symbol("GLS",3));
 
    void validate() const override {
         eosio_assert(min_breakout <= max_breakout, "min_breakout > max_breakout");
@@ -29,10 +29,10 @@ struct expire_parametrs : parameter {
 using expire_param = param_wrapper<expire_parametrs,1>;
 
 struct percent_parametrs : parameter {
-   uint32_t max_perсent;
+   uint32_t max_percent;
 
    void validate() const override {
-        eosio_assert(max_perсent <= 10000, "max_perсent > 100.00%");
+        eosio_assert(max_percent <= 10000, "max_percent > 100.00%");
    }
 };
 using percent_param = param_wrapper<percent_parametrs,1>;
