@@ -1,6 +1,6 @@
 #include "golos_tester.hpp"
 #include "golos.referral_test_api.hpp"
-#include "eosio.token_test_api.hpp"
+#include "cyber.token_test_api.hpp"
 #include "contracts.hpp"
 
 
@@ -60,7 +60,7 @@ protected:
     const uint32_t delay_clear_old_ref = 650; // 650 sec
 
     golos_referral_api referral;
-    eosio_token_api token;
+    cyber_token_api token;
 };
 
 BOOST_AUTO_TEST_SUITE(golos_referral_tests)
@@ -125,19 +125,30 @@ BOOST_FIXTURE_TEST_CASE(transfer_tests, golos_referral_tester) try {
     auto expire = 8;
     auto breakout = 10;
 
+    BOOST_TEST_MESSAGE("--- creating referral 'gls.referral'");
     BOOST_CHECK(!referral.get_referral(cfg::referral_name));
     BOOST_CHECK_EQUAL(success(), referral.create_referral(N(issuer), cfg::referral_name, 500, cur_time().to_seconds() + expire, token.make_asset(breakout)));
     BOOST_CHECK_EQUAL(referral.get_referral(cfg::referral_name)["referral"].as<name>(), cfg::referral_name);
+
+    BOOST_TEST_MESSAGE("--- creating referral 'vania'");
     BOOST_CHECK(!referral.get_referral(N(vania)));
     BOOST_CHECK_EQUAL(success(), referral.create_referral(N(issuer), N(vania), 500, cur_time().to_seconds() + expire, token.make_asset(breakout)));
     BOOST_CHECK_EQUAL(referral.get_referral(N(vania))["referral"].as<name>(), N(vania));
+
+    BOOST_TEST_MESSAGE("--- issue tokens for users");
     BOOST_CHECK_EQUAL(success(), token.create(cfg::emission_name, token.make_asset(10000)));
     BOOST_CHECK_EQUAL(success(), token.issue(cfg::emission_name, N(vania), token.make_asset(30), "issue 30 tokens for vania"));
     BOOST_CHECK_EQUAL(success(), token.issue(cfg::emission_name, N(tania), token.make_asset(30), "issue 30 tokens for tania"));
+
+    BOOST_TEST_MESSAGE("--- checking for asserts");
     BOOST_CHECK_EQUAL(err.referral_not_exist, token.transfer(N(tania), cfg::referral_name, token.make_asset(breakout), ""));
     BOOST_CHECK_EQUAL(err.funds_not_equal, token.transfer(N(vania), cfg::referral_name, token.make_asset(breakout-1), ""));
     BOOST_CHECK_EQUAL(err.funds_not_equal, token.transfer(N(vania), cfg::referral_name, token.make_asset(breakout+1), ""));
+
+    BOOST_TEST_MESSAGE("--- checking that transfer was successful");
     BOOST_CHECK_EQUAL(success(), token.transfer(N(vania), cfg::referral_name, token.make_asset(breakout), ""));
+
+    BOOST_TEST_MESSAGE("--- checking that record about referral was removed");
     BOOST_CHECK(!referral.get_referral(N(vania)));
 } FC_LOG_AND_RETHROW()
   
