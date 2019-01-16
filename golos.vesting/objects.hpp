@@ -136,7 +136,7 @@ struct shash {          // ???
 namespace tables {
 using vesting_table = eosio::multi_index<N(vesting), structures::vesting_info>;
 
-using account_table = eosio::multi_index<N(balances), structures::user_balance>;
+using account_table = eosio::multi_index<N(accounts), structures::user_balance>;
 
 using index_sender = indexed_by<N(sender), const_mem_fun<structures::delegate_record, uint64_t, &structures::delegate_record::sender_key>>;
 using index_recipient = indexed_by<N(recipient), const_mem_fun<structures::delegate_record, uint64_t, &structures::delegate_record::recipient_key>>;
@@ -147,7 +147,7 @@ using index_date = indexed_by<N(date), const_mem_fun<structures::return_delegate
 using return_delegate_table = multi_index<N(rdelegate), structures::return_delegate, index_date>;
 
 using index_payout_time = indexed_by<N(payouttime), const_mem_fun<structures::convert_of_tokens, uint64_t, &structures::convert_of_tokens::payout_time_key>>;
-using convert_table = multi_index<N(converttable), structures::convert_of_tokens, index_payout_time>;
+using convert_table = multi_index<N(convert), structures::convert_of_tokens, index_payout_time>;
 }
 
 

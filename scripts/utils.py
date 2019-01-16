@@ -9,9 +9,36 @@ fract_digits = {
 fixp_max = 2**(63 - fract_digits['fixp']) - 1
 
 import hashlib
+import bson
 from decimal import Decimal
-from bson.decimal128 import Decimal128
+from bson import decimal128
 from config import BALANCE_PRECISION
+
+
+def Int64(value):
+    return bson.Int64(value)
+
+def UInt64(value):
+    return decimal128.Decimal128(Decimal(value))
+
+def Int128(value):
+    val = value
+    if val < 0:
+        val += (1<<128)
+    return {
+        "binary": bson.Binary((0).to_bytes(1,"big") + val.to_bytes(16,"big")),
+        "string": "%d"%value
+    }
+
+def UInt128(value):
+    return {
+        "binary": bson.Binary((1).to_bytes(1,"big") + value.to_bytes(16,"big")),
+        "string": "%d"%value
+    }
+
+
+def Decimal128(value):
+    return decimal128.Decimal128(Decimal(value))
 
 def get_checked_int64(arg):
     if arg > int64_max:
@@ -34,9 +61,7 @@ def get_golos_asset_amount(arg):
     
 def convert_hash(param):
     a=hashlib.sha256(param.encode('ascii')).hexdigest()[:16]
-    q=int(a[14:16] + a[12:14] + a[10:12] + a[8:10] + a[6:8] + a[4:6] + a[2:4] + a[0:2], 16)
-    return q if q < 2**63 else -(2**64-q)
-
+    return int(a[14:16] + a[12:14] + a[10:12] + a[8:10] + a[6:8] + a[4:6] + a[2:4] + a[0:2], 16)
 
 def printProgressBar (iteration, total, prefix = '', suffix = '', decimals = 1, length = 100, fill = '█'):
     percent = ("{0:." + str(decimals) + "f}").format(100 * (iteration / float(total)))

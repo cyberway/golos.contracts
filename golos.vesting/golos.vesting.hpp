@@ -34,28 +34,28 @@ public:
     void calculate_delegate_vesting();
 
     static inline asset get_account_vesting(name code, name account, symbol_code sym) {
-        tables::account_table balances(code, account.value);
-        const auto& balance = balances.get(sym.raw());
-        return balance.vesting;
+        tables::account_table accounts(code, account.value);
+        const auto& account_obj = accounts.get(sym.raw());
+        return account_obj.vesting;
     }
     static inline asset get_account_effective_vesting(name code, name account, symbol_code sym) {
-        tables::account_table balances(code, account.value);
-        const auto& balance = balances.get(sym.raw());
-        return balance.effective_vesting();
+        tables::account_table accounts(code, account.value);
+        const auto& account_obj = accounts.get(sym.raw());
+        return account_obj.effective_vesting();
     }
     static inline asset get_account_available_vesting(name code, name account, symbol_code sym) {
-        tables::account_table balances(code, account.value);
-        const auto& balance = balances.get(sym.raw());
-        return balance.available_vesting();
+        tables::account_table accounts(code, account.value);
+        const auto& account_obj = accounts.get(sym.raw());
+        return account_obj.available_vesting();
     }
     static inline asset get_account_unlocked_vesting(name code, name account, symbol_code sym) {
-        tables::account_table balances(code, account.value);
-        const auto& balance = balances.get(sym.raw());
-        return balance.unlocked_vesting();
+        tables::account_table accounts(code, account.value);
+        const auto& account_obj = accounts.get(sym.raw());
+        return account_obj.unlocked_vesting();
     }
     static inline bool balance_exist(name code, name owner, symbol_code sym) {
-        tables::account_table balances(code, owner.value);
-        return balances.find(sym.raw()) != balances.end();
+        tables::account_table accounts(code, owner.value);
+        return accounts.find(sym.raw()) != accounts.end();
     }
 
     static inline std::vector<structures::delegate_record> 
