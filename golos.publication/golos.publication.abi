@@ -827,6 +827,14 @@
           "orders": [
               {"field": "message_id", "order": "asc"}
           ]
+       },
+       {
+          "name": "combine",
+          "unique": "false",
+          "orders": [
+              {"field": "message_id", "order": "asc"},
+              {"field": "voter", "order": "asc"}
+          ]
        }
     ]
   },

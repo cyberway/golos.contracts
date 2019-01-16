@@ -102,6 +102,14 @@ struct voteinfo {
     uint64_t by_message() const {
         return message_id;
     }
+
+    uint128_t by_combine_fields() const {
+        return combine_fields(message_id, voter);
+    }
+
+    static uint128_t combine_fields(const uint64_t &message_id, const name &voter) {
+        return (uint128_t{message_id} << 64) | voter.value;
+    }
 };
 
 struct funcinfo {
@@ -175,7 +183,8 @@ using content_table = multi_index<N(contenttable), structures::content, content_
 
 using vote_id_index = indexed_by<N(id), const_mem_fun<structures::voteinfo, uint64_t, &structures::voteinfo::primary_key>>;
 using vote_messageid_index = indexed_by<N(messageid), const_mem_fun<structures::voteinfo, uint64_t, &structures::voteinfo::by_message>>;
-using vote_table = multi_index<N(votetable), structures::voteinfo, vote_id_index, vote_messageid_index>;
+using vote_group_index = indexed_by<N(combine), const_mem_fun<structures::voteinfo, uint128_t, &structures::voteinfo::by_combine_fields>>;
+using vote_table = multi_index<N(votetable), structures::voteinfo, vote_id_index, vote_messageid_index, vote_group_index>;
 
 using reward_pools = multi_index<N(rewardpools), structures::rewardpool>;
 using limit_table = multi_index<N(limittable), structures::limitparams>;
