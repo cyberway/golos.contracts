@@ -187,11 +187,11 @@ void vesting::unlock_limit(name owner, asset quantity) {
     auto sym = quantity.symbol;
     eosio_assert(quantity.is_valid(), "invalid quantity");
     eosio_assert(quantity.amount >= 0, "the number of tokens should not be less than 0");
-    tables::account_table balances(_self, owner.value);
-    const auto& b = balances.get(sym.code().raw(), "no balance object found");
+    tables::account_table accounts(_self, owner.value);
+    const auto& b = accounts.get(sym.code().raw(), "no balance object found");
     eosio_assert(b.unlocked_limit.symbol == sym, "symbol precision mismatch");
 
-    balances.modify(b, name(), [&](auto& item) {
+    accounts.modify(b, name(), [&](auto& item) {
         item.unlocked_limit = quantity;
     });
 }

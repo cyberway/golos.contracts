@@ -785,7 +785,7 @@
   ],
   "tables": [
   {
-    "name": "messagetable",
+    "name": "message",
     "type": "message",
     "indexes": [
        {
@@ -798,7 +798,7 @@
     ]
   },
   {
-    "name": "contenttable",
+    "name": "content",
     "type": "content",
     "indexes": [
        {
@@ -811,7 +811,7 @@
     ]
   },
   {
-    "name": "votetable",
+    "name": "vote",
     "type": "voteinfo",
     "indexes": [
        {
@@ -844,7 +844,7 @@
     ]
   },
   {
-    "name": "limittable",
+    "name": "limit",
     "type": "limitparams",
     "indexes": [
        {

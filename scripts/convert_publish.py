@@ -48,9 +48,9 @@ class PublishConverter:
         self.update_list = []
         self.messages = self.publish_db["message"]
         self.publish_tables = dbs.Tables([
-            ('vote',    self.publish_db['votetable'],    None, None),
-            ('message', self.publish_db['messagetable'], None, None),
-            ('content', self.publish_db['contenttable'], None, None),
+            ('vote',    self.publish_db['vote'],    None, None),
+            ('message', self.publish_db['message'], None, None),
+            ('content', self.publish_db['content'], None, None),
             ("gtransaction", self.cyberway_db['gtransaction'], None, None)
         ])
         self.cache_period = cache_period
@@ -207,7 +207,7 @@ class PublishConverter:
     def convert_votes(self, query = {}):
         print("convert_votes")
         golos_votes = self.golos_db['comment_vote_object']
-        cyberway_messages = self.publish_db['messagetable']
+        cyberway_messages = self.publish_db['message']
 
         cursor = golos_votes.find(query)
         length = cursor.count()
