@@ -1,7 +1,7 @@
 #include "golos.vesting.hpp"
 #include "config.hpp"
 #include <eosiolib/transaction.hpp>
-#include <eosio.token/eosio.token.hpp>
+#include <cyber.token/cyber.token.hpp>
 #include <golos.charge/golos.charge.hpp>
 
 namespace golos {

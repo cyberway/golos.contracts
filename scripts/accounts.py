@@ -21,7 +21,7 @@ cyberway = dbs.Tables([
         ('accountseq', dbs.cyberway_db['accountseq'],              None,            None),
         ('reslimit',   dbs.cyberway_db['reslimit'],                None,            None),
         ('resusage',   dbs.cyberway_db['resusage'],                None,            None),
-        ('balance',    dbs.cyberway_eosio_token_db['accounts'],    None,            None),
+        ('balance',    dbs.cyberway_cyber_token_db['accounts'],    None,            None),
         ('vesting',    dbs.cyberway_gls_vesting_db['balances'],    None,            None),
 ])
 

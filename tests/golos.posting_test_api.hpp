@@ -40,14 +40,6 @@ struct golos_posting_api: base_contract_api {
         );
     }
 
-    action_result setprops(
-        const forumprops& props
-    ) {
-        return push("setprops"_n, _code, args()
-            ("props", props)
-        );
-    }
-
     action_result create_msg(
         account_name author,
         std::string permlink,
@@ -151,7 +143,15 @@ struct golos_posting_api: base_contract_api {
 
     string get_str_comment_depth(uint16_t max_comment_depth) {
         return string("['st_max_comment_depth', {'value':'") + std::to_string(max_comment_depth) + "'}]";
-    }  
+    }
+    
+    string get_str_social_acc(name social_acc) {
+        return string("['st_social_acc', {'value':'") + name{social_acc}.to_string() + "'}]";
+    }
+    
+    string get_str_referral_acc(name referral_acc) {
+        return string("['st_referral_acc', {'value':'") + name{referral_acc}.to_string() + "'}]";
+    }   
 
     //// posting tables
     variant get_message(account_name acc, uint64_t id) {
@@ -187,6 +187,8 @@ struct golos_posting_api: base_contract_api {
     const uint32_t upvote_lockout = 15;
     const uint8_t max_beneficiaries = 64;
     const uint16_t max_comment_depth = 127;
+    const name social_acc = "gls.social"_n;
+    const name referral_acc = "gls.referral"_n;
 };
 
 

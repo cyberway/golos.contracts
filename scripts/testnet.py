@@ -81,7 +81,7 @@ def linkAuth(account, code, action, permission):
     cleos('set action permission %s %s %s %s -p %s'%(account, code, action, permission, account))
 
 def transfer(sender, recipient, amount, memo=""):
-    pushAction('eosio.token', 'transfer', sender, [sender, recipient, amount, memo])
+    pushAction('cyber.token', 'transfer', sender, [sender, recipient, amount, memo])
 
 # --------------------- GOLOS functions ---------------------------------------
 
@@ -89,10 +89,10 @@ def openVestingBalance(account):
     pushAction('gls.vesting', 'open', account, [account, args.vesting, account])
 
 def openTokenBalance(account):
-    pushAction('eosio.token', 'open', account, [account, args.token, account])
+    pushAction('cyber.token', 'open', account, [account, args.token, account])
 
 def issueToken(account, amount, memo=""):
-    pushAction('eosio.token', 'issue', 'gls.publish@owner', [account, amount, memo])
+    pushAction('cyber.token', 'issue', 'gls.publish@owner', [account, amount, memo])
 
 def buyVesting(account, amount):
     issueToken(account, amount)

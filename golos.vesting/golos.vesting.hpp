@@ -58,6 +58,21 @@ public:
         return accounts.find(sym.raw()) != accounts.end();
     }
 
+    static inline std::vector<structures::delegate_record> 
+    get_list_delegate(name code, name owner, symbol_code sym) {
+        std::vector<structures::delegate_record> list_result;
+        tables::delegate_table delegates(code, sym.raw());
+        auto index_delegate = delegates.get_index<"recipient"_n>();
+        
+        auto record_index = index_delegate.find(owner.value);
+        while (record_index != index_delegate.end() && record_index->recipient == owner) {
+            list_result.push_back(*record_index);
+            ++record_index;
+        }
+
+        return list_result;
+    }
+
 private:
     void notify_balance_change(name owner, asset diff);
     void sub_balance(name owner, asset value, bool retire_mode = false);

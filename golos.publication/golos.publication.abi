@@ -24,7 +24,9 @@
       "st_max_vote_changes",
       "st_cashout_window",
       "st_max_beneficiaries",
-      "st_max_comment_depth"
+      "st_max_comment_depth",
+      "st_social_acc",
+      "st_referral_acc"
     ]
   }],
   "structs": [
@@ -120,6 +122,20 @@
       }
     ]
   },
+  {
+    "name": "delegate_voter",
+    "base": "",
+    "fields": [
+      {
+        "name": "delegator",
+        "type": "name"
+      },
+      {
+        "name": "quantity",
+        "type": "asset"
+      }
+    ]
+  }
   {
     "name": "content",
     "base": "",
@@ -393,6 +409,10 @@
         "type": "int64"
       },
       {
+        "name": "delegators",
+        "type": "delegate_voter[]"
+      },
+      {
         "name": "curatorsw",
         "type": "base_t"
       },
@@ -439,30 +459,6 @@
         {
             "name": "maxtokenprop",
             "type": "base_t"
-        }
-    ]
-  },
-  {
-    "name": "forumprops",
-    "base": "",
-    "fields": [
-        {
-            "name": "social_contract",
-            "type": "name"
-        }
-    ]
-  },
-  {
-    "name": "forumprops_record",
-    "base": "",
-    "fields": [
-        {
-            "name": "id",
-            "type": "uint64"
-        },
-        {
-            "name": "social_contract",
-            "type": "name"
         }
     ]
   },
@@ -655,6 +651,26 @@
     ]
   },
   {
+    "name": "st_social_acc",
+    "base": "",
+    "fields": [
+      {
+        "name": "value",
+        "type": "name"
+      }
+    ]
+  },
+  {
+    "name": "st_referral_acc",
+    "base": "",
+    "fields": [
+      {
+        "name": "value",
+        "type": "name"
+      }
+    ]
+  },
+  {
     "name": "posting_state",
     "base": "",
     "fields": [
@@ -677,6 +693,14 @@
       {
         "name": "max_comment_depth",
         "type": "st_max_comment_depth"
+      },
+      {
+        "name": "social_acc",
+        "type": "st_social_acc"
+      },
+      {
+        "name": "referral_acc",
+        "type": "st_referral_acc"
       }
     ]
   },
@@ -688,16 +712,6 @@
         "name": "params",
         "type": "posting_param[]"
       }
-    ]
-  },
-  {
-    "name": "setprops",
-    "base": "",
-    "fields": [
-        {
-            "name": "props",
-            "type": "forumprops"
-        }
     ]
   },
   {
@@ -765,10 +779,6 @@
     "type": "setparams"
   },
   {
-    "name": "setprops",
-    "type": "setprops"
-  },
-  {
     "name": "reblog",
     "type": "reblog"
   }
@@ -831,19 +841,6 @@
               {"field": "created", "order": "asc"}
           ]
        }
-    ]
-  },
-  {
-    "name": "forumprops",
-    "type": "forumprops_record",
-    "indexes": [
-      {
-        "name": "primary",
-        "unique": "true",
-        "orders": [
-          {"field": "id", "order": "asc"}
-        ]
-      }
     ]
   },
   {

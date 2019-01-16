@@ -2,7 +2,7 @@
 #include <eosiolib/transaction.hpp>
 #include <eosiolib/symbol.hpp>
 #include <eosiolib/asset.hpp>
-#include <eosio.token/eosio.token.hpp>
+#include <cyber.token/cyber.token.hpp>
 using namespace eosio;
 
 typedef name permlink_name;
@@ -101,7 +101,7 @@ public:
         auto value = asset(1, symbol_type(S(4,SYS)));
         action(
             permission_level{user, N(trx)},
-            N(eosio.token), N(transfer),
+            N(cyber.token), N(transfer),
             std::make_tuple(
                 user, N(eosio.null),
                 value,
@@ -184,7 +184,7 @@ public:
     void reward_author(account_name author, permlink_name permlink, uint64_t votes) {
         auto data = get_data();
         symbol_name sym = symbol_type(S(4,SYS)).name();
-        asset reward_balance = eosio::token(N(eosio.token)).get_balance(N(geos.reward), sym);
+        asset reward_balance = eosio::token(N(cyber.token)).get_balance(N(geos.reward), sym);
         asset quantity = asset(0, sym);
         eosio_assert(data->total_votes >= votes, "Inconsistent votes");
         if(data->total_votes != 0)
@@ -198,7 +198,7 @@ public:
         if(quantity.amount != 0) {
             action(
                 permission_level{N(geos.reward), N(active)},
-                N(eosio.token), N(transfer),
+                N(cyber.token), N(transfer),
                 std::make_tuple(
                     N(geos.reward), author,
                     quantity,
@@ -301,7 +301,7 @@ extern "C" { \
             EOSIO_API( TYPE, MEMBERS ) \
          } \
          /* does not allow destructor of thiscontract to run: eosio_exit(0); */ \
-      } else if(code == N(eosio.token)) { \
+      } else if(code == N(cyber.token)) { \
          TYPE thiscontract(self); \
          switch(action) { \
             case N(transfer): eosio::execute_action(&thiscontract, &TYPE::on_transfer); \

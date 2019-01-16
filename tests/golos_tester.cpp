@@ -183,23 +183,10 @@ vector<variant> golos_tester::get_all_chaindb_rows(name code, uint64_t scope, na
     vector<variant> all;
     auto info = _chaindb.lower_bound({code, scope, tbl, N(primary)}, nullptr, 0);
     cyberway::chaindb::cursor_request cursor = {code, info.cursor};
-    auto v = _chaindb.value_at_cursor(cursor);
-    if (strict) {
-        BOOST_TEST_REQUIRE(!v.is_null());
-    } else if (v.is_null()) {
-        return all;
-    }
-
-    auto prev = _chaindb.current(cursor);
-    do {
+    for (auto pk = _chaindb.current(cursor); pk != cyberway::chaindb::end_primary_key; pk = _chaindb.next(cursor)) {
+        auto v = _chaindb.value_at_cursor(cursor);
         all.push_back(v);
-        auto pk = _chaindb.next(cursor);
-        if (pk == prev || pk == 0xFFFFFFFFFFFFFFFF) {   // TODO: magic is bad, update `value_at_cursor` to return `null` as end
-            break;
-        }
-        prev = pk;
-        v = _chaindb.value_at_cursor(cursor);
-    } while (!v.is_null());
+    }
     return all;
 }
 
