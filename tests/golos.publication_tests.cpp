@@ -34,7 +34,6 @@ protected:
     golos_posting_api post;
     golos_vesting_api vest;
     cyber_token_api token;
-    golos_social_api social;
 
     std::vector<account_name> _users;
 public:
@@ -45,8 +44,7 @@ public:
         , post({this, _code, _sym})
         , vest({this, cfg::vesting_name, _sym})
         , token({this, cfg::token_name, _sym})
-        , social({this, cfg::social_name, _sym})
-        , _users{_code, N(jackiechan), N(brucelee), N(chucknorris), N(gls.social), N(gls.referral)} {
+        , _users{_code, N(jackiechan), N(brucelee), N(chucknorris)} {
 
         produce_block();
         create_accounts(_users);
@@ -56,7 +54,6 @@ public:
         install_contract(_code, contracts::posting_wasm(), contracts::posting_abi());
         install_contract(cfg::vesting_name, contracts::vesting_wasm(), contracts::vesting_abi());
         install_contract(cfg::token_name, contracts::token_wasm(), contracts::token_abi());
-        install_contract(cfg::social_name, contracts::social_wasm(), contracts::social_abi());
     }
 
     void init() {
@@ -68,6 +65,9 @@ public:
         BOOST_CHECK_EQUAL(success(), post.set_limit("comment"));
         BOOST_CHECK_EQUAL(success(), post.set_limit("vote"));
         BOOST_CHECK_EQUAL(success(), post.set_limit("post bandwidth"));
+
+        BOOST_CHECK_EQUAL(success(), post.init_default_params());
+
         produce_block();
         for (auto& u : _users) {
             BOOST_CHECK_EQUAL(success(), vest.open(u, _sym, u));
@@ -107,19 +107,6 @@ public:
         }
         BOOST_CHECK_EQUAL(a["jsonmetadata"].as<std::string>(), b["jsonmetadata"].as<std::string>());
     }
-
-    void init_params() {
-        auto vote_changes = post.get_str_vote_changes(post.max_vote_changes);
-        auto cashout_window = post.get_str_cashout_window(post.window, post.upvote_lockout);
-        auto beneficiaries = post.get_str_beneficiaries(post.max_beneficiaries);
-        auto comment_depth = post.get_str_comment_depth(post.max_comment_depth);
-        auto social_acc = post.get_str_social_acc(post.social_acc);
-        auto referral_acc = post.get_str_referral_acc(post.referral_acc);
-
-        auto params = "[" + vote_changes + "," + cashout_window + "," + beneficiaries + "," + comment_depth + 
-            "," + social_acc + "," + referral_acc + "]";
-        BOOST_CHECK_EQUAL(success(), post.set_params(params)); 
-    } 
 
 protected:
     const mvo _test_msg = mvo()
@@ -178,7 +165,7 @@ BOOST_FIXTURE_TEST_CASE(set_params, golos_publication_tester) try {
     BOOST_TEST_MESSAGE("--- check that global params not exist");
     BOOST_TEST_CHECK(post.get_params().is_null());
 
-    init_params();
+    post.init_default_params();
 
     auto obj_params = post.get_params();
     BOOST_TEST_MESSAGE("--- all params were initialized successful");
@@ -188,8 +175,8 @@ BOOST_FIXTURE_TEST_CASE(set_params, golos_publication_tester) try {
     BOOST_CHECK_EQUAL(obj_params["cashout_window"]["upvote_lockout"], post.upvote_lockout);
     BOOST_CHECK_EQUAL(obj_params["max_beneficiaries"]["value"], post.max_beneficiaries);
     BOOST_CHECK_EQUAL(obj_params["max_comment_depth"]["value"], post.max_comment_depth);
-    BOOST_CHECK_EQUAL(obj_params["social_acc"]["value"].as_string(), name{post.social_acc}.to_string());
-    BOOST_CHECK_EQUAL(obj_params["referral_acc"]["value"].as_string(), name{post.referral_acc}.to_string());
+    BOOST_CHECK_EQUAL(obj_params["social_acc"]["value"].as_string(), "");
+    BOOST_CHECK_EQUAL(obj_params["referral_acc"]["value"].as_string(), "");
 
     auto params = "[" + post.get_str_cashout_window(0, post.upvote_lockout) + "]";
     BOOST_CHECK_EQUAL(err.window_less_0, post.set_params(params));
@@ -200,17 +187,16 @@ BOOST_FIXTURE_TEST_CASE(set_params, golos_publication_tester) try {
     params = "[" + post.get_str_comment_depth(0) + "]";
     BOOST_CHECK_EQUAL(err.max_cmmnt_dpth_less_0, post.set_params(params));
     
-    params = "[" + post.get_str_social_acc(name()) + "]";
+    params = "[" + post.get_str_social_acc(N(gls.social)) + "]";
     BOOST_CHECK_EQUAL(err.no_social_acc, post.set_params(params));
     
-    params = "[" + post.get_str_referral_acc(name()) + "]";
+    params = "[" + post.get_str_referral_acc(N(gls.referral)) + "]";
     BOOST_CHECK_EQUAL(err.no_referral_acc, post.set_params(params));
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE(create_message, golos_publication_tester) try {
     BOOST_TEST_MESSAGE("Create message testing.");
     init();
-    init_params();
     BOOST_CHECK_EQUAL(success(), post.create_msg(N(brucelee), "permlink"));
 
     BOOST_TEST_MESSAGE("--- checking that another user can create a message with the same permlink.");
@@ -241,7 +227,6 @@ BOOST_FIXTURE_TEST_CASE(create_message, golos_publication_tester) try {
 BOOST_FIXTURE_TEST_CASE(update_message, golos_publication_tester) try {
     BOOST_TEST_MESSAGE("Update message testing.");
     init();
-    init_params();
     BOOST_CHECK_EQUAL(success(), post.create_msg(N(brucelee), "permlink"));
     BOOST_CHECK_EQUAL(success(), post.update_msg(N(brucelee), "permlink",
         "headermssgnew", "bodymssgnew", "languagemssgnew", {{"tagnew"}}, "jsonmetadatanew"));
@@ -260,7 +245,6 @@ BOOST_FIXTURE_TEST_CASE(update_message, golos_publication_tester) try {
 BOOST_FIXTURE_TEST_CASE(delete_message, golos_publication_tester) try {
     BOOST_TEST_MESSAGE("Delete message testing.");
     init();
-    init_params();
     BOOST_CHECK_EQUAL(success(), post.create_msg(N(brucelee), "permlink"));
     BOOST_CHECK_EQUAL(success(), post.create_msg(N(jackiechan), "child", N(brucelee), "permlink"));
 
@@ -277,7 +261,6 @@ BOOST_FIXTURE_TEST_CASE(delete_message, golos_publication_tester) try {
 BOOST_FIXTURE_TEST_CASE(upvote, golos_publication_tester) try {
     BOOST_TEST_MESSAGE("Upvote testing.");
     init();
-    init_params();
 
     auto permlink = "permlink";
     auto vote_brucelee = [&](auto weight){ return post.upvote(N(brucelee), N(brucelee), permlink, weight); };
@@ -328,7 +311,6 @@ BOOST_FIXTURE_TEST_CASE(upvote, golos_publication_tester) try {
 BOOST_FIXTURE_TEST_CASE(downvote, golos_publication_tester) try {
     BOOST_TEST_MESSAGE("Downvote testing.");
     init();
-    init_params();
     auto permlink = "permlink";
     auto vote_brucelee = [&](auto weight){ return post.downvote(N(brucelee), N(brucelee), permlink, weight); };
     auto vote_jackie = [&](auto weight){ return post.downvote(N(jackiechan), N(brucelee), permlink, weight); };
@@ -372,7 +354,6 @@ BOOST_FIXTURE_TEST_CASE(downvote, golos_publication_tester) try {
 BOOST_FIXTURE_TEST_CASE(unvote, golos_publication_tester) try {
     BOOST_TEST_MESSAGE("Unvote testing.");
     init();
-    init_params();
     BOOST_CHECK_EQUAL(err.no_message, post.unvote(N(brucelee), N(brucelee), "permlink"));
 
     // TODO: test fail on initial unvote
@@ -392,7 +373,6 @@ BOOST_FIXTURE_TEST_CASE(unvote, golos_publication_tester) try {
 BOOST_FIXTURE_TEST_CASE(mixed_vote_test, golos_publication_tester) try {
     BOOST_TEST_MESSAGE("Mixed vote testing.");
     init();
-    init_params();
     BOOST_TEST_MESSAGE("--- test that each vote type increases votes count");
     BOOST_CHECK_EQUAL(success(), post.create_msg(N(brucelee), "permlink"));
     BOOST_CHECK_EQUAL(success(), post.downvote(N(brucelee), N(brucelee), "permlink", 123));
@@ -409,7 +389,6 @@ BOOST_FIXTURE_TEST_CASE(mixed_vote_test, golos_publication_tester) try {
 BOOST_FIXTURE_TEST_CASE(delete_post_with_vote_test, golos_publication_tester) try {
     BOOST_TEST_MESSAGE("Delete post with vote testing.");   // TODO: move to "delete" test ?
     init();
-    init_params();
     BOOST_CHECK_EQUAL(success(), post.create_msg(N(brucelee), "upvote-me"));
     BOOST_CHECK_EQUAL(success(), post.create_msg(N(chucknorris), "downvote-me"));
     BOOST_CHECK_EQUAL(success(), post.upvote(N(chucknorris), N(brucelee), "upvote-me", 321));
@@ -422,7 +401,6 @@ BOOST_FIXTURE_TEST_CASE(delete_post_with_vote_test, golos_publication_tester) tr
 BOOST_FIXTURE_TEST_CASE(nesting_level_test, golos_publication_tester) try {
     BOOST_TEST_MESSAGE("nesting level test.");
     init();
-    init_params();
     BOOST_CHECK_EQUAL(success(), post.create_msg(N(brucelee), "permlink0"));
     size_t i = 0;
     for (; i < post.max_comment_depth; i++) {
@@ -438,7 +416,6 @@ BOOST_FIXTURE_TEST_CASE(nesting_level_test, golos_publication_tester) try {
 BOOST_FIXTURE_TEST_CASE(comments_cashout_time_test, golos_publication_tester) try {
     BOOST_TEST_MESSAGE("comments_cashout_time_test.");
     init();
-    init_params();
     BOOST_CHECK_EQUAL(success(), post.create_msg(N(brucelee), "permlink"));
     auto need_blocks = seconds_to_blocks(post.window);
     auto wait_blocks = 5;
