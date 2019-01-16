@@ -108,9 +108,9 @@ class PublishConverter:
                       "sender": "gls.publish",
                       "sender_id": hex(cur_mssg_id << 64 | utils.string_to_name(doc["author"])),
                       "payer": "gls.publish",
-                      "delay_until" : doc["cashout_time"].isoformat(), 
-                      "expiration" :  (doc["cashout_time"] + expiretion).isoformat(), 
-                      "published" :   doc["created"].isoformat(), 
+                      "delay_until" : doc["cashout_time"], 
+                      "expiration" :  (doc["cashout_time"] + expiretion), 
+                      "published" :   doc["created"], 
                       "packed_trx" : create_trx(doc["author"], utils.convert_hash(doc["permlink"])), 
                       "_SERVICE_" : {
                           "scope" : "",
