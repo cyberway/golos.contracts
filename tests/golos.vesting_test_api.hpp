@@ -100,7 +100,7 @@ struct golos_vesting_api: base_contract_api {
 
     variant get_balance(name acc) {
         // converts assets to strings; TODO: generalize
-        auto v = get_struct(acc, N(balances), _symbol.to_symbol_code().value, "user_balance");
+        auto v = get_struct(acc, N(accounts), _symbol.to_symbol_code().value, "user_balance");
         if (v.is_object()) {
             auto o = mvo(v);
             o["vesting"] = o["vesting"].as<asset>().to_string();
@@ -114,15 +114,15 @@ struct golos_vesting_api: base_contract_api {
 
     variant get_balance_raw(name acc) {
         // base_api_helper knows code
-        return get_struct(acc, N(balances), _symbol.to_symbol_code().value, "user_balance");
+        return get_struct(acc, N(accounts), _symbol.to_symbol_code().value, "user_balance");
     }
 
     std::vector<variant> get_balances(name user) {
-        return _tester->get_all_chaindb_rows(_code, user, N(balances), false);
+        return _tester->get_all_chaindb_rows(_code, user, N(accounts), false);
     }
 
     variant get_convert_obj(name from) {
-        return get_struct(_symbol.to_symbol_code().value, N(converttable), from, "convert_of_tokens");
+        return get_struct(_symbol.to_symbol_code().value, N(convert), from, "convert_of_tokens");
     }
 
     //// helpers

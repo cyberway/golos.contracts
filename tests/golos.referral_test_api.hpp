@@ -70,8 +70,8 @@ struct golos_referral_api: base_contract_api {
          return string("['expire_parametrs', {'max_expire':'") + std::to_string(max_expire) + "'}]";
      }
 
-     string percent_parametrs(uint32_t max_perсent) {
-         return string("['percent_parametrs', {'max_perсent':'") + std::to_string(max_perсent) + "'}]";
+     string percent_parametrs(uint32_t max_percent) {
+         return string("['percent_parametrs', {'max_percent':'") + std::to_string(max_percent) + "'}]";
      }
 
      string delay_parametrs(uint32_t delay_clear_old_ref) {

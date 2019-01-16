@@ -26,7 +26,7 @@ public:
     void init_params() {
         auto breakout_parametrs = referral.breakout_parametrs(min_breakout, max_breakout);
         auto expire_parametrs   = referral.expire_parametrs(max_expire);
-        auto percent_parametrs  = referral.percent_parametrs(max_persent);
+        auto percent_parametrs  = referral.percent_parametrs(max_percent);
         auto delay_parametrs    = referral.delay_parametrs(delay_clear_old_ref);
 
         auto params = "[" + breakout_parametrs + "," + expire_parametrs + "," + percent_parametrs + "," + delay_parametrs + "]";
@@ -56,7 +56,7 @@ protected:
     const asset min_breakout = asset(10000,  symbol(4,"GLS"));
     const asset max_breakout = asset(100000, symbol(4,"GLS"));
     const uint64_t max_expire = 600; // 600 sec
-    const uint32_t max_persent = 5000; // 50.00%
+    const uint32_t max_percent = 5000; // 50.00%
     const uint32_t delay_clear_old_ref = 650; // 650 sec
 
     golos_referral_api referral;
@@ -81,7 +81,7 @@ BOOST_AUTO_TEST_SUITE(golos_referral_tests)
      BOOST_TEST_CHECK(obj_params["breakout_params"]["min_breakout"].as<asset>() == min_breakout);
      BOOST_TEST_CHECK(obj_params["breakout_params"]["max_breakout"].as<asset>() == max_breakout);
      BOOST_TEST_CHECK(obj_params["expire_params"]["max_expire"].as<uint64_t>() == max_expire);
-     BOOST_TEST_CHECK(obj_params["percent_params"]["max_perсent"].as<uint32_t>() == max_persent);
+     BOOST_TEST_CHECK(obj_params["percent_params"]["max_percent"].as<uint32_t>() == max_percent);
 
      auto params = "[" + referral.breakout_parametrs(max_breakout, min_breakout) + "]";
      BOOST_CHECK_EQUAL(err.min_more_than_max, referral.set_params(cfg::referral_name, params));

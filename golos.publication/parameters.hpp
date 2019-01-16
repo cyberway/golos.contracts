@@ -41,7 +41,9 @@ namespace golos {
         name account;
 
         void validate() const override {
-            eosio_assert(is_account(account), "Social account doesn't exist.");
+            if (account != name()) {
+                eosio_assert(is_account(account), "Social account doesn't exist.");
+            }
         }
     };
     using social_acc_prm = param_wrapper<st_social_acc, 1>;
@@ -50,7 +52,9 @@ namespace golos {
         name account;
 
         void validate() const override {
-            eosio_assert(is_account(account), "Referral account doesn't exist.");
+            if (account != name()) {
+                eosio_assert(is_account(account), "Referral account doesn't exist.");
+            }
         }
     };
     using referral_acc_prm = param_wrapper<st_referral_acc, 1>;

@@ -42,7 +42,7 @@
            "name": "percent_parametrs",
            "base": "",
            "fields": [
-              {"name": "max_perсent", "type": "uint32"}
+              {"name": "max_percent", "type": "uint32"}
            ]
         },
         {
