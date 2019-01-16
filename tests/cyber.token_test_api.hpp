@@ -4,8 +4,8 @@
 namespace eosio { namespace testing {
 
 
-struct eosio_token_api: base_contract_api {
-    eosio_token_api(golos_tester* tester, name code, symbol sym)
+struct cyber_token_api: base_contract_api {
+    cyber_token_api(golos_tester* tester, name code, symbol sym)
     :   base_contract_api(tester, code)
     ,   _symbol(sym) {}
 

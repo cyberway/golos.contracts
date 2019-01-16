@@ -1,6 +1,6 @@
 #include "golos_tester.hpp"
 #include "golos.vesting_test_api.hpp"
-#include "eosio.token_test_api.hpp"
+#include "cyber.token_test_api.hpp"
 #include "contracts.hpp"
 #include "../golos.vesting/config.hpp"
 #include "golos.charge_test_api.hpp"
@@ -22,7 +22,7 @@ static const auto _vesting_sym = symbol(_vesting_precision, _token_name);
 class golos_charge_tester : public golos_tester {
 protected:
     golos_vesting_api vest;
-    eosio_token_api token;
+    cyber_token_api token;
     golos_charge_api charge;
     vector<account_name> _users;
 

@@ -1,7 +1,7 @@
 #include "golos_tester.hpp"
 #include "golos.vesting_test_api.hpp"
 #include "golos.charge_test_api.hpp"
-#include "eosio.token_test_api.hpp"
+#include "cyber.token_test_api.hpp"
 #include "contracts.hpp"
 #include "../golos.vesting/config.hpp"
 
@@ -20,7 +20,7 @@ static const auto default_vesting_amount = 100;
 class golos_vesting_tester : public golos_tester {
 protected:
     golos_vesting_api vest;
-    eosio_token_api token;
+    cyber_token_api token;
     golos_charge_api charge;
 public:
 

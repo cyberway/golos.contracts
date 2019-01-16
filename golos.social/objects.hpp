@@ -38,9 +38,7 @@ namespace tables {
 
 using namespace eosio;
 
-using pb_account_idx = indexed_by<"account"_n, const_mem_fun<structures::pinblock_record, uint64_t, &structures::pinblock_record::primary_key>>;
-using pinblock_table = multi_index<"pinblock"_n, structures::pinblock_record, pb_account_idx>;
-
+using pinblock_table = multi_index<"pinblock"_n, structures::pinblock_record>;
 using reputation_singleton = eosio::singleton<"reputation"_n, structures::reputation_record>;
 }
 

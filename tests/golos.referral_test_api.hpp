@@ -39,9 +39,9 @@ struct golos_referral_api: base_contract_api {
          );
      }
 
-     action_result close_old_referrals() {
+     action_result close_old_referrals(uint64_t hash) {
          return push(N(closeoldref), _code, args()
-             ("hash", rand())
+             ("hash", hash)
          );
      }
 
@@ -58,6 +58,9 @@ struct golos_referral_api: base_contract_api {
         return _tester->get_chaindb_struct(_code, _code, N(referrals), referral, "obj_referral");
     }
 
+     vector<variant> get_referrals() {
+         return _tester->get_all_chaindb_rows(_code, _code, N(referrals), false);
+     }
 
      string breakout_parametrs(asset min_breakout, asset max_breakout) {
          return string("['breakout_parametrs', {'min_breakout':'") + min_breakout.to_string() + "','max_breakout':'" + max_breakout.to_string() + "'}]";

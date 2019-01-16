@@ -2,7 +2,7 @@
 #include "golos.emit_test_api.hpp"
 #include "golos.ctrl_test_api.hpp"
 #include "golos.vesting_test_api.hpp"
-#include "eosio.token_test_api.hpp"
+#include "cyber.token_test_api.hpp"
 #include "contracts.hpp"
 #include "../common/config.hpp"
 
@@ -21,7 +21,7 @@ protected:
     golos_emit_api emit;
     golos_ctrl_api ctrl;
     golos_vesting_api vest;
-    eosio_token_api token;
+    cyber_token_api token;
 
 public:
     golos_params_tester()
