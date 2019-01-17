@@ -85,7 +85,7 @@ protected:
         const string unknown_asset    = amsg("unknown asset");
         const string wrong_precision  = amsg("wrong asset precision");
         const string vesting_params   = amsg("not found vesting params");
-        const string issuer_not_autority = "missing authority of issuer";
+        const string issuer_not_autority = "missing authority of " + cfg::emission_name.to_string();
 
         const string withdraw_intervals        = amsg("intervals <= 0");
         const string withdraw_interval_seconds = amsg("interval_seconds <= 0");
@@ -182,11 +182,13 @@ BOOST_FIXTURE_TEST_CASE(set_params, golos_vesting_tester) try {
 BOOST_FIXTURE_TEST_CASE(create_vesting, golos_vesting_tester) try {
     BOOST_TEST_MESSAGE("Test creating vesting");
     auto issuer = cfg::emission_name;
+
+    BOOST_CHECK_EQUAL(success(), token.create(issuer, token.make_asset(100000), {cfg::charge_name}));
+
     BOOST_TEST_MESSAGE("--- fail on non-existing token");
-    BOOST_CHECK_EQUAL(err.key_not_found, vest.create_vesting(issuer));
+    BOOST_CHECK_EQUAL(err.key_not_found, vest.create_vesting(issuer, symbol(_token_precision, "GOLOSA")));
 
     BOOST_TEST_MESSAGE("--- fails when not issuer");
-    BOOST_CHECK_EQUAL(success(), token.create(issuer, token.make_asset(100000)));
     BOOST_CHECK_EQUAL(err.issuer_not_autority, vest.create_vesting(N(sania)));
     // TODO: test issuers list
 

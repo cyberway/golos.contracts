@@ -145,7 +145,7 @@ public:
     }
 
     void prepare_balances() {
-        BOOST_CHECK_EQUAL(success(), token.create(_issuer, dasset(100500)));
+        BOOST_CHECK_EQUAL(success(), token.create(_issuer, dasset(100500), {cfg::vesting_name}));
         BOOST_CHECK_EQUAL(success(), vest.create_vesting(_issuer));
         BOOST_CHECK_EQUAL(success(), vest.open(cfg::vesting_name, _token, cfg::vesting_name));
         vector<std::pair<uint64_t,double>> amounts = {
@@ -225,6 +225,8 @@ BOOST_FIXTURE_TEST_CASE(register_witness, golos_ctrl_tester) try {
 
     BOOST_TEST_MESSAGE("--- check properties update");
     BOOST_CHECK_EQUAL(success(), ctrl.reg_witness(_w[0], _test_key, "-"));
+    produce_block();
+
     BOOST_CHECK_EQUAL(err.same_reg_props, ctrl.reg_witness(_w[0], _test_key, "-"));
     // BOOST_CHECK_EQUAL(err.bad_pub_key, ctrl.reg_witness(_w[0], "", "-"));        // not needed, key will be removed
     string maxurl =
@@ -237,6 +239,8 @@ BOOST_FIXTURE_TEST_CASE(register_witness, golos_ctrl_tester) try {
 
     BOOST_TEST_MESSAGE("--- check unreg");
     BOOST_CHECK_EQUAL(success(), ctrl.unreg_witness(_w[0]));
+    produce_block();
+
     BOOST_CHECK_EQUAL(err.already_unreg, ctrl.unreg_witness(_w[0]));
     BOOST_CHECK_EQUAL(err.no_witness, ctrl.unreg_witness(_w[1]));
 } FC_LOG_AND_RETHROW()
@@ -270,6 +274,8 @@ BOOST_FIXTURE_TEST_CASE(vote_witness, golos_ctrl_tester) try {
 
     BOOST_TEST_MESSAGE("--- Check witness weight after unvote");
     BOOST_CHECK_EQUAL(success(), ctrl.unvote_witness(_bob, _w[0]));
+    produce_block();
+
     BOOST_CHECK_EQUAL(err.no_vote, ctrl.unvote_witness(_bob, _w[0]));
     CHECK_MATCHING_OBJECT(ctrl.get_witness(_w[0]), wp("total_weight",(800+100)*_wmult));
     produce_block();
@@ -281,7 +287,7 @@ BOOST_FIXTURE_TEST_CASE(vote_witness, golos_ctrl_tester) try {
     BOOST_CHECK_EQUAL(success(), ctrl.unvote_witness(_alice, _w[3]));
     BOOST_CHECK_EQUAL(success(), ctrl.vote_witness(_alice, _w[4]));
     produce_block();
-    BOOST_CHECK_EQUAL(err.no_votes, ctrl.unvote_witness(_carol, _bob));
+    BOOST_CHECK_EQUAL(err.no_votes, ctrl.unvote_witness(_carol, _w[0]));
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE(attach_detach_account, golos_ctrl_tester) try {
