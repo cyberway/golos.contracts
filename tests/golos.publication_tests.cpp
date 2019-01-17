@@ -1,6 +1,7 @@
 #include "golos_tester.hpp"
 #include "golos.posting_test_api.hpp"
 #include "golos.vesting_test_api.hpp"
+#include "golos.charge_test_api.hpp"
 #include "cyber.token_test_api.hpp"
 #include "golos.social_test_api.hpp"
 #include "../golos.publication/types.h"
@@ -33,6 +34,7 @@ protected:
     symbol _sym;
     golos_posting_api post;
     golos_vesting_api vest;
+    golos_charge_api charge;
     cyber_token_api token;
 
     std::vector<account_name> _users;
@@ -43,16 +45,18 @@ public:
         , _sym(0, "DUMMY")
         , post({this, _code, _sym})
         , vest({this, cfg::vesting_name, _sym})
+        , charge({this, cfg::charge_name, _sym})
         , token({this, cfg::token_name, _sym})
         , _users{_code, N(jackiechan), N(brucelee), N(chucknorris)} {
 
         produce_block();
         create_accounts(_users);
-        create_accounts({cfg::token_name, cfg::vesting_name, cfg::emission_name, N(dan.larimer)});
+        create_accounts({cfg::charge_name, cfg::token_name, cfg::vesting_name, cfg::emission_name, N(dan.larimer)});
         produce_block();
 
         install_contract(_code, contracts::posting_wasm(), contracts::posting_abi());
         install_contract(cfg::vesting_name, contracts::vesting_wasm(), contracts::vesting_abi());
+        install_contract(cfg::charge_name, contracts::charge_wasm(), contracts::charge_abi());
         install_contract(cfg::token_name, contracts::token_wasm(), contracts::token_abi());
     }
 
