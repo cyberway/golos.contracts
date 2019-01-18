@@ -53,12 +53,19 @@ public:
     }
 
     void init(int64_t issuer_funds, int64_t user_vesting_funds) {
-        BOOST_CHECK_EQUAL(success(), token.create("issuer"_n, token.make_asset(issuer_funds)));
+        BOOST_CHECK_EQUAL(success(), token.create("issuer"_n, token.make_asset(issuer_funds), {_code}));
         BOOST_CHECK_EQUAL(success(), token.open(_code, _token_sym, _code));
         BOOST_CHECK_EQUAL(success(), vest.create_vesting("issuer"_n));
 
         funcparams fn{"0", 1};
         BOOST_CHECK_EQUAL(success(), post.set_rules(fn, fn, fn, 0, 0));
+        BOOST_CHECK_EQUAL(success(), post.set_limit("post"));
+        BOOST_CHECK_EQUAL(success(), post.set_limit("comment"));
+        BOOST_CHECK_EQUAL(success(), post.set_limit("vote"));
+        BOOST_CHECK_EQUAL(success(), post.set_limit("post bandwidth"));
+
+        BOOST_CHECK_EQUAL(success(), post.init_default_params());
+        BOOST_CHECK_EQUAL(success(), post.set_params("["+post.get_str_social_acc(cfg::social_name)+"]"));
 
         produce_block();
 

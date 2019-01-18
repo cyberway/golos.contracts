@@ -136,7 +136,7 @@ BOOST_FIXTURE_TEST_CASE(set_params, golos_params_tester) try {
     BOOST_TEST_CHECK(emit.get_params().is_null());
 
     BOOST_TEST_MESSAGE("--- check_params: fail on empty parameters, wrong variant order or several copies of the same parameter");
-    BOOST_CHECK_EQUAL(err.empty, emit.set_params("[]"));
+    BOOST_CHECK_EQUAL(err.incomplete, emit.set_params("[]"));
     auto pools = "['reward_pools',{'pools':[" + emit.pool_json(_bob,0) + "]}]";
     auto pools2 = "['reward_pools',{'pools':[" + emit.pool_json(_alice,1000) + "," + emit.pool_json(_bob,0) + "]}]";
     auto infrate = emit.infrate_json(0,0);
@@ -159,6 +159,9 @@ BOOST_FIXTURE_TEST_CASE(set_params, golos_params_tester) try {
     produce_block();
     BOOST_CHECK_EQUAL(success(), emit.set_params("[" + infrate + "]"));
     produce_block();
+
+    BOOST_TEST_MESSAGE("--- fail on empty parameters (params exists)");
+    BOOST_CHECK_EQUAL(err.empty, emit.set_params("[]"));
 /*
     BOOST_TEST_MESSAGE("--- fail if parameter value not changed");
     BOOST_CHECK_EQUAL(err.same_value, emit.set_params("[" + infrate + "]"));

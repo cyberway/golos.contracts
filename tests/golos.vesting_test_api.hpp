@@ -16,11 +16,14 @@ struct golos_vesting_api: base_contract_api {
         return create_vesting(creator, _symbol, golos::config::control_name);
     }
     action_result create_vesting(name creator, symbol vesting_symbol, name notify_acc = N(notify.acc)) {
-        _tester->link_authority(creator, _code, golos::config::invoice_name, N(retire));
-        return push(N(createvest), creator, args()
+        action_result result = push(N(createvest), creator, args()
             ("symbol", vesting_symbol)
             ("notify_acc", notify_acc)
         );
+        if (base_tester::success() == result) {
+            _tester->link_authority(creator, _code, golos::config::invoice_name, N(retire));
+        }
+        return result;
     }
 
     action_result open(name owner) {
