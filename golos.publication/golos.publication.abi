@@ -830,10 +830,10 @@
        },
        {
           "name": "combine",
-          "unique": "false",
+          "unique": "true",
           "orders": [
               {"field": "message_id", "order": "asc"},
-              {"field": "voter", "order": "asc"}
+              {"field": "weight", "order": "asc"}
           ]
        }
     ]
