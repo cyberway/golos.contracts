@@ -12,7 +12,7 @@ class PublishConverter:
         self.childcount_dict = {}
         self.update_list = []
         self.publish_db = publish_db
-        self.messages = self.publish_db["messagetable"]
+        self.messages = self.publish_db["message"]
         self.cache_period = cache_period
 
     def count_childcount(self):
