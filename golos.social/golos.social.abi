@@ -281,8 +281,6 @@
      {"name": "unpin",      "type": "pin"},
      {"name": "block",      "type": "block"},
      {"name": "unblock",    "type": "blocK"},
-     {"name": "updatemeta", "type": "updatemeta"},
-     {"name": "deletemeta", "type": "deletemeta"},
      {"name": "changereput","type": "changereput_event"}
   ],
   "tables": [

@@ -134,14 +134,10 @@ void social::changereput(name voter, name author, int64_t rshares) {
 
 void social::updatemeta(name account, accountmeta meta) {
     require_auth(account);
-
-    eosio::event(_self, "updatemeta"_n, std::make_tuple(account,meta)).send();
 }
 
 void social::deletemeta(name account) {
     require_auth(account);
-
-    eosio::event(_self, "deletemeta"_n, account).send();
 }
 
 
