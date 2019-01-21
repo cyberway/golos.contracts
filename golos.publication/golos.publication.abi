@@ -829,11 +829,11 @@
           ]
        },
        {
-          "name": "combine",
+          "name": "byvoter",
           "unique": "true",
           "orders": [
               {"field": "message_id", "order": "asc"},
-              {"field": "weight", "order": "asc"}
+              {"field": "voter", "order": "asc"}
           ]
        }
     ]

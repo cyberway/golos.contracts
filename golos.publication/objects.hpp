@@ -175,9 +175,9 @@ using content_table = multi_index<N(content), structures::content, content_id_in
 
 using vote_id_index = indexed_by<N(id), const_mem_fun<structures::voteinfo, uint64_t, &structures::voteinfo::primary_key>>;
 using vote_messageid_index = indexed_by<N(messageid), const_mem_fun<structures::voteinfo, uint64_t, &structures::voteinfo::by_message>>;
-using vote_group_index = indexed_by<N(combine), eosio::composite_key<structures::voteinfo, 
+using vote_group_index = indexed_by<N(byvoter), eosio::composite_key<structures::voteinfo, 
       eosio::member<structures::voteinfo, uint64_t, &structures::voteinfo::message_id>,
-      eosio::member<structures::voteinfo, int16_t, &structures::voteinfo::weight>>>;
+      eosio::member<structures::voteinfo, name, &structures::voteinfo::voter>>>;
 using vote_table = multi_index<N(vote), structures::voteinfo, vote_id_index, vote_messageid_index, vote_group_index>;
 
 using reward_pools = multi_index<N(rewardpools), structures::rewardpool>;

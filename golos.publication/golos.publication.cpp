@@ -501,8 +501,8 @@ void publication::set_vote(name voter, name author, string permlink, int16_t wei
 
     auto cur_time = current_time();
 
-    auto votetable_index = vote_table.get_index<"combine"_n>();
-    auto vote_itr = votetable_index.find(std::make_tuple(hash64(permlink), weight));
+    auto votetable_index = vote_table.get_index<"byvoter"_n>();
+    auto vote_itr = votetable_index.find(std::make_tuple(hash64(permlink), voter));
     if (vote_itr != votetable_index.end()) {
         // it's not consensus part and can be moved to storage in future
         if (mssg_itr->closed) {
