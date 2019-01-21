@@ -1,3 +1,4 @@
+#include <eosiolib/event.hpp>
 #include "golos.social.hpp"
 
 namespace golos {
@@ -23,13 +24,14 @@ void social::pin(name pinner, name pinning) {
             item.pinning = true;
         });
 
-        return;
+    } else {
+        table.emplace(pinner, [&](auto& item){
+            item.account = pinning;
+            item.pinning = true;
+        });
     }
 
-    table.emplace(pinner, [&](auto& item){
-        item.account = pinning;
-        item.pinning = true;
-    });
+    eosio::event(_self, "pin"_n, std::make_tuple(pinner, pinning)).send();
 }
 
 void social::unpin(name pinner, name pinning) {
@@ -49,6 +51,8 @@ void social::unpin(name pinner, name pinning) {
 
     if (record_is_empty(*itr))
         table.erase(itr);
+
+    eosio::event(_self, "unpin"_n, std::make_tuple(pinner, pinning)).send();
 }
 
 bool social::record_is_empty(structures::pinblock_record record) {
@@ -72,13 +76,14 @@ void social::block(name blocker, name blocking) {
             item.blocking = true;
         });
 
-        return;
+    } else {
+        table.emplace(blocker, [&](auto& item){
+            item.account = blocking;
+            item.blocking = true;
+        });
     }
 
-    table.emplace(blocker, [&](auto& item){
-        item.account = blocking;
-        item.blocking = true;
-    });
+    eosio::event(_self, "block"_n, std::make_tuple(blocker, blocking)).send();
 }
 
 void social::unblock(name blocker, name blocking) {
@@ -98,6 +103,8 @@ void social::unblock(name blocker, name blocking) {
 
     if (record_is_empty(*itr))
         table.erase(itr);
+
+    eosio::event(_self, "unblock"_n, std::make_tuple(blocker, blocking)).send();
 }
 
 void social::changereput(name voter, name author, int64_t rshares) {
@@ -121,14 +128,20 @@ void social::changereput(name voter, name author, int64_t rshares) {
 
     author_rep.reputation += rshares;
     author_single.set(author_rep, author);
+
+    eosio::event(_self, "changereput"_n, std::make_tuple(author, author_rep.reputation)).send();
 }
 
 void social::updatemeta(name account, accountmeta meta) {
     require_auth(account);
+
+    eosio::event(_self, "updatemeta"_n, std::make_tuple(account,meta)).send();
 }
 
 void social::deletemeta(name account) {
     require_auth(account);
+
+    eosio::event(_self, "deletemeta"_n, account).send();
 }
 
 

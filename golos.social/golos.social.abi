@@ -208,6 +208,20 @@
     ]
   },
   {
+    "name": "changereput_event",
+    "base": "",
+    "fields": [
+      {
+        "name": "author",
+        "type": "name"
+      },
+      {
+        "name": "reputation",
+        "type": "int64"
+      }
+    ]
+  },
+  {
     "name": "updatemeta",
     "base": "",
     "fields": [
@@ -261,6 +275,15 @@
     "name": "deletemeta",
     "type": "deletemeta"
   }
+  ],
+  "events": [
+     {"name": "pin",        "type": "pin"},
+     {"name": "unpin",      "type": "pin"},
+     {"name": "block",      "type": "block"},
+     {"name": "unblock",    "type": "blocK"},
+     {"name": "updatemeta", "type": "updatemeta"},
+     {"name": "deletemeta", "type": "deletemeta"},
+     {"name": "changereput","type": "changereput_event"}
   ],
   "tables": [
   {
