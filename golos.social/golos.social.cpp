@@ -30,8 +30,6 @@ void social::pin(name pinner, name pinning) {
             item.pinning = true;
         });
     }
-
-    eosio::event(_self, "pin"_n, std::make_tuple(pinner, pinning)).send();
 }
 
 void social::unpin(name pinner, name pinning) {
@@ -51,8 +49,6 @@ void social::unpin(name pinner, name pinning) {
 
     if (record_is_empty(*itr))
         table.erase(itr);
-
-    eosio::event(_self, "unpin"_n, std::make_tuple(pinner, pinning)).send();
 }
 
 bool social::record_is_empty(structures::pinblock_record record) {
@@ -82,8 +78,6 @@ void social::block(name blocker, name blocking) {
             item.blocking = true;
         });
     }
-
-    eosio::event(_self, "block"_n, std::make_tuple(blocker, blocking)).send();
 }
 
 void social::unblock(name blocker, name blocking) {
@@ -103,8 +97,6 @@ void social::unblock(name blocker, name blocking) {
 
     if (record_is_empty(*itr))
         table.erase(itr);
-
-    eosio::event(_self, "unblock"_n, std::make_tuple(blocker, blocking)).send();
 }
 
 void social::changereput(name voter, name author, int64_t rshares) {

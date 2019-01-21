@@ -277,10 +277,6 @@
   }
   ],
   "events": [
-     {"name": "pin",        "type": "pin"},
-     {"name": "unpin",      "type": "pin"},
-     {"name": "block",      "type": "block"},
-     {"name": "unblock",    "type": "blocK"},
      {"name": "changereput","type": "changereput_event"}
   ],
   "tables": [
