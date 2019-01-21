@@ -1,4 +1,6 @@
 #include "golos.referral/golos.referral.hpp"
+#include <cyber.token/cyber.token.hpp>
+#include <common/dispatchers.hpp>
 #include <eosiolib/transaction.hpp>
 
 namespace golos {
@@ -65,6 +67,22 @@ void referral::addreferral(name referrer, name referral, uint32_t percent,
     });
 }
 
+void referral::on_transfer(name from, name to, asset quantity, std::string memo) {
+    if(_self != to)
+        return;
+
+    referrals_table referrals(_self, _self.value);
+    auto it_referral = referrals.find(from.value);
+    eosio_assert(it_referral != referrals.end(), "A referral with this name doesn't exist.");
+    eosio_assert(it_referral->breakout.amount == quantity.amount, "Amount of funds doesn't equal.");
+    
+    INLINE_ACTION_SENDER(eosio::token, transfer)
+        (config::token_name, {_self, config::active_name},
+        {_self, it_referral->referrer, quantity, ""});
+
+    referrals.erase(it_referral);
+}
+
 void referral::closeoldref(uint64_t hash) {
     require_auth(_self);
 
@@ -88,4 +106,4 @@ void referral::closeoldref(uint64_t hash) {
 
 }
 
-EOSIO_DISPATCH(golos::referral, (addreferral)(validateprms)(setparams)(closeoldref));
+DISPATCH_WITH_TRANSFER(golos::referral, on_transfer, (addreferral)(validateprms)(setparams)(closeoldref))
