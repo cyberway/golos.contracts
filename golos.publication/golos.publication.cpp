@@ -7,6 +7,7 @@
 #include <golos.charge/golos.charge.hpp>
 #include <common/upsert.hpp>
 #include "utils.hpp"
+#include "objects.hpp"
 
 namespace golos {
 
@@ -500,50 +501,47 @@ void publication::set_vote(name voter, name author, string permlink, int16_t wei
 
     auto cur_time = current_time();
 
-    auto votetable_index = vote_table.get_index<"messageid"_n>();
-    auto vote_itr = votetable_index.lower_bound(id);
-    while ((vote_itr != votetable_index.end()) && (vote_itr->message_id == id)) {
-        if (voter == vote_itr->voter) {
-            // it's not consensus part and can be moved to storage in future
-            if (mssg_itr->closed) {
-                votetable_index.modify(vote_itr, voter, [&]( auto &item ) {
-                    item.count = -1;
-                });
-                return;
-            }
-
-            eosio_assert(weight != vote_itr->weight, "Vote with the same weight has already existed.");
-            eosio_assert(vote_itr->count != max_vote_changes_param.max_vote_changes, "You can't revote anymore.");
-
-            atmsp::machine<fixp_t> machine;
-            fixp_t rshares = calc_available_rshares(voter, weight, cur_time, *pool);
-            if(rshares > FP(vote_itr->rshares))
-                check_upvote_time(cur_time, mssg_itr->date);
-
-            fixp_t new_mssg_rshares = (FP(mssg_itr->state.netshares) - FP(vote_itr->rshares)) + rshares;
-            auto rsharesfn_delta = get_delta(machine, FP(mssg_itr->state.netshares), new_mssg_rshares, pool->rules.mainfunc);
-
-            pools.modify(*pool, _self, [&](auto &item) {
-                item.state.rshares = ((WP(item.state.rshares) - wdfp_t(FP(vote_itr->rshares))) + wdfp_t(rshares)).data();
-                item.state.rsharesfn = (WP(item.state.rsharesfn) + wdfp_t(rsharesfn_delta)).data();
-            });
-
-            message_table.modify(mssg_itr, name(), [&]( auto &item ) {
-                item.state.netshares = new_mssg_rshares.data();
-                item.state.sumcuratorsw = (FP(item.state.sumcuratorsw) - FP(vote_itr->curatorsw)).data();
-            });
-
+    auto votetable_index = vote_table.get_index<"byvoter"_n>();
+    auto vote_itr = votetable_index.find(std::make_tuple(hash64(permlink), voter));
+    if (vote_itr != votetable_index.end()) {
+        // it's not consensus part and can be moved to storage in future
+        if (mssg_itr->closed) {
             votetable_index.modify(vote_itr, voter, [&]( auto &item ) {
-               item.weight = weight;
-               item.time = cur_time;
-               item.curatorsw = fixp_t(0).data();
-               item.rshares = rshares.data();
-               ++item.count;
+                item.count = -1;
             });
-
             return;
         }
-        ++vote_itr;
+
+        eosio_assert(weight != vote_itr->weight, "Vote with the same weight has already existed.");
+        eosio_assert(vote_itr->count != max_vote_changes_param.max_vote_changes, "You can't revote anymore.");
+
+        atmsp::machine<fixp_t> machine;
+        fixp_t rshares = calc_available_rshares(voter, weight, cur_time, *pool);
+        if(rshares > FP(vote_itr->rshares))
+            check_upvote_time(cur_time, mssg_itr->date);
+
+        fixp_t new_mssg_rshares = (FP(mssg_itr->state.netshares) - FP(vote_itr->rshares)) + rshares;
+        auto rsharesfn_delta = get_delta(machine, FP(mssg_itr->state.netshares), new_mssg_rshares, pool->rules.mainfunc);
+
+        pools.modify(*pool, _self, [&](auto &item) {
+            item.state.rshares = ((WP(item.state.rshares) - wdfp_t(FP(vote_itr->rshares))) + wdfp_t(rshares)).data();
+            item.state.rsharesfn = (WP(item.state.rsharesfn) + wdfp_t(rsharesfn_delta)).data();
+        });
+
+        message_table.modify(mssg_itr, name(), [&]( auto &item ) {
+            item.state.netshares = new_mssg_rshares.data();
+            item.state.sumcuratorsw = (FP(item.state.sumcuratorsw) - FP(vote_itr->curatorsw)).data();
+        });
+
+        votetable_index.modify(vote_itr, voter, [&]( auto &item ) {
+            item.weight = weight;
+            item.time = cur_time;
+            item.curatorsw = fixp_t(0).data();
+            item.rshares = rshares.data();
+            ++item.count;
+        });
+
+        return;
     }
     atmsp::machine<fixp_t> machine;
     fixp_t rshares = calc_available_rshares(voter, weight, cur_time, *pool);
