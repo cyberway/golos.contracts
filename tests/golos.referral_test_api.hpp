@@ -54,6 +54,10 @@ struct golos_referral_api: base_contract_api {
          return base_contract_api::get_struct(_code, N(refparams), N(refparams), "referral_state");
      }
 
+    variant get_referral(name referral) {
+        return _tester->get_chaindb_struct(_code, _code, N(referrals), referral, "obj_referral");
+    }
+
      vector<variant> get_referrals() {
          return _tester->get_all_chaindb_rows(_code, _code, N(referrals), false);
      }

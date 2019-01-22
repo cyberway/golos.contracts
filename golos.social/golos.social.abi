@@ -208,6 +208,20 @@
     ]
   },
   {
+    "name": "changereput_event",
+    "base": "",
+    "fields": [
+      {
+        "name": "author",
+        "type": "name"
+      },
+      {
+        "name": "reputation",
+        "type": "int64"
+      }
+    ]
+  },
+  {
     "name": "updatemeta",
     "base": "",
     "fields": [
@@ -261,6 +275,9 @@
     "name": "deletemeta",
     "type": "deletemeta"
   }
+  ],
+  "events": [
+     {"name": "changereput","type": "changereput_event"}
   ],
   "tables": [
   {

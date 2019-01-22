@@ -1,3 +1,4 @@
+#include <eosiolib/event.hpp>
 #include "golos.social.hpp"
 
 namespace golos {
@@ -23,13 +24,12 @@ void social::pin(name pinner, name pinning) {
             item.pinning = true;
         });
 
-        return;
+    } else {
+        table.emplace(pinner, [&](auto& item){
+            item.account = pinning;
+            item.pinning = true;
+        });
     }
-
-    table.emplace(pinner, [&](auto& item){
-        item.account = pinning;
-        item.pinning = true;
-    });
 }
 
 void social::unpin(name pinner, name pinning) {
@@ -72,13 +72,12 @@ void social::block(name blocker, name blocking) {
             item.blocking = true;
         });
 
-        return;
+    } else {
+        table.emplace(blocker, [&](auto& item){
+            item.account = blocking;
+            item.blocking = true;
+        });
     }
-
-    table.emplace(blocker, [&](auto& item){
-        item.account = blocking;
-        item.blocking = true;
-    });
 }
 
 void social::unblock(name blocker, name blocking) {
@@ -121,6 +120,8 @@ void social::changereput(name voter, name author, int64_t rshares) {
 
     author_rep.reputation += rshares;
     author_single.set(author_rep, author);
+
+    eosio::event(_self, "changereput"_n, std::make_tuple(author, author_rep.reputation)).send();
 }
 
 void social::updatemeta(name account, accountmeta meta) {
