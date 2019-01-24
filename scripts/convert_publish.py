@@ -232,6 +232,7 @@ class PublishConverter:
                     "weight" : doc["vote_percent"],
                     "time" : utils.UInt64(int(doc["last_update"].timestamp()) * 1000000),
                     "count" : utils.Int64(doc["num_changes"]),
+                    "delegators" : [],
                     "curatorsw": utils.Int64(doc["weight"] / 2),
                     "rshares": utils.Int64(utils.get_fixp_raw(doc["rshares"])),
                     "_SERVICE_" : {
