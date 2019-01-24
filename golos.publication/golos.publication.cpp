@@ -1,6 +1,7 @@
 #include "golos.publication.hpp"
 #include <common/hash64.hpp>
 #include <eosiolib/transaction.hpp>
+#include <eosiolib/event.hpp>
 #include <cyber.token/cyber.token.hpp>
 #include <golos.social/golos.social.hpp>
 #include <golos.vesting/golos.vesting.hpp>
@@ -440,6 +441,7 @@ void publication::close_message(name account, uint64_t id) {
     message_table.modify(mssg_itr, _self, [&]( auto &item) {
         item.rewardweight = static_cast<base_t>(reward_weight.data()); //not used to calculate rewards, stored for stats only
         item.closed = true;
+        send_postclose_event(account, item);
     });
 
     bool pool_erased = false;
@@ -448,12 +450,17 @@ void publication::close_message(name account, uint64_t id) {
         if(pool != --pools.end()) {//there is a pool after, so we can delete this one
             eosio_assert(state.funds.amount == unclaimed_rewards, "LOGIC ERROR! publication::payrewards: state.funds != unclaimed_rewards");
             fill_depleted_pool(pools, state.funds, pool);
+            send_poolerase_event(*pool);
+
             pools.erase(pool);
             pool_erased = true;
         }
     }
     if(!pool_erased)
-        pools.modify(pool, _self, [&](auto &item) { item.state = state; });
+        pools.modify(pool, _self, [&](auto &item) {
+            item.state = state; 
+            send_poolstate_event(item);
+        });
 }
 
 void publication::close_message_timer(name account, uint64_t id, uint64_t delay_sec) {
@@ -526,11 +533,13 @@ void publication::set_vote(name voter, name author, string permlink, int16_t wei
         pools.modify(*pool, _self, [&](auto &item) {
             item.state.rshares = ((WP(item.state.rshares) - wdfp_t(FP(vote_itr->rshares))) + wdfp_t(rshares)).data();
             item.state.rsharesfn = (WP(item.state.rsharesfn) + wdfp_t(rsharesfn_delta)).data();
+            send_poolstate_event(item);
         });
 
         message_table.modify(mssg_itr, name(), [&]( auto &item ) {
             item.state.netshares = new_mssg_rshares.data();
             item.state.sumcuratorsw = (FP(item.state.sumcuratorsw) - FP(vote_itr->curatorsw)).data();
+            send_poststate_event(author, item);
         });
 
         votetable_index.modify(vote_itr, voter, [&]( auto &item ) {
@@ -539,6 +548,7 @@ void publication::set_vote(name voter, name author, string permlink, int16_t wei
             item.curatorsw = fixp_t(0).data();
             item.rshares = rshares.data();
             ++item.count;
+            send_votestate_event(voter, item, author, *mssg_itr);
         });
 
         return;
@@ -561,13 +571,17 @@ void publication::set_vote(name voter, name author, string permlink, int16_t wei
     pools.modify(*pool, _self, [&](auto &item) {
          item.state.rshares = (WP(item.state.rshares) + wdfp_t(rshares)).data();
          item.state.rsharesfn = (WP(item.state.rsharesfn) + wdfp_t(rsharesfn_delta)).data();
+         send_poolstate_event(item);
     });
     eosio_assert(WP(pool->state.rshares) >= 0, "pool state rshares overflow");
     eosio_assert(WP(pool->state.rsharesfn) >= 0, "pool state rsharesfn overflow");
 
     auto sumcuratorsw_delta = get_delta(machine, FP(mssg_itr->state.voteshares), FP(msg_new_state.voteshares), pool->rules.curationfunc);
     msg_new_state.sumcuratorsw = (FP(mssg_itr->state.sumcuratorsw) + sumcuratorsw_delta).data();
-    message_table.modify(mssg_itr, _self, [&](auto &item) { item.state = msg_new_state; });
+    message_table.modify(mssg_itr, _self, [&](auto &item) {
+        item.state = msg_new_state;
+        send_poststate_event(author, item);
+    });
 
     auto time_delta = static_cast<int64_t>((cur_time - mssg_itr->date) / seconds(1).count());
     auto curatorsw_factor =
@@ -591,6 +605,7 @@ void publication::set_vote(name voter, name author, string permlink, int16_t wei
         item.delegators = delegators;
         item.curatorsw = (fixp_t(sumcuratorsw_delta * curatorsw_factor)).data();
         item.rshares = rshares.data();
+        send_votestate_event(voter, item, author, *mssg_itr);
     });
 
     if (social_acc_param.account) {
@@ -631,7 +646,10 @@ void publication::fill_depleted_pool(tables::reward_pools& pools, eosio::asset q
         }
     //sic. we don't need assert here
     if(choice != pools.end())
-        pools.modify(*choice, _self, [&](auto &item){ item.state.funds += quantity; });
+        pools.modify(*choice, _self, [&](auto &item){
+            item.state.funds += quantity;
+            send_poolstate_event(item);
+        });
 }
 
 void publication::on_transfer(name from, name to, eosio::asset quantity, std::string memo) {
@@ -705,7 +723,32 @@ void publication::set_rules(const funcparams& mainfunc, const funcparams& curati
         item.state.funds = unclaimed_funds;
         item.state.rshares = (wdfp_t(0)).data();
         item.state.rsharesfn = (wdfp_t(0)).data();
+        send_poolstate_event(item);
     });
+}
+
+void publication::send_poolstate_event(const structures::rewardpool& pool) {
+    structures::pool_event data{pool.created, pool.state.msgs, pool.state.funds, pool.state.rshares};
+    eosio::event(_self, "poolstate"_n, data).send();
+}
+
+void publication::send_poolerase_event(const structures::rewardpool& pool) {
+    eosio::event(_self, "poolerase"_n, pool.created).send();
+}
+
+void publication::send_poststate_event(name author, const structures::message& post) {
+    structures::post_event data{author, post.permlink, post.state.netshares, post.state.voteshares, post.state.sumcuratorsw};
+    eosio::event(_self, "poststate"_n, data).send();
+}
+
+void publication::send_postclose_event(name author, const structures::message& post) {
+    structures::post_close data{author, post.permlink, post.rewardweight};
+    eosio::event(_self, "postclose"_n, data).send();
+}
+
+void publication::send_votestate_event(name voter, const structures::voteinfo& vote, name author, const structures::message& post) {
+    structures::vote_event data{voter, author, post.permlink, vote.weight, vote.curatorsw, vote.rshares};
+    eosio::event(_self, "votestate"_n, data).send();
 }
 
 structures::funcinfo publication::load_func(const funcparams& params, const std::string& name, const atmsp::parser<fixp_t>& pa, atmsp::machine<fixp_t>& machine, bool inc) {
