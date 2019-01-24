@@ -143,6 +143,37 @@ struct rewardpool {
     EOSLIB_SERIALIZE(rewardpool, (created)(rules)(state))
 };
 
+struct post_event {
+    name author;
+    std::string permlink;
+
+    base_t netshares = 0;
+    base_t voteshares = 0;
+    base_t sumcuratorsw = 0;
+};
+
+struct post_close {
+    name author;
+    std::string permlink;
+    base_t rewardweight;
+};
+
+struct vote_event {
+    name voter;
+    name author;
+    std::string permlink;
+    int16_t weight;
+    base_t curatorsw;
+    base_t rshares;
+};
+
+struct pool_event {
+    uint64_t created;
+    counter_t msgs;
+    eosio::asset funds;
+    wide_t rshares;
+};
+
 struct limitparams {
     enum act_t: uint8_t {POST, COMM, VOTE, POSTBW};
     uint64_t act;
