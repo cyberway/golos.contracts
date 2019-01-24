@@ -207,7 +207,6 @@ class PublishConverter:
     def convert_votes(self, query = {}):
         print("convert_votes")
         golos_votes = self.golos_db['comment_vote_object']
-        golos_delegation = self.golos_db['vesting_delegation_object']
         cyberway_messages = self.publish_db['message']
 
         cursor = golos_votes.find(query)
@@ -226,11 +225,6 @@ class PublishConverter:
                 if (not (doc["author"] in self.exists_accs)) or (not (doc["voter"] in self.exists_accs)):
                     continue
 
-                delegation_cursor = golos_delegation.find({'removed':{'$exists':False}, 'delegatee':doc['voter']})
-                delegators = []
-                for delegation_doc in delegation_cursor:
-                    delegators.append(delegation_doc['delegator'])
-
                 vote = {
                     "id" : utils.UInt64(added),
                     "message_id" : utils.UInt64(cur_mssg_id),
@@ -238,7 +232,7 @@ class PublishConverter:
                     "weight" : doc["vote_percent"],
                     "time" : utils.UInt64(int(doc["last_update"].timestamp()) * 1000000),
                     "count" : utils.Int64(doc["num_changes"]),
-                    "delegators" : delegators,
+                    "delegators" : [],
                     "curatorsw": utils.Int64(doc["weight"] / 2),
                     "rshares": utils.Int64(utils.get_fixp_raw(doc["rshares"])),
                     "_SERVICE_" : {
