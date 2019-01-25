@@ -125,6 +125,19 @@ struct golos_posting_api: base_contract_api {
             ("params", json_str_to_obj(json_params)));
     }
 
+    action_result init_default_params() {
+        auto vote_changes = get_str_vote_changes(max_vote_changes);
+        auto cashout_window = get_str_cashout_window(window, upvote_lockout);
+        auto beneficiaries = get_str_beneficiaries(max_beneficiaries);
+        auto comment_depth = get_str_comment_depth(max_comment_depth);
+        auto social = get_str_social_acc(name());
+        auto referral = get_str_referral_acc(name());
+
+        auto params = "[" + vote_changes + "," + cashout_window + "," + beneficiaries + "," + comment_depth + 
+            "," + social + "," + referral + "]";
+        return set_params(params); 
+    } 
+
     variant get_params() const {
         return base_contract_api::get_struct(_code, N(pstngparams), N(pstngparams), "posting_state");
     }
@@ -155,15 +168,15 @@ struct golos_posting_api: base_contract_api {
 
     //// posting tables
     variant get_message(account_name acc, uint64_t id) {
-        return _tester->get_chaindb_struct(_code, acc, N(messagetable), id, "message");
+        return _tester->get_chaindb_struct(_code, acc, N(message), id, "message");
     }
 
     variant get_content(account_name acc, uint64_t id) {
-        return _tester->get_chaindb_struct(_code, acc, N(contenttable), id, "content");
+        return _tester->get_chaindb_struct(_code, acc, N(content), id, "content");
     }
 
     variant get_vote(account_name acc, uint64_t id) {
-        return _tester->get_chaindb_struct(_code, acc, N(votetable), id, "voteinfo");
+        return _tester->get_chaindb_struct(_code, acc, N(vote), id, "voteinfo");
     }
 
     std::vector<variant> get_reward_pools() {
@@ -171,7 +184,7 @@ struct golos_posting_api: base_contract_api {
     }
 
     std::vector<variant> get_messages(account_name user) {
-        return _tester->get_all_chaindb_rows(_code, user, N(messagetable), false);
+        return _tester->get_all_chaindb_rows(_code, user, N(message), false);
     }
 
     //// posting helpers
@@ -187,8 +200,6 @@ struct golos_posting_api: base_contract_api {
     const uint32_t upvote_lockout = 15;
     const uint8_t max_beneficiaries = 64;
     const uint16_t max_comment_depth = 127;
-    const name social_acc = "gls.social"_n;
-    const name referral_acc = "gls.referral"_n;
 };
 
 

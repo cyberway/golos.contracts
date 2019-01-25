@@ -16,11 +16,14 @@ struct golos_vesting_api: base_contract_api {
         return create_vesting(creator, _symbol, golos::config::control_name);
     }
     action_result create_vesting(name creator, symbol vesting_symbol, name notify_acc = N(notify.acc)) {
-        _tester->link_authority(creator, _code, golos::config::invoice_name, N(retire));
-        return push(N(createvest), creator, args()
+        action_result result = push(N(createvest), creator, args()
             ("symbol", vesting_symbol)
             ("notify_acc", notify_acc)
         );
+        if (base_tester::success() == result) {
+            _tester->link_authority(creator, _code, golos::config::invoice_name, N(retire));
+        }
+        return result;
     }
 
     action_result open(name owner) {
@@ -100,7 +103,7 @@ struct golos_vesting_api: base_contract_api {
 
     variant get_balance(name acc) {
         // converts assets to strings; TODO: generalize
-        auto v = get_struct(acc, N(balances), _symbol.to_symbol_code().value, "user_balance");
+        auto v = get_struct(acc, N(accounts), _symbol.to_symbol_code().value, "user_balance");
         if (v.is_object()) {
             auto o = mvo(v);
             o["vesting"] = o["vesting"].as<asset>().to_string();
@@ -114,15 +117,15 @@ struct golos_vesting_api: base_contract_api {
 
     variant get_balance_raw(name acc) {
         // base_api_helper knows code
-        return get_struct(acc, N(balances), _symbol.to_symbol_code().value, "user_balance");
+        return get_struct(acc, N(accounts), _symbol.to_symbol_code().value, "user_balance");
     }
 
     std::vector<variant> get_balances(name user) {
-        return _tester->get_all_chaindb_rows(_code, user, N(balances), false);
+        return _tester->get_all_chaindb_rows(_code, user, N(accounts), false);
     }
 
     variant get_convert_obj(name from) {
-        return get_struct(_symbol.to_symbol_code().value, N(converttable), from, "convert_of_tokens");
+        return get_struct(_symbol.to_symbol_code().value, N(convert), from, "convert_of_tokens");
     }
 
     //// helpers

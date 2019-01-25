@@ -23,6 +23,8 @@ public:
     [[eosio::action]]
     void closeoldref(uint64_t hash);
 
+    void on_transfer(name from, name to, asset quantity, std::string memo);
+
 private:
     struct obj_referral {
         name referrer;

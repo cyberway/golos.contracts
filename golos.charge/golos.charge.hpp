@@ -10,7 +10,7 @@
 #include <eosiolib/eosio.hpp>
 #include <string>
 #include <common/config.hpp>
-#include <eosio.token/eosio.token.hpp>
+#include <cyber.token/cyber.token.hpp>
 #include <golos.vesting/golos.vesting.hpp>
 
 namespace golos {
@@ -113,6 +113,10 @@ private:
         
         return std::max(fp_cast<fixp_t>((elap_t(FP(user_balance.value)) - elap_t(restored)) + elap_t(price)), fixp_t(0));
     }
+
+private:
+    void send_charge_event(name user, const balance& state);
+
 public:
     static inline int64_t get_current_value(name code, name user, symbol_code token_code, uint8_t charge_id = 0) {
         balances balances_table(code, user.value);

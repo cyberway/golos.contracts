@@ -143,6 +143,37 @@ struct rewardpool {
     EOSLIB_SERIALIZE(rewardpool, (created)(rules)(state))
 };
 
+struct post_event {
+    name author;
+    std::string permlink;
+
+    base_t netshares = 0;
+    base_t voteshares = 0;
+    base_t sumcuratorsw = 0;
+};
+
+struct post_close {
+    name author;
+    std::string permlink;
+    base_t rewardweight;
+};
+
+struct vote_event {
+    name voter;
+    name author;
+    std::string permlink;
+    int16_t weight;
+    base_t curatorsw;
+    base_t rshares;
+};
+
+struct pool_event {
+    uint64_t created;
+    counter_t msgs;
+    eosio::asset funds;
+    wide_t rshares;
+};
+
 struct limitparams {
     enum act_t: uint8_t {POST, COMM, VOTE, POSTBW};
     uint64_t act;
@@ -168,17 +199,20 @@ namespace tables {
 using namespace eosio;
 
 using id_index = indexed_by<N(id), const_mem_fun<structures::message, uint64_t, &structures::message::primary_key>>;
-using message_table = multi_index<N(messagetable), structures::message, id_index>;
+using message_table = multi_index<N(message), structures::message, id_index>;
 
 using content_id_index = indexed_by<N(id), const_mem_fun<structures::content, uint64_t, &structures::content::primary_key>>;
-using content_table = multi_index<N(contenttable), structures::content, content_id_index>;
+using content_table = multi_index<N(content), structures::content, content_id_index>;
 
 using vote_id_index = indexed_by<N(id), const_mem_fun<structures::voteinfo, uint64_t, &structures::voteinfo::primary_key>>;
 using vote_messageid_index = indexed_by<N(messageid), const_mem_fun<structures::voteinfo, uint64_t, &structures::voteinfo::by_message>>;
-using vote_table = multi_index<N(votetable), structures::voteinfo, vote_id_index, vote_messageid_index>;
+using vote_group_index = indexed_by<N(byvoter), eosio::composite_key<structures::voteinfo, 
+      eosio::member<structures::voteinfo, uint64_t, &structures::voteinfo::message_id>,
+      eosio::member<structures::voteinfo, name, &structures::voteinfo::voter>>>;
+using vote_table = multi_index<N(vote), structures::voteinfo, vote_id_index, vote_messageid_index, vote_group_index>;
 
 using reward_pools = multi_index<N(rewardpools), structures::rewardpool>;
-using limit_table = multi_index<N(limittable), structures::limitparams>;
+using limit_table = multi_index<N(limit), structures::limitparams>;
 
 }
 

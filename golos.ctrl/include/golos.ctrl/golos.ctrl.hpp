@@ -106,6 +106,7 @@ private:
     void apply_vote_weight(name voter, name witness, bool add);
     void update_witnesses_weights(std::vector<name> witnesses, share_type diff);
     void update_auths();
+    void send_witness_event(const witness_info& wi);
 };
 
 

@@ -10,7 +10,7 @@ golos = dbs.Tables([
 
 cyberway = dbs.Tables([
     ('account',     dbs.cyberway_db['account'],              dbs.get_next_id, [('id',True),('name',True)]),
-    ('vesting',     dbs.cyberway_gls_vesting_db['balances'], None,            None),
+    ('vesting',     dbs.cyberway_gls_vesting_db['accounts'], None,            None),
     ('witness',     dbs.cyberway_gls_ctrl_db['witness'],     None,            None),
     ('witnessvote', dbs.cyberway_gls_ctrl_db['witnessvote'], None,            None)
 ])

@@ -3,9 +3,10 @@
 #include <golos.vesting/golos.vesting.hpp>
 #include <common/parameter_ops.hpp>
 #include <common/dispatchers.hpp>
-#include <eosio.system/native.hpp>
-#include <eosio.token/eosio.token.hpp>
+#include <cyber.system/native.hpp>
+#include <cyber.token/cyber.token.hpp>
 #include <eosiolib/transaction.hpp>
+#include <eosiolib/event.hpp>
 
 namespace golos {
 
@@ -271,6 +272,7 @@ void control::update_witnesses_weights(vector<name> witnesses, share_type diff) 
         if (w != wtbl.end()) {
             wtbl.modify(w, witness, [&](auto& wi) {
                 wi.total_weight += diff;            // TODO: additional checks of overflow? (not possible normally)
+                send_witness_event(wi);
             });
         } else {
             // just skip unregistered witnesses (incl. non existing accs) for now
@@ -317,6 +319,10 @@ void control::update_auths() {
             std::make_tuple(owner, perm, config::active_name, auth)
         ).send();
     }
+}
+
+void control::send_witness_event(const witness_info& wi) {
+    eosio::event(_self, "witnessstate"_n, std::make_tuple(wi.name, wi.total_weight)).send();
 }
 
 vector<witness_info> control::top_witness_info() {

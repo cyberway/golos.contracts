@@ -135,7 +135,7 @@
         "type": "asset"
       }
     ]
-  }
+  },
   {
     "name": "content",
     "base": "",
@@ -731,7 +731,56 @@
             "type": "string"
         }
     ]
+  },
+  {
+    "name": "post_event",
+    "base": "",
+    "fields": [
+        {"name": "author", "type": "name"},
+        {"name": "permlink", "type": "string"},
+        {"name": "netshares", "type": "base_t"},
+        {"name": "voteshares", "type": "base_t"},
+        {"name": "sumcuratorsw", "type": "base_t"}
+    ]
+  },
+  {
+    "name": "post_close",
+    "base": "",
+    "fields": [
+        {"name": "author", "type": "name"},
+        {"name": "permlink", "type": "string"},
+        {"name": "rewardweight", "type": "base_t"}
+    ]
+  },
+  {
+    "name": "vote_event",
+    "base": "",
+    "fields": [
+        {"name": "voter", "type": "name"},
+        {"name": "author", "type": "name"},
+        {"name": "permlink", "type": "string"},
+        {"name": "weight", "type": "int16"},
+        {"name": "curatorsw", "type": "base_t"},
+        {"name": "rshares", "type": "base_t"}
+    ]
+  },
+  {
+    "name": "pool_event",
+    "base": "",
+    "fields": [
+        {"name": "created", "type": "uint64"},
+        {"name": "msgs", "type": "counter_t"},
+        {"name": "funds", "type": "asset"},
+        {"name": "rshares", "type": "wide_t"}
+    ]
   }
+  ],
+  "events": [
+    {"name": "poolstate", "type": "pool_event"},
+    {"name": "poolerase", "type": "uint64"},
+    {"name": "poststate", "type": "post_event"},
+    {"name": "postclose", "type": "post_close"},
+    {"name": "votestate", "type": "vote_event"}
   ],
   "actions": [
   {
@@ -785,7 +834,7 @@
   ],
   "tables": [
   {
-    "name": "messagetable",
+    "name": "message",
     "type": "message",
     "indexes": [
        {
@@ -798,7 +847,7 @@
     ]
   },
   {
-    "name": "contenttable",
+    "name": "content",
     "type": "content",
     "indexes": [
        {
@@ -811,7 +860,7 @@
     ]
   },
   {
-    "name": "votetable",
+    "name": "vote",
     "type": "voteinfo",
     "indexes": [
        {
@@ -826,6 +875,14 @@
           "unique": "false",
           "orders": [
               {"field": "message_id", "order": "asc"}
+          ]
+       },
+       {
+          "name": "byvoter",
+          "unique": "true",
+          "orders": [
+              {"field": "message_id", "order": "asc"},
+              {"field": "voter", "order": "asc"}
           ]
        }
     ]
@@ -844,7 +901,7 @@
     ]
   },
   {
-    "name": "limittable",
+    "name": "limit",
     "type": "limitparams",
     "indexes": [
        {

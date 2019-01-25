@@ -40,6 +40,12 @@ private:
     void payto(name user, asset quantity, enum_t mode);
     void check_account(name user, symbol tokensymbol);
 
+    void send_poolstate_event(const structures::rewardpool& pool);
+    void send_poolerase_event(const structures::rewardpool& pool);
+    void send_poststate_event(name author, const structures::message& post);
+    void send_postclose_event(name author, const structures::message& post);
+    void send_votestate_event(name voter, const structures::voteinfo& vote, name author, const structures::message& post);
+
     static structures::funcinfo load_func(const funcparams& params, const std::string& name,
         const atmsp::parser<fixp_t>& pa, atmsp::machine<fixp_t>& machine, bool inc);
     static fixp_t get_delta(atmsp::machine<fixp_t>& machine, fixp_t old_val, fixp_t new_val,

@@ -48,9 +48,9 @@ class PublishConverter:
         self.update_list = []
         self.messages = self.publish_db["message"]
         self.publish_tables = dbs.Tables([
-            ('vote',    self.publish_db['votetable'],    None, None),
-            ('message', self.publish_db['messagetable'], None, None),
-            ('content', self.publish_db['contenttable'], None, None),
+            ('vote',    self.publish_db['vote'],    None, None),
+            ('message', self.publish_db['message'], None, None),
+            ('content', self.publish_db['content'], None, None),
             ("gtransaction", self.cyberway_db['gtransaction'], None, None)
         ])
         self.cache_period = cache_period
@@ -108,9 +108,9 @@ class PublishConverter:
                       "sender": "gls.publish",
                       "sender_id": hex(cur_mssg_id << 64 | utils.string_to_name(doc["author"])),
                       "payer": "gls.publish",
-                      "delay_until" : doc["cashout_time"].isoformat(), 
-                      "expiration" :  (doc["cashout_time"] + expiretion).isoformat(), 
-                      "published" :   doc["created"].isoformat(), 
+                      "delay_until" : doc["cashout_time"], 
+                      "expiration" :  (doc["cashout_time"] + expiretion), 
+                      "published" :   doc["created"], 
                       "packed_trx" : create_trx(doc["author"], utils.convert_hash(doc["permlink"])), 
                       "_SERVICE_" : {
                           "scope" : "",
@@ -207,7 +207,7 @@ class PublishConverter:
     def convert_votes(self, query = {}):
         print("convert_votes")
         golos_votes = self.golos_db['comment_vote_object']
-        cyberway_messages = self.publish_db['messagetable']
+        cyberway_messages = self.publish_db['message']
 
         cursor = golos_votes.find(query)
         length = cursor.count()
@@ -232,6 +232,7 @@ class PublishConverter:
                     "weight" : doc["vote_percent"],
                     "time" : utils.UInt64(int(doc["last_update"].timestamp()) * 1000000),
                     "count" : utils.Int64(doc["num_changes"]),
+                    "delegators" : [],
                     "curatorsw": utils.Int64(doc["weight"] / 2),
                     "rshares": utils.Int64(utils.get_fixp_raw(doc["rshares"])),
                     "_SERVICE_" : {

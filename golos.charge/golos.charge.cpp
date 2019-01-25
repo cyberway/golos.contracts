@@ -1,4 +1,5 @@
 #include "golos.charge.hpp"
+#include <eosiolib/event.hpp>
 
 namespace golos {
 using namespace eosio;
@@ -33,6 +34,7 @@ fixp_t charge::consume_charge(name issuer, name user, symbol_code token_code, ui
                 item.charge_id = charge_id;
                 item.last_update = current_time();
                 item.value = new_val.data();
+                send_charge_event(user, item);
             });
         return new_val;
     }
@@ -40,9 +42,15 @@ fixp_t charge::consume_charge(name issuer, name user, symbol_code token_code, ui
         balances_table.modify(*itr, name(), [&]( auto &item ) {
             item.last_update = current_time();
             item.value = new_val.data();
+            send_charge_event(user, item);
         });
-    else
+    else {
+        balance item{*itr};
+        item.last_update = current_time();
+        item.value = new_val;
+        send_charge_event(user, item);
         balances_table.erase(itr);
+    }
     return new_val;
 }
 
@@ -117,6 +125,11 @@ void charge::setrestorer(symbol_code token_code, uint8_t charge_id, std::string 
              item.max_elapsed = to_fixp(max_elapsed).data();
         });
 }
+
+void charge::send_charge_event(name user, const balance& state) {
+    eosio::event(_self, "chargestate"_n, std::make_tuple(user, state)).send();
+}
+
 EOSIO_DISPATCH(charge, (use)(useandstore)(removestored)(setrestorer) )
 
 } /// namespace golos
