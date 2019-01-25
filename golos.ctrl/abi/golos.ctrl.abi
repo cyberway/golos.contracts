@@ -125,7 +125,16 @@
             "name": "setparams",
             "fields": [
                 {"type": "ctrl_param[]", "name": "params"}]
+        }, {
+            "name": "witnessstate",
+            "fields": [
+                {"type": "name", "name": "witness"},
+                {"type": "uint64", "name": "weight"}
+            ]
         }
+    ],
+    "events": [
+        {"name": "witnessstate", "type": "witnessstate"}
     ],
     "actions": [
         {
