@@ -44,8 +44,13 @@ fixp_t charge::consume_charge(name issuer, name user, symbol_code token_code, ui
             item.value = new_val.data();
             send_charge_event(user, item);
         });
-    else
+    else {
+        balance item{*itr};
+        item.last_update = current_time();
+        item.value = new_val;
+        send_charge_event(user, item);
         balances_table.erase(itr);
+    }
     return new_val;
 }
 
