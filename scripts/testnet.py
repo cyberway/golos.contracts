@@ -92,7 +92,7 @@ def openTokenBalance(account):
     pushAction('cyber.token', 'open', account, [account, args.token, account])
 
 def issueToken(account, amount, memo=""):
-    pushAction('cyber.token', 'issue', 'gls.publish@owner', [account, amount, memo])
+    pushAction('cyber.token', 'issue', 'gls.issuer', [account, amount, memo])
 
 def buyVesting(account, amount):
     issueToken(account, amount)
@@ -109,7 +109,7 @@ def registerWitness(witness, key, url=None):
     })
 
 def voteWitness(voter, witness, weight):
-    pushAction('gls.ctrl', 'votewitness', voter, [args.token, voter, witness, weight])
+    pushAction('gls.ctrl', 'votewitness', voter, [voter, witness, weight])
 
 def createPost(author, permlink, category, header, body, *, beneficiaries=[]):
     pushAction('gls.publish', 'createmssg', author, 
