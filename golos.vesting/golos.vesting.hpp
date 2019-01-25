@@ -77,6 +77,8 @@ private:
     void notify_balance_change(name owner, asset diff);
     void sub_balance(name owner, asset value, bool retire_mode = false);
     void add_balance(name owner, asset value, name ram_payer);
+    void send_account_event(name account, const structures::user_balance& balance);
+    void send_vesting_event(const structures::vesting_info& info);
 
     const asset convert_to_token(const asset& vesting, const structures::vesting_info& vinfo) const;
     const asset convert_to_vesting(const asset& token, const structures::vesting_info& vinfo) const;

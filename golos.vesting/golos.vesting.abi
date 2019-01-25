@@ -51,6 +51,28 @@
       ]
     },
     {
+      "name": "balance_event",
+      "base": "",
+      "fields": [
+        {
+          "name": "account",
+          "type": "name"
+        },
+        {
+          "name": "vesting",
+          "type": "asset"
+        },
+        {
+          "name": "delegate_vesting",
+          "type": "asset"
+        },
+        {
+          "name": "received_vesting",
+          "type": "asset"
+        }
+      ]
+    },
+    {
       "name": "delegate_record",
       "base": "",
       "fields": [
@@ -294,6 +316,10 @@
           {"name": "params", "type": "vesting_param[]"}
        ]
     }
+  ],
+  "events": [
+    {"name": "balance", "type": "balance_event"},
+    {"name": "vesting", "type": "asset"}
   ],
   "actions": [
     {
