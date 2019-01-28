@@ -10,6 +10,7 @@
 #include <common/upsert.hpp>
 #include "utils.hpp"
 #include "objects.hpp"
+#include <common/config.hpp>
 
 namespace golos {
 
@@ -322,6 +323,7 @@ int64_t publication::pay_curators(name author, uint64_t msgid, int64_t max_rewar
             eosio_assert(claim <= unclaimed_rewards, "LOGIC ERROR! publication::pay_curators: claim > unclaimed_rewards");
             if(claim > 0) {
                 unclaimed_rewards -= claim;
+                claim -= pay_delegators(msgid, claim, v->voter, tokensymbol);
                 payto(v->voter, eosio::asset(claim, tokensymbol), static_cast<enum_t>(payment_t::VESTING));
             }
         }
@@ -806,6 +808,32 @@ void publication::reblog(name rebloger, name author, std::string permlink) {
     auto message_id = hash64(permlink);
     eosio_assert(message_table.find(message_id) != message_table.end(), 
             "You can't reblog, because this message doesn't exist.");
+}
+
+int64_t publication::pay_delegators(uint64_t message_id, int64_t claim, name voter, eosio::symbol tokensymbol) {
+    int64_t dlg_payout_sum = 0;
+    auto delegate_list = golos::vesting::get_list_delegate(config::vesting_name, voter, tokensymbol.code());
+    for (auto delegate_obj : delegate_list) {
+        tables::delegate_table table(_self, tokensymbol.code().raw());
+        auto index_table = table.get_index<"unique"_n>();
+        auto delegate_record = index_table.find(structures::delegate_record::unique_key(delegate_obj.sender, voter));
+        if (delegate_record != index_table.end()) {
+            if (delegate_record->payout_strategy == config::to_delegated_vesting) {
+                auto dlg_payout = claim * delegate_record->interest_rate / config::_100percent;
+                tables::account_table acc_table(_self, voter.value);
+                auto balance = acc_table.find(tokensymbol.code().raw());
+                acc_table.modify(balance, delegate_obj.sender, [&](auto& item) {
+                    item.delegate_vesting += eosio::asset(dlg_payout, tokensymbol);
+                    item.received_vesting += eosio::asset(dlg_payout, tokensymbol);
+                });
+                index_table.modify(delegate_record, name(), [&](auto& item) {
+                    item.deductions += eosio::asset(dlg_payout, tokensymbol);
+                }); 
+                dlg_payout_sum += dlg_payout;
+            }
+        }
+    }
+    return dlg_payout_sum;
 }
 
 } // golos
