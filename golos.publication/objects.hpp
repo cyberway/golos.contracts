@@ -80,7 +80,7 @@ struct delegate_voter {
     asset quantity;
     uint64_t interest_rate;
     uint8_t payout_strategy;
-    int16_t weight;
+    asset effective_vesting;
 };
 
 struct voteinfo {

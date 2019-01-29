@@ -615,9 +615,10 @@ void publication::set_vote(name voter, name author, string permlink, int16_t wei
     std::vector<structures::delegate_voter> delegators;
     auto token_code = pool->state.funds.symbol.code();
     auto list_delegate_voter = golos::vesting::get_list_delegate(config::vesting_name, voter, token_code);
+    auto effective_vesting = golos::vesting::get_account_effective_vesting(config::vesting_name, voter, token_code);
     for (auto record : list_delegate_voter) 
         delegators.push_back( {record.sender, record.quantity, record.interest_rate, 
-                record.payout_strategy, weight} );
+                record.payout_strategy, effective_vesting} );
 
     vote_table.emplace(voter, [&]( auto &item ) {
         item.id = vote_table.available_primary_key();
@@ -816,7 +817,12 @@ int64_t publication::pay_delegators(uint64_t message_id, int64_t claim, name vot
     int64_t dlg_payout_sum = 0;
     for (auto delegate_obj : delegate_list) {
         if (delegate_obj.payout_strategy == config::to_delegated_vesting) {
-            auto dlg_payout = claim * delegate_obj.interest_rate / config::_100percent;
+
+            auto interest_rate = static_cast<uint64_t>(static_cast<uint128_t>(delegate_obj.quantity.amount) * 
+                    delegate_obj.interest_rate / delegate_obj.effective_vesting.amount);
+
+            auto dlg_payout = claim * interest_rate / config::_100percent;
+
             tables::account_table acc_table(_self, voter.value);
             auto balance = acc_table.find(tokensymbol.code().raw());
             acc_table.modify(balance, delegate_obj.delegator, [&](auto& item) {
