@@ -10,6 +10,7 @@ EOSIO_DISPATCH(social, (pin)(unpin)(block)(unblock)(changereput)(updatemeta)(del
 void social::pin(name pinner, name pinning) {
     require_auth(pinner);
 
+    eosio_assert(is_account(pinning), "Pinning account doesn't exist.");
     eosio_assert(pinner != pinning, "You cannot pin yourself");
 
     tables::pinblock_table table(_self, pinner.value);
@@ -58,6 +59,7 @@ bool social::record_is_empty(structures::pinblock_record record) {
 void social::block(name blocker, name blocking) {
     require_auth(blocker);
 
+    eosio_assert(is_account(blocking), "Blocking account doesn't exist.");
     eosio_assert(blocker != blocking, "You cannot block yourself");
 
     tables::pinblock_table table(_self, blocker.value);
