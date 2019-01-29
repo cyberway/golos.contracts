@@ -7,10 +7,10 @@ COPY --from=cdt /opt/cyberway.cdt /opt/cyberway.cdt
 COPY --from=cyberway /opt/cyberway /opt/cyberway
 
 ARG branch=master
-ADD https://api.github.com/repos/GolosChain/golos-smart/git/refs/heads/$branch /etc/version.json
-RUN git clone -b $branch https://github.com/GolosChain/golos-smart.git --recursive
+ADD https://api.github.com/repos/GolosChain/golos.contracts/git/refs/heads/$branch /etc/version.json
+RUN git clone -b $branch https://github.com/GolosChain/golos.contracts.git --recursive
 
-RUN cd golos-smart/cyberway.contracts \
+RUN cd golos.contracts/cyberway.contracts \
     && echo ":$(git rev-parse HEAD)" > version \
     && cmake -H. -B"build" \
         -GNinja \
@@ -36,14 +36,14 @@ RUN apt-get update \
     && DEBIAN_FRONTEND=noninteractive apt-get -y install openssl ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-COPY --from=builder /golos-smart/version /opt/golos.contracts/version
+COPY --from=builder /golos.contracts/version /opt/golos.contracts/version
 COPY --from=builder /opt/golos.contracts/ /opt/golos.contracts/
-COPY --from=builder /golos-smart/build/tests/unit_test /opt/golos.contracts/unit_test
+COPY --from=builder /golos.contracts/build/tests/unit_test /opt/golos.contracts/unit_test
 
-COPY --from=builder /golos-smart/cyberway.contracts/version /opt/cyberway.contracts/version
+COPY --from=builder /golos.contracts/cyberway.contracts/version /opt/cyberway.contracts/version
 COPY --from=builder /opt/cyberway.contracts/ /opt/cyberway.contracts/
-COPY --from=builder /golos-smart/cyberway.contracts/build/tests/unit_test /opt/cyberway.contracts/unit_test
-COPY --from=builder /golos-smart/cyberway.contracts/tests/test_contracts /opt/cyberway.contracts/
+COPY --from=builder /golos.contracts/cyberway.contracts/build/tests/unit_test /opt/cyberway.contracts/unit_test
+COPY --from=builder /golos.contracts/cyberway.contracts/tests/test_contracts /opt/cyberway.contracts/
 
 COPY --from=builder /usr/local/lib/libbson-1.0.so* /usr/local/lib/
 
