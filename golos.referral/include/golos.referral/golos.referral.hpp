@@ -36,6 +36,11 @@ private:
         uint64_t primary_key()const  { return referral.value; }
         uint64_t referrer_key()const { return referrer.value; }
         uint64_t expire_key()const { return expire; }
+
+        bool is_empty() const {
+            auto status = referral == name() && referrer == name();
+            return status;
+        }
     };
     using referrals_table = eosio::multi_index< "referrals"_n, obj_referral,
                             eosio::indexed_by< "referrerkey"_n, eosio::const_mem_fun<obj_referral, uint64_t, &obj_referral::referrer_key> >,
@@ -44,6 +49,16 @@ private:
     struct st_hash {
         uint64_t hash;
     };
+
+public:
+    static inline obj_referral account_referrer( name contract_name, name referral ) {
+        referrals_table referrals( contract_name, contract_name.value );
+        auto iterator_referral = referrals.find( referral.value );
+        if (iterator_referral != referrals.end())
+            return *iterator_referral;
+
+         return obj_referral();
+    }
 
 };
 
