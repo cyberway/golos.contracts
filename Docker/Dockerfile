@@ -43,7 +43,7 @@ COPY --from=builder /golos.contracts/build/tests/unit_test /opt/golos.contracts/
 COPY --from=builder /golos.contracts/cyberway.contracts/version /opt/cyberway.contracts/version
 COPY --from=builder /opt/cyberway.contracts/ /opt/cyberway.contracts/
 COPY --from=builder /golos.contracts/cyberway.contracts/build/tests/unit_test /opt/cyberway.contracts/unit_test
-COPY --from=builder /golos.contracts/cyberway.contracts/tests/test_contracts /opt/cyberway.contracts/
+COPY --from=builder /golos.contracts/cyberway.contracts/tests/test_contracts /opt/cyberway.contracts/test_contracts
 
 COPY --from=builder /usr/local/lib/libbson-1.0.so* /usr/local/lib/
 
