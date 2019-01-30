@@ -42,6 +42,37 @@ public:
         BOOST_CHECK_EQUAL(success(), referral.set_params(cfg::referral_name, params));
     }
 
+    void init_params_posts() {
+        BOOST_CHECK_EQUAL(success(), token.create(cfg::emission_name, token.make_asset(1)));
+        BOOST_CHECK_EQUAL(success(), token.open(cfg::publish_name, _sym, cfg::publish_name));
+        step();
+
+        funcparams fn{"0", 1};
+        BOOST_CHECK_EQUAL(success(), post.set_rules(fn ,fn ,fn , 0, 0));
+        BOOST_CHECK_EQUAL(success(), post.set_limit("post"));
+        BOOST_CHECK_EQUAL(success(), post.set_limit("comment"));
+        BOOST_CHECK_EQUAL(success(), post.set_limit("vote"));
+        BOOST_CHECK_EQUAL(success(), post.set_limit("post bandwidth"));
+        step();
+
+        for (auto& u : _users) {
+            BOOST_CHECK_EQUAL(success(), vest.open(u, _sym, u));
+        }
+        step();
+
+        auto vote_changes = post.get_str_vote_changes(post.max_vote_changes);
+        auto cashout_window = post.get_str_cashout_window(post.window, post.upvote_lockout);
+        auto beneficiaries = post.get_str_beneficiaries(post.max_beneficiaries);
+        auto comment_depth = post.get_str_comment_depth(post.max_comment_depth);
+        auto social_acc = post.get_str_social_acc(cfg::social_name);
+        auto referral_acc = post.get_str_referral_acc(cfg::referral_name);
+
+        auto params = "[" + vote_changes + "," + cashout_window + "," + beneficiaries + "," + comment_depth +
+                "," + social_acc + "," + referral_acc + "]";
+        BOOST_CHECK_EQUAL(success(), post.set_params(params));
+        step();
+   }
+
 protected:
     symbol _sym;
     // TODO: make contract error messages more clear
@@ -196,6 +227,29 @@ BOOST_FIXTURE_TEST_CASE(close_referral_tests, golos_referral_tester) try {
 
     v_referrals = referral.get_referrals();
     BOOST_TEST_CHECK(v_referrals.size() == 0);
+} FC_LOG_AND_RETHROW()
+
+BOOST_FIXTURE_TEST_CASE(create_referral_message_tests, golos_referral_tester) try {
+    BOOST_TEST_MESSAGE("Test creating message referral");
+    init_params();
+    init_params_posts();
+
+    auto expire = 8; // sec
+    BOOST_CHECK_EQUAL(success(), referral.create_referral(N(issuer), N(sania), 500, cur_time().to_seconds() + expire, token.make_asset(50)));
+    BOOST_CHECK_EQUAL(success(), post.create_msg(N(sania), "permlink"));
+
+    auto id = hash64("permlink");
+    auto post_sania = post.get_message(N(sania), id);
+    auto size_ben = post_sania["beneficiaries"].size();
+    BOOST_CHECK_EQUAL (post_sania["beneficiaries"].size(), 1);
+    BOOST_CHECK_EQUAL( post_sania["beneficiaries"][size_ben - 1].as<beneficiary>().account, N(issuer) );
+
+    BOOST_CHECK_EQUAL(success(), referral.create_referral(N(issuer), N(pasha), 5000, cur_time().to_seconds() + expire, token.make_asset(10)));
+    BOOST_CHECK_EQUAL(err.limit_percents, post.create_msg(N(pasha), "permlink", N(), "parentprmlnk", { beneficiary{N(tania), 7000} }));
+
+    BOOST_CHECK_EQUAL(err.referrer_benif, post.create_msg(N(pasha), "permlink", N(), "parentprmlnk", { beneficiary{N(issuer), 2000} }));
+
+    BOOST_CHECK_EQUAL(success(), post.create_msg(N(pasha), "permlink", N(), "parentprmlnk", { beneficiary{N(tania), 2000} }));
 } FC_LOG_AND_RETHROW()
 
 BOOST_AUTO_TEST_SUITE_END()

@@ -7,10 +7,13 @@ namespace eosio { namespace testing {
 class extended_tester : public golos_tester {
     using golos_tester::golos_tester;
     fc::microseconds _cur_time;
+    void update_cur_time() { _cur_time = control->head_block_time().time_since_epoch();};
 
 protected:
-    const fc::microseconds& cur_time()const { return _cur_time; };
-    void update_cur_time() { _cur_time = control->head_block_time().time_since_epoch();};
+    const fc::microseconds& cur_time()const {
+        update_cur_time();
+        return _cur_time;
+    };
 
 public:
     void step(uint32_t n = 1) {
