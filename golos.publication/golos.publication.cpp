@@ -132,14 +132,15 @@ void publication::create_message(name account, std::string permlink,
         benefic_map[ben.account] += ben.deductprcnt; //several entries for one user? ok.
     }
 
-    auto obj_referral = golos::referral::account_referrer( referral_acc_param.account, account );
+    if (referral_acc_param.account) {
+        auto obj_referral = golos::referral::account_referrer( referral_acc_param.account, account );
         if ( !obj_referral.is_empty() ) {
             auto& referrer = obj_referral.referrer;
             const auto& itr = std::find_if( beneficiaries.begin(), beneficiaries.end(),
-                                                [&referrer] (const structures::beneficiary& benef) {
+                                            [&referrer] (const structures::beneficiary& benef) {
                                                 return benef.account == referrer;
                                             }
-                                          );
+            );
 
             eosio_assert( itr == beneficiaries.end(), "Comment already has referrer as a referrer-beneficiary." );
 
@@ -147,6 +148,7 @@ void publication::create_message(name account, std::string permlink,
             eosio_assert(prop_sum <= config::_100percent, "publication::create_message: prop_sum > 100%");
             benefic_map[obj_referral.referrer] += obj_referral.percent;
         }
+    }
 
         //reusing a vector
     beneficiaries.reserve(benefic_map.size());
