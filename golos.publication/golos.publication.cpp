@@ -132,7 +132,7 @@ void publication::create_message(name account, std::string permlink,
         benefic_map[ben.account] += ben.deductprcnt; //several entries for one user? ok.
     }
 
-    if (referral_acc_param.account) {
+    if ( referral_acc_param.account.value ) {
         auto obj_referral = golos::referral::account_referrer( referral_acc_param.account, account );
         if ( !obj_referral.is_empty() ) {
             auto& referrer = obj_referral.referrer;
