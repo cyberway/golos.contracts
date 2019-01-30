@@ -244,11 +244,9 @@ BOOST_FIXTURE_TEST_CASE(create_referral_message_tests, golos_referral_tester) tr
     BOOST_CHECK_EQUAL (post_sania["beneficiaries"].size(), 1);
     BOOST_CHECK_EQUAL( post_sania["beneficiaries"][size_ben - 1].as<beneficiary>().account, N(issuer) );
 
-    BOOST_CHECK_EQUAL(success(), referral.create_referral(N(issuer), N(pasha), 5000, cur_time().to_seconds() + expire, token.make_asset(10)));
+    BOOST_CHECK_EQUAL(success(), referral.create_referral(N(issuer), N(pasha), 5000, cur_time().to_seconds() + expire, token.make_asset(50)));
     BOOST_CHECK_EQUAL(err.limit_percents, post.create_msg(N(pasha), "permlink", N(), "parentprmlnk", { beneficiary{N(tania), 7000} }));
-
     BOOST_CHECK_EQUAL(err.referrer_benif, post.create_msg(N(pasha), "permlink", N(), "parentprmlnk", { beneficiary{N(issuer), 2000} }));
-
     BOOST_CHECK_EQUAL(success(), post.create_msg(N(pasha), "permlink", N(), "parentprmlnk", { beneficiary{N(tania), 2000} }));
 } FC_LOG_AND_RETHROW()
 
