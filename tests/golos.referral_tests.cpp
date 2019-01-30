@@ -1,4 +1,6 @@
 #include "golos_tester.hpp"
+#include "golos.posting_test_api.hpp"
+#include "golos.vesting_test_api.hpp"
 #include "golos.referral_test_api.hpp"
 #include "cyber.token_test_api.hpp"
 #include "contracts.hpp"
@@ -13,14 +15,21 @@ class golos_referral_tester : public extended_tester {
 public:
     golos_referral_tester()
         : extended_tester(cfg::referral_name)
+        , _sym(3, "GLS")
+        , post( {this, cfg::publish_name, _sym} )
+        , vest({this, cfg::vesting_name, _sym})
         , referral( {this, cfg::referral_name} )
-        , token({this, cfg::token_name, symbol(3, "GLS")})
+        , token({this, cfg::token_name, _sym})
+        , _users{N(sania), N(pasha), N(tania), N(vania), N(issuer)}
     {
-        create_accounts({N(sania), N(pasha), N(tania), N(vania), N(issuer), _code, cfg::token_name, cfg::emission_name});
+        create_accounts({N(sania), N(pasha), N(tania), N(vania), N(issuer), _code,
+                        cfg::publish_name, cfg::token_name, cfg::emission_name, cfg::vesting_name, cfg::social_name });
         step(2);
 
         install_contract(_code, contracts::referral_wasm(), contracts::referral_abi());
         install_contract(cfg::token_name, contracts::token_wasm(), contracts::token_abi());
+        install_contract(cfg::vesting_name, contracts::vesting_wasm(), contracts::vesting_abi());
+        install_contract(cfg::publish_name, contracts::posting_wasm(), contracts::posting_abi());
     }
 
     void init_params() {
@@ -34,6 +43,7 @@ public:
     }
 
 protected:
+    symbol _sym;
     // TODO: make contract error messages more clear
     struct errors: contract_error_messages {
         const string referral_exist = amsg("A referral with the same name already exists");
@@ -51,8 +61,12 @@ protected:
 
         const string referral_not_exist      = amsg("A referral with this name doesn't exist.");
         const string funds_not_equal         = amsg("Amount of funds doesn't equal.");
+        const string limit_percents          = amsg("publication::create_message: prop_sum > 100%");
+        const string referrer_benif          = amsg("Comment already has referrer as a referrer-beneficiary.");
     } err;
 
+    golos_posting_api post;
+    golos_vesting_api vest;
     golos_referral_api referral;
     cyber_token_api token;
 
