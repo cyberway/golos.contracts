@@ -195,7 +195,7 @@ BOOST_FIXTURE_TEST_CASE(set_params, golos_publication_tester) try {
     params = "[" + post.get_str_social_acc(N(gls.social)) + "]";
     BOOST_CHECK_EQUAL(err.no_social_acc, post.set_params(params));
     
-    params = "[" + post.get_str_referral_acc(N(glsreferral)) + "]";
+    params = "[" + post.get_str_referral_acc(N(gls.referral)) + "]";
     BOOST_CHECK_EQUAL(err.no_referral_acc, post.set_params(params));
 } FC_LOG_AND_RETHROW()
 

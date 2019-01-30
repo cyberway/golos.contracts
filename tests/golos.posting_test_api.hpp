@@ -131,7 +131,7 @@ struct golos_posting_api: base_contract_api {
         auto beneficiaries = get_str_beneficiaries(max_beneficiaries);
         auto comment_depth = get_str_comment_depth(max_comment_depth);
         auto social = get_str_social_acc(name());
-        auto referral = get_str_referral_acc(name("gls.referral"));
+        auto referral = get_str_referral_acc(name();
 
         auto params = "[" + vote_changes + "," + cashout_window + "," + beneficiaries + "," + comment_depth + 
             "," + social + "," + referral + "]";
