@@ -76,6 +76,7 @@ protected:
     const uint32_t max_percent = 5000; // 50.00%
     const uint32_t delay_clear_old_ref = 650; // 650 sec
 
+    std::vector<account_name> _users;
     };
 
 BOOST_AUTO_TEST_SUITE(golos_referral_tests)
