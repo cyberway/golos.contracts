@@ -173,6 +173,8 @@ BOOST_FIXTURE_TEST_CASE(transfer_tests, golos_referral_tester) try {
     auto expire = 8;
     auto breakout = 100;
 
+    update_cur_time();
+
     BOOST_TEST_MESSAGE("--- creating referral 'gls.referral'");
     BOOST_CHECK(!referral.get_referral(cfg::referral_name));
     BOOST_CHECK_EQUAL(success(), referral.create_referral(N(issuer), cfg::referral_name, 500, cur_time().to_seconds() + expire, token.make_asset(breakout)));
@@ -206,6 +208,8 @@ BOOST_FIXTURE_TEST_CASE(close_referral_tests, golos_referral_tester) try {
     init_params();
 
     auto expire = 8; // sec
+
+    update_cur_time();
 
     BOOST_CHECK_EQUAL(success(), referral.create_referral(N(issuer), N(sania), 500, cur_time().to_seconds() + expire, token.make_asset(50)));
     BOOST_CHECK_EQUAL(success(), referral.close_old_referrals(cur_time().to_seconds()));
