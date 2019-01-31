@@ -168,6 +168,7 @@ void control::regwitness(name witness, eosio::public_key key, string url) {
             w.active = true;
         };
     });
+
     update_auths();
 }
 
@@ -175,6 +176,7 @@ void control::regwitness(name witness, eosio::public_key key, string url) {
 void control::unregwitness(name witness) {
     assert_started();
     require_auth(witness);
+
     // TODO: simplify upsert to allow passing just inner lambda
     bool exists = upsert_tbl<witness_tbl>(witness.value, [&](bool) {
         return [&](witness_info& w) {
@@ -183,6 +185,7 @@ void control::unregwitness(name witness) {
         };
     }, false);
     eosio_assert(exists, "witness not found");
+
     update_auths();
 }
 
@@ -279,12 +282,20 @@ void control::update_witnesses_weights(vector<name> witnesses, share_type diff) 
             print("apply_vote_weight: witness not found\n");
         }
     }
+
     update_auths();
 }
 
 void control::update_auths() {
     // TODO: change only if top changed #35
     auto top = top_witnesses();
+    auth_witnesses_tl top_witnesses(_self, _self.value);
+    const auto &old_top = top_witnesses.get().witnesses;
+    if ( std::equal(old_top.begin(), old_top.end(), top.begin()) ) {
+        print("The top witnesses has not changed\n");
+        return;
+    }
+
     auto max_witn = props().witnesses.max;
     if (top.size() < max_witn) {           // TODO: ?restrict only just after creation and allow later
         print("Not enough witnesses to change auth\n");
