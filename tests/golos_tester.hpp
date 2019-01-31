@@ -50,10 +50,8 @@ protected:
 
 public:
     golos_tester(name code): tester(), _code(code), _chaindb(control->chaindb()) {
-        std::cout << "golos_tester()" << std::endl;
     }
     ~golos_tester() {
-        std::cout << "~golos_tester()" << std::endl;
     }
 
     void install_contract(account_name acc, const std::vector<uint8_t>& wasm, const std::vector<char>& abi, bool produce = true);
