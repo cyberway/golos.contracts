@@ -291,10 +291,13 @@ void control::update_auths() {
     auto top = top_witnesses();
     auth_witnesses_tl top_witnesses(_self, _self.value);
     const auto &old_top = top_witnesses.get().witnesses;
-    if ( std::equal(old_top.begin(), old_top.end(), top.begin()) ) {
-        print("The top witnesses has not changed\n");
+    bool result = std::equal(old_top.begin(), old_top.end(), top.begin(), [&] (const auto &old_element, const auto &new_element) {
+        return old_element.value == new_element.value;
+    });
+    if ( result )
         return;
-    }
+
+    top_witnesses.set(top);
 
     auto max_witn = props().witnesses.max;
     if (top.size() < max_witn) {           // TODO: ?restrict only just after creation and allow later
