@@ -12,7 +12,7 @@ protected:
     void update_cur_time() { _cur_time = control->head_block_time().time_since_epoch();};
 
     const fc::microseconds& cur_time()const {
-        return _cur_time;
+        return control->head_block_time().time_since_epoch();
     };
 
 public:

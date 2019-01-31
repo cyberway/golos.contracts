@@ -133,7 +133,6 @@ void publication::create_message(name account, std::string permlink,
     }
 
     if (referral_acc_param.account != name()) {
-        eosio_assert(is_account(referral_acc_param.account), "Referral account doesn't exist.");
         auto obj_referral = golos::referral::account_referrer( referral_acc_param.account, account );
         if ( !obj_referral.is_empty() ) {
             auto& referrer = obj_referral.referrer;
