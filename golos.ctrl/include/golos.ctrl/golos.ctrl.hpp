@@ -55,7 +55,7 @@ struct [[eosio::table]] bw_user {   // ?needed or simple names vector will be en
 };
 using bw_user_tbl = eosio::multi_index<"bwuser"_n, bw_user>;
 
-struct [[eosio::table]] auth_witnesses {   // ?needed or simple names vector will be enough?
+struct [[eosio::table]] auth_witnesses {
     std::vector<name> witnesses;
 };
 using auth_witnesses_tl = eosio::singleton<"witnessauth"_n, auth_witnesses>;

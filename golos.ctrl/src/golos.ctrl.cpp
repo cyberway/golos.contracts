@@ -289,15 +289,15 @@ void control::update_witnesses_weights(vector<name> witnesses, share_type diff) 
 void control::update_auths() {
     // TODO: change only if top changed #35
     auto top = top_witnesses();
-    auth_witnesses_tl top_witnesses(_self, _self.value);
-    const auto &old_top = top_witnesses.get().witnesses;
+    auth_witnesses_tl top_witnesses_tl(_self, _self.value);
+    const auto &old_top = top_witnesses_tl.get().witnesses;
     bool result = std::equal(old_top.begin(), old_top.end(), top.begin(), [&] (const auto &old_element, const auto &new_element) {
         return old_element.value == new_element.value;
     });
     if ( result )
         return;
 
-    top_witnesses.set(top);
+    top_witnesses_tl.set( {top}, _self );
 
     auto max_witn = props().witnesses.max;
     if (top.size() < max_witn) {           // TODO: ?restrict only just after creation and allow later
