@@ -187,6 +187,9 @@ vector<variant> golos_tester::get_all_chaindb_rows(name code, uint64_t scope, na
         auto v = _chaindb.value_at_cursor(cursor);
         all.push_back(v);
     }
+    if (!all.size()) {
+        BOOST_TEST_REQUIRE(!strict);
+    }
     return all;
 }
 
