@@ -147,6 +147,8 @@ BOOST_AUTO_TEST_SUITE(golos_referral_tests)
      init_params();
      step();
 
+     update_cur_time();
+
      auto time_now = static_cast<uint32_t>(time(nullptr));
      BOOST_CHECK_EQUAL(err.referral_equal, referral.create_referral(N(issuer), N(issuer), time_now, 0, token.make_asset(10)));
 
