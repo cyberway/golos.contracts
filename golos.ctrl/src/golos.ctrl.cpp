@@ -290,7 +290,7 @@ void control::update_auths() {
     // TODO: change only if top changed #35
     auto top = top_witnesses();
     auth_witnesses_tl top_witnesses_tl(_self, _self.value);
-    const auto &old_top = top_witnesses_tl.get().witnesses;
+    const auto &old_top = top_witnesses_tl.get_or_default().witnesses;
     bool result = std::equal(old_top.begin(), old_top.end(), top.begin(), [&] (const auto &old_element, const auto &new_element) {
         return old_element.value == new_element.value;
     });
