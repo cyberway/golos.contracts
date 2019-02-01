@@ -5,6 +5,7 @@
 #include <cyber.token/cyber.token.hpp>
 #include <golos.social/golos.social.hpp>
 #include <golos.vesting/golos.vesting.hpp>
+#include <golos.referral/golos.referral.hpp>
 #include <golos.charge/golos.charge.hpp>
 #include <common/upsert.hpp>
 #include "utils.hpp"
@@ -97,6 +98,7 @@ void publication::create_message(name account, std::string permlink,
     const auto &max_beneficiaries_param = cfg.get().max_beneficiaries_param;
     const auto &max_comment_depth_param = cfg.get().max_comment_depth_param;
     const auto &social_acc_param = cfg.get().social_acc_param;
+    const auto &referral_acc_param = cfg.get().referral_acc_param;
 
     if (parentacc) {
         if (social_acc_param.account) {
@@ -129,9 +131,26 @@ void publication::create_message(name account, std::string permlink,
         eosio_assert(prop_sum <= config::_100percent, "publication::create_message: prop_sum > 100%");
         benefic_map[ben.account] += ben.deductprcnt; //several entries for one user? ok.
     }
-    eosio_assert((benefic_map.size() <= max_beneficiaries_param.max_beneficiaries), "publication::create_message: benafic_map.size() > MAX_BENEFICIARIES");
 
-    //reusing a vector
+    if (referral_acc_param.account != name()) {
+        auto obj_referral = golos::referral::account_referrer( referral_acc_param.account, account );
+        if ( !obj_referral.is_empty() ) {
+            auto& referrer = obj_referral.referrer;
+            const auto& itr = std::find_if( beneficiaries.begin(), beneficiaries.end(),
+                                            [&referrer] (const structures::beneficiary& benef) {
+                return benef.account == referrer;
+            }
+            );
+
+            eosio_assert( itr == beneficiaries.end(), "Comment already has referrer as a referrer-beneficiary." );
+
+            prop_sum += obj_referral.percent;
+            eosio_assert(prop_sum <= config::_100percent, "publication::create_message: prop_sum > 100%");
+            benefic_map[obj_referral.referrer] += obj_referral.percent;
+        }
+    }
+
+        //reusing a vector
     beneficiaries.reserve(benefic_map.size());
     beneficiaries.clear();
     for(auto & ben : benefic_map)
@@ -139,6 +158,8 @@ void publication::create_message(name account, std::string permlink,
             .account = ben.first,
             .deductprcnt = static_cast<base_t>(get_limit_prop(ben.second).data())
         });
+
+    eosio_assert((benefic_map.size() <= max_beneficiaries_param.max_beneficiaries), "publication::create_message: benafic_map.size() > MAX_BENEFICIARIES");
 
     auto cur_time = current_time();
     atmsp::machine<fixp_t> machine;
