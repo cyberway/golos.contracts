@@ -165,7 +165,6 @@ public:
     }
 };
 
-
 BOOST_AUTO_TEST_SUITE(golos_ctrl_tests)
 
 BOOST_FIXTURE_TEST_CASE(create_community, golos_ctrl_tester) try {
@@ -212,7 +211,6 @@ BOOST_FIXTURE_TEST_CASE(create_community, golos_ctrl_tester) try {
     BOOST_CHECK_EQUAL(err.immutable, ctrl.set_params(_test_params));
 } FC_LOG_AND_RETHROW()
 
-
 BOOST_FIXTURE_TEST_CASE(register_witness, golos_ctrl_tester) try {
     BOOST_TEST_MESSAGE("Witness registration");
     BOOST_TEST_MESSAGE("--- prepare");
@@ -248,32 +246,32 @@ BOOST_FIXTURE_TEST_CASE(register_witness, golos_ctrl_tester) try {
 BOOST_FIXTURE_TEST_CASE(register_update_witness, golos_ctrl_tester) try {
     BOOST_TEST_MESSAGE("Witness registration");
     BOOST_TEST_MESSAGE("--- prepare");
-    prepare(step_only_create);
-
+    prepare(step_vote_witnesses);
     BOOST_TEST_MESSAGE("--- check registration success");
-    BOOST_CHECK_EQUAL(success(), ctrl.reg_witness(_w[0], _test_key, "localhost"));
-    auto w = mvo()("name","witn1")("key",_test_key)("url","localhost")("active",true)("total_weight",0);
-    CHECK_MATCHING_OBJECT(ctrl.get_witness(_w[0]), w);
 
     BOOST_TEST_MESSAGE("--- check top witnesses");
     BOOST_TEST_MESSAGE("Top witnesses: " + fc::json::to_string( ctrl.get_top_witnesses()) );
-//    auto count_witnesses = ctrl.get_witnesses().as<vector<name>>().size();
-//    auto count_top_witnesses = ctrl.get_top_witnesses().as<vector<name>>().size();
+    auto save_top_witnesses = ctrl.get_top_witnesses()["witnesses"].as<vector<name>>();
+    auto list_top_witnesses = ctrl.get_witness();
 
-    BOOST_TEST_MESSAGE("--- check properties update");
-    BOOST_CHECK_EQUAL(success(), ctrl.reg_witness(_w[0], _test_key, "-"));
-    produce_block();
+    std::sort(list_top_witnesses.begin(), list_top_witnesses.end(), [](const auto &it1, const auto &it2) {
+        return it1["total_weight"].as_uint64() < it2["total_weight"].as_uint64();
+    });
 
-    string maxurl =
-        "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
-        "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
-        "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
-        "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
-    BOOST_CHECK_EQUAL(success(), ctrl.reg_witness(_w[0], _test_key, maxurl));
+    vector<name> top(save_top_witnesses.size());
+    std::transform(list_top_witnesses.begin(), list_top_witnesses.end(), top.begin(), [](auto& w) {
+        return name(w["name"].as_string());
+    });
 
-    BOOST_TEST_MESSAGE("--- check unreg");
-    BOOST_CHECK_EQUAL(success(), ctrl.unreg_witness(_w[0]));
-    produce_block();
+    std::sort(top.begin(), top.end(), [](const auto &it1, const auto &it2) {
+        return it1.value < it2.value;
+    });
+
+    auto result = std::equal(save_top_witnesses.begin(), save_top_witnesses.end(), top.begin(), [&] (const auto &old_element, const auto &new_element) {
+        return old_element.value == new_element.value;
+    });
+
+    BOOST_CHECK_EQUAL(true, result);
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE(vote_witness, golos_ctrl_tester) try {

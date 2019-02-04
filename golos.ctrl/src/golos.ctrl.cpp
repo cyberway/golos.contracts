@@ -287,15 +287,22 @@ void control::update_witnesses_weights(vector<name> witnesses, share_type diff) 
 }
 
 void control::update_auths() {
-    // TODO: change only if top changed #35
     auto top = top_witnesses();
+    std::sort(top.begin(), top.end(), [&](const auto &it1, const auto &it2) {
+        return it1.value < it2.value;
+    });
+
     auth_witnesses_tl top_witnesses_tl(_self, _self.value);
     const auto &old_top = top_witnesses_tl.get_or_default().witnesses;
-    bool result = std::equal(old_top.begin(), old_top.end(), top.begin(), [&] (const auto &old_element, const auto &new_element) {
-        return old_element.value == new_element.value;
-    });
-    if ( result )
-        return;
+
+    if (old_top.size() > 0 && old_top.size() == top.size()) {
+        bool result = std::equal(old_top.begin(), old_top.end(), top.begin(), [&] (const auto &old_element, const auto &new_element) {
+            return old_element.value == new_element.value;
+        });
+
+        if ( result )
+            return;
+    }
 
     top_witnesses_tl.set( {top}, _self );
 

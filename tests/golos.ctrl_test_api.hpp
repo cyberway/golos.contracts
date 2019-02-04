@@ -102,12 +102,12 @@ struct golos_ctrl_api: base_contract_api {
         return get_struct(_code, N(witness), witness, "witness_info");
     }
 
-    variant get_witnesses() const {
-        return get_struct(_code, N(witnessauth), _code, "witnesses_auth");
+    std::vector<variant> get_witness() {
+        return _tester->get_all_chaindb_rows(_code, _code, N(witness), false);
     }
 
     variant get_top_witnesses() const {
-        return get_struct(_code, N(witnessauth), _code, "witnesses_auth");
+        return get_struct(_code, N(witnessauth), N(witnessauth), "witnesses_auth");
     }
 
     //// helpers
