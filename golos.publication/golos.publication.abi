@@ -193,6 +193,10 @@
         "type": "uint64"
       },
       {
+        "name": "mssg_hash",
+        "type": "uint64"
+      },
+      {
         "name": "permlink",
         "type": "string"
       },
@@ -843,7 +847,15 @@
           "orders": [
               {"field": "id", "order": "asc"}
           ]
+       },
+       {
+          "name": "mssghash",
+          "unique": "true",
+          "orders": [
+              {"field": "mssg_hash", "order": "asc"}
+          ]
        }
+
     ]
   },
   {
