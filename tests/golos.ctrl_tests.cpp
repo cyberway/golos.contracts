@@ -245,6 +245,37 @@ BOOST_FIXTURE_TEST_CASE(register_witness, golos_ctrl_tester) try {
     BOOST_CHECK_EQUAL(err.no_witness, ctrl.unreg_witness(_w[1]));
 } FC_LOG_AND_RETHROW()
 
+BOOST_FIXTURE_TEST_CASE(register_update_witness, golos_ctrl_tester) try {
+    BOOST_TEST_MESSAGE("Witness registration");
+    BOOST_TEST_MESSAGE("--- prepare");
+    prepare(step_only_create);
+
+    BOOST_TEST_MESSAGE("--- check registration success");
+    BOOST_CHECK_EQUAL(success(), ctrl.reg_witness(_w[0], _test_key, "localhost"));
+    auto w = mvo()("name","witn1")("key",_test_key)("url","localhost")("active",true)("total_weight",0);
+    CHECK_MATCHING_OBJECT(ctrl.get_witness(_w[0]), w);
+
+    BOOST_TEST_MESSAGE("--- check top witnesses");
+    BOOST_TEST_MESSAGE("Top witnesses: " + fc::json::to_string( ctrl.get_top_witnesses()) );
+//    auto count_witnesses = ctrl.get_witnesses().as<vector<name>>().size();
+//    auto count_top_witnesses = ctrl.get_top_witnesses().as<vector<name>>().size();
+
+    BOOST_TEST_MESSAGE("--- check properties update");
+    BOOST_CHECK_EQUAL(success(), ctrl.reg_witness(_w[0], _test_key, "-"));
+    produce_block();
+
+    string maxurl =
+        "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+        "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+        "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+        "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+    BOOST_CHECK_EQUAL(success(), ctrl.reg_witness(_w[0], _test_key, maxurl));
+
+    BOOST_TEST_MESSAGE("--- check unreg");
+    BOOST_CHECK_EQUAL(success(), ctrl.unreg_witness(_w[0]));
+    produce_block();
+} FC_LOG_AND_RETHROW()
+
 BOOST_FIXTURE_TEST_CASE(vote_witness, golos_ctrl_tester) try {
     BOOST_TEST_MESSAGE("Witness vote");
     BOOST_TEST_MESSAGE("--- prepare");
