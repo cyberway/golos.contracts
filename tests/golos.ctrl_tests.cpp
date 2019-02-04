@@ -255,13 +255,14 @@ BOOST_FIXTURE_TEST_CASE(register_update_witness, golos_ctrl_tester) try {
     auto list_top_witnesses = ctrl.get_witness();
 
     std::sort(list_top_witnesses.begin(), list_top_witnesses.end(), [](const auto &it1, const auto &it2) {
-        return it1["total_weight"].as_uint64() < it2["total_weight"].as_uint64();
+        return it1["total_weight"].as_uint64() > it2["total_weight"].as_uint64();
     });
 
-    vector<name> top(save_top_witnesses.size());
+    vector<name> top(list_top_witnesses.size());
     std::transform(list_top_witnesses.begin(), list_top_witnesses.end(), top.begin(), [](auto& w) {
         return name(w["name"].as_string());
     });
+    top.resize(_max_witnesses);
 
     std::sort(top.begin(), top.end(), [](const auto &it1, const auto &it2) {
         return it1.value < it2.value;
