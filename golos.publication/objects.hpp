@@ -80,7 +80,6 @@ struct delegate_voter {
     asset quantity;
     uint64_t interest_rate;
     uint8_t payout_strategy;
-    asset effective_vesting;
 };
 
 struct voteinfo {
@@ -92,9 +91,7 @@ struct voteinfo {
     int16_t weight;
     uint64_t time;
     int64_t count;
-
     std::vector<delegate_voter> delegators;
-
     base_t curatorsw;
     base_t rshares;
 

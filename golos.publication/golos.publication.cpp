@@ -10,7 +10,6 @@
 #include <common/upsert.hpp>
 #include "utils.hpp"
 #include "objects.hpp"
-#include <common/config.hpp>
 
 namespace golos {
 
@@ -323,7 +322,7 @@ int64_t publication::pay_curators(name author, uint64_t msgid, int64_t max_rewar
             eosio_assert(claim <= unclaimed_rewards, "LOGIC ERROR! publication::pay_curators: claim > unclaimed_rewards");
             if(claim > 0) {
                 unclaimed_rewards -= claim;
-                claim -= pay_delegators(msgid, claim, v->voter, tokensymbol, v->delegators);
+                claim -= pay_delegators(claim, v->voter, tokensymbol, v->delegators);
                 payto(v->voter, eosio::asset(claim, tokensymbol), static_cast<enum_t>(payment_t::VESTING));
             }
         }
@@ -616,9 +615,16 @@ void publication::set_vote(name voter, name author, string permlink, int16_t wei
     auto token_code = pool->state.funds.symbol.code();
     auto list_delegate_voter = golos::vesting::get_list_delegate(config::vesting_name, voter, token_code);
     auto effective_vesting = golos::vesting::get_account_effective_vesting(config::vesting_name, voter, token_code);
-    for (auto record : list_delegate_voter) 
-        delegators.push_back( {record.sender, record.quantity, record.interest_rate, 
-                record.payout_strategy, effective_vesting} );
+    
+    for (auto record : list_delegate_voter) {
+        auto interest_rate = static_cast<uint64_t>(static_cast<uint128_t>(record.quantity.amount) * 
+                    record.interest_rate / effective_vesting.amount);
+
+        if (interest_rate == 0)
+            continue;
+ 
+        delegators.push_back( {record.sender, record.quantity, interest_rate, record.payout_strategy} );
+    }
 
     vote_table.emplace(voter, [&]( auto &item ) {
         item.id = vote_table.available_primary_key();
@@ -812,33 +818,16 @@ void publication::reblog(name rebloger, name author, std::string permlink) {
             "You can't reblog, because this message doesn't exist.");
 }
 
-int64_t publication::pay_delegators(uint64_t message_id, int64_t claim, name voter, 
+int64_t publication::pay_delegators(int64_t claim, name voter, 
         eosio::symbol tokensymbol, std::vector<structures::delegate_voter> delegate_list) {
     int64_t dlg_payout_sum = 0;
     for (auto delegate_obj : delegate_list) {
-        if (delegate_obj.payout_strategy == config::to_delegated_vesting) {
-
-            auto interest_rate = static_cast<uint64_t>(static_cast<uint128_t>(delegate_obj.quantity.amount) * 
-                    delegate_obj.interest_rate / delegate_obj.effective_vesting.amount);
-
-            auto dlg_payout = claim * interest_rate / config::_100percent;
-
-            tables::account_table acc_table(_self, voter.value);
-            auto balance = acc_table.find(tokensymbol.code().raw());
-            acc_table.modify(balance, delegate_obj.delegator, [&](auto& item) {
-                item.delegate_vesting += eosio::asset(dlg_payout, tokensymbol);
-                item.received_vesting += eosio::asset(dlg_payout, tokensymbol);
-            });
-            tables::delegate_table table(_self, tokensymbol.code().raw());
-            auto index_table = table.get_index<"unique"_n>();
-            auto delegate_record = index_table.find(structures::delegate_record::unique_key(delegate_obj.delegator, voter));
-            if (delegate_record != index_table.end()) {
-                index_table.modify(delegate_record, name(), [&](auto& item) {
-                    item.deductions += eosio::asset(dlg_payout, tokensymbol);
-                });            
-            }
-            dlg_payout_sum += dlg_payout;
-        }
+        auto dlg_payout = claim * delegate_obj.interest_rate / config::_100percent;
+        INLINE_ACTION_SENDER(golos::vesting, paydelegator) (config::vesting_name, 
+            {config::vesting_name, config::active_name}, 
+            {voter, eosio::asset(dlg_payout, tokensymbol), delegate_obj.delegator, 
+            delegate_obj.interest_rate, delegate_obj.payout_strategy});
+        dlg_payout_sum += dlg_payout;
     }
     return dlg_payout_sum;
 }

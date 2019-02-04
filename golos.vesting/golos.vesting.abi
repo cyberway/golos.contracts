@@ -47,6 +47,10 @@
         {
           "name": "unlocked_limit",
           "type": "asset"
+        },
+        {
+          "name": "delegation_rewards",
+          "type": "asset"
         }
       ]
     },
@@ -315,6 +319,17 @@
           {"name": "symbol", "type": "symbol"},
           {"name": "params", "type": "vesting_param[]"}
        ]
+    },
+    {
+       "name": "paydelegator",
+       "base": "",
+       "fields": [
+          {"name": "voter", "type": "name"},
+          {"name": "reward", "type": "asset"},
+          {"name": "delegator", "type": "name"},
+          {"name": "interest_rate", "type": "uint64"},
+          {"name": "payout_strategy", "type": "uint8"}
+       ]
     }
   ],
   "events": [
@@ -383,6 +398,10 @@
     {
       "name": "close",
       "type": "close"
+    },
+    {
+      "name": "paydelegator",
+      "type": "paydelegator"
     }
   ],
   "tables": [

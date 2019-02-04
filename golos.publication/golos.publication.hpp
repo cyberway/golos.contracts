@@ -39,7 +39,7 @@ private:
         symbol tokensymbol);
     void payto(name user, asset quantity, enum_t mode);
     void check_account(name user, symbol tokensymbol);
-    int64_t pay_delegators(uint64_t message_id, int64_t claim, name voter, 
+    int64_t pay_delegators(int64_t claim, name voter, 
             eosio::symbol tokensymbol, std::vector<structures::delegate_voter> delegate_list); 
 
     void send_poolstate_event(const structures::rewardpool& pool);
