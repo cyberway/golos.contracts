@@ -274,10 +274,6 @@ BOOST_FIXTURE_TEST_CASE(register_update_witness, golos_ctrl_tester) try {
         auto last_update_top_withnesses = top_withnesses["last_update"].as<fc::time_point>().time_since_epoch();
         
         BOOST_CHECK_EQUAL(last_update_top_withnesses == current_time, std::get<2>(v));
-
-        BOOST_TEST_MESSAGE(std::get<1>(v));
-        BOOST_TEST_MESSAGE("Last update: " + std::to_string(last_update_top_withnesses.count()));
-        BOOST_TEST_MESSAGE("Currenct time: " + std::to_string(current_time.count()));
         
         auto save_top_witnesses = top_withnesses["witnesses"].as<vector<name>>();
         auto list_top_witnesses = ctrl.get_all_witnesses();
@@ -303,8 +299,6 @@ BOOST_FIXTURE_TEST_CASE(register_update_witness, golos_ctrl_tester) try {
         std::sort(top.begin(), top.end(), [](const auto &it1, const auto &it2) {
             return it1.value < it2.value;
         });
-
-        BOOST_TEST_MESSAGE("List witnesses: " + fc::json::to_string(top));
 
         auto result = std::equal(save_top_witnesses.begin(), save_top_witnesses.end(), top.begin(), [&] (const auto &old_element, const auto &new_element) {
             return old_element.value == new_element.value;
