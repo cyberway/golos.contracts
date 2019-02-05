@@ -260,7 +260,7 @@ BOOST_FIXTURE_TEST_CASE(register_update_witness, golos_ctrl_tester) try {
     prepare_balances();
     vector<std::tuple<name,name,bool>> votes = {
         {_alice, _w[1], true}, {_alice, _w[2], true}, {_alice, _w[3], false},
-        {_alice, _w[0], false}, {_bob, _w[0], true}, {_w[0], _w[0], false}
+        {_alice, _w[0], true}, {_bob, _w[0], false}, {_w[0], _w[0], false}
     };
 
     for (const auto& v : votes) {
@@ -274,6 +274,7 @@ BOOST_FIXTURE_TEST_CASE(register_update_witness, golos_ctrl_tester) try {
         
         BOOST_CHECK_EQUAL(last_update_top_withnesses == current_time, std::get<2>(v));
 
+        BOOST_TEST_MESSAGE(std::get<1>(v));
         BOOST_TEST_MESSAGE("Last update: " + std::to_string(last_update_top_withnesses.count()));
         BOOST_TEST_MESSAGE("Currenct time: " + std::to_string(current_time.count()));
         
