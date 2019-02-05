@@ -288,15 +288,15 @@ void control::update_witnesses_weights(vector<name> witnesses, share_type diff) 
 
 void control::update_auths() {
     auto top = top_witnesses();
-    std::sort(top.begin(), top.end(), [&](const auto &it1, const auto &it2) {
+    std::sort(top.begin(), top.end(), [](const auto& it1, const auto& it2) {
         return it1.value < it2.value;
     });
 
-    auth_witnesses_tl top_witnesses_tl(_self, _self.value);
-    const auto &old_top = top_witnesses_tl.get_or_default().witnesses;
+    msig_auth_singleton_tbl top_witnesses_tbl(_self, _self.value);
+    const auto &old_top = top_witnesses_tbl.get_or_default().witnesses;
 
     if (old_top.size() > 0 && old_top.size() == top.size()) {
-        bool result = std::equal(old_top.begin(), old_top.end(), top.begin(), [&] (const auto &old_element, const auto &new_element) {
+        bool result = std::equal(old_top.begin(), old_top.end(), top.begin(), [] (const auto& old_element, const auto& new_element) {
             return old_element.value == new_element.value;
         });
 
@@ -304,7 +304,7 @@ void control::update_auths() {
             return;
     }
 
-    top_witnesses_tl.set( {top}, _self );
+    top_witnesses_tbl.set({top, time_point_sec(now())}, _self);
 
     auto max_witn = props().witnesses.max;
     if (top.size() < max_witn) {           // TODO: ?restrict only just after creation and allow later

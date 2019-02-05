@@ -135,7 +135,8 @@
             "name": "witnesses_auth",
             "fields": [
                 {"type": "uint64", "name": "id"},
-                {"type": "name[]", "name": "witnesses"}
+                {"type": "name[]", "name": "witnesses"},
+                {"type": "time_point_sec", "name": "last_update"},
             ]
         }
     ],

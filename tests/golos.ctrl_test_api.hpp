@@ -102,7 +102,7 @@ struct golos_ctrl_api: base_contract_api {
         return get_struct(_code, N(witness), witness, "witness_info");
     }
 
-    std::vector<variant> get_witness() {
+    std::vector<variant> get_all_witnesses() {
         return _tester->get_all_chaindb_rows(_code, _code, N(witness), false);
     }
 
