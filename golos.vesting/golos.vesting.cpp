@@ -565,12 +565,8 @@ void vesting::paydelegator(name account, asset reward, name delegator,
                 item.quantity += reward;
             });
         }
-    } 
-    tables::account_table acc_table(_self, delegator.value);
-    auto balance = acc_table.find(reward.symbol.code().raw());
-    acc_table.modify(balance, name(), [&](auto& item) {
-        item.vesting += reward;
-    });
+    }
+    add_balance(delegator, reward, account); 
 }
 
 } // golos
