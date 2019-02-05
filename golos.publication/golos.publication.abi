@@ -133,6 +133,14 @@
       {
         "name": "quantity",
         "type": "asset"
+      },
+      {
+        "name": "interest_rate",
+        "type": "uint16"
+      },
+      {
+        "name": "payout_strategy",
+        "type": "uint8"
       }
     ]
   },

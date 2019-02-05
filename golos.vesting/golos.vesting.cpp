@@ -53,6 +53,8 @@ extern "C" {
         execute_action(&vesting::validateprms);
     else if (NN(setparams) == action)
         execute_action(&vesting::setparams);
+    else if (NN(paydelegator) == action)
+        execute_action(&vesting::paydelegator);
     }
 #undef NN
 }
@@ -541,5 +543,30 @@ void vesting::timeout_delay_trx() {
     trx.send(_self.value, _self);
 }
 
+void vesting::paydelegator(name account, asset reward, name delegator, 
+        uint16_t interest_rate, uint8_t payout_strategy) {
+    require_auth(_self);
+    if (payout_strategy == config::payout_strategy::to_delegated_vesting) {
+        tables::delegate_table table(_self, reward.symbol.code().raw());
+        auto index_table = table.get_index<"unique"_n>();
+        auto delegate_record = index_table.find(structures::delegate_record::unique_key(delegator, account));
+        if (delegate_record != index_table.end()) {
+            tables::account_table acc_table_dlg(_self, delegator.value);
+            auto balance_dlg = acc_table_dlg.find(reward.symbol.code().raw());
+            acc_table_dlg.modify(balance_dlg, name(), [&](auto& item) {
+                item.delegate_vesting += reward;
+            });
+            tables::account_table acc_table_rcv(_self, account.value);
+            auto balance_rcv = acc_table_rcv.find(reward.symbol.code().raw());
+            acc_table_rcv.modify(balance_rcv, name(), [&](auto& item) {
+                item.received_vesting += reward;
+            });
+            index_table.modify(delegate_record, name(), [&](auto& item) {
+                item.quantity += reward;
+            });
+        }
+    }
+    add_balance(delegator, reward, same_payer); 
+}
 
 } // golos

@@ -32,6 +32,8 @@ public:
     void timeout_delay_trx();
     void calculate_convert_vesting();
     void calculate_delegate_vesting();
+    void paydelegator(name account, asset reward, name delegator, 
+        uint16_t interest_rate, uint8_t payout_strategy);
 
     static inline asset get_account_vesting(name code, name account, symbol_code sym) {
         tables::account_table accounts(code, account.value);
