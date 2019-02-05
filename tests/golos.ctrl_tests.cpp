@@ -276,7 +276,7 @@ BOOST_FIXTURE_TEST_CASE(register_update_witness, golos_ctrl_tester) try {
         BOOST_CHECK_EQUAL(last_update_top_withnesses == current_time, std::get<2>(v));
 
         BOOST_TEST_MESSAGE("Top witnesses: " + fc::json::to_string(top_withnesses));
-        BOOST_TEST_MESSAGE("Currenct time: " + std::to_string(current_time));
+        BOOST_TEST_MESSAGE("Currenct time: " + std::to_string(current_time.count()));
         auto save_top_witnesses = top_withnesses["witnesses"].as<vector<name>>();
         auto list_top_witnesses = ctrl.get_all_witnesses();
 
