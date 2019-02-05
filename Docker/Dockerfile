@@ -46,7 +46,7 @@ COPY --from=builder /golos.contracts/cyberway.contracts/build/tests/unit_test /o
 COPY --from=builder /golos.contracts/cyberway.contracts/tests/test_contracts /opt/cyberway.contracts/test_contracts
 
 COPY --from=builder /golos.contracts/cyberway.contracts/scripts/bios-boot-sequence /opt/cyberway.contracts/scripts/bios-boot-sequence
-COPY --from=builder /golos.contracts/scripts/golos-boot-sequence /opt/golos.contracts/scripts/golos-boot-sequence
+COPY --from=builder /golos.contracts/scripts /opt/golos.contracts/scripts
 COPY --from=builder /golos.contracts/scripts/boot-sequence.py /opt/golos.contracts/scripts/boot-sequence.py
 
 RUN ln -s ../cyberway.contracts /opt/golos.contracts/cyberway.contracts
