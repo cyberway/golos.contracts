@@ -566,7 +566,7 @@ void vesting::paydelegator(name account, asset reward, name delegator,
             });
         }
     }
-    add_balance(delegator, reward, account); 
+    add_balance(delegator, reward, same_payer); 
 }
 
 } // golos
