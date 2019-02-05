@@ -51,6 +51,7 @@ COPY --from=builder /golos.contracts/scripts/boot-sequence.py /opt/golos.contrac
 
 COPY --from=builder /usr/local/lib/libbson-1.0.so.0.0.0 /usr/local/lib/
 COPY --from=cyberway /opt/cyberway/bin/cleos /opt/cyberway/bin/cleos
+COPY --from=cyberway /opt/cyberway/bin/keosd /opt/cyberway/bin/keosd
 
 RUN ldconfig && ln -s ../cyberway.contracts /opt/golos.contracts/cyberway.contracts
 

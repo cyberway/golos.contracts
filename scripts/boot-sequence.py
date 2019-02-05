@@ -4,12 +4,11 @@ import sys
 import subprocess
 
 default_contracts_dir = '/opt/cyberway/bin/data-dir/contracts/'
-wallet_url = os.environ.get('WALLET_URL', 'http://keosd:8900')
 nodeos_url = os.environ.get('CYBERWAY_URL', 'http://nodeosd:8888')
 
 args = {
     'basedir': os.path.dirname(os.path.dirname(os.path.realpath(__file__))),
-    'cleos':'/opt/cyberway/bin/cleos --wallet-url=%s --url=%s ' % (wallet_url, nodeos_url),
+    'cleos':'/opt/cyberway/bin/cleos --url=%s ' % nodeos_url,
     'public_key':'GLS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV',
     'private_key':'5KQwrPbwdL6PhXujxW37FSSQZ1JiwsST4cqQzDeyXtP79zkvFD3',
     'eosio_private_key':'5KQwrPbwdL6PhXujxW37FSSQZ1JiwsST4cqQzDeyXtP79zkvFD3',
