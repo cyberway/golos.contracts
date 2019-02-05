@@ -136,7 +136,7 @@
       },
       {
         "name": "interest_rate",
-        "type": "uint64"
+        "type": "uint16"
       },
       {
         "name": "payout_strategy",

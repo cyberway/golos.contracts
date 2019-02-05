@@ -47,10 +47,6 @@
         {
           "name": "unlocked_limit",
           "type": "asset"
-        },
-        {
-          "name": "delegation_rewards",
-          "type": "asset"
         }
       ]
     },
@@ -327,7 +323,7 @@
           {"name": "voter", "type": "name"},
           {"name": "reward", "type": "asset"},
           {"name": "delegator", "type": "name"},
-          {"name": "interest_rate", "type": "uint64"},
+          {"name": "interest_rate", "type": "uint16"},
           {"name": "payout_strategy", "type": "uint8"}
        ]
     }

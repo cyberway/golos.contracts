@@ -417,7 +417,6 @@ void vesting::open(name owner, symbol symbol, name ram_payer) {
         a.delegate_vesting.symbol = symbol;
         a.received_vesting.symbol = symbol;
         a.unlocked_limit.symbol = symbol;
-        a.delegation_rewards.symbol = symbol;
     });
 }
 
@@ -429,7 +428,6 @@ void vesting::close(name owner, symbol symbol) {
     eosio_assert(it->vesting.amount == 0, "Cannot close because the balance vesting is not zero");
     eosio_assert(it->delegate_vesting.amount == 0, "Cannot close because the balance delegate vesting is not zero");
     eosio_assert(it->received_vesting.amount == 0, "Cannot close because the balance received vesting not zero");
-    eosio_assert(it->delegation_rewards.amount == 0, "Cannot close because the balance of rewards not zero");
     account.erase(it);
 }
 
@@ -545,32 +543,34 @@ void vesting::timeout_delay_trx() {
     trx.send(_self.value, _self);
 }
 
-void vesting::paydelegator(name voter, asset reward, name delegator, 
-        uint64_t interest_rate, uint8_t payout_strategy) {
-    if (payout_strategy == config::to_delegated_vesting) {
-        tables::account_table acc_table_dlg(_self, delegator.value);
-        auto balance_dlg = acc_table_dlg.find(reward.symbol.code().raw());
-        acc_table_dlg.modify(balance_dlg, voter, [&](auto& item) {
-            item.delegate_vesting += reward;
-        });
-        tables::account_table acc_table_rcv(_self, voter.value);
-        auto balance_rcv = acc_table_rcv.find(reward.symbol.code().raw());
-        acc_table_rcv.modify(balance_rcv, delegator, [&](auto& item) {
-            item.received_vesting += reward;
-        });
+void vesting::paydelegator(name account, asset reward, name delegator, 
+        uint16_t interest_rate, uint8_t payout_strategy) {
+    require_auth(_self);
+    if (payout_strategy == config::payout_strategy::to_delegated_vesting) {
         tables::delegate_table table(_self, reward.symbol.code().raw());
         auto index_table = table.get_index<"unique"_n>();
-        auto delegate_record = index_table.find(structures::delegate_record::unique_key(delegator, voter));
-        index_table.modify(delegate_record, name(), [&](auto& item) {
-            item.deductions += reward;
-        });
-    } else if (payout_strategy == config::to_delegator) {
-        tables::account_table acc_table(_self, delegator.value);
-        auto balance = acc_table.find(reward.symbol.code().raw());
-        acc_table.modify(balance, voter, [&](auto& item) {
-            item.delegation_rewards += reward;
-        });
-    }
+        auto delegate_record = index_table.find(structures::delegate_record::unique_key(delegator, account));
+        if (delegate_record != index_table.end()) {
+            tables::account_table acc_table_dlg(_self, delegator.value);
+            auto balance_dlg = acc_table_dlg.find(reward.symbol.code().raw());
+            acc_table_dlg.modify(balance_dlg, name(), [&](auto& item) {
+                item.delegate_vesting += reward;
+            });
+            tables::account_table acc_table_rcv(_self, account.value);
+            auto balance_rcv = acc_table_rcv.find(reward.symbol.code().raw());
+            acc_table_rcv.modify(balance_rcv, name(), [&](auto& item) {
+                item.received_vesting += reward;
+            });
+            index_table.modify(delegate_record, name(), [&](auto& item) {
+                item.quantity += reward;
+            });
+        }
+    } 
+    tables::account_table acc_table(_self, delegator.value);
+    auto balance = acc_table.find(reward.symbol.code().raw());
+    acc_table.modify(balance, name(), [&](auto& item) {
+        item.vesting += reward;
+    });
 }
 
 } // golos

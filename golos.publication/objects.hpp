@@ -78,7 +78,7 @@ struct delegate_voter {
 
     name delegator;
     asset quantity;
-    uint64_t interest_rate;
+    uint16_t interest_rate;
     uint8_t payout_strategy;
 };
 

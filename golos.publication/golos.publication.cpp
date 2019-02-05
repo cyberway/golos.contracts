@@ -617,7 +617,7 @@ void publication::set_vote(name voter, name author, string permlink, int16_t wei
     auto effective_vesting = golos::vesting::get_account_effective_vesting(config::vesting_name, voter, token_code);
     
     for (auto record : list_delegate_voter) {
-        auto interest_rate = static_cast<uint64_t>(static_cast<uint128_t>(record.quantity.amount) * 
+        auto interest_rate = static_cast<uint16_t>(static_cast<uint128_t>(record.quantity.amount) * 
                     record.interest_rate / effective_vesting.amount);
 
         if (interest_rate == 0)
