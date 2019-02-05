@@ -267,8 +267,8 @@ BOOST_FIXTURE_TEST_CASE(register_update_witness, golos_ctrl_tester) try {
         BOOST_CHECK_EQUAL(success(), ctrl.vote_witness(std::get<0>(v), std::get<1>(v)));
         BOOST_TEST_MESSAGE("--- check top witnesses");
 
-        auto current_time = control->head_block_time().time_since_epoch();
         produce_block();
+        auto current_time = control->head_block_time().time_since_epoch();
 
         auto top_withnesses = ctrl.get_top_witnesses();
         auto last_update_top_withnesses = top_withnesses["last_update"].as<fc::time_point>().time_since_epoch();
