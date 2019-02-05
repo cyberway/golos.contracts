@@ -258,13 +258,13 @@ BOOST_FIXTURE_TEST_CASE(register_update_witness, golos_ctrl_tester) try {
     BOOST_TEST_MESSAGE("--- check registration success");
 
     prepare_balances();
-    vector<std::pair<name,name>> votes = {
-        {_alice, _w[1]}, {_alice, _w[2]}, {_alice, _w[3]},
-        {_alice, _w[0]}, {_bob, _w[0]}, {_w[0], _w[0]}
+    vector<std::tuple<name,name,bool>> votes = {
+        {_alice, _w[1], true}, {_alice, _w[2], true}, {_alice, _w[3], false},
+        {_alice, _w[0], false}, {_bob, _w[0], true}, {_w[0], _w[0], false}
     };
 
     for (const auto& v : votes) {
-        BOOST_CHECK_EQUAL(success(), ctrl.vote_witness(v.first, v.second));
+        BOOST_CHECK_EQUAL(success(), ctrl.vote_witness(std::get<0>(v), std::get<1>(v)));
         BOOST_TEST_MESSAGE("--- check top witnesses");
 
         auto current_time = control->head_block_time().time_since_epoch();
@@ -272,6 +272,8 @@ BOOST_FIXTURE_TEST_CASE(register_update_witness, golos_ctrl_tester) try {
 
         auto top_withnesses = ctrl.get_top_witnesses();
         auto last_update_top_withnesses = top_withnesses["last_update"].as<fc::time_point>();
+        
+        BOOST_CHECK_EQUAL(last_update_top_withnesses == current_time, std::get<2>(v));
 
         BOOST_TEST_MESSAGE("Top witnesses: " + fc::json::to_string(top_withnesses));
         auto save_top_witnesses = top_withnesses["witnesses"].as<vector<name>>();
