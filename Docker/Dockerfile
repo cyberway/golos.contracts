@@ -49,10 +49,10 @@ COPY --from=builder /golos.contracts/cyberway.contracts/scripts/bios-boot-sequen
 COPY --from=builder /golos.contracts/scripts /opt/golos.contracts/scripts
 COPY --from=builder /golos.contracts/scripts/boot-sequence.py /opt/golos.contracts/scripts/boot-sequence.py
 
-RUN ln -s ../cyberway.contracts /opt/golos.contracts/cyberway.contracts
-
-COPY --from=builder /usr/local/lib/libbson-1.0.so* /usr/local/lib/
+COPY --from=builder /usr/local/lib/libbson-1.0.so.0.0.0 /usr/local/lib/
 COPY --from=cyberway /opt/cyberway/bin/cleos /opt/cyberway/bin/cleos
+
+RUN ldconfig && ln -s ../cyberway.contracts /opt/golos.contracts/cyberway.contracts
 
 ENV CYBERWAY_TEST_CONTRACTS /opt/cyberway.contracts/test_contracts/
 ENV CYBERWAY_CONTRACTS /opt/cyberway.contracts/
