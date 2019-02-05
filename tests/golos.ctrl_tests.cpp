@@ -268,15 +268,15 @@ BOOST_FIXTURE_TEST_CASE(register_update_witness, golos_ctrl_tester) try {
         BOOST_TEST_MESSAGE("--- check top witnesses");
 
         auto current_time = control->head_block_time().time_since_epoch();
-        produce_block();
 
         auto top_withnesses = ctrl.get_top_witnesses();
         auto last_update_top_withnesses = top_withnesses["last_update"].as<fc::time_point>().time_since_epoch();
         
         BOOST_CHECK_EQUAL(last_update_top_withnesses == current_time, std::get<2>(v));
 
-        BOOST_TEST_MESSAGE("Top witnesses: " + fc::json::to_string(top_withnesses));
+        BOOST_TEST_MESSAGE("Last update: " + std::to_string(last_update_top_withnesses.count()));
         BOOST_TEST_MESSAGE("Currenct time: " + std::to_string(current_time.count()));
+        
         auto save_top_witnesses = top_withnesses["witnesses"].as<vector<name>>();
         auto list_top_witnesses = ctrl.get_all_witnesses();
 
@@ -309,6 +309,7 @@ BOOST_FIXTURE_TEST_CASE(register_update_witness, golos_ctrl_tester) try {
         });
 
         BOOST_CHECK_EQUAL(true, result);
+        produce_block();
     }
 } FC_LOG_AND_RETHROW()
 
