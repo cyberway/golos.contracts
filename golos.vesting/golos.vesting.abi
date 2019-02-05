@@ -93,10 +93,6 @@
           "type": "asset"
         },
         {
-          "name": "deductions",
-          "type": "asset"
-        },
-        {
           "name": "interest_rate",
           "type": "uint16"
         },
