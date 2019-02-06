@@ -193,8 +193,8 @@
         "type": "uint64"
       },
       {
-        "name": "mssg_hash",
-        "type": "uint64"
+        "name": "account",
+        "type": "name"
       },
       {
         "name": "permlink",
@@ -849,13 +849,13 @@
           ]
        },
        {
-          "name": "mssghash",
+          "name": "byaccount",
           "unique": "true",
           "orders": [
-              {"field": "mssg_hash", "order": "asc"}
+              {"field": "account", "order": "asc"},
+              {"field": "permlink", "order": "asc"}
           ]
        }
-
     ]
   },
   {

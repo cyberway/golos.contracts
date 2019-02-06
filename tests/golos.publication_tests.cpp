@@ -114,7 +114,7 @@ public:
 
 protected:
     const mvo _test_msg = mvo()
-        ("id", hash64("permlink"))
+        ("id", 1)
         ("parentacc", "")
         ("parent_id", 0)
         ("tokenprop", 0)
@@ -130,7 +130,7 @@ protected:
         ("level", 0);
 
     const mvo _test_content = mvo()
-        ("id", hash64("permlink"))
+        ("id", 1)
         ("headermssg", "headermssg")
         ("bodymssg", "bodymssg")
         ("languagemssg", "languagemssg")
@@ -206,7 +206,7 @@ BOOST_FIXTURE_TEST_CASE(create_message, golos_publication_tester) try {
     BOOST_TEST_MESSAGE("--- checking that another user can create a message with the same permlink.");
     BOOST_CHECK_EQUAL(success(), post.create_msg(N(chucknorris), "permlink"));
 
-    auto id = hash64("permlink");
+    auto id = 1;
     check_equal_post(post.get_message(N(brucelee), id), _test_msg);
     check_equal_content(post.get_content(N(brucelee), id), _test_content);
 
@@ -235,8 +235,8 @@ BOOST_FIXTURE_TEST_CASE(update_message, golos_publication_tester) try {
     BOOST_CHECK_EQUAL(success(), post.update_msg(N(brucelee), "permlink",
         "headermssgnew", "bodymssgnew", "languagemssgnew", {{"tagnew"}}, "jsonmetadatanew"));
 
-    check_equal_content(post.get_content(N(brucelee), hash64("permlink")), mvo()
-        ("id", hash64("permlink"))
+    check_equal_content(post.get_content(N(brucelee), 1), mvo()
+        ("id", 1)
         ("headermssg", "headermssgnew")
         ("bodymssg", "bodymssgnew")
         ("languagemssg", "languagemssgnew")
@@ -277,7 +277,7 @@ BOOST_FIXTURE_TEST_CASE(upvote, golos_publication_tester) try {
     BOOST_TEST_MESSAGE("--- succeed on initial upvote");
     BOOST_CHECK_EQUAL(success(), post.create_msg(N(brucelee), permlink));
     BOOST_CHECK_EQUAL(success(), vote_brucelee(123));
-    auto _vote = mvo()("id",0)("message_id",hash64(permlink))("voter","brucelee")("count",1);   // TODO: time
+    auto _vote = mvo()("id",0)("message_id",1)("voter","brucelee")("count",1);   // TODO: time
     CHECK_MATCHING_OBJECT(post.get_vote(N(brucelee), 0), _vote);
     produce_block();
 
@@ -326,7 +326,7 @@ BOOST_FIXTURE_TEST_CASE(downvote, golos_publication_tester) try {
     BOOST_TEST_MESSAGE("--- succeed on initial downvote");
     BOOST_CHECK_EQUAL(success(), post.create_msg(N(brucelee), permlink));
     BOOST_CHECK_EQUAL(success(), vote_brucelee(123));
-    auto _vote = mvo()("id",0)("message_id",hash64(permlink))("voter","brucelee")("count",1);   // TODO: time
+    auto _vote = mvo()("id",0)("message_id",1)("voter","brucelee")("count",1);   // TODO: time
     CHECK_MATCHING_OBJECT(post.get_vote(N(brucelee), 0), _vote);
     produce_block();
 
@@ -431,20 +431,20 @@ BOOST_FIXTURE_TEST_CASE(comments_cashout_time_test, golos_publication_tester) tr
     produce_blocks(need_blocks);
     
     BOOST_TEST_MESSAGE("--- checking that messages wasn't closed.");
-    BOOST_CHECK_EQUAL(post.get_message(N(brucelee), hash64("permlink"))["closed"].as<bool>(), false);
-    BOOST_CHECK_EQUAL(post.get_message(N(chucknorris), hash64("comment_permlink"))["closed"].as<bool>(), false);
+    BOOST_CHECK_EQUAL(post.get_message(N(brucelee), 1)["closed"].as<bool>(), false);
+    BOOST_CHECK_EQUAL(post.get_message(N(chucknorris), 1)["closed"].as<bool>(), false);
     
     produce_block();
     
     BOOST_TEST_MESSAGE("--- checking that messages was closed.");
-    BOOST_CHECK_EQUAL(post.get_message(N(brucelee), hash64("permlink"))["closed"].as<bool>(), true);
-    BOOST_CHECK_EQUAL(post.get_message(N(chucknorris), hash64("comment_permlink"))["closed"].as<bool>(), true);
+    BOOST_CHECK_EQUAL(post.get_message(N(brucelee), 1)["closed"].as<bool>(), true);
+    BOOST_CHECK_EQUAL(post.get_message(N(chucknorris), 1)["closed"].as<bool>(), true);
     
     BOOST_CHECK_EQUAL(success(), post.create_msg(N(jackiechan), "sorry guys i'm late", N(brucelee), "permlink"));
     produce_block();
     
     BOOST_TEST_MESSAGE("--- checking that closed message comment was closed.");
-    BOOST_CHECK_EQUAL(post.get_message(N(jackiechan), hash64("sorry guys i'm late"))["closed"].as<bool>(), true);
+    BOOST_CHECK_EQUAL(post.get_message(N(jackiechan), 1)["closed"].as<bool>(), true);
 
 } FC_LOG_AND_RETHROW()
 

@@ -1,5 +1,4 @@
 #include "golos.publication.hpp"
-#include <common/hash64.hpp>
 #include <eosiolib/transaction.hpp>
 #include <eosiolib/event.hpp>
 #include <cyber.token/cyber.token.hpp>
@@ -119,10 +118,13 @@ void publication::create_message(name account, std::string permlink,
         golos::vesting::get_account_effective_vesting(config::vesting_name, account, token_code).amount, token_code, vestpayment);
             
     tables::message_table message_table(_self, account.value);
-    auto message_id = message_table.available_primary_key() + 1;
-    auto mssg_hash = hash64(permlink);
+    uint64_t message_id;
+    if (message_table.available_primary_key())
+        message_id = message_table.available_primary_key();
+    else
+        message_id = message_table.available_primary_key() + 1;
     if(!parentacc)
-        use_postbw_charge(lims, issuer, account, token_code, mssg_hash);
+        use_postbw_charge(lims, issuer, account, token_code, message_id);
 
     std::map<name, int64_t> benefic_map;
     int64_t prop_sum = 0;
@@ -170,18 +172,18 @@ void publication::create_message(name account, std::string permlink,
     eosio_assert(pool->state.msgs < std::numeric_limits<structures::counter_t>::max(), "publication::create_message: pool->msgs == max_counter_val");
     pools.modify(*pool, _self, [&](auto &item){ item.state.msgs++; });
 
-    auto message_index = message_table.get_index<"mssghash"_n>();
-    auto message_itr = message_index.lower_bound(mssg_hash);
+    auto message_index = message_table.get_index<"byaccount"_n>();
+    auto message_itr = message_index.find(std::make_tuple(account, permlink));
     eosio_assert(message_itr == message_index.end(), "This message already exists.");
 
     tables::content_table content_table(_self, account.value);
-    auto parent_hash = hash64(parentprmlnk);
+    uint64_t parent_id = 0;
     if (parentacc) {
-        auto message_index = message_table.get_index<"mssghash"_n>();
-        auto message_itr = message_index.lower_bound(hash64(parentprmlnk));
-        auto parent_id = message_itr->id;
+        tables::message_table message_table(_self, parentacc.value);
+        auto message_index = message_table.get_index<"byaccount"_n>();
+        auto message_itr = message_index.find(std::make_tuple(parentacc, parentprmlnk));
+        parent_id = message_itr->id;
     }
-    auto parent_id = 0;
 
     uint8_t level = 0;
     if(parentacc)
@@ -190,7 +192,7 @@ void publication::create_message(name account, std::string permlink,
 
     auto mssg_itr = message_table.emplace(account, [&]( auto &item ) {
         item.id = message_id;
-        item.mssg_hash = mssg_hash;
+        item.account = account;
         item.permlink = permlink;
         item.date = cur_time;
         item.parentacc = parentacc;
@@ -211,7 +213,7 @@ void publication::create_message(name account, std::string permlink,
         item.jsonmetadata = jsonmetadata;
     });
 
-    structures::accandvalue parent {parentacc, parent_hash};
+    structures::accandvalue parent {parentacc, parent_id};
     uint64_t seconds_diff = 0;
     bool closed = false;
     while (parent.account) {
@@ -236,8 +238,11 @@ void publication::update_message(name account, std::string permlink,
                               std::string languagemssg, std::vector<structures::tag> tags,
                               std::string jsonmetadata) {
     require_auth(account);
+    tables::message_table message_table(_self, account.value);
+    auto message_index = message_table.get_index<"byaccount"_n>();
+    auto message_itr = message_index.find(std::make_tuple(account, permlink));
     tables::content_table content_table(_self, account.value);
-    auto cont_itr = content_table.find(hash64(permlink));
+    auto cont_itr = content_table.find(message_itr->id);
     eosio_assert(cont_itr != content_table.end(), "Content doesn't exist.");
 
     content_table.modify(cont_itr, account, [&]( auto &item ) {
@@ -265,13 +270,12 @@ void publication::delete_message(name account, std::string permlink) {
     tables::content_table content_table(_self, account.value);
     tables::vote_table vote_table(_self, account.value);
 
-    auto message_hash = hash64(permlink);
-    auto message_index = message_table.get_index<"mssghash"_n>();
-    auto mssg_itr = message_index.lower_bound(message_hash);
+    auto message_index = message_table.get_index<"byaccount"_n>();
+    auto mssg_itr = message_index.find(std::make_tuple(account, permlink));
     eosio_assert(mssg_itr != message_index.end(), "Message doesn't exist.");
     eosio_assert((mssg_itr->childcount) == 0, "You can't delete comment with child comments.");
     eosio_assert(FP(mssg_itr->state.netshares) <= 0, "Cannot delete a comment with net positive votes.");
-    auto cont_itr = content_table.find(message_hash);
+    auto cont_itr = content_table.find(mssg_itr->id);
     eosio_assert(cont_itr != content_table.end(), "Content doesn't exist.");
 
     if(mssg_itr->parentacc)
@@ -285,8 +289,8 @@ void publication::delete_message(name account, std::string permlink) {
     content_table.erase(cont_itr);
 
     auto votetable_index = vote_table.get_index<"messageid"_n>();
-    auto vote_itr = votetable_index.lower_bound(message_hash);
-    while ((vote_itr != votetable_index.end()) && (vote_itr->message_id == message_hash))
+    auto vote_itr = votetable_index.lower_bound(mssg_itr->id);
+    while ((vote_itr != votetable_index.end()) && (vote_itr->message_id == mssg_itr->id))
         vote_itr = votetable_index.erase(vote_itr);
 }
 
@@ -530,8 +534,8 @@ void publication::set_vote(name voter, name author, string permlink, int16_t wei
     const auto &social_acc_param = cfg.get().social_acc_param;
 
     tables::message_table message_table(_self, author.value);
-    auto message_index = message_table.get_index<"mssghash"_n>();
-    auto mssg_itr = message_index.lower_bound(hash64(permlink));
+    auto message_index = message_table.get_index<"byaccount"_n>();
+    auto mssg_itr = message_index.find(std::make_tuple(author, permlink));
     eosio_assert(mssg_itr != message_index.end(), "Message doesn't exist.");
     tables::reward_pools pools(_self, _self.value);
     auto pool = get_pool(pools, mssg_itr->date);
@@ -541,7 +545,7 @@ void publication::set_vote(name voter, name author, string permlink, int16_t wei
     auto cur_time = current_time();
 
     auto votetable_index = vote_table.get_index<"byvoter"_n>();
-    auto vote_itr = votetable_index.find(std::make_tuple(hash64(permlink), voter));
+    auto vote_itr = votetable_index.find(std::make_tuple(mssg_itr->id, voter));
     if (vote_itr != votetable_index.end()) {
         // it's not consensus part and can be moved to storage in future
         if (mssg_itr->closed) {
@@ -814,8 +818,8 @@ void publication::set_params(std::vector<posting_params> params) {
 
 void publication::reblog(name rebloger, name author, std::string permlink) {
     tables::message_table message_table(_self, author.value);
-    auto message_index = message_table.get_index<"mssghash"_n>();
-    auto mssg_itr = message_index.lower_bound(hash64(permlink));
+    auto message_index = message_table.get_index<"byaccount"_n>();
+    auto mssg_itr = message_index.find(std::make_tuple(author, permlink));
     eosio_assert(mssg_itr != message_index.end(), 
             "You can't reblog, because this message doesn't exist.");
 }

@@ -328,7 +328,7 @@ public:
                 for (auto itr = msgs.begin(); itr != msgs.end(); ++itr) {
                     auto cur = *itr;
                     if (!cur["closed"].as<bool>()) {
-                        s.set_message(message_key{user, cur["id"].as<uint64_t>()}, {
+                        s.set_message(message_key{user, cur["id"].as<std::string>()}, {
                             static_cast<double>(FP(cur["state"]["netshares"].as<base_t>())),
                             static_cast<double>(FP(cur["state"]["voteshares"].as<base_t>())),
                             static_cast<double>(FP(cur["state"]["sumcuratorsw"].as<base_t>()))
@@ -455,7 +455,12 @@ public:
         bool vestpayment = false
     ) {
         auto ret = post.create_msg(author, permlink, parentacc, parentprmlnk, beneficiaries, tokenprop, vestpayment);
-        message_key key{author, hash64(permlink)};
+        //uint64_t id;
+        //if (_state.pools.back().messages.empty())
+        //    id = 1;
+        //else
+        //    id = _state.pools.back().messages.back().id + 1; 
+        message_key key{author, permlink};
 
         auto reward_weight = 0.0;
         string ret_str = ret;
@@ -478,7 +483,7 @@ public:
                 static_cast<double>(cur_time().to_seconds()),
                 beneficiaries, reward_weight));
         } else {
-            key.id = 0;
+            key.id = "";
         }
         return ret;
     }
@@ -494,7 +499,7 @@ public:
                 ? post.upvote(voter, author, permlink, weight)
                 : post.downvote(voter, author, permlink, -weight);
 
-        message_key msg_key{author, hash64(permlink)};
+        message_key msg_key{author, permlink};
 
         string ret_str = ret;
         if ((ret == success()) || (ret_str.find("forum::apply_limits:") != string::npos)) {

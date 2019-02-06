@@ -56,7 +56,7 @@ struct message {
     message() = default;
 
     uint64_t id;
-    uint64_t mssg_hash;
+    name account;
     std::string permlink;
     uint64_t date;
     name parentacc;
@@ -71,10 +71,6 @@ struct message {
 
     uint64_t primary_key() const {
         return id;
-    }
-
-    uint64_t secondary_key() const {
-        return mssg_hash;
     }
 };
 
@@ -204,8 +200,10 @@ namespace tables {
 using namespace eosio;
 
 using id_index = indexed_by<N(id), const_mem_fun<structures::message, uint64_t, &structures::message::primary_key>>;
-using mssg_hash_index = indexed_by<N(mssghash), const_mem_fun<structures::message, uint64_t, &structures::message::secondary_key>>;
-using message_table = multi_index<N(message), structures::message, id_index, mssg_hash_index>;
+using message_group_index = indexed_by<N(byaccount), eosio::composite_key<structures::message, 
+      eosio::member<structures::message, name, &structures::message::account>,
+      eosio::member<structures::message, std::string, &structures::message::permlink>>>;
+using message_table = multi_index<N(message), structures::message, id_index, message_group_index>;
 
 using content_id_index = indexed_by<N(id), const_mem_fun<structures::content, uint64_t, &structures::content::primary_key>>;
 using content_table = multi_index<N(content), structures::content, content_id_index>;

@@ -240,7 +240,7 @@ BOOST_FIXTURE_TEST_CASE(create_referral_message_tests, golos_referral_tester) tr
     BOOST_CHECK_EQUAL(success(), referral.create_referral(N(issuer), N(sania), 500, cur_time().to_seconds() + expire, token.make_asset(50)));
     BOOST_CHECK_EQUAL(success(), post.create_msg(N(sania), "permlink"));
 
-    auto id = hash64("permlink");
+    auto id = 1;
     auto post_sania = post.get_message(N(sania), id);
     BOOST_CHECK_EQUAL (post_sania["beneficiaries"].size(), 1);
     BOOST_CHECK_EQUAL( post_sania["beneficiaries"][uint8_t(0)].as<beneficiary>().account, N(issuer) );
