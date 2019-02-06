@@ -29,8 +29,7 @@
   ],
   "actions": [{
       "name": "transfer",
-      "type": "transfer",
-      "ricardian_contract": ""
+      "type": "transfer"
     }
   ],
   "tables": [{
@@ -41,7 +40,6 @@
       "key_types" : ["uint64"]
     }
   ],
-  "ricardian_clauses": [],
   "error_messages": [],
   "abi_extensions": []
 }

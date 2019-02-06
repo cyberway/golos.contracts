@@ -81,23 +81,19 @@
     "actions": [
         {
             "name": "addreferral",
-            "type": "addreferral",
-            "ricardian_contract": ""
+            "type": "addreferral"
         },
         {
             "name": "validateprms",
-            "type": "setparams",
-            "ricardian_contract": ""
+            "type": "setparams"
         },
         {
             "name": "setparams",
-            "type": "setparams",
-            "ricardian_contract": ""
+            "type": "setparams"
         },
         {
             "name": "closeoldref",
-            "type": "hash",
-            "ricardian_contract": ""
+            "type": "hash"
         }
     ],
     "tables": [
@@ -142,6 +138,5 @@
             ]
         }
     ],
-    "ricardian_clauses": [],
     "abi_extensions": []
 }
