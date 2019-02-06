@@ -193,10 +193,6 @@
         "type": "uint64"
       },
       {
-        "name": "account",
-        "type": "name"
-      },
-      {
         "name": "permlink",
         "type": "string"
       },
@@ -849,10 +845,9 @@
           ]
        },
        {
-          "name": "byaccount",
-          "unique": "true",
+          "name": "bypermlink",
+          "unique": "false",
           "orders": [
-              {"field": "account", "order": "asc"},
               {"field": "permlink", "order": "asc"}
           ]
        }
