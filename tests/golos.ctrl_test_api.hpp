@@ -102,6 +102,14 @@ struct golos_ctrl_api: base_contract_api {
         return get_struct(_code, N(witness), witness, "witness_info");
     }
 
+    std::vector<variant> get_all_witnesses() {
+        return _tester->get_all_chaindb_rows(_code, _code, N(witness), false);
+    }
+
+    variant get_top_witnesses() const {
+        return get_struct(_code, N(witnessauth), N(witnessauth), "witnesses_auth");
+    }
+
     //// helpers
     static std::string token_param(symbol token) {
         return std::string() + "['ctrl_token',{'code':'"+token.name()+"'}]";
