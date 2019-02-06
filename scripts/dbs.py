@@ -1,11 +1,15 @@
+import os
 from pymongo import MongoClient
 import pymongo
 from config import *
 from decimal import Decimal
 from bson.decimal128 import Decimal128
 
-golos_client = MongoClient('172.17.0.1', 27017)
-cyberway_client = MongoClient('127.0.0.1', 27018)
+golos_url = os.environ.get("GOLOS_DB", "mongodb://172.17.0.1:27017")
+cyberway_url = os.environ.get("CYBERWAY_DB", "mongodb://127.0.0.1:27018")
+
+golos_client = MongoClient(golos_url)
+cyberway_client = MongoClient(cyberway_url)
 
 golos_db = golos_client['Golos']
 cyberway_db = cyberway_client[CYBERWAY_PREFIX]
