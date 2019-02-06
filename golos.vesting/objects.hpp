@@ -56,7 +56,6 @@ struct delegate_record {
     name sender;
     name recipient;
     asset quantity;
-    asset deductions;
     uint16_t interest_rate;
     uint8_t payout_strategy;
     time_point_sec return_date;
@@ -81,8 +80,7 @@ struct delegate_record {
         return recipient.value;
     }
 
-    EOSLIB_SERIALIZE(delegate_record, (id)(sender)(recipient)(quantity)
-                     (deductions)(interest_rate)(payout_strategy)(return_date))
+    EOSLIB_SERIALIZE(delegate_record, (id)(sender)(recipient)(quantity)(interest_rate)(payout_strategy)(return_date))
 };
 
 struct return_delegate {

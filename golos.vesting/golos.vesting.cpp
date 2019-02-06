@@ -259,7 +259,6 @@ void vesting::delegate_vesting(name sender, name recipient, asset quantity, uint
             item.sender = sender;
             item.recipient = recipient;
             item.quantity = quantity;
-            item.deductions.symbol = quantity.symbol;
             item.interest_rate = interest_rate;
             item.payout_strategy = payout_strategy; // TODO 0 - to_delegator, 1 - to_delegated_vestings
             item.return_date = time_point_sec(now() + delegation_params.min_time);
