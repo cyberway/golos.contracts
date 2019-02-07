@@ -51,7 +51,7 @@ inline double get_prop(int64_t arg) {
 
 struct message_key {
     account_name author;
-    std::string id;
+    uint64_t id;
     bool operator ==(const message_key& rhs) const {
         return author == rhs.author && id == rhs.id;
     }
@@ -94,10 +94,10 @@ struct statemap : public std::map<std::string, aprox_val_t> {
         return "balance of " +  acc.to_string() + ": ";
     }
     static std::string get_message_str(const message_key& msg) {
-        return "message of " + msg.author.to_string() + " #" + msg.id + ": ";
+        return "message of " + msg.author.to_string() + " #" + std::to_string(msg.id) + ": ";
     }
     static std::string get_vote_str(account_name voter, const message_key& msg) {
-        return "vote of " + voter.to_string() + " for message of " + msg.author.to_string() + " #" + msg.id + ": ";
+        return "vote of " + voter.to_string() + " for message of " + msg.author.to_string() + " #" + std::to_string(msg.id) + ": ";
     }
     void set_pool(uint64_t id, const pool_data& data = {}) {
         auto prefix = get_pool_str(id);

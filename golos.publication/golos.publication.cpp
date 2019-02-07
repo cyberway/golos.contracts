@@ -238,6 +238,7 @@ void publication::update_message(name account, std::string permlink,
     tables::message_table message_table(_self, account.value);
     auto message_index = message_table.get_index<"bypermlink"_n>();
     auto message_itr = message_index.find(permlink);
+    eosio_assert(message_itr != message_index.end(), "Message doesn't exist.");
     tables::content_table content_table(_self, account.value);
     auto cont_itr = content_table.find(message_itr->id);
     eosio_assert(cont_itr != content_table.end(), "Content doesn't exist.");
