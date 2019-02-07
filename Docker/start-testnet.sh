@@ -60,7 +60,7 @@ docker create --name extract-golos-scripts $GOLOS_IMAGE
 docker cp extract-golos-scripts:/opt/golos.contracts/scripts scripts
 docker rm extract-golos-scripts
 
-echo "=== Start cyberway conteiners"
+echo "=== Start cyberway containers"
 startup/run-with-events.sh
 sleep 10
 call_hook "nodeos-started"
