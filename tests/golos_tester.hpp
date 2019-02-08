@@ -72,6 +72,19 @@ public:
     fc::variant get_tbl_struct(name code, uint64_t scope, name tbl, uint64_t id, const std::string& n) const;
     fc::variant get_tbl_singleton(name code, uint64_t scope, name tbl, const string &n) const;
 
+    template<typename Key>
+    fc::variant get_chaindb_lower_bound_struct(name code, uint64_t scope, name tbl, name indx, const Key& key, const std::string& n) const {
+        variant r;
+        try {
+            bytes data = fc::raw::pack(key);
+            const auto& finfo = _chaindb.lower_bound({code, scope, tbl, indx}, data.data(), data.size());
+            r = _chaindb.value_at_cursor({code, finfo.cursor});
+        } catch (...) {
+            // key not found
+        }
+        return r;
+    }
+
     fc::variant get_chaindb_struct(name code, uint64_t scope, name tbl, uint64_t id, const std::string& n) const;
     fc::variant get_chaindb_singleton(name code, uint64_t scope, name tbl, const std::string& n) const;
     std::vector<fc::variant> get_all_chaindb_rows(name code, uint64_t scope, name tbl, bool strict) const;

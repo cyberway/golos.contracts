@@ -851,6 +851,13 @@
           "orders": [
               {"field": "id", "order": "asc"}
           ]
+       },
+       {
+          "name": "bypermlink",
+          "unique": "false",
+          "orders": [
+              {"field": "permlink", "order": "asc"}
+          ]
        }
     ]
   },
