@@ -31,6 +31,24 @@
   }],
   "structs": [
   {
+    "name":"mssgid",
+    "base": "",
+    "fields": [
+        {
+            "name": "author",
+            "type": "name"
+        },
+        {
+            "name": "permlink",
+            "type": "string"
+        },
+        {
+            "name": "ref_block_num",
+            "type": "uint64"
+        }
+    ]
+  },
+  {
     "name": "value",
     "base": "",
     "fields": [
@@ -85,7 +103,7 @@
     ]
   },
   {
-    "name": "messagekey",
+    "name": "closemssg",
     "base": "",
     "fields": [
       {
@@ -93,7 +111,7 @@
         "type": "name"
       },
       {
-        "name": "permlink",
+        "name": "id",
         "type": "uint64"
       }
     ]
@@ -205,6 +223,10 @@
         "type": "string"
       },
       {
+        "name": "ref_block_num",
+        "type": "uint64"
+      },
+      {
         "name": "date",
         "type": "uint64"
       },
@@ -251,20 +273,12 @@
     "base": "",
     "fields": [
       {
-        "name": "account",
-        "type": "name"
+        "name": "message_id",
+        "type": "mssgid"
       },
       {
-        "name": "permlink",
-        "type": "string"
-      },
-      {
-        "name": "parentacc",
-        "type": "name"
-      },
-      {
-        "name": "parentprmlnk",
-        "type": "string"
+        "name": "parent_message_id",
+        "type": "mssgid"
       },
       {
         "name": "beneficiaries",
@@ -305,12 +319,8 @@
     "base": "",
     "fields": [
       {
-        "name": "account",
-        "type": "name"
-      },
-      {
-        "name": "permlink",
-        "type": "string"
+        "name": "message_id",
+        "type": "mssgid"
       },
       {
         "name": "headermssg",
@@ -339,12 +349,8 @@
     "base": "",
     "fields": [
       {
-        "name": "account",
-        "type": "name"
-      },
-      {
-        "name": "permlink",
-        "type": "string"
+        "name": "message_id",
+        "type": "mssgid"
       }
     ]
   },
@@ -357,12 +363,8 @@
         "type": "name"
       },
       {
-        "name": "author",
-        "type": "name"
-      },
-      {
-        "name": "permlink",
-        "type": "string"
+        "name": "message_id",
+        "type": "mssgid"
       },
       {
         "name": "weight",
@@ -379,12 +381,8 @@
         "type": "name"
       },
       {
-        "name": "author",
-        "type": "name"
-      },
-      {
-        "name": "permlink",
-        "type": "string"
+        "name": "message_id",
+        "type": "mssgid"
       }
     ]
   },
@@ -731,12 +729,8 @@
             "type": "name"
         },
         {
-            "name": "author",
-            "type": "name"
-        },
-        {
-            "name": "permlink",
-            "type": "string"
+            "name": "message_id",
+            "type": "mssgid"
         }
     ]
   },
@@ -817,7 +811,7 @@
   },
   {
     "name": "closemssg",
-    "type": "messagekey"
+    "type": "closemssg"
   },
   {
     "name": "createacc",
@@ -856,7 +850,8 @@
           "name": "bypermlink",
           "unique": "false",
           "orders": [
-              {"field": "permlink", "order": "asc"}
+              {"field": "permlink", "order": "asc"},
+              {"field": "ref_block_num", "order": "asc"}
           ]
        }
     ]
