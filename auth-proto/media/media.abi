@@ -121,28 +121,22 @@
   ],
   "actions": [{
       "name": "publish",
-      "type": "publish",
-      "ricardian_contract": ""
+      "type": "publish"
     },{
       "name": "vote",
-      "type": "vote",
-      "ricardian_contract": ""
+      "type": "vote"
     },{
       "name": "vote2",
-      "type": "vote2",
-      "ricardian_contract": ""
+      "type": "vote2"
     },{
       "name": "vote3",
-      "type": "vote3",
-      "ricardian_contract": ""
+      "type": "vote3"
     },{
       "name": "vote4",
-      "type": "vote4",
-      "ricardian_contract": ""
+      "type": "vote4"
     },{
       "name": "reward",
-      "type": "reward",
-      "ricardian_contract": ""
+      "type": "reward"
     }
   ],
   "tables": [{
@@ -177,7 +171,6 @@
       "type": "data"
     }
   ],
-  "ricardian_clauses": [],
   "error_messages": [],
   "abi_extensions": []
 }

@@ -69,23 +69,19 @@
     "actions": [
         {
             "name": "setparams",
-            "type": "setparams",
-            "ricardian_contract": ""
+            "type": "setparams"
         },
         {
             "name": "emit",
-            "type": "emit",
-            "ricardian_contract": ""
+            "type": "emit"
         },
         {
             "name": "start",
-            "type": "start",
-            "ricardian_contract": ""
+            "type": "start"
         },
         {
             "name": "stop",
-            "type": "stop",
-            "ricardian_contract": ""
+            "type": "stop"
         }
     ],
     "tables": [
@@ -107,6 +103,5 @@
             }]
         }
     ],
-    "ricardian_clauses": [],
     "abi_extensions": []
 }

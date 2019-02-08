@@ -44,12 +44,10 @@
     "actions": [
         {
             "name": "updateparamse",
-            "type": "updateparamse",
-            "ricardian_contract": ""
+            "type": "updateparamse"
         }, {
             "name": "notifytop",
-            "type": "notifytop",
-            "ricardian_contract": ""
+            "type": "notifytop"
         }
     ],
     "tables": [
@@ -63,6 +61,5 @@
             }]
         }
     ],
-    "ricardian_clauses": [],
     "abi_extensions": []
 }

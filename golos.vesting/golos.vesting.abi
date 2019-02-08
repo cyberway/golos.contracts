@@ -331,13 +331,11 @@
   "actions": [
     {
       "name": "setparams",
-      "type": "setparams",
-      "ricardian_contract": ""
+      "type": "setparams"
     },
     {
       "name": "validateprms",
-      "type": "setparams",
-      "ricardian_contract": ""
+      "type": "setparams"
     },
     {
       "name": "buyvg",
@@ -475,7 +473,6 @@
       }]
     }
   ],
-  "ricardian_clauses": [],
   "error_messages": [],
   "abi_extensions": []
 }
