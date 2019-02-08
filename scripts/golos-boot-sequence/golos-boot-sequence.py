@@ -232,6 +232,10 @@ def createGolosAccounts():
     updateAuth('gls.social',  'active', 'owner', [args.public_key], ['gls.publish@eosio.code'])
     updateAuth('gls.emit',    'active', 'owner', [args.public_key], ['gls.emit@eosio.code'])
 
+    updateAuth('eosio',       'createuser', 'active', ['GLS5a2eDuRETEg7uy8eHbiCqGZM3wnh2pLjiXrFduLWBKVZKCkB62'], [])
+    linkAuth('eosio', 'eosio', 'newaccount', 'createuser')
+    linkAuth('eosio', 'gls.vesting', 'open', 'createuser')
+
 def stepInstallContracts():
     for acc in golosAccounts:
         if (acc.contract != None):
