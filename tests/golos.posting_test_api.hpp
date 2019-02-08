@@ -175,6 +175,24 @@ struct golos_posting_api: base_contract_api {
         return _tester->get_chaindb_struct(_code, acc, N(content), id, "content");
     }
 
+    variant get_message(account_name acc, const std::string& permlink) {
+        variant obj = _tester->get_chaindb_lower_bound_struct(_code, acc, N(message), N(bypermlink), permlink, "message");
+        if (!obj.is_null()) {
+            if(obj["permlink"].as<std::string>() != permlink) {
+                return variant();
+            }
+        }
+        return obj;
+    }
+
+    variant get_content(account_name acc, const std::string& permlink) {
+        variant obj = get_message(acc, permlink);
+        if(!obj.is_null()) {
+            return get_content(acc, obj["id"].as<uint64_t>());
+        }
+        return variant();
+    }
+
     variant get_vote(account_name acc, uint64_t id) {
         return _tester->get_chaindb_struct(_code, acc, N(vote), id, "voteinfo");
     }
