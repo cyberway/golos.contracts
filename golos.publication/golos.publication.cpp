@@ -522,7 +522,7 @@ void publication::check_upvote_time(uint64_t cur_time, uint64_t mssg_date) {
 
 bool publication::is_close_message_by_ref_block_num(uint64_t ref_block_num) {
     const uint64_t number_of_blocks_before_closing = 201600;
-    return (ref_block_num + number_of_blocks_before_closing) > tapos_block_num();
+    return (ref_block_num + number_of_blocks_before_closing) < tapos_block_num();
 }
 
 fixp_t publication::calc_available_rshares(name voter, int16_t weight, uint64_t cur_time, const structures::rewardpool& pool) {

@@ -848,7 +848,7 @@
        },
        {
           "name": "bypermlink",
-          "unique": "false",
+          "unique": "true",
           "orders": [
               {"field": "permlink", "order": "asc"},
               {"field": "ref_block_num", "order": "asc"}
