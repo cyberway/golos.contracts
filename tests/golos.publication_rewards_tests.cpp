@@ -50,7 +50,6 @@ public:
     }
 };
 
-
 class reward_calcs_tester : public extended_tester {
     symbol _token_symbol;
     golos_posting_api post;
@@ -79,7 +78,7 @@ protected:
     void init(int64_t issuer_funds, int64_t user_vesting_funds) {
 
         BOOST_CHECK_EQUAL(success(), post.init_default_params());
-        
+
         auto total_funds = issuer_funds + _users.size() * user_vesting_funds;
         BOOST_CHECK_EQUAL(success(), token.create(_issuer, asset(total_funds, _token_symbol), {_issuer, cfg::charge_name, _forum_name}));
         step();
@@ -199,14 +198,14 @@ public:
     ) {
         static const std::vector<std::string> act_strings{"post", "comment", "vote", "post bandwidth"};
         static const int64_t max_arg = static_cast<int64_t>(std::numeric_limits<fixp_t>::max());
-        
+
         BOOST_REQUIRE_EQUAL(act_strings.size(), lims.limitedacts.size());
         for (size_t i = 0; i < act_strings.size(); i++) {
-            BOOST_REQUIRE_EQUAL(success(), charge.set_restorer(_issuer, lims.limitedacts[i].chargenum, 
+            BOOST_REQUIRE_EQUAL(success(), charge.set_restorer(_issuer, lims.limitedacts[i].chargenum,
                 lims.restorers[lims.limitedacts[i].restorernum], max_arg, max_arg, max_arg));
             step();
             BOOST_REQUIRE_EQUAL(success(), post.set_limit(
-                act_strings[i], 
+                act_strings[i],
                 lims.limitedacts[i].chargenum,
                 lims.limitedacts[i].chargeprice,
                 lims.limitedacts[i].cutoffval,
@@ -215,7 +214,7 @@ public:
             ));
             step();
         }
-        
+
         auto ret =  post.set_rules(mainfunc, curationfunc, timepenalty, curatorsprop, MAXTOKENPROB);
         if (ret == success()) {
             double unclaimed_funds = 0.0;
@@ -328,7 +327,7 @@ public:
                 for (auto itr = msgs.begin(); itr != msgs.end(); ++itr) {
                     auto cur = *itr;
                     if (!cur["closed"].as<bool>()) {
-                        s.set_message(message_key{user, cur["permlink"].as<std::string>()}, {
+                        s.set_message(mssgid{user, cur["permlink"].as<std::string>(), cur["ref_block_num"].as<uint64_t>()}, {
                             static_cast<double>(FP(cur["state"]["netshares"].as<base_t>())),
                             static_cast<double>(FP(cur["state"]["voteshares"].as<base_t>())),
                             static_cast<double>(FP(cur["state"]["sumcuratorsw"].as<base_t>()))
@@ -446,55 +445,55 @@ public:
     }
 
     action_result create_message(
-        account_name author,
-        string permlink,
-        account_name parentacc = N(),
-        string parentprmlnk = "parentprmlnk",
+        mssgid message_id,
+        mssgid parent_message_id = {N(), "parentprmlnk", 0},
         vector<beneficiary> beneficiaries = {},
         int64_t tokenprop = 5000,
         bool vestpayment = false
     ) {
-        auto ret = post.create_msg(author, permlink, parentacc, parentprmlnk, beneficiaries, tokenprop, vestpayment);
-        message_key key{author, permlink};
+        auto ref_block_num = control->head_block_header().block_num();
+        auto ret = post.create_msg(message_id, parent_message_id, beneficiaries, tokenprop, vestpayment);
+//        message_key key{author, permlink};
 
         auto reward_weight = 0.0;
         string ret_str = ret;
         if ((ret == success()) || (ret_str.find("forum::apply_limits:") != string::npos)) {
             reward_weight = _state.pools.back().lims.apply(
-                parentacc ? limits::COMM : limits::POST,
-                _state.pools.back().charges[key.author],
-                _state.balances[key.author].vestamount,
+                parent_message_id.author ? limits::COMM : limits::POST,
+                _state.pools.back().charges[message_id.author],
+                _state.balances[message_id.author].vestamount,
                 cur_time().count(),
                 vestpayment);
             BOOST_REQUIRE_MESSAGE(((ret == success()) == (reward_weight >= 0.0)), "wrong ret_str: " + ret_str
-                + "; vesting = " + std::to_string(_state.balances[key.author].vestamount)
+                + "; vesting = " + std::to_string(_state.balances[message_id.author].vestamount)
                 + "; reward_weight = " + std::to_string(reward_weight));
         }
 
         if (ret == success()) {
             _state.pools.back().messages.emplace_back(message(
-                key,
+                message_id,
                 static_cast<double>(std::min(tokenprop, MAXTOKENPROB)) / static_cast<double>(cfg::_100percent),
                 static_cast<double>(cur_time().to_seconds()),
                 beneficiaries, reward_weight));
         } else {
-            key.permlink = std::string();
+            message_id.permlink = std::string();
+            message_id.ref_block_num = 0;
         }
         return ret;
     }
 
-    action_result delete_message(account_name author, string permlink) {
-        return post.delete_msg(author, permlink);
+    action_result delete_message(mssgid message_id) {
+        return post.delete_msg(message_id);
     }
 
-    action_result addvote(account_name voter, account_name author, string permlink, int32_t weight) {
+    action_result addvote(account_name voter, mssgid message_id, int32_t weight) {
         auto ret = weight == 0
-            ? post.unvote(voter, author, permlink)
+            ? post.unvote(voter, message_id)
             : weight > 0
-                ? post.upvote(voter, author, permlink, weight)
-                : post.downvote(voter, author, permlink, -weight);
+                ? post.upvote(voter, message_id, weight)
+                : post.downvote(voter, message_id, -weight);
 
-        message_key msg_key{author, permlink};
+//        message_key msg_key{author, permlink};
 
         string ret_str = ret;
         if ((ret == success()) || (ret_str.find("forum::apply_limits:") != string::npos)) {
@@ -509,7 +508,7 @@ public:
         if (ret == success()) {
             for (auto& p : _state.pools) {
                 for (auto& m : p.messages) {
-                    if (m.key == msg_key) {
+                    if (m.key == message_id) {
                         auto vote_itr = std::find_if(m.votes.begin(), m.votes.end(), [voter](const vote& v) {return v.voter == voter;});
                         if (vote_itr == m.votes.end())
                             m.votes.emplace_back(vote{
@@ -557,7 +556,8 @@ BOOST_FIXTURE_TEST_CASE(basic_tests, reward_calcs_tester) try {
     check();
 
     BOOST_TEST_MESSAGE("--- create_message: alice");
-    BOOST_CHECK_EQUAL(success(), create_message(N(alice), "permlink"));
+    auto ref_block_num_alice = control->head_block_header().block_num();
+    BOOST_CHECK_EQUAL(success(), create_message({N(alice), "permlink", ref_block_num_alice}));
     check();
     BOOST_CHECK_EQUAL(success(), setrules({"x", bignum}, {"sqrt(x)", bignum}, {"1", bignum}, 2500,
         [](double x){ return x; }, [](double x){ return sqrt(x); }, [](double x){ return 1.0; }));
@@ -566,36 +566,38 @@ BOOST_FIXTURE_TEST_CASE(basic_tests, reward_calcs_tester) try {
     BOOST_CHECK_EQUAL(success(), add_funds_to_forum(50000));
     check();
     BOOST_TEST_MESSAGE("--- create_message: bob");
-    BOOST_CHECK_EQUAL(success(), create_message(N(bob), "permlink1"));
+    auto ref_block_num_bob = control->head_block_header().block_num();
+    BOOST_CHECK_EQUAL(success(), create_message({N(bob), "permlink1", ref_block_num_bob}));
     check();
     BOOST_TEST_MESSAGE("--- create_message: alice (1)");
-    BOOST_CHECK_EQUAL(success(), create_message(N(alice), "permlink1"));
+    auto ref_block_num_alice1 = control->head_block_header().block_num();
+    BOOST_CHECK_EQUAL(success(), create_message({N(alice), "permlink1", ref_block_num_alice1}));
     check();
     BOOST_TEST_MESSAGE("--- alice1 voted for alice");
-    BOOST_CHECK_EQUAL(success(), addvote(N(alice1), N(alice), "permlink", 100));
+    BOOST_CHECK_EQUAL(success(), addvote(N(alice1), {N(alice), "permlink", ref_block_num_alice}, 100));
     check();
     BOOST_TEST_MESSAGE("--- trying to delete alice's message");
-    BOOST_CHECK_EQUAL(err.delete_upvoted, delete_message(N(alice), "permlink"));
+    BOOST_CHECK_EQUAL(err.delete_upvoted, delete_message({N(alice), "permlink", ref_block_num_alice}));
     BOOST_TEST_MESSAGE("--- bob1 voted (1%) for bob");
-    BOOST_CHECK_EQUAL(success(), addvote(N(bob1), N(bob), "permlink1", 100));
+    BOOST_CHECK_EQUAL(success(), addvote(N(bob1), {N(bob), "permlink1", ref_block_num_bob}, 100));
     check();
     BOOST_TEST_MESSAGE("--- bob1 revoted (-50%) against bob");
-    BOOST_CHECK_EQUAL(success(), addvote(N(bob1), N(bob), "permlink1", -5000));
+    BOOST_CHECK_EQUAL(success(), addvote(N(bob1), {N(bob), "permlink1", ref_block_num_bob}, -5000));
     check();
     BOOST_TEST_MESSAGE("--- bob2 voted (100%) for bob");
-    BOOST_CHECK_EQUAL(success(), addvote(N(bob2), N(bob), "permlink1", 10000));
+    BOOST_CHECK_EQUAL(success(), addvote(N(bob2), {N(bob), "permlink1", ref_block_num_bob}, 10000));
     check();
     BOOST_TEST_MESSAGE("--- alice2 voted (100%) for alice (1)");
-    BOOST_CHECK_EQUAL(success(), addvote(N(alice2), N(alice), "permlink1", 10000));
+    BOOST_CHECK_EQUAL(success(), addvote(N(alice2), {N(alice), "permlink1", ref_block_num_alice1}, 10000));
     check();
     BOOST_TEST_MESSAGE("--- alice3 flagged (80%) against bob");
-    BOOST_CHECK_EQUAL(success(), addvote(N(alice3), N(bob), "permlink1", -8000));
+    BOOST_CHECK_EQUAL(success(), addvote(N(alice3), {N(bob), "permlink1", ref_block_num_bob}, -8000));
     check();
     BOOST_TEST_MESSAGE("--- alice4 voted (30%) for alice (1)");
-    BOOST_CHECK_EQUAL(success(), addvote(N(alice4), N(alice), "permlink1", 3000));
+    BOOST_CHECK_EQUAL(success(), addvote(N(alice4), {N(alice), "permlink1", ref_block_num_alice1}, 3000));
     check();
     BOOST_TEST_MESSAGE("--- alice4 revoted (100%) for alice (1)");
-    BOOST_CHECK_EQUAL(success(), addvote(N(alice4), N(alice), "permlink1", 10000));
+    BOOST_CHECK_EQUAL(success(), addvote(N(alice4), {N(alice), "permlink1", ref_block_num_alice1}, 10000));
     check();
 
     BOOST_TEST_MESSAGE("--- add_funds_to_forum");
@@ -607,13 +609,14 @@ BOOST_FIXTURE_TEST_CASE(basic_tests, reward_calcs_tester) try {
     run(seconds(99));   // TODO: remove magic number
     check();
     BOOST_TEST_MESSAGE("--- create_message: why");
-    BOOST_CHECK_EQUAL(success(), create_message(N(why), "why not", N(), "", {{N(alice5), 5000}, {N(bob5), 2500}}));
+    auto ref_block_num_why = control->head_block_header().block_num();
+    BOOST_CHECK_EQUAL(success(), create_message({N(why), "why not", ref_block_num_why}, {N(), "", 0}, {{N(alice5), 5000}, {N(bob5), 2500}}));
     check();
     BOOST_TEST_MESSAGE("--- add_funds_to_forum");
     BOOST_CHECK_EQUAL(success(), add_funds_to_forum(100000));
     check();
     BOOST_TEST_MESSAGE("--- why voted (100%) for why");
-    BOOST_CHECK_EQUAL(success(), addvote(N(why), N(why), "why not", 10000));
+    BOOST_CHECK_EQUAL(success(), addvote(N(why), {N(why), "why not", ref_block_num_why}, 10000));
     step();     // push transactions before run() call
     check();
     run(seconds(99));   // TODO: remove magic number
@@ -635,11 +638,12 @@ BOOST_FIXTURE_TEST_CASE(timepenalty_test, reward_calcs_tester) try {
     BOOST_CHECK_EQUAL(success(), add_funds_to_forum(50000));
     check();
     BOOST_TEST_MESSAGE("--- create_message: bob");
-    BOOST_CHECK_EQUAL(success(), create_message(N(bob), "permlink"));
+    auto ref_block_num_bob = control->head_block_header().block_num();
+    BOOST_CHECK_EQUAL(success(), create_message({N(bob), "permlink", ref_block_num_bob}));
     check();
     BOOST_TEST_MESSAGE("--- voting");
     for (size_t i = 0; i < 6; i++) {    // TODO: remove magic number, 6 must be derived from some constant used in rules
-        BOOST_CHECK_EQUAL(success(), addvote(_users[i], N(bob), "permlink", 10000));
+        BOOST_CHECK_EQUAL(success(), addvote(_users[i], {N(bob), "permlink", ref_block_num_bob}, 10000));
         check();
         run(seconds(3));    // TODO: remove magic number
     }
@@ -676,20 +680,23 @@ BOOST_FIXTURE_TEST_CASE(limits_test, reward_calcs_tester) try {
     BOOST_CHECK_EQUAL(success(), add_funds_to_forum(100000));
     check();
 
-    BOOST_CHECK_EQUAL(success(), create_message(N(bob), "permlink"));
-    BOOST_CHECK_EQUAL(success(), create_message(N(bob), "permlink1"));
-    BOOST_CHECK_EQUAL(err.limit_no_power, create_message(N(bob), "permlink2"));
+    auto ref_block_num_bob = control->head_block_header().block_num();
+    BOOST_CHECK_EQUAL(success(), create_message({N(bob), "permlink", ref_block_num_bob}));
+    BOOST_CHECK_EQUAL(success(), create_message({N(bob), "permlink1", ref_block_num_bob}));
+    BOOST_CHECK_EQUAL(err.limit_no_power, create_message({N(bob), "permlink2", ref_block_num_bob}));
     BOOST_TEST_MESSAGE("--- comments");
     for (size_t i = 0; i < 10; i++) {   // TODO: remove magic number, 10 must be derived from some constant used in rules
-        BOOST_CHECK_EQUAL(success(), create_message(N(bob), "comment" + std::to_string(i), N(bob), "permlink"));
+        BOOST_CHECK_EQUAL(success(), create_message({N(bob), "comment" + std::to_string(i), ref_block_num_bob},
+                                                    {N(bob), "permlink", ref_block_num_bob}));
     }
-    BOOST_CHECK_EQUAL(err.limit_no_power, create_message(N(bob), "oops", N(bob), "permlink"));
-    BOOST_CHECK_EQUAL(success(), create_message(N(bob), "I can pay for posting", N(), "", {}, 5000, true));
+    BOOST_CHECK_EQUAL(err.limit_no_power, create_message({N(bob), "oops", ref_block_num_bob},
+                                                         {N(bob), "permlink", ref_block_num_bob}));
+    BOOST_CHECK_EQUAL(success(), create_message({N(bob), "I can pay for posting", ref_block_num_bob}, {N(), "", 0}, {}, 5000, true));
     BOOST_CHECK_EQUAL(err.limit_no_power,
-        create_message(N(bob), "only if it is not a comment", N(bob), "permlink", {}, 5000, true));
-    BOOST_CHECK_EQUAL(success(), addvote(N(alice), N(bob), "I can pay for posting", 10000));
-    BOOST_CHECK_EQUAL(success(), addvote(N(bob), N(bob), "I can pay for posting", 10000)); //He can also vote
-    BOOST_CHECK_EQUAL(success(), create_message(N(bob1), "permlink"));
+        create_message({N(bob), "only if it is not a comment", ref_block_num_bob}, {N(bob), "permlink", ref_block_num_bob}, {}, 5000, true));
+    BOOST_CHECK_EQUAL(success(), addvote(N(alice), {N(bob), "I can pay for posting", ref_block_num_bob}, 10000));
+    BOOST_CHECK_EQUAL(success(), addvote(N(bob), {N(bob), "I can pay for posting", ref_block_num_bob}, 10000)); //He can also vote
+    BOOST_CHECK_EQUAL(success(), create_message({N(bob1), "permlink", ref_block_num_bob}));
     step();     // push transactions before run() call
 
     BOOST_TEST_MESSAGE("--- waiting");
@@ -697,9 +704,11 @@ BOOST_FIXTURE_TEST_CASE(limits_test, reward_calcs_tester) try {
     check();
     run(seconds(150));  // TODO: remove magic number
     check();
-    BOOST_CHECK_EQUAL(err.limit_no_power, create_message(N(bob), ":("));
+    auto ref_block_num_bob1 = control->head_block_header().block_num();
+    BOOST_CHECK_EQUAL(err.limit_no_power, create_message({N(bob), ":(", ref_block_num_bob1}));
     run(seconds(45));   // TODO: remove magic number
-    BOOST_CHECK_EQUAL(success(), create_message(N(bob), ":)"));
+    auto ref_block_num_bob2 = control->head_block_header().block_num();
+    BOOST_CHECK_EQUAL(success(), create_message({N(bob), ":)", ref_block_num_bob2}));
     check();
     BOOST_CHECK_EQUAL(success(), setrules({"x", bignum}, {"sqrt(x)", bignum}, {"x / 1800", 1800},
         0, //curatorsprop
@@ -719,8 +728,9 @@ BOOST_FIXTURE_TEST_CASE(limits_test, reward_calcs_tester) try {
         })
     );
     check();
-    BOOST_CHECK_EQUAL(err.limit_no_vesting, create_message(N(bob), ":'("));
-    BOOST_CHECK_EQUAL(success(), create_message(N(bob1), ":D"));
+    auto ref_block_num_bob3 = control->head_block_header().block_num();
+    BOOST_CHECK_EQUAL(err.limit_no_vesting, create_message({N(bob), ":'(", ref_block_num_bob3}));
+    BOOST_CHECK_EQUAL(success(), create_message({N(bob1), ":D", ref_block_num_bob3}));
     check();
     show();
 } FC_LOG_AND_RETHROW()
@@ -743,10 +753,11 @@ BOOST_FIXTURE_TEST_CASE(rshares_sum_overflow_test, reward_calcs_tester) try {
 
     for (size_t i = 0; i < 10; i++) {   // TODO: remove magic number, 10 must be derived from some constant used in rules
         BOOST_TEST_MESSAGE("--- create_message: " << name{_users[i]}.to_string());
-        BOOST_CHECK_EQUAL(success(), create_message(_users[i], "permlink"));
+        auto ref_block_num = control->head_block_header().block_num();
+        BOOST_CHECK_EQUAL(success(), create_message({_users[i], "permlink", ref_block_num}));
         check();
         BOOST_TEST_MESSAGE("--- " << name{_users[i]}.to_string() << " voted for self");
-        BOOST_CHECK_EQUAL(success(), addvote(_users[i], _users[i], "permlink", 10000));
+        BOOST_CHECK_EQUAL(success(), addvote(_users[i], {_users[i], "permlink", ref_block_num}, 10000));
         check();
     }
 } FC_LOG_AND_RETHROW()
@@ -767,18 +778,18 @@ BOOST_FIXTURE_TEST_CASE(golos_curation_test, reward_calcs_tester) try {
     BOOST_CHECK_EQUAL(success(), add_funds_to_forum(50000));
     check();
 
+    auto ref_block_num = control->head_block_header().block_num();
     BOOST_TEST_MESSAGE("--- create_message: " << name{_users[0]}.to_string());
-    BOOST_CHECK_EQUAL(success(), create_message(_users[0], "permlink"));
+    BOOST_CHECK_EQUAL(success(), create_message({_users[0], "permlink", ref_block_num}));
     check();
 
     for (size_t i = 0; i < 10; i++) {
         BOOST_TEST_MESSAGE("--- " << name{_users[i]}.to_string() << " voted");
-        BOOST_CHECK_EQUAL(success(), addvote(_users[i], _users[0], "permlink", 10000));
+        BOOST_CHECK_EQUAL(success(), addvote(_users[i], {_users[0], "permlink", ref_block_num}, 10000));
         check();
     }
     run(seconds(170));
     check();
-
 } FC_LOG_AND_RETHROW()
 
 BOOST_AUTO_TEST_SUITE_END()

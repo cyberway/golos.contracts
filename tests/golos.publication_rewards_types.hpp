@@ -49,11 +49,13 @@ inline double get_prop(int64_t arg) {
     return static_cast<double>(arg) / static_cast<double>(golos::config::_100percent);
 }
 
-struct message_key {
-    account_name author;
+struct mssgid {
+    eosio::chain::name author;
     std::string permlink;
-    bool operator ==(const message_key& rhs) const {
-        return author == rhs.author && permlink == rhs.permlink;
+    uint64_t ref_block_num;
+
+    bool operator ==(const mssgid& rhs) const {
+        return author == rhs.author && permlink == rhs.permlink && ref_block_num == rhs.ref_block_num;
     }
 };
 
@@ -93,11 +95,11 @@ struct statemap : public std::map<std::string, aprox_val_t> {
     static std::string get_balance_str(account_name acc) {
         return "balance of " +  acc.to_string() + ": ";
     }
-    static std::string get_message_str(const message_key& msg) {
-        return "message of " + msg.author.to_string() + " #" + msg.permlink + ": ";
+    static std::string get_message_str(const mssgid& msg) {
+        return "message of " + msg.author.to_string() + " #" + msg.permlink + ", " + std::to_string(msg.ref_block_num) + ": ";
     }
-    static std::string get_vote_str(account_name voter, const message_key& msg) {
-        return "vote of " + voter.to_string() + " for message of " + msg.author.to_string() + " #" + msg.permlink + ": ";
+    static std::string get_vote_str(account_name voter, const mssgid& msg) {
+        return "vote of " + voter.to_string() + " for message of " + msg.author.to_string() + " #" + msg.permlink + ", " + std::to_string(msg.ref_block_num) + ": ";
     }
     void set_pool(uint64_t id, const pool_data& data = {}) {
         auto prefix = get_pool_str(id);
@@ -122,7 +124,7 @@ struct statemap : public std::map<std::string, aprox_val_t> {
         operator[](prefix + "vestamount") = { val, delta.balance.vestamount };
     }
 
-    void set_message(const message_key& msg, const message_data& data = {}) {
+    void set_message(const mssgid& msg, const message_data& data = {}) {
 
         auto prefix = get_message_str(msg);
         operator[](prefix + "netshares") = { data.netshares, delta.message.netshares };
@@ -178,7 +180,7 @@ struct tags {
 };
 
 struct message {
-    message_key key;
+    mssgid key;
     double tokenprop;
     std::list<vote> votes;
     double created;         // time
@@ -192,7 +194,7 @@ struct message {
         return ret;
     };
 
-    message(message_key k, double tokenprop_, double created_, const std::vector<beneficiary>& beneficiaries_, double reward_weight_) :
+    message(mssgid k, double tokenprop_, double created_, const std::vector<beneficiary>& beneficiaries_, double reward_weight_) :
         key(k), tokenprop(tokenprop_), created(created_), beneficiaries(beneficiaries_), reward_weight(reward_weight_) {};
 };
 
@@ -371,3 +373,4 @@ struct state {
 
 FC_REFLECT(eosio::testing::beneficiary, (account)(deductprcnt))
 FC_REFLECT(eosio::testing::tags, (tag))
+FC_REFLECT(eosio::testing::mssgid, (author)(permlink)(ref_block_num))
