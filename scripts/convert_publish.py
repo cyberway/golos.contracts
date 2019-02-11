@@ -46,20 +46,26 @@ class PublishConverter:
         self.mssgs_curatorsw = defaultdict(int)
         self.childcount_dict = {}
         self.update_list = []
-        self.messages = self.publish_db["message"]
         self.publish_tables = dbs.Tables([
-            ('vote',    self.publish_db['vote'],    None, None),
-            ('message', self.publish_db['message'], None, None),
+            ('vote',    self.publish_db['vote'],    dbs.get_next_id, None),
+            ('message', self.publish_db['message'], dbs.get_next_id, None),
             ('content', self.publish_db['content'], None, None),
             ("gtransaction", self.cyberway_db['gtransaction'], None, None)
         ])
         self.cache_period = cache_period
+        self.post_ids = {}
 
     def fill_exists_accs(self):
         cw_accounts = self.cyberway_db['account']
         for doc in cw_accounts.find({},{'name':1}):
             self.exists_accs.add(doc["name"])
         print("accs num = ", len(self.exists_accs))
+
+    def get_post_id(self,author,permlink):
+        post_id = (author,permlink)
+        if not post_id in self.post_ids:
+            self.post_ids[post_id] = self.publish_tables.message.nextId()
+        return self.post_ids[post_id]
 
     def convert_posts(self, query = {}):
         print("convert_posts")
@@ -88,7 +94,7 @@ class PublishConverter:
                 if doc["removed"] or (not (doc["author"] in self.exists_accs)):
                     continue
                 
-                cur_mssg_id = utils.convert_hash(doc["permlink"])
+                cur_mssg_id = self.get_post_id(doc["author"],doc["permlink"])
                 cur_rshares_raw = utils.get_fixp_raw(doc["net_rshares"])
                 messagestate = {
                     "netshares": utils.Int64(cur_rshares_raw),
@@ -111,7 +117,7 @@ class PublishConverter:
                       "delay_until" : doc["cashout_time"], 
                       "expiration" :  (doc["cashout_time"] + expiretion), 
                       "published" :   doc["created"], 
-                      "packed_trx" : create_trx(doc["author"], utils.convert_hash(doc["permlink"])), 
+                      "packed_trx" : create_trx(doc["author"], cur_mssg_id), 
                       "_SERVICE_" : {
                           "scope" : "",
                           "rev" : utils.Int64(1),
@@ -128,7 +134,7 @@ class PublishConverter:
                     "permlink": doc["permlink"],
                     "date": utils.UInt64(int(doc["last_update"].timestamp()) * 1000000),
                     "parentacc": "" if orphan_comment else doc["parent_author"],
-                    "parent_id": utils.UInt64(0 if (orphan_comment or (not len(doc["parent_permlink"]) > 0)) else utils.convert_hash(doc["parent_permlink"])),
+                    "parent_id": utils.UInt64(0 if (orphan_comment or (len(doc["parent_permlink"]) == 0)) else self.get_post_id(doc["parent_author"],doc["parent_permlink"])),
                     "tokenprop": utils.Int64(utils.get_prop_raw(doc["percent_steem_dollars"] / 2)),
                     "beneficiaries": [],
                     "rewardweight": utils.Int64(utils.get_prop_raw(doc["reward_weight"])),
@@ -220,13 +226,14 @@ class PublishConverter:
         for doc in cursor:
             passed += 1
             try:
-                cur_mssg_id = utils.convert_hash(doc["permlink"])
-                    
                 if (not (doc["author"] in self.exists_accs)) or (not (doc["voter"] in self.exists_accs)):
                     continue
 
+                post_id = (doc["author"],doc["permlink"])
+                cur_mssg_id = self.get_post_id(doc["author"],doc["permlink"])
+                    
                 vote = {
-                    "id" : utils.UInt64(added),
+                    "id" : utils.UInt64(self.publish_tables.vote.nextId()),
                     "message_id" : utils.UInt64(cur_mssg_id),
                     "voter" : doc["voter"],
                     "weight" : doc["vote_percent"],
@@ -257,6 +264,7 @@ class PublishConverter:
                 print(doc)
                 print(e.args)
                 print(traceback.format_exc())
+                break
         try:
             self.publish_tables.writeCache()
             utils.printProgressBar(passed+1, length, prefix = 'Progress:', suffix = 'Complete', length = 50)
