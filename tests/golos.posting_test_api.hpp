@@ -165,17 +165,18 @@ struct golos_posting_api: base_contract_api {
         return _tester->get_chaindb_struct(_code, acc, N(content), id, "content");
     }
 
-    variant get_message(account_name acc, std::tuple<std::string, uint64_t> key) {
-//        variant obj = _tester->get_chaindb_lower_bound_struct(_code, acc, N(message), N(bypermlink), key, "message");
-//        if (!obj.is_null()) {
-//            if(obj["permlink"].as<std::string>() != std::get<0>(key) || obj["ref_block_num"].as<uint64_t>() != std::get<1>(key)) {
+
+    variant get_message(account_name acc, std::pair<fc::string, uint64_t> key) {
+        variant obj = _tester->get_chaindb_lower_bound_struct(_code, acc, N(message), N(bypermlink), key, "message");
+        if (!obj.is_null()) {
+            if(obj["permlink"].as<std::string>() != key.first || obj["ref_block_num"].as<uint64_t>() != key.second) {
                 return variant();
-//            }
-//        }
-//        return obj;
+            }
+        }
+        return obj;
     }
 
-    variant get_content(account_name acc, std::tuple<std::string, uint64_t> key) {
+    variant get_content(account_name acc, std::pair<std::string, uint64_t> key) {
         variant obj = get_message(acc, key);
         if(!obj.is_null()) {
             return get_content(acc, obj["id"].as<uint64_t>());
