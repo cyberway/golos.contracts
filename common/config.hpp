@@ -10,28 +10,32 @@
 
 #ifdef UNIT_TEST_ENV
 #   include <eosio/chain/types.hpp>
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wgnu-string-literal-operator-template"
 template <typename T, T... Str>
 inline eosio::chain::name operator ""_n() {
    return eosio::chain::name({Str...});
 }
+#pragma clang diagnostic pop
 #endif
 
 namespace golos { namespace config {
 
 // contracts
-static const auto control_name = "gls.ctrl"_n;
-static const auto social_name = "gls.social"_n;
-static const auto vesting_name = "gls.vesting"_n;
-static const auto publish_name = "gls.publish"_n;
-static const auto charge_name = "gls.charge"_n;
+static const auto control_name  = "gls.ctrl"_n;
+static const auto social_name   = "gls.social"_n;
+static const auto vesting_name  = "gls.vesting"_n;
+static const auto publish_name  = "gls.publish"_n;
+static const auto charge_name   = "gls.charge"_n;
 static const auto emission_name = "gls.emit"_n;
-static const auto workers_name = "gls.worker"_n;
+static const auto workers_name  = "gls.worker"_n;
 static const auto referral_name = "gls.referral"_n;
-static const auto token_name = "cyber.token"_n;
-static const auto internal_name = "eosio"_n;
+
+static const auto internal_name = "cyber"_n;
+static const auto token_name    = "cyber.token"_n;
 
 // permissions
-static const auto code_name = "eosio.code"_n;
+static const auto code_name = "cyber.code"_n;
 static const auto owner_name = "owner"_n;
 static const auto active_name = "active"_n;
 static const auto invoice_name = "invoice"_n;          // for vesting.retire

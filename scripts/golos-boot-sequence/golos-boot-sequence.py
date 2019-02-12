@@ -114,7 +114,7 @@ def createAccount(creator, account, key):
     retry(args.cleos + 'create account %s %s %s' % (creator, account, key))
 
 def updateAuth(account, permission, parent, keys, accounts):
-    retry(args.cleos + 'push action eosio updateauth' + jsonArg({
+    retry(args.cleos + 'push action cyber updateauth' + jsonArg({
         'account': account,
         'permission': permission,
         'parent': parent,
@@ -163,31 +163,31 @@ def registerWitness(ctrl, witness, key):
     }) + '-p %s'%witness)
 
 def voteWitness(ctrl, voter, witness, weight):
-    retry(args.cleos + ' push action ' + ctrl + ' votewitness ' + 
+    retry(args.cleos + ' push action ' + ctrl + ' votewitness ' +
         jsonArg([voter, witness, weight]) + '-p %s'%voter)
 
 def createPost(author, permlink, header, body, *, beneficiaries=[]):
-    retry(args.cleos + 'push action gls.publish createmssg' + 
+    retry(args.cleos + 'push action gls.publish createmssg' +
         jsonArg([author, permlink, "", "", beneficiaries, 0, False, header, body, 'ru', [], '']) +
         '-p %s'%author)
 
 def createComment(author, permlink, pauthor, ppermlink, header, body, *, beneficiaries=[]):
-    retry(args.cleos + 'push action gls.publish createmssg' + 
+    retry(args.cleos + 'push action gls.publish createmssg' +
         jsonArg([author, permlink, pauthor, ppermlink, beneficiaries, 0, False, header, body, 'ru', [], '']) +
         '-p %s'%author)
 
 def upvotePost(voter, author, permlink, weight):
-    retry(args.cleos + 'push action gls.publish upvote' + 
+    retry(args.cleos + 'push action gls.publish upvote' +
         jsonArg([voter, author, permlink, weight]) +
         '-p %s'%voter)
 
 def downvotePost(voter, author, permlink, weight):
-    retry(args.cleos + 'push action gls.publish downvote' + 
+    retry(args.cleos + 'push action gls.publish downvote' +
         jsonArg([voter, author, permlink, weight]) +
         '-p %s'%voter)
 
 def unvotePost(voter, author, permlink):
-    retry(args.cleos + 'push action gls.publish unvote' + 
+    retry(args.cleos + 'push action gls.publish unvote' +
         jsonArg([voter, author, permlink]) +
         '-p %s'%voter)
 
@@ -208,9 +208,9 @@ def importKeys():
     keys = {}
     run(args.cleos + 'wallet import -n "golos" --private-key ' + args.private_key)
     keys[args.private_key] = True
-    if not args.eosio_private_key in keys:
-        run(args.cleos + 'wallet import -n "golos" --private-key ' + args.eosio_private_key)
-        keys[args.eosio_private_key] = True
+    if not args.cyber_private_key in keys:
+        run(args.cleos + 'wallet import -n "golos" --private-key ' + args.cyber_private_key)
+        keys[args.cyber_private_key] = True
     for a in accounts:
         key = a['pvt']
         if not key in keys:
@@ -221,20 +221,20 @@ def importKeys():
 
 def createGolosAccounts():
     for acc in golosAccounts:
-        createAccount('eosio', acc.name, args.public_key)
+        createAccount('cyber', acc.name, args.public_key)
     updateAuth('gls.issuer',  'witn.major', 'active', [args.public_key], [])
     updateAuth('gls.issuer',  'witn.minor', 'active', [args.public_key], [])
     updateAuth('gls.issuer',  'witn.smajor', 'active', [args.public_key], [])
-    updateAuth('gls.issuer',  'active', 'owner', [args.public_key], ['gls.ctrl@eosio.code', 'gls.emit@eosio.code'])
-    updateAuth('gls.ctrl',    'active', 'owner', [args.public_key], ['gls.ctrl@eosio.code'])
-    updateAuth('gls.publish', 'active', 'owner', [args.public_key], ['gls.publish@eosio.code'])
-    updateAuth('gls.vesting', 'active', 'owner', [args.public_key], ['gls.vesting@eosio.code'])
-    updateAuth('gls.social',  'active', 'owner', [args.public_key], ['gls.publish@eosio.code'])
-    updateAuth('gls.emit',    'active', 'owner', [args.public_key], ['gls.emit@eosio.code'])
+    updateAuth('gls.issuer',  'active', 'owner', [args.public_key], ['gls.ctrl@cyber.code', 'gls.emit@cyber.code'])
+    updateAuth('gls.ctrl',    'active', 'owner', [args.public_key], ['gls.ctrl@cyber.code'])
+    updateAuth('gls.publish', 'active', 'owner', [args.public_key], ['gls.publish@cyber.code'])
+    updateAuth('gls.vesting', 'active', 'owner', [args.public_key], ['gls.vesting@cyber.code'])
+    updateAuth('gls.social',  'active', 'owner', [args.public_key], ['gls.publish@cyber.code'])
+    updateAuth('gls.emit',    'active', 'owner', [args.public_key], ['gls.emit@cyber.code'])
 
-    updateAuth('eosio',       'createuser', 'active', ['GLS5a2eDuRETEg7uy8eHbiCqGZM3wnh2pLjiXrFduLWBKVZKCkB62'], [])
-    linkAuth('eosio', 'eosio', 'newaccount', 'createuser')
-    linkAuth('eosio', 'gls.vesting', 'open', 'createuser')
+    updateAuth('cyber',       'createuser', 'active', ['GLS5a2eDuRETEg7uy8eHbiCqGZM3wnh2pLjiXrFduLWBKVZKCkB62'], [])
+    linkAuth('cyber', 'cyber', 'newaccount', 'createuser')
+    linkAuth('cyber', 'gls.vesting', 'open', 'createuser')
 
 def stepInstallContracts():
     for acc in golosAccounts:
@@ -244,7 +244,7 @@ def stepInstallContracts():
 def stepCreateTokens():
     retry(args.cleos + 'push action cyber.token create ' + jsonArg(["gls.issuer", intToToken(10000000000*10000)]) + ' -p cyber.token')
     #totalAllocation = allocateFunds(0, len(accounts))
-    #totalAllocation = 10000000*10000 
+    #totalAllocation = 10000000*10000
     #retry(args.cleos + 'push action cyber.token issue ' + jsonArg(["gls.publish", intToToken(totalAllocation), "memo"]) + ' -p gls.publish')
     retry(args.cleos + 'push action gls.vesting createvest ' + jsonArg([args.vesting, 'gls.ctrl']) + '-p gls.issuer')
     for acc in golosAccounts:
@@ -268,7 +268,7 @@ def createCommunity():
             }]
         ]]) + '-p gls.emit')
     cleos('push action gls.vesting setparams ' + jsonArg([
-        args.vesting, 
+        args.vesting,
         [
             ['vesting_withdraw',{
                 'intervals':13,
@@ -316,11 +316,11 @@ def createCommunity():
 def createWitnessAccounts():
     for i in range(firstWitness, firstWitness + numWitness):
         a = accounts[i]
-        createAccount('eosio', a['name'], a['pub'])
+        createAccount('cyber', a['name'], a['pub'])
         buyVesting(a['name'], intToToken(10000000*10000))
         registerWitness('gls.ctrl', a['name'], a['pub'])
         voteWitness('gls.ctrl', a['name'], a['name'], 10000)
-        
+
 def initCommunity():
     retry(args.cleos + 'push action gls.publish setparams ' + jsonArg([[
         ['st_max_vote_changes', {'value':5}],
@@ -376,7 +376,7 @@ def initCommunity():
 def addUsers():
     for i in range(0, firstWitness-1):
         a = accounts[i]
-        createAccount('eosio', a['name'], a['pub'])
+        createAccount('cyber', a['name'], a['pub'])
         openVestingBalance(a['name'])
         buyVesting(a['name'], intToToken(50000))
 
@@ -400,7 +400,7 @@ commands = [
 
 parser.add_argument('--public-key', metavar='', help="Golos Public Key", default='GLS6Tvw3apAGeHCUTWpf9DY4xvUoKwmuDatW7GV8ygkuZ8F6y4Yor', dest="public_key")
 parser.add_argument('--private-key', metavar='', help="Golos Private Key", default='5KekbiEKS4bwNptEtSawUygRb5sQ33P6EUZ6c4k4rEyQg7sARqW', dest="private_key")
-parser.add_argument('--eosio-private-key', metavar='', help="EOSIO Private Key", default='5K463ynhZoCDDa4RDcr63cUwWLTnKqmdcoTKTHBjqoKfv4u5V7p', dest="eosio_private_key")
+parser.add_argument('--cyber-private-key', metavar='', help="Cyberway Private Key", default='5K463ynhZoCDDa4RDcr63cUwWLTnKqmdcoTKTHBjqoKfv4u5V7p', dest="cyber_private_key")
 parser.add_argument('--programs-dir', metavar='', help="Programs directory for cleos, nodeos, keosd", default='/mnt/working/eos-debug.git/build/programs');
 parser.add_argument('--cleos', metavar='', help="Cleos command (default in programs-dir)", default='cleos/cleos')
 parser.add_argument('--keosd', metavar='', help="Path to keosd binary (default in programs-dir", default='keosd/keosd')
@@ -425,7 +425,7 @@ for (flag, command, function, inAll, inDocker, help) in commands:
         parser.add_argument('-' + flag, '--' + command, action='store_true', help=help, dest=command)
     else:
         parser.add_argument('--' + command, action='store_true', help=help, dest=command)
-        
+
 args = parser.parse_args()
 
 if (parser.get_default('cleos') == args.cleos):
