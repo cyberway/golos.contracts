@@ -242,9 +242,6 @@ void publication::update_message(structures::mssgid message_pk,
     auto message_index = message_table.get_index<"bypermlink"_n>();
     auto message_itr = message_index.find({message_pk.permlink, message_pk.ref_block_num});
 
-    if (is_close_message_by_ref_block_num(message_pk.ref_block_num) || message_itr->closed)
-        return;
-
     tables::content_table content_table(_self, message_pk.author.value);
     auto cont_itr = content_table.find(message_itr->id);
     eosio_assert(cont_itr != content_table.end(), "Content doesn't exist.");
@@ -521,11 +518,6 @@ void publication::check_upvote_time(uint64_t cur_time, uint64_t mssg_date) {
                  "You can't upvote, because publication will be closed soon.");
 }
 
-bool publication::is_close_message_by_ref_block_num(uint64_t ref_block_num) {
-    const uint64_t number_of_blocks_before_closing = 201600;
-    return (ref_block_num + number_of_blocks_before_closing) < tapos_block_num();
-}
-
 fixp_t publication::calc_available_rshares(name voter, int16_t weight, uint64_t cur_time, const structures::rewardpool& pool) {
     elaf_t abs_w = get_limit_prop(abs(weight));
     tables::limit_table lims(_self, _self.value);
@@ -548,9 +540,6 @@ void publication::set_vote(name voter, name author, string permlink, uint64_t re
     auto message_index = message_table.get_index<"bypermlink"_n>();
     auto mssg_itr = message_index.find({permlink, ref_block_num});
     eosio_assert(mssg_itr != message_index.end(), "Message doesn't exist.");
-
-    if (is_close_message_by_ref_block_num(ref_block_num))
-        return;
 
     tables::reward_pools pools(_self, _self.value);
     auto pool = get_pool(pools, mssg_itr->date);

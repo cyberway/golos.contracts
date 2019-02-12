@@ -59,8 +59,6 @@ private:
 
     fixp_t calc_available_rshares(name voter, int16_t weight, uint64_t cur_time, const structures::rewardpool& pool);
     void check_upvote_time(uint64_t cur_time, uint64_t mssg_date);
-
-    bool is_close_message_by_ref_block_num(uint64_t ref_block_num);
 };
 
 } // golos
