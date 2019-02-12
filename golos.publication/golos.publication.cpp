@@ -283,6 +283,8 @@ void publication::delete_message(name account, std::string permlink) {
         remove_postbw_charge(account, get_pool(pools, mssg_itr->date)->state.funds.symbol.code(), mssg_itr->id);
     }
 
+    cancel_deferred((static_cast<uint128_t>(mssg_itr->id) << 64) | account.value);
+
     message_index.erase(mssg_itr);
     content_table.erase(cont_itr);
 
