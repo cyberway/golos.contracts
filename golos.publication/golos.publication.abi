@@ -133,6 +133,14 @@
       {
         "name": "quantity",
         "type": "asset"
+      },
+      {
+        "name": "interest_rate",
+        "type": "uint16"
+      },
+      {
+        "name": "payout_strategy",
+        "type": "uint8"
       }
     ]
   },
@@ -843,6 +851,13 @@
           "orders": [
               {"field": "id", "order": "asc"}
           ]
+       },
+       {
+          "name": "bypermlink",
+          "unique": "false",
+          "orders": [
+              {"field": "permlink", "order": "asc"}
+          ]
        }
     ]
   },
@@ -927,7 +942,6 @@
     ]
   }
   ],
-  "ricardian_clauses": [],
   "error_messages": [],
   "abi_extensions": []
 }

@@ -5,7 +5,6 @@
 #include "contracts.hpp"
 #include "../golos.emit/include/golos.emit/config.hpp"
 
-
 namespace cfg = golos::config;
 using namespace eosio::testing;
 using namespace eosio::chain;
@@ -165,7 +164,6 @@ public:
     }
 };
 
-
 BOOST_AUTO_TEST_SUITE(golos_ctrl_tests)
 
 BOOST_FIXTURE_TEST_CASE(create_community, golos_ctrl_tester) try {
@@ -212,7 +210,6 @@ BOOST_FIXTURE_TEST_CASE(create_community, golos_ctrl_tester) try {
     BOOST_CHECK_EQUAL(err.immutable, ctrl.set_params(_test_params));
 } FC_LOG_AND_RETHROW()
 
-
 BOOST_FIXTURE_TEST_CASE(register_witness, golos_ctrl_tester) try {
     BOOST_TEST_MESSAGE("Witness registration");
     BOOST_TEST_MESSAGE("--- prepare");
@@ -243,6 +240,72 @@ BOOST_FIXTURE_TEST_CASE(register_witness, golos_ctrl_tester) try {
 
     BOOST_CHECK_EQUAL(err.already_unreg, ctrl.unreg_witness(_w[0]));
     BOOST_CHECK_EQUAL(err.no_witness, ctrl.unreg_witness(_w[1]));
+} FC_LOG_AND_RETHROW()
+
+BOOST_FIXTURE_TEST_CASE(register_update_witness, golos_ctrl_tester) try {
+    BOOST_TEST_MESSAGE("Witness registration");
+
+    BOOST_CHECK_EQUAL(success(), ctrl.set_params(_test_params));
+    produce_block();
+
+    ctrl.prepare_multisig(BLOG);
+    produce_block();
+
+    for (int i = 0; i < _n_w; i++) {
+        BOOST_CHECK_EQUAL(success(), ctrl.reg_witness(_w[i], _test_key, "localhost"));
+    }
+    produce_block();
+    BOOST_TEST_MESSAGE("--- check registration success");
+
+    prepare_balances();
+    vector<std::tuple<name,name,bool>> votes = {
+        {_alice, _w[1], true}, {_alice, _w[2], true}, {_alice, _w[3], false},
+        {_alice, _w[0], true}, {_bob, _w[0], false}, {_w[0], _w[0], false}
+    };
+
+    for (const auto& v : votes) {
+        BOOST_CHECK_EQUAL(success(), ctrl.vote_witness(std::get<0>(v), std::get<1>(v)));
+        BOOST_TEST_MESSAGE("--- check top witnesses");
+
+        produce_block();
+        auto current_time = control->head_block_time().time_since_epoch();
+
+        auto top_withnesses = ctrl.get_top_witnesses();
+        auto last_update_top_withnesses = top_withnesses["last_update"].as<fc::time_point>().time_since_epoch();
+        
+        BOOST_CHECK_EQUAL(last_update_top_withnesses == current_time, std::get<2>(v));
+        
+        auto save_top_witnesses = top_withnesses["witnesses"].as<vector<name>>();
+        auto list_top_witnesses = ctrl.get_all_witnesses();
+
+        std::sort(list_top_witnesses.begin(), list_top_witnesses.end(), [](const auto &it1, const auto &it2) {
+            return it1["total_weight"].as_uint64() > it2["total_weight"].as_uint64();
+        });
+
+        list_top_witnesses.erase(std::remove_if(list_top_witnesses.begin(), list_top_witnesses.end(), [](const auto& item){
+            return !bool(item["total_weight"].as_uint64());
+        }), list_top_witnesses.end());
+
+
+        vector<name> top(list_top_witnesses.size());
+        std::transform(list_top_witnesses.begin(), list_top_witnesses.end(), top.begin(), [](auto& w) {
+            return name(w["name"].as_string());
+        });
+
+        top.resize(_max_witnesses);
+        if (save_top_witnesses.size() < _max_witnesses) // TODO when adding the first element the list of witnesses is less than the specified number
+            top.resize(save_top_witnesses.size());
+
+        std::sort(top.begin(), top.end(), [](const auto &it1, const auto &it2) {
+            return it1.value < it2.value;
+        });
+
+        auto result = std::equal(save_top_witnesses.begin(), save_top_witnesses.end(), top.begin(), [&] (const auto &old_element, const auto &new_element) {
+            return old_element.value == new_element.value;
+        });
+
+        BOOST_CHECK_EQUAL(true, result);
+    }
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE(vote_witness, golos_ctrl_tester) try {

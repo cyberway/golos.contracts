@@ -1,4 +1,6 @@
 #include "golos_tester.hpp"
+#include "golos.posting_test_api.hpp"
+#include "golos.vesting_test_api.hpp"
 #include "golos.referral_test_api.hpp"
 #include "cyber.token_test_api.hpp"
 #include "contracts.hpp"
@@ -13,14 +15,21 @@ class golos_referral_tester : public extended_tester {
 public:
     golos_referral_tester()
         : extended_tester(cfg::referral_name)
+        , _sym(3, "GLS")
+        , post( {this, cfg::publish_name, _sym} )
+        , vest({this, cfg::vesting_name, _sym})
         , referral( {this, cfg::referral_name} )
-        , token({this, cfg::token_name, symbol(3, "GLS")})
+        , token({this, cfg::token_name, _sym})
+        , _users{N(sania), N(pasha), N(tania), N(vania), N(issuer)}
     {
-        create_accounts({N(sania), N(pasha), N(tania), N(vania), N(issuer), _code, cfg::token_name, cfg::emission_name});
+        create_accounts({N(sania), N(pasha), N(tania), N(vania), N(issuer), _code,
+                        cfg::publish_name, cfg::token_name, cfg::emission_name, cfg::vesting_name, cfg::social_name });
         step(2);
 
         install_contract(_code, contracts::referral_wasm(), contracts::referral_abi());
         install_contract(cfg::token_name, contracts::token_wasm(), contracts::token_abi());
+        install_contract(cfg::vesting_name, contracts::vesting_wasm(), contracts::vesting_abi());
+        install_contract(cfg::publish_name, contracts::posting_wasm(), contracts::posting_abi());
     }
 
     void init_params() {
@@ -33,7 +42,39 @@ public:
         BOOST_CHECK_EQUAL(success(), referral.set_params(cfg::referral_name, params));
     }
 
+    void init_params_posts() {
+        BOOST_CHECK_EQUAL(success(), token.create(cfg::emission_name, token.make_asset(1)));
+        BOOST_CHECK_EQUAL(success(), token.open(cfg::publish_name, _sym, cfg::publish_name));
+        step();
+
+        funcparams fn{"0", 1};
+        BOOST_CHECK_EQUAL(success(), post.set_rules(fn ,fn ,fn , 0, 0));
+        BOOST_CHECK_EQUAL(success(), post.set_limit("post"));
+        BOOST_CHECK_EQUAL(success(), post.set_limit("comment"));
+        BOOST_CHECK_EQUAL(success(), post.set_limit("vote"));
+        BOOST_CHECK_EQUAL(success(), post.set_limit("post bandwidth"));
+        step();
+
+        for (auto& u : _users) {
+            BOOST_CHECK_EQUAL(success(), vest.open(u, _sym, u));
+        }
+        step();
+
+        auto vote_changes = post.get_str_vote_changes(post.max_vote_changes);
+        auto cashout_window = post.get_str_cashout_window(post.window, post.upvote_lockout);
+        auto beneficiaries = post.get_str_beneficiaries(post.max_beneficiaries);
+        auto comment_depth = post.get_str_comment_depth(post.max_comment_depth);
+        auto social_acc = post.get_str_social_acc(cfg::social_name);
+        auto referral_acc = post.get_str_referral_acc(cfg::referral_name);
+
+        auto params = "[" + vote_changes + "," + cashout_window + "," + beneficiaries + "," + comment_depth +
+                "," + social_acc + "," + referral_acc + "]";
+        BOOST_CHECK_EQUAL(success(), post.set_params(params));
+        step();
+   }
+
 protected:
+    symbol _sym;
     // TODO: make contract error messages more clear
     struct errors: contract_error_messages {
         const string referral_exist = amsg("A referral with the same name already exists");
@@ -51,8 +92,12 @@ protected:
 
         const string referral_not_exist      = amsg("A referral with this name doesn't exist.");
         const string funds_not_equal         = amsg("Amount of funds doesn't equal.");
+        const string limit_percents          = amsg("publication::create_message: prop_sum > 100%");
+        const string referrer_benif          = amsg("Comment already has referrer as a referrer-beneficiary.");
     } err;
 
+    golos_posting_api post;
+    golos_vesting_api vest;
     golos_referral_api referral;
     cyber_token_api token;
 
@@ -62,6 +107,7 @@ protected:
     const uint32_t max_percent = 5000; // 50.00%
     const uint32_t delay_clear_old_ref = 650; // 650 sec
 
+    std::vector<account_name> _users;
     };
 
 BOOST_AUTO_TEST_SUITE(golos_referral_tests)
@@ -100,6 +146,8 @@ BOOST_AUTO_TEST_SUITE(golos_referral_tests)
 
      init_params();
      step();
+
+     update_cur_time();
 
      auto time_now = static_cast<uint32_t>(time(nullptr));
      BOOST_CHECK_EQUAL(err.referral_equal, referral.create_referral(N(issuer), N(issuer), time_now, 0, token.make_asset(10)));
@@ -181,6 +229,28 @@ BOOST_FIXTURE_TEST_CASE(close_referral_tests, golos_referral_tester) try {
 
     v_referrals = referral.get_referrals();
     BOOST_TEST_CHECK(v_referrals.size() == 0);
+} FC_LOG_AND_RETHROW()
+
+BOOST_FIXTURE_TEST_CASE(create_referral_message_tests, golos_referral_tester) try {
+    BOOST_TEST_MESSAGE("Test creating message referral");
+    init_params();
+    init_params_posts();
+
+    auto expire = 8; // sec
+    BOOST_CHECK_EQUAL(success(), referral.create_referral(N(issuer), N(sania), 500, cur_time().to_seconds() + expire, token.make_asset(50)));
+    BOOST_CHECK_EQUAL(success(), post.create_msg(N(sania), "permlink"));
+
+    auto post_sania = post.get_message(N(sania), "permlink");
+    BOOST_CHECK_EQUAL (post_sania["beneficiaries"].size(), 1);
+    BOOST_CHECK_EQUAL( post_sania["beneficiaries"][uint8_t(0)].as<beneficiary>().account, N(issuer) );
+
+    BOOST_CHECK_EQUAL(success(), referral.create_referral(N(issuer), N(pasha), 5000, cur_time().to_seconds() + expire, token.make_asset(50)));
+    BOOST_CHECK_EQUAL(err.limit_percents, post.create_msg(N(pasha), "permlink", N(), "parentprmlnk", { beneficiary{N(tania), 7000} }));
+    BOOST_CHECK_EQUAL(err.referrer_benif, post.create_msg(N(pasha), "permlink", N(), "parentprmlnk", { beneficiary{N(issuer), 2000} }));
+    BOOST_CHECK_EQUAL(success(), post.create_msg(N(pasha), "permlink", N(), "parentprmlnk", { beneficiary{N(tania), 2000} }));
+
+    auto post_pasha = post.get_message(N(pasha), "permlink");
+    BOOST_CHECK_EQUAL (post_pasha["beneficiaries"].size(), 2);
 } FC_LOG_AND_RETHROW()
 
 BOOST_AUTO_TEST_SUITE_END()

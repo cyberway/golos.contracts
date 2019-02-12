@@ -71,6 +71,11 @@ struct message {
     uint64_t primary_key() const {
         return id;
     }
+    
+    std::string secondary_key() const {
+        return permlink;
+    }
+
 };
 
 struct delegate_voter {
@@ -78,6 +83,8 @@ struct delegate_voter {
 
     name delegator;
     asset quantity;
+    uint16_t interest_rate;
+    uint8_t payout_strategy;
 };
 
 struct voteinfo {
@@ -89,9 +96,7 @@ struct voteinfo {
     int16_t weight;
     uint64_t time;
     int64_t count;
-
     std::vector<delegate_voter> delegators;
-
     base_t curatorsw;
     base_t rshares;
 
@@ -199,7 +204,8 @@ namespace tables {
 using namespace eosio;
 
 using id_index = indexed_by<N(id), const_mem_fun<structures::message, uint64_t, &structures::message::primary_key>>;
-using message_table = multi_index<N(message), structures::message, id_index>;
+using permlink_index = indexed_by<N(bypermlink), const_mem_fun<structures::message, std::string, &structures::message::secondary_key>>;
+using message_table = multi_index<N(message), structures::message, id_index, permlink_index>;
 
 using content_id_index = indexed_by<N(id), const_mem_fun<structures::content, uint64_t, &structures::content::primary_key>>;
 using content_table = multi_index<N(content), structures::content, content_id_index>;

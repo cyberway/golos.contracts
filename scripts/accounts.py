@@ -19,7 +19,7 @@ golos = dbs.Tables([
 cyberway = dbs.Tables([
         ('permusage',  dbs.cyberway_db['permusage'],               dbs.get_next_id, None),
         ('permission', dbs.cyberway_db['permission'],              dbs.get_next_id, [('owner',False)]),
-        ('account',    dbs.cyberway_db['account'],                 dbs.get_next_id, [('id', True),('name',True)]),
+        ('account',    dbs.cyberway_db['account'],                 dbs.get_next_id, [('name',True)]),
         ('accountseq', dbs.cyberway_db['accountseq'],              None,            None),
         ('reslimit',   dbs.cyberway_db['reslimit'],                None,            None),
         ('resusage',   dbs.cyberway_db['resusage'],                None,            None),

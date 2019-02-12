@@ -131,6 +131,13 @@
                 {"type": "name", "name": "witness"},
                 {"type": "uint64", "name": "weight"}
             ]
+        }, {
+            "name": "witnesses_auth",
+            "fields": [
+                {"type": "uint64", "name": "id"},
+                {"type": "name[]", "name": "witnesses"},
+                {"type": "time_point_sec", "name": "last_update"},
+            ]
         }
     ],
     "events": [
@@ -139,40 +146,31 @@
     "actions": [
         {
             "name": "setparams",
-            "type": "setparams",
-            "ricardian_contract": ""
+            "type": "setparams"
         }, {
             "name": "validateprms",
-            "type": "setparams",
-            "ricardian_contract": ""
+            "type": "setparams"
         }, {
             "name": "attachacc",
-            "type": "attachacc",
-            "ricardian_contract": ""
+            "type": "attachacc"
         }, {
             "name": "detachacc",
-            "type": "detachacc",
-            "ricardian_contract": ""
+            "type": "detachacc"
         }, {
             "name": "regwitness",
-            "type": "regwitness",
-            "ricardian_contract": ""
+            "type": "regwitness"
         }, {
             "name": "unregwitness",
-            "type": "unregwitness",
-            "ricardian_contract": ""
+            "type": "unregwitness"
         }, {
             "name": "unvotewitn",
-            "type": "unvotewitn",
-            "ricardian_contract": ""
+            "type": "unvotewitn"
         }, {
             "name": "changevest",
-            "type": "changevest",
-            "ricardian_contract": ""
+            "type": "changevest"
         }, {
             "name": "votewitness",
-            "type": "votewitness",
-            "ricardian_contract": ""
+            "type": "votewitness"
         }
     ],
     "tables": [
@@ -212,8 +210,15 @@
                 "unique": true,
                 "orders": [{"field": "id", "order": "asc"}]
             }]
+        }, {
+            "name": "witnessauth",
+            "type": "witnesses_auth",
+            "indexes" : [{
+                "name": "primary",
+                "unique": true,
+                "orders": [{"field": "id", "order": "asc"}]
+            }]
         }
     ],
-    "ricardian_clauses": [],
     "abi_extensions": []
 }

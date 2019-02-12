@@ -2,6 +2,7 @@
 #include "golos.ctrl/parameters.hpp"
 #include <common/upsert.hpp>
 #include <common/config.hpp>
+#include <eosiolib/time.hpp>
 #include <eosiolib/eosio.hpp>
 #include <eosiolib/asset.hpp>
 #include <eosiolib/singleton.hpp>
@@ -54,6 +55,12 @@ struct [[eosio::table]] bw_user {   // ?needed or simple names vector will be en
     }
 };
 using bw_user_tbl = eosio::multi_index<"bwuser"_n, bw_user>;
+
+struct [[eosio::table]] msig_auth_singleton {
+    std::vector<name> witnesses;
+    time_point_sec last_update;
+};
+using msig_auth_singleton_tbl = eosio::singleton<"witnessauth"_n, msig_auth_singleton>;
 
 
 class control: public contract {

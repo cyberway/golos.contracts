@@ -168,6 +168,7 @@ void control::regwitness(name witness, eosio::public_key key, string url) {
             w.active = true;
         };
     });
+
     update_auths();
 }
 
@@ -175,6 +176,7 @@ void control::regwitness(name witness, eosio::public_key key, string url) {
 void control::unregwitness(name witness) {
     assert_started();
     require_auth(witness);
+
     // TODO: simplify upsert to allow passing just inner lambda
     bool exists = upsert_tbl<witness_tbl>(witness.value, [&](bool) {
         return [&](witness_info& w) {
@@ -183,6 +185,7 @@ void control::unregwitness(name witness) {
         };
     }, false);
     eosio_assert(exists, "witness not found");
+
     update_auths();
 }
 
@@ -279,12 +282,30 @@ void control::update_witnesses_weights(vector<name> witnesses, share_type diff) 
             print("apply_vote_weight: witness not found\n");
         }
     }
+
     update_auths();
 }
 
 void control::update_auths() {
-    // TODO: change only if top changed #35
     auto top = top_witnesses();
+    std::sort(top.begin(), top.end(), [](const auto& it1, const auto& it2) {
+        return it1.value < it2.value;
+    });
+
+    msig_auth_singleton_tbl top_witnesses_tbl(_self, _self.value);
+    const auto &old_top = top_witnesses_tbl.get_or_default().witnesses;
+
+    if (old_top.size() > 0 && old_top.size() == top.size()) {
+        bool result = std::equal(old_top.begin(), old_top.end(), top.begin(), [] (const auto& old_element, const auto& new_element) {
+            return old_element.value == new_element.value;
+        });
+
+        if ( result )
+            return;
+    }
+
+    top_witnesses_tbl.set({top, time_point_sec(now())}, _self);
+
     auto max_witn = props().witnesses.max;
     if (top.size() < max_witn) {           // TODO: ?restrict only just after creation and allow later
         print("Not enough witnesses to change auth\n");
