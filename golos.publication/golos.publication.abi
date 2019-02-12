@@ -107,11 +107,7 @@
     "base": "",
     "fields": [
       {
-        "name": "account",
-        "type": "name"
-      },
-      {
-        "name": "id",
+        "name": "message_pk",
         "type": "uint64"
       }
     ]
@@ -273,11 +269,11 @@
     "base": "",
     "fields": [
       {
-        "name": "message_id",
+        "name": "message_pk",
         "type": "mssgid"
       },
       {
-        "name": "parent_message_id",
+        "name": "parent_message_pk",
         "type": "mssgid"
       },
       {
@@ -319,7 +315,7 @@
     "base": "",
     "fields": [
       {
-        "name": "message_id",
+        "name": "message_pk",
         "type": "mssgid"
       },
       {
@@ -349,7 +345,7 @@
     "base": "",
     "fields": [
       {
-        "name": "message_id",
+        "name": "message_pk",
         "type": "mssgid"
       }
     ]
@@ -363,7 +359,7 @@
         "type": "name"
       },
       {
-        "name": "message_id",
+        "name": "message_pk",
         "type": "mssgid"
       },
       {
@@ -381,7 +377,7 @@
         "type": "name"
       },
       {
-        "name": "message_id",
+        "name": "message_pk",
         "type": "mssgid"
       }
     ]
@@ -729,7 +725,7 @@
             "type": "name"
         },
         {
-            "name": "message_id",
+            "name": "message_pk",
             "type": "mssgid"
         }
     ]

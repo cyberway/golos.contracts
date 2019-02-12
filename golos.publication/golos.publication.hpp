@@ -14,21 +14,21 @@ public:
     void set_rules(const funcparams& mainfunc, const funcparams& curationfunc, const funcparams& timepenalty,
         int64_t curatorsprop, int64_t maxtokenprop, symbol tokensymbol);
     void on_transfer(name from, name to, asset quantity, std::string memo);
-    void create_message(structures::mssgid message_id, structures::mssgid parent_message_id,
+    void create_message(structures::mssgid message_pk, structures::mssgid parent_message_pk,
         std::vector<structures::beneficiary> beneficiaries, int64_t tokenprop, bool vestpayment,
         std::string headermssg, std::string bodymssg, std::string languagemssg, std::vector<structures::tag> tags,
         std::string jsonmetadata);
-    void update_message(structures::mssgid message_id, std::string headermssg, std::string bodymssg,
+    void update_message(structures::mssgid message_pk, std::string headermssg, std::string bodymssg,
                         std::string languagemssg, std::vector<structures::tag> tags, std::string jsonmetadata);
-    void delete_message(structures::mssgid message_id);
-    void upvote(name voter, structures::mssgid message_id, uint16_t weight);
-    void downvote(name voter, structures::mssgid message_id, uint16_t weight);
-    void unvote(name voter, structures::mssgid message_id);
-    void close_message(name account, uint64_t id);
+    void delete_message(structures::mssgid message_pk);
+    void upvote(name voter, structures::mssgid message_pk, uint16_t weight);
+    void downvote(name voter, structures::mssgid message_pk, uint16_t weight);
+    void unvote(name voter, structures::mssgid message_pk);
+    void close_message(structures::mssgid message_pk);
     void set_params(std::vector<posting_params> params);
-    void reblog(name rebloger, structures::mssgid message_id);
+    void reblog(name rebloger, structures::mssgid message_pk);
 private:
-    void close_message_timer(name account, uint64_t id, uint64_t delay_sec);
+    void close_message_timer(structures::mssgid message_pk, uint64_t id, uint64_t delay_sec);
     void set_vote(name voter, name author, std::string permlink, uint64_t ref_block_num, int16_t weight);
     uint16_t notify_parent(bool increase, name parentacc, uint64_t parent_id);
     void fill_depleted_pool(tables::reward_pools& pools, asset quantity,

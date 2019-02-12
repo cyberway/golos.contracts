@@ -41,8 +41,8 @@ struct golos_posting_api: base_contract_api {
     }
 
     action_result create_msg(
-        mssgid message_id,
-        mssgid parent_message_id = {N(), "parentprmlnk", 0},
+        mssgid message_pk,
+        mssgid parent_message_pk = {N(), "parentprmlnk", 0},
         std::vector<beneficiary> beneficiaries = {},
         int64_t token_prop = 5000,
         bool vest_payment = false,
@@ -52,9 +52,9 @@ struct golos_posting_api: base_contract_api {
         std::vector<tags> tags = {{"tag"}},
         std::string json_metadata = "jsonmetadata"
     ) {
-        return push(N(createmssg), message_id.author, args()
-            ("message_id", message_id)
-            ("parent_message_id", parent_message_id)
+        return push(N(createmssg), message_pk.author, args()
+            ("message_pk", message_pk)
+            ("parent_message_pk", parent_message_pk)
             ("beneficiaries", beneficiaries)
             ("tokenprop", token_prop)
             ("vestpayment", vest_payment)
@@ -67,15 +67,15 @@ struct golos_posting_api: base_contract_api {
     }
 
     action_result update_msg(
-        mssgid message_id,
+        mssgid message_pk,
         std::string title,
         std::string body,
         std::string language,
         std::vector<tags> tags,
         std::string json_metadata
     ) {
-        return push(N(updatemssg), message_id.author, args()
-            ("message_id", message_id)
+        return push(N(updatemssg), message_pk.author, args()
+            ("message_pk", message_pk)
             ("headermssg", title)
             ("bodymssg", body)
             ("languagemssg", language)
@@ -84,30 +84,30 @@ struct golos_posting_api: base_contract_api {
         );
     }
 
-    action_result delete_msg(mssgid message_id) {
-        return push(N(deletemssg), message_id.author, args()
-            ("message_id", message_id)
+    action_result delete_msg(mssgid message_pk) {
+        return push(N(deletemssg), message_pk.author, args()
+            ("message_pk", message_pk)
         );
     }
 
-    action_result upvote(account_name voter, mssgid message_id, uint16_t weight) {
+    action_result upvote(account_name voter, mssgid message_pk, uint16_t weight) {
         return push(N(upvote), voter, args()
             ("voter", voter)
-            ("message_id", message_id)
+            ("message_pk", message_pk)
             ("weight", weight)
         );
     }
-    action_result downvote(account_name voter, mssgid message_id, uint16_t weight) {
+    action_result downvote(account_name voter, mssgid message_pk, uint16_t weight) {
         return push(N(downvote), voter, args()
             ("voter", voter)
-            ("message_id", message_id)
+            ("message_pk", message_pk)
             ("weight", weight)
         );
     }
-    action_result unvote(account_name voter, mssgid message_id) {
+    action_result unvote(account_name voter, mssgid message_pk) {
         return push(N(unvote), voter, args()
             ("voter", voter)
-            ("message_id", message_id)
+            ("message_pk", message_pk)
         );
     }
     action_result set_params(std::string json_params) {
