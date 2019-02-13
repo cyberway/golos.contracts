@@ -43,7 +43,7 @@ public:
 
         set_authority(cfg::social_name, "active", authority(1,
             { {get_public_key(cfg::social_name, "active"), 1} },
-            { {{"golos.soc"_n, "eosio.code"}, 1} }),
+            { {{"golos.soc"_n, cfg::code_name}, 1} }),
             "owner");
 
         install_contract(_code, contracts::posting_wasm(), contracts::posting_abi());

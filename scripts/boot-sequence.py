@@ -11,7 +11,7 @@ args = {
     'cleos':'/opt/cyberway/bin/cleos --url=%s ' % nodeos_url,
     'public_key':'GLS6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV',
     'private_key':'5KQwrPbwdL6PhXujxW37FSSQZ1JiwsST4cqQzDeyXtP79zkvFD3',
-    'eosio_private_key':'5KQwrPbwdL6PhXujxW37FSSQZ1JiwsST4cqQzDeyXtP79zkvFD3',
+    'cyber_private_key':'5KQwrPbwdL6PhXujxW37FSSQZ1JiwsST4cqQzDeyXtP79zkvFD3',
     'cyberway_contracts_dir': os.environ.get('CYBERWAY_CONTRACTS', default_contracts_dir),
     'golos_contracts_dir': os.environ.get('GOLOS_CONTRACTS', default_contracts_dir),
 }
@@ -28,8 +28,8 @@ if subprocess.call(bios_boot_sequence, shell=True):
 golos_boot_sequence=('{basedir}/scripts/golos-boot-sequence/golos-boot-sequence.py '
                      '--cleos "{cleos}" --contracts-dir "{golos_contracts_dir}" ' 
                      '--public-key {public_key} --private-key {private_key} '
-                     '--eosio-private-key {eosio_private_key} '
-                     '--docker --all').format(**args) 
+                     '--cyber-private-key {cyber_private_key} '
+                     '--docker --all').format(**args)
 if subprocess.call(golos_boot_sequence, shell=True):
     print('golos-boot-sequence.py exited with error')
     sys.exit(1)

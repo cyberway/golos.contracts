@@ -70,7 +70,7 @@ def getAccount(account):
     cleos('get account %s' % account)
 
 def updateAuth(account, permission, parent, keys, accounts):
-    pushAction('eosio', 'updateauth', account, {
+    pushAction('cyber', 'updateauth', account, {
         'account': account,
         'permission': permission,
         'parent': parent,
@@ -112,7 +112,7 @@ def voteWitness(voter, witness, weight):
     pushAction('gls.ctrl', 'votewitness', voter, [voter, witness, weight])
 
 def createPost(author, permlink, category, header, body, *, beneficiaries=[]):
-    pushAction('gls.publish', 'createmssg', author, 
+    pushAction('gls.publish', 'createmssg', author,
         [author, permlink, "", category, beneficiaries, 0, False, header, body, 'ru', [], ''])
 
 def createComment(author, permlink, pauthor, ppermlink, header, body, *, beneficiaries=[]):
