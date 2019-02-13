@@ -179,7 +179,7 @@ void publication::create_message(structures::mssgid message_id,
     tables::content_table content_table(_self, message_id.author.value);
     uint64_t parent_pk = 0;
     if (parent_id.author) {
-        tables::message_table message_table(_self, message_id.author.value);
+        tables::message_table message_table(_self, parent_id.author.value);
         auto message_index = message_table.get_index<"bypermlink"_n>();
         auto message_itr = message_index.find({parent_id.permlink, parent_id.ref_block_num});
         parent_pk = message_itr->id;
@@ -241,6 +241,7 @@ void publication::update_message(structures::mssgid message_id,
     tables::message_table message_table(_self, message_id.author.value);
     auto message_index = message_table.get_index<"bypermlink"_n>();
     auto message_itr = message_index.find({message_id.permlink, message_id.ref_block_num});
+    eosio_assert(message_itr != message_index.end(), "Message doesn't exist.");
 
     tables::content_table content_table(_self, message_id.author.value);
     auto cont_itr = content_table.find(message_itr->id);
