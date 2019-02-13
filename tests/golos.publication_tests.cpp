@@ -208,27 +208,26 @@ BOOST_FIXTURE_TEST_CASE(create_message, golos_publication_tester) try {
     BOOST_TEST_MESSAGE("--- checking that another user can create a message with the same permlink.");
     BOOST_CHECK_EQUAL(success(), post.create_msg({N(chucknorris), "permlink", ref_block_num_brucelee_and_chucknorris}));
 
-    check_equal_post(post.get_message(N(brucelee), {"permlink", ref_block_num_brucelee_and_chucknorris}), _test_msg);
-    check_equal_content(post.get_content(N(brucelee), {"permlink", ref_block_num_brucelee_and_chucknorris}), _test_content);
+    check_equal_post(post.get_message({N(brucelee), "permlink", ref_block_num_brucelee_and_chucknorris}), _test_msg);
+    check_equal_content(post.get_content({N(brucelee), "permlink", ref_block_num_brucelee_and_chucknorris}), _test_content);
 
     BOOST_TEST_MESSAGE("--- checking that message wasn't closed.");
     produce_blocks(seconds_to_blocks(post.window));
-    auto msg = post.get_message(N(brucelee), {"permlink", ref_block_num_brucelee_and_chucknorris});
+    auto msg = post.get_message({N(brucelee), "permlink", ref_block_num_brucelee_and_chucknorris});
     BOOST_CHECK_EQUAL(msg["closed"].as<bool>(), false);
 
     BOOST_TEST_MESSAGE("--- checking that message was closed.");
     produce_block();
-    msg = post.get_message(N(brucelee), {"permlink", ref_block_num_brucelee_and_chucknorris});
+    msg = post.get_message({N(brucelee), "permlink", ref_block_num_brucelee_and_chucknorris});
     BOOST_CHECK_EQUAL(msg["closed"].as<bool>(), true);
 
     auto ref_block_num_jackiechan_and_larimer = control->head_block_header().block_num();
 
     BOOST_CHECK_EQUAL(success(), post.create_msg({N(jackiechan), "permlink1", ref_block_num_jackiechan_and_larimer},
                                                  {N(brucelee), "permlink", ref_block_num_brucelee_and_chucknorris}));
-    msg = post.get_message(N(brucelee), {"permlink", ref_block_num_brucelee_and_chucknorris});
+    msg = post.get_message({N(brucelee), "permlink", ref_block_num_brucelee_and_chucknorris});
     BOOST_CHECK_EQUAL(msg["childcount"].as<uint64_t>(), 1);
 
-//    BOOST_CHECK_EQUAL(err.msg_exists, post.create_msg({N(brucelee), "permlink", ref_block_num_brucelee_and_chucknorris}));
     BOOST_CHECK_EQUAL(err.unregistered_user_ + "dan.larimer", post.create_msg({N(dan.larimer), "Hi", ref_block_num_jackiechan_and_larimer}));
 } FC_LOG_AND_RETHROW()
 
@@ -248,8 +247,6 @@ BOOST_FIXTURE_TEST_CASE(update_message, golos_publication_tester) try {
         ("languagemssg", "languagemssgnew")
         ("tags", variants({mvo()("tag", "tagnew")}))
         ("jsonmetadata", "jsonmetadatanew"));
-//    BOOST_CHECK_EQUAL(err.no_content, post.update_msg({N(brucelee), "permlinknew", ref_block_num},
-//        "headermssgnew", "bodymssgnew", "languagemssgnew", {{"tagnew"}}, "jsonmetadatanew"));
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE(delete_message, golos_publication_tester) try {
@@ -449,14 +446,14 @@ BOOST_FIXTURE_TEST_CASE(comments_cashout_time_test, golos_publication_tester) tr
     produce_blocks(need_blocks);
     
     BOOST_TEST_MESSAGE("--- checking that messages wasn't closed.");
-    BOOST_CHECK_EQUAL(post.get_message(N(brucelee), {"permlink", ref_block_num_brucelee})["closed"].as<bool>(), false);
-    BOOST_CHECK_EQUAL(post.get_message(N(chucknorris), {"comment_permlink", ref_block_num_chucknorris})["closed"].as<bool>(), false);
+    BOOST_CHECK_EQUAL(post.get_message({N(brucelee), "permlink", ref_block_num_brucelee})["closed"].as<bool>(), false);
+    BOOST_CHECK_EQUAL(post.get_message({N(chucknorris), "comment_permlink", ref_block_num_chucknorris})["closed"].as<bool>(), false);
     
     produce_block();
     
     BOOST_TEST_MESSAGE("--- checking that messages was closed.");
-    BOOST_CHECK_EQUAL(post.get_message(N(brucelee), {"permlink", ref_block_num_brucelee})["closed"].as<bool>(), true);
-    BOOST_CHECK_EQUAL(post.get_message(N(chucknorris), {"comment_permlink", ref_block_num_chucknorris})["closed"].as<bool>(), true);
+    BOOST_CHECK_EQUAL(post.get_message({N(brucelee), "permlink", ref_block_num_brucelee})["closed"].as<bool>(), true);
+    BOOST_CHECK_EQUAL(post.get_message({N(chucknorris), "comment_permlink", ref_block_num_chucknorris})["closed"].as<bool>(), true);
     
     auto ref_block_num_jackiechan = control->head_block_header().block_num();
     BOOST_CHECK_EQUAL(success(), post.create_msg({N(jackiechan), "sorry guys i'm late", ref_block_num_jackiechan},
@@ -464,7 +461,7 @@ BOOST_FIXTURE_TEST_CASE(comments_cashout_time_test, golos_publication_tester) tr
     produce_block();
     
     BOOST_TEST_MESSAGE("--- checking that closed message comment was closed.");
-    BOOST_CHECK_EQUAL(post.get_message(N(jackiechan), {"sorry guys i'm late", ref_block_num_jackiechan})["closed"].as<bool>(), true);
+    BOOST_CHECK_EQUAL(post.get_message({N(jackiechan), "sorry guys i'm late", ref_block_num_jackiechan})["closed"].as<bool>(), true);
 
 } FC_LOG_AND_RETHROW()
 

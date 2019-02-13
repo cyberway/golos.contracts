@@ -54,6 +54,10 @@ struct mssgid {
     std::string permlink;
     uint64_t ref_block_num;
 
+    auto get_unique_key() const {
+        return std::pair<std::string, uint64_t>(permlink, ref_block_num);
+    }
+
     bool operator ==(const mssgid& rhs) const {
         return author == rhs.author && permlink == rhs.permlink && ref_block_num == rhs.ref_block_num;
     }

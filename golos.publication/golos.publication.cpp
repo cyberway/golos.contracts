@@ -298,17 +298,17 @@ void publication::delete_message(structures::mssgid message_id) {
 void publication::upvote(name voter, structures::mssgid message_id, uint16_t weight) {
     eosio_assert(weight > 0, "weight can't be 0.");
     eosio_assert(weight <= config::_100percent, "weight can't be more than 100%.");
-    set_vote(voter, message_id.author, message_id.permlink, message_id.ref_block_num, weight);
+    set_vote(voter, message_id, weight);
 }
 
 void publication::downvote(name voter, structures::mssgid message_id, uint16_t weight) {
     eosio_assert(weight > 0, "weight can't be 0.");
     eosio_assert(weight <= config::_100percent, "weight can't be more than 100%.");
-    set_vote(voter, message_id.author, message_id.permlink, message_id.ref_block_num, -weight);
+    set_vote(voter, message_id, -weight);
 }
 
 void publication::unvote(name voter, structures::mssgid message_id) {
-    set_vote(voter, message_id.author, message_id.permlink, message_id.ref_block_num, 0);
+    set_vote(voter, message_id, 0);
 }
 
 void publication::payto(name user, eosio::asset quantity, enum_t mode) {
@@ -529,22 +529,22 @@ fixp_t publication::calc_available_rshares(name voter, int16_t weight, uint64_t 
     return (weight < 0) ? -abs_rshares : abs_rshares;
 }
 
-void publication::set_vote(name voter, name author, string permlink, uint64_t ref_block_num, int16_t weight) {
+void publication::set_vote(name voter, const structures::mssgid& message_id, int16_t weight) {
     require_auth(voter);
 
     posting_params_singleton cfg(_self, _self.value);
     const auto &max_vote_changes_param = cfg.get().max_vote_changes_param;
     const auto &social_acc_param = cfg.get().social_acc_param;
 
-    tables::message_table message_table(_self, author.value);
+    tables::message_table message_table(_self, message_id.author.value);
     auto message_index = message_table.get_index<"bypermlink"_n>();
-    auto mssg_itr = message_index.find({permlink, ref_block_num});
+    auto mssg_itr = message_index.find({message_id.permlink, message_id.ref_block_num});
     eosio_assert(mssg_itr != message_index.end(), "Message doesn't exist.");
 
     tables::reward_pools pools(_self, _self.value);
     auto pool = get_pool(pools, mssg_itr->date);
     check_account(voter, pool->state.funds.symbol);
-    tables::vote_table vote_table(_self, author.value);
+    tables::vote_table vote_table(_self, message_id.author.value);
 
     auto cur_time = current_time();
 
@@ -579,7 +579,7 @@ void publication::set_vote(name voter, name author, string permlink, uint64_t re
         message_index.modify(mssg_itr, name(), [&]( auto &item ) {
             item.state.netshares = new_mssg_rshares.data();
             item.state.sumcuratorsw = (FP(item.state.sumcuratorsw) - FP(vote_itr->curatorsw)).data();
-            send_poststate_event(author, item);
+            send_poststate_event(message_id.author, item);
         });
 
         votetable_index.modify(vote_itr, voter, [&]( auto &item ) {
@@ -588,7 +588,7 @@ void publication::set_vote(name voter, name author, string permlink, uint64_t re
             item.curatorsw = fixp_t(0).data();
             item.rshares = rshares.data();
             ++item.count;
-            send_votestate_event(voter, item, author, *mssg_itr);
+            send_votestate_event(voter, item, message_id.author, *mssg_itr);
         });
 
         return;
@@ -620,7 +620,7 @@ void publication::set_vote(name voter, name author, string permlink, uint64_t re
     msg_new_state.sumcuratorsw = (FP(mssg_itr->state.sumcuratorsw) + sumcuratorsw_delta).data();
     message_index.modify(mssg_itr, _self, [&](auto &item) {
         item.state = msg_new_state;
-        send_poststate_event(author, item);
+        send_poststate_event(message_id.author, item);
     });
 
     auto time_delta = static_cast<int64_t>((cur_time - mssg_itr->date) / seconds(1).count());
@@ -654,13 +654,13 @@ void publication::set_vote(name voter, name author, string permlink, uint64_t re
         item.delegators = delegators;
         item.curatorsw = (fixp_t(sumcuratorsw_delta * curatorsw_factor)).data();
         item.rshares = rshares.data();
-        send_votestate_event(voter, item, author, *mssg_itr);
+        send_votestate_event(voter, item, message_id.author, *mssg_itr);
     });
 
     if (social_acc_param.account) {
         INLINE_ACTION_SENDER(golos::social, changereput)
             (social_acc_param.account, {social_acc_param.account, config::active_name},
-            {voter, author, (rshares.data() >> 6)});
+            {voter, message_id.author, (rshares.data() >> 6)});
     }
 }
 

@@ -29,7 +29,7 @@ public:
     void reblog(name rebloger, structures::mssgid message_id);
 private:
     void close_message_timer(structures::mssgid message_id, uint64_t id, uint64_t delay_sec);
-    void set_vote(name voter, name author, std::string permlink, uint64_t ref_block_num, int16_t weight);
+    void set_vote(name voter, const structures::mssgid &message_id, int16_t weight);
     uint16_t notify_parent(bool increase, name parentacc, uint64_t parent_id);
     void fill_depleted_pool(tables::reward_pools& pools, asset quantity,
         tables::reward_pools::const_iterator excluded);

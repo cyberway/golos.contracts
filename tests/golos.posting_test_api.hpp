@@ -166,20 +166,21 @@ struct golos_posting_api: base_contract_api {
     }
 
 
-    variant get_message(account_name acc, std::pair<fc::string, uint64_t> key) {
-        variant obj = _tester->get_chaindb_lower_bound_struct(_code, acc, N(message), N(bypermlink), key, "message");
+    variant get_message(mssgid message_id) {
+        variant obj = _tester->get_chaindb_lower_bound_struct(_code, message_id.author, N(message), N(bypermlink),
+                                                                message_id.get_unique_key(), "message");
         if (!obj.is_null()) {
-            if(obj["permlink"].as<std::string>() != key.first || obj["ref_block_num"].as<uint64_t>() != key.second) {
+            if(obj["permlink"].as<std::string>() != message_id.permlink || obj["ref_block_num"].as<uint64_t>() != message_id.ref_block_num) {
                 return variant();
             }
         }
         return obj;
     }
 
-    variant get_content(account_name acc, std::pair<std::string, uint64_t> key) {
-        variant obj = get_message(acc, key);
+    variant get_content(mssgid message_id) {
+        variant obj = get_message(message_id);
         if(!obj.is_null()) {
-            return get_content(acc, obj["id"].as<uint64_t>());
+            return get_content(message_id.author, obj["id"].as<uint64_t>());
         }
         return variant();
     }
