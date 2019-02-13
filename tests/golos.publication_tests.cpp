@@ -223,11 +223,11 @@ BOOST_FIXTURE_TEST_CASE(create_message, golos_publication_tester) try {
 
     auto ref_block_num_jackiechan_and_larimer = control->head_block_header().block_num();
 
-//    BOOST_CHECK_EQUAL(success(), post.create_msg({N(jackiechan), "permlink1", ref_block_num_jackiechan_and_larimer},
-//                                                 {N(brucelee), "permlink", ref_block_num_brucelee_and_chucknorris}));
+    BOOST_CHECK_EQUAL(success(), post.create_msg({N(jackiechan), "permlink1", ref_block_num_jackiechan_and_larimer},
+                                                 {N(brucelee), "permlink", ref_block_num_brucelee_and_chucknorris}));
 
-//    msg = post.get_message({N(brucelee), "permlink", ref_block_num_brucelee_and_chucknorris});
-//    BOOST_CHECK_EQUAL(msg["childcount"].as<uint64_t>(), 1);
+    msg = post.get_message({N(brucelee), "permlink", ref_block_num_brucelee_and_chucknorris});
+    BOOST_CHECK_EQUAL(msg["childcount"].as<uint64_t>(), 1);
 
     BOOST_CHECK_EQUAL(err.unregistered_user_ + "dan.larimer", post.create_msg({N(dan.larimer), "Hi", ref_block_num_jackiechan_and_larimer}));
 } FC_LOG_AND_RETHROW()
