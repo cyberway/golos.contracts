@@ -30,6 +30,16 @@ struct tag {
     EOSLIB_SERIALIZE(tag, (tag_name))
 };
 
+struct mssgid {
+    mssgid() = default;
+
+    name author;
+    std::string permlink;
+    uint64_t ref_block_num;
+
+    EOSLIB_SERIALIZE(mssgid, (author)(permlink)(ref_block_num))
+};
+
 struct content {
     content() = default;
 
@@ -57,6 +67,7 @@ struct message {
 
     uint64_t id;
     std::string permlink;
+    uint64_t ref_block_num;
     uint64_t date;
     name parentacc;
     uint64_t parent_id;
@@ -72,10 +83,9 @@ struct message {
         return id;
     }
     
-    std::string secondary_key() const {
-        return permlink;
+    std::tuple<std::string, uint64_t> secondary_key() const {
+        return {permlink, ref_block_num};
     }
-
 };
 
 struct delegate_voter {
@@ -204,7 +214,7 @@ namespace tables {
 using namespace eosio;
 
 using id_index = indexed_by<N(id), const_mem_fun<structures::message, uint64_t, &structures::message::primary_key>>;
-using permlink_index = indexed_by<N(bypermlink), const_mem_fun<structures::message, std::string, &structures::message::secondary_key>>;
+using permlink_index = indexed_by<N(bypermlink), const_mem_fun<structures::message, std::tuple<std::string, uint64_t>, &structures::message::secondary_key>>;
 using message_table = multi_index<N(message), structures::message, id_index, permlink_index>;
 
 using content_id_index = indexed_by<N(id), const_mem_fun<structures::content, uint64_t, &structures::content::primary_key>>;
