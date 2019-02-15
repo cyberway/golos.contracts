@@ -319,7 +319,7 @@ void publication::payto(name user, eosio::asset quantity, enum_t mode) {
         return;
 
     if(static_cast<payment_t>(mode) == payment_t::TOKEN)
-        INLINE_ACTION_SENDER(eosio::token, transfer) (config::token_name, {_self, config::active_name}, {_self, user, quantity, ""});
+        INLINE_ACTION_SENDER(eosio::token, payment) (config::token_name, {_self, config::active_name}, {_self, user, quantity, ""});
     else if(static_cast<payment_t>(mode) == payment_t::VESTING)
         INLINE_ACTION_SENDER(eosio::token, transfer) (config::token_name, {_self, config::active_name},
             {_self, config::vesting_name, quantity, config::send_prefix + name{user}.to_string()});
