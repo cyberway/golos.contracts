@@ -155,6 +155,10 @@ protected:
         const string no_social_acc         = amsg("Social account doesn't exist.");
         const string no_referral_acc       = amsg("Referral account doesn't exist.");
         const string not_valid_ref_block_num = amsg("ref_block_num mismatch");
+        const string wrong_prmlnk_length   = amsg("Permlink length doesn't validated.");
+        const string wrong_prmlnk          = amsg("Permlink doesn't match with naming convension.");
+        const string wrong_title_length    = amsg("Title length doesn't validated.");
+        const string wrong_body_length     = amsg("Body length doesn't validated.");
     } err;
 };
 
@@ -464,6 +468,40 @@ BOOST_FIXTURE_TEST_CASE(comments_cashout_time_test, golos_publication_tester) tr
     BOOST_TEST_MESSAGE("--- checking that closed message comment was closed.");
     BOOST_CHECK_EQUAL(post.get_message({N(jackiechan), "sorry guys i'm late", ref_block_num_jackiechan})["closed"].as<bool>(), true);
 
+} FC_LOG_AND_RETHROW()
+
+BOOST_FIXTURE_TEST_CASE(data_validation, golos_publication_tester) try {
+    BOOST_TEST_MESSAGE("data_validation_test.");
+    init();
+    auto ref_block_num_brucelee = control->head_block_header().block_num();
+    std::string str256(256, 'a');
+
+    BOOST_TEST_MESSAGE("--- checking permlink length.");
+    BOOST_CHECK_EQUAL(err.wrong_prmlnk_length, post.create_msg({N(brucelee), "", ref_block_num_brucelee}));
+    BOOST_CHECK_EQUAL(err.wrong_prmlnk_length, post.create_msg({N(brucelee), str256, ref_block_num_brucelee}));
+
+    BOOST_TEST_MESSAGE("--- checking permlink naming convension.");
+    BOOST_CHECK_EQUAL(err.wrong_prmlnk, post.create_msg({N(brucelee), "ABC", ref_block_num_brucelee}));
+    BOOST_CHECK_EQUAL(err.wrong_prmlnk, post.create_msg({N(brucelee), "АБЦ", ref_block_num_brucelee}));
+    BOOST_CHECK_EQUAL(success(), post.create_msg({N(brucelee), "abcdefghijklmnopqrstuvwxyz0123456789-", ref_block_num_brucelee}));
+
+    BOOST_TEST_MESSAGE("--- checking title length.");
+    BOOST_CHECK_EQUAL(success(), post.create_msg({N(brucelee), "permlink", ref_block_num_brucelee}));
+    BOOST_CHECK_EQUAL(err.wrong_title_length, post.create_msg({N(brucelee), "test-title", ref_block_num_brucelee},
+                                                              {N(brucelee), "permlink", ref_block_num_brucelee},
+                                                              {},
+                                                              5000,
+                                                              false,
+                                                              str256));
+
+    BOOST_TEST_MESSAGE("--- checking body length.");
+    BOOST_CHECK_EQUAL(err.wrong_body_length, post.create_msg({N(brucelee), "test-title", ref_block_num_brucelee},
+                                                             {N(brucelee), "permlink", ref_block_num_brucelee},
+                                                             {},
+                                                             5000,
+                                                             false,
+                                                             "headermssg",
+                                                             ""));
 } FC_LOG_AND_RETHROW()
 
 BOOST_AUTO_TEST_SUITE_END()
