@@ -610,13 +610,13 @@ BOOST_FIXTURE_TEST_CASE(basic_tests, reward_calcs_tester) try {
     check();
     BOOST_TEST_MESSAGE("--- create_message: why");
     auto ref_block_num_why = control->head_block_header().block_num();
-    BOOST_CHECK_EQUAL(success(), create_message({N(why), "why not", ref_block_num_why}, {N(), "", 0}, {{N(alice5), 5000}, {N(bob5), 2500}}));
+    BOOST_CHECK_EQUAL(success(), create_message({N(why), "why-not", ref_block_num_why}, {N(), "", 0}, {{N(alice5), 5000}, {N(bob5), 2500}}));
     check();
     BOOST_TEST_MESSAGE("--- add_funds_to_forum");
     BOOST_CHECK_EQUAL(success(), add_funds_to_forum(100000));
     check();
     BOOST_TEST_MESSAGE("--- why voted (100%) for why");
-    BOOST_CHECK_EQUAL(success(), addvote(N(why), {N(why), "why not", ref_block_num_why}, 10000));
+    BOOST_CHECK_EQUAL(success(), addvote(N(why), {N(why), "why-not", ref_block_num_why}, 10000));
     step();     // push transactions before run() call
     check();
     run(seconds(99));   // TODO: remove magic number
@@ -691,11 +691,11 @@ BOOST_FIXTURE_TEST_CASE(limits_test, reward_calcs_tester) try {
     }
     BOOST_CHECK_EQUAL(err.limit_no_power, create_message({N(bob), "oops", ref_block_num_bob},
                                                          {N(bob), "permlink", ref_block_num_bob}));
-    BOOST_CHECK_EQUAL(success(), create_message({N(bob), "I can pay for posting", ref_block_num_bob}, {N(), "", 0}, {}, 5000, true));
+    BOOST_CHECK_EQUAL(success(), create_message({N(bob), "i-can-pay-for-posting", ref_block_num_bob}, {N(), "", 0}, {}, 5000, true));
     BOOST_CHECK_EQUAL(err.limit_no_power,
-        create_message({N(bob), "only if it is not a comment", ref_block_num_bob}, {N(bob), "permlink", ref_block_num_bob}, {}, 5000, true));
-    BOOST_CHECK_EQUAL(success(), addvote(N(alice), {N(bob), "I can pay for posting", ref_block_num_bob}, 10000));
-    BOOST_CHECK_EQUAL(success(), addvote(N(bob), {N(bob), "I can pay for posting", ref_block_num_bob}, 10000)); //He can also vote
+        create_message({N(bob), "only-if-it-is-not-a-comment", ref_block_num_bob}, {N(bob), "permlink", ref_block_num_bob}, {}, 5000, true));
+    BOOST_CHECK_EQUAL(success(), addvote(N(alice), {N(bob), "i-can-pay-for-posting", ref_block_num_bob}, 10000));
+    BOOST_CHECK_EQUAL(success(), addvote(N(bob), {N(bob), "i-can-pay-for-posting", ref_block_num_bob}, 10000)); //He can also vote
     BOOST_CHECK_EQUAL(success(), create_message({N(bob1), "permlink", ref_block_num_bob}));
     step();     // push transactions before run() call
 
@@ -705,10 +705,10 @@ BOOST_FIXTURE_TEST_CASE(limits_test, reward_calcs_tester) try {
     run(seconds(150));  // TODO: remove magic number
     check();
     auto ref_block_num_bob1 = control->head_block_header().block_num();
-    BOOST_CHECK_EQUAL(err.limit_no_power, create_message({N(bob), ":(", ref_block_num_bob1}));
+    BOOST_CHECK_EQUAL(err.limit_no_power, create_message({N(bob), "limit-no-power", ref_block_num_bob1}));
     run(seconds(45));   // TODO: remove magic number
     auto ref_block_num_bob2 = control->head_block_header().block_num();
-    BOOST_CHECK_EQUAL(success(), create_message({N(bob), ":)", ref_block_num_bob2}));
+    BOOST_CHECK_EQUAL(success(), create_message({N(bob), "test", ref_block_num_bob2}));
     check();
     BOOST_CHECK_EQUAL(success(), setrules({"x", bignum}, {"sqrt(x)", bignum}, {"x / 1800", 1800},
         0, //curatorsprop
@@ -729,8 +729,8 @@ BOOST_FIXTURE_TEST_CASE(limits_test, reward_calcs_tester) try {
     );
     check();
     auto ref_block_num_bob3 = control->head_block_header().block_num();
-    BOOST_CHECK_EQUAL(err.limit_no_vesting, create_message({N(bob), ":'(", ref_block_num_bob3}));
-    BOOST_CHECK_EQUAL(success(), create_message({N(bob1), ":D", ref_block_num_bob3}));
+    BOOST_CHECK_EQUAL(err.limit_no_vesting, create_message({N(bob), "limit-no-vesting", ref_block_num_bob3}));
+    BOOST_CHECK_EQUAL(success(), create_message({N(bob1), "test2", ref_block_num_bob3}));
     check();
     show();
 } FC_LOG_AND_RETHROW()

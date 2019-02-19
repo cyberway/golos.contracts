@@ -155,10 +155,10 @@ protected:
         const string no_social_acc         = amsg("Social account doesn't exist.");
         const string no_referral_acc       = amsg("Referral account doesn't exist.");
         const string not_valid_ref_block_num = amsg("ref_block_num mismatch");
-        const string wrong_prmlnk_length   = amsg("Permlink length doesn't validated.");
-        const string wrong_prmlnk          = amsg("Permlink doesn't match with naming convension.");
-        const string wrong_title_length    = amsg("Title length doesn't validated.");
-        const string wrong_body_length     = amsg("Body length doesn't validated.");
+        const string wrong_prmlnk_length   = amsg("Permlink length is empty or more than 256.");
+        const string wrong_prmlnk          = amsg("Permlink contains wrong symbol.");
+        const string wrong_title_length    = amsg("Title length is more than 256.");
+        const string wrong_body_length     = amsg("Body is empty.");
     } err;
 };
 
@@ -233,7 +233,7 @@ BOOST_FIXTURE_TEST_CASE(create_message, golos_publication_tester) try {
     msg = post.get_message({N(brucelee), "permlink", ref_block_num_brucelee_and_chucknorris});
     BOOST_CHECK_EQUAL(msg["childcount"].as<uint64_t>(), 1);
 
-    BOOST_CHECK_EQUAL(err.unregistered_user_ + "dan.larimer", post.create_msg({N(dan.larimer), "Hi", ref_block_num_jackiechan_and_larimer}));
+    BOOST_CHECK_EQUAL(err.unregistered_user_ + "dan.larimer", post.create_msg({N(dan.larimer), "hi", ref_block_num_jackiechan_and_larimer}));
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE(update_message, golos_publication_tester) try {
@@ -444,7 +444,7 @@ BOOST_FIXTURE_TEST_CASE(comments_cashout_time_test, golos_publication_tester) tr
     need_blocks -= wait_blocks;
 
     auto ref_block_num_chucknorris = control->head_block_header().block_num();
-    BOOST_CHECK_EQUAL(success(), post.create_msg({N(chucknorris), "comment_permlink", ref_block_num_chucknorris},
+    BOOST_CHECK_EQUAL(success(), post.create_msg({N(chucknorris), "comment-permlink", ref_block_num_chucknorris},
                                                  {N(brucelee), "permlink", ref_block_num_brucelee}));
         
     BOOST_TEST_MESSAGE("--- creating " << need_blocks << " blocks");
@@ -452,21 +452,21 @@ BOOST_FIXTURE_TEST_CASE(comments_cashout_time_test, golos_publication_tester) tr
     
     BOOST_TEST_MESSAGE("--- checking that messages wasn't closed.");
     BOOST_CHECK_EQUAL(post.get_message({N(brucelee), "permlink", ref_block_num_brucelee})["closed"].as<bool>(), false);
-    BOOST_CHECK_EQUAL(post.get_message({N(chucknorris), "comment_permlink", ref_block_num_chucknorris})["closed"].as<bool>(), false);
+    BOOST_CHECK_EQUAL(post.get_message({N(chucknorris), "comment-permlink", ref_block_num_chucknorris})["closed"].as<bool>(), false);
     
     produce_block();
     
     BOOST_TEST_MESSAGE("--- checking that messages was closed.");
     BOOST_CHECK_EQUAL(post.get_message({N(brucelee), "permlink", ref_block_num_brucelee})["closed"].as<bool>(), true);
-    BOOST_CHECK_EQUAL(post.get_message({N(chucknorris), "comment_permlink", ref_block_num_chucknorris})["closed"].as<bool>(), true);
+    BOOST_CHECK_EQUAL(post.get_message({N(chucknorris), "comment-permlink", ref_block_num_chucknorris})["closed"].as<bool>(), true);
     
     auto ref_block_num_jackiechan = control->head_block_header().block_num();
-    BOOST_CHECK_EQUAL(success(), post.create_msg({N(jackiechan), "sorry guys i'm late", ref_block_num_jackiechan},
+    BOOST_CHECK_EQUAL(success(), post.create_msg({N(jackiechan), "sorry-guys-i-am-late", ref_block_num_jackiechan},
                                                  {N(brucelee), "permlink", ref_block_num_brucelee}));
     produce_block();
     
     BOOST_TEST_MESSAGE("--- checking that closed message comment was closed.");
-    BOOST_CHECK_EQUAL(post.get_message({N(jackiechan), "sorry guys i'm late", ref_block_num_jackiechan})["closed"].as<bool>(), true);
+    BOOST_CHECK_EQUAL(post.get_message({N(jackiechan), "sorry-guys-i-am-late", ref_block_num_jackiechan})["closed"].as<bool>(), true);
 
 } FC_LOG_AND_RETHROW()
 
@@ -495,7 +495,7 @@ BOOST_FIXTURE_TEST_CASE(data_validation, golos_publication_tester) try {
                                                               str256));
 
     BOOST_TEST_MESSAGE("--- checking body length.");
-    BOOST_CHECK_EQUAL(err.wrong_body_length, post.create_msg({N(brucelee), "test-title", ref_block_num_brucelee},
+    BOOST_CHECK_EQUAL(err.wrong_body_length, post.create_msg({N(brucelee), "test-body", ref_block_num_brucelee},
                                                              {N(brucelee), "permlink", ref_block_num_brucelee},
                                                              {},
                                                              5000,

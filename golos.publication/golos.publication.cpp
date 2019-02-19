@@ -94,10 +94,10 @@ void publication::create_message(structures::mssgid message_id,
 
     eosio_assert(message_id.ref_block_num == tapos_block_num(), "ref_block_num mismatch");
 
-    eosio_assert(message_id.permlink.length() && message_id.permlink.length() < 256, "Permlink length doesn't validated.");
-    eosio_assert(check_permlink_correctness(message_id.permlink), "Permlink doesn't match with naming convension.");
-    eosio_assert(headermssg.length() < 256, "Title length doesn't validated.");
-    eosio_assert(bodymssg.length(), "Body length doesn't validated.");
+    eosio_assert(message_id.permlink.length() && message_id.permlink.length() < config::max_length, "Permlink length is empty or more than 256.");
+    eosio_assert(check_permlink_correctness(message_id.permlink), "Permlink contains wrong symbol.");
+    eosio_assert(headermssg.length() < config::max_length, "Title length is more than 256.");
+    eosio_assert(bodymssg.length(), "Body is empty.");
 
     posting_params_singleton cfg(_self, _self.value);
     const auto &cashout_window_param = cfg.get().cashout_window_param;
@@ -859,45 +859,12 @@ int64_t publication::pay_delegators(int64_t claim, name voter,
 
 bool publication::check_permlink_correctness(std::string permlink) {
     for (auto symbol : permlink) {
-        switch(symbol) {
-            case 'a' : ; break;
-            case 'b' : ; break;
-            case 'c' : ; break;
-            case 'd' : ; break;
-            case 'e' : ; break;
-            case 'f' : ; break;
-            case 'g' : ; break;
-            case 'h' : ; break;
-            case 'i' : ; break;
-            case 'j' : ; break;
-            case 'k' : ; break;
-            case 'l' : ; break;
-            case 'm' : ; break;
-            case 'n' : ; break;
-            case 'o' : ; break;
-            case 'p' : ; break;
-            case 'q' : ; break;
-            case 'r' : ; break;
-            case 's' : ; break;
-            case 't' : ; break;
-            case 'u' : ; break;
-            case 'v' : ; break;
-            case 'w' : ; break;
-            case 'x' : ; break;
-            case 'y' : ; break;
-            case 'z' : ; break;
-            case '0' : ; break;
-            case '1' : ; break;
-            case '2' : ; break;
-            case '3' : ; break;
-            case '4' : ; break;
-            case '5' : ; break;
-            case '6' : ; break;
-            case '7' : ; break;
-            case '8' : ; break;
-            case '9' : ; break;
-            case '-' : ; break;
-            default: return false;
+        if ((symbol >= '0' && symbol <= '9') || 
+            (symbol >= 'a' && symbol <= 'z') ||
+             symbol == '-') {
+            continue;
+        } else {
+            return false;
         }
     }
     return true;
