@@ -129,14 +129,18 @@ struct golos_ctrl_api: base_contract_api {
             ",'majority':"+std::to_string(major) +
             ",'minority':"+std::to_string(minor) + "}]";
     }
+    static std::string update_auth_param(uint64_t delay_sec = 1) {
+        return std::string() + "['update_auth',{'period':"+std::to_string(delay_sec)+"}]";
+    }
     static std::string default_params(name owner, symbol token, uint16_t witnesses = 21, uint16_t witness_votes = 30,
-        uint16_t smajor = 0, uint16_t major = 0, uint16_t minor = 0) {
+        uint16_t smajor = 0, uint16_t major = 0, uint16_t minor = 0, uint64_t delay_sec = 33) {
         return std::string() + "[" +
             token_param(token) + "," +
             multisig_param(owner) + "," +
             max_witnesses_param(witnesses) + "," +
             msig_perms_param(smajor, major, minor) + "," +
-            max_witness_votes_param(witness_votes) + "]";
+            max_witness_votes_param(witness_votes) + "," +
+            update_auth_param(delay_sec) + "]";
     }
 
     // sets permissions for "multisig" account

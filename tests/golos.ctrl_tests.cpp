@@ -109,6 +109,7 @@ public:
         const string already_attached   = amsg("already attached");
         const string already_detached   = amsg("user already detached");
         const string no_account         = amsg("user not found");
+        const string auth_period0       = amsg("update auth period can't be 0");
     } err;
 
     // prepare
@@ -396,6 +397,7 @@ BOOST_FIXTURE_TEST_CASE(set_params, golos_ctrl_tester) try {
     // TODO: maybe move to separate parameters validation test
     BOOST_CHECK_EQUAL(err.no_msig_acc, ctrl.set_param(ctrl.multisig_param(N(nobody))));
     BOOST_CHECK_EQUAL(err.max_witness0, ctrl.set_param(ctrl.max_witnesses_param(0)));
+    BOOST_CHECK_EQUAL(err.auth_period0, ctrl.set_param(ctrl.update_auth_param(0)));
 
     BOOST_TEST_MESSAGE("--- check that setting valid parameters succeed");
     BOOST_CHECK_EQUAL(success(), ctrl.set_param(ctrl.msig_perms_param(_max_witnesses)));

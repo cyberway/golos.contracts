@@ -58,6 +58,13 @@ struct msig_permissions: parameter {
     uint16_t minority_threshold(uint16_t top) const;
 };
 
+struct update_auth_period: parameter {
+    uint64_t period = 1;
+
+    void validate() const override {
+        eosio_assert(period > 0, "update auth period can't be 0");
+    } 
+};
 
 } // param
 
@@ -66,9 +73,10 @@ using multisig_acc_param = param_wrapper<param::multisig,1>;
 using max_witnesses_param = param_wrapper<param::witnesses,1>;
 using msig_perms_param = param_wrapper<param::msig_permissions,3>;
 using witness_votes_param = param_wrapper<param::witness_votes,1>;
+using update_auth_param = param_wrapper<param::update_auth_period,1>;
 
-using ctrl_param =
-    std::variant<ctrl_token_param, multisig_acc_param, max_witnesses_param, msig_perms_param, witness_votes_param>;
+using ctrl_param = std::variant<ctrl_token_param, multisig_acc_param, max_witnesses_param, 
+                                msig_perms_param, witness_votes_param, update_auth_param>;
 
 struct [[eosio::table]] ctrl_state {
     ctrl_token_param    token;
@@ -76,8 +84,9 @@ struct [[eosio::table]] ctrl_state {
     max_witnesses_param witnesses;
     msig_perms_param    msig_perms;
     witness_votes_param witness_votes;
+    update_auth_param   update_auth_period;
 
-    static constexpr int params_count = 5;
+    static constexpr int params_count = 6;
 };
 using ctrl_params_singleton = eosio::singleton<"ctrlparams"_n, ctrl_state>;
 

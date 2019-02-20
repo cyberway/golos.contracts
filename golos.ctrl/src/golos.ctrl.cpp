@@ -78,6 +78,9 @@ struct ctrl_params_setter: set_params_visitor<ctrl_state> {
     bool operator()(const witness_votes_param& p) {
         return set_param(p, &ctrl_state::witness_votes);
     }
+    bool operator()(const update_auth_param& p) {
+        return set_param(p, &ctrl_state::update_auth_period);
+    }
 };
 
 void control::validateprms(vector<ctrl_param> params) {
@@ -90,7 +93,7 @@ void control::setparams(vector<ctrl_param> params) {
     if (setter.recheck_msig_perms) {
         setter.check_msig_perms(setter.state.msig_perms);
     }
-    // TODO: auto-change auths on params change
+    update_auths_timer(props().update_auth_period.period);
 }
 
 void control::on_transfer(name from, name to, asset quantity, string memo) {
@@ -169,7 +172,7 @@ void control::regwitness(name witness, eosio::public_key key, string url) {
         };
     });
 
-    update_auths();
+    updateauths();
 }
 
 // TODO: special action to free memory?
@@ -186,7 +189,7 @@ void control::unregwitness(name witness) {
     }, false);
     eosio_assert(exists, "witness not found");
 
-    update_auths();
+    updateauths();
 }
 
 // Note: if not weighted, it's possible to pass all witnesses in vector like in BP actions
@@ -283,10 +286,10 @@ void control::update_witnesses_weights(vector<name> witnesses, share_type diff) 
         }
     }
 
-    update_auths();
+    updateauths();
 }
 
-void control::update_auths() {
+void control::updateauths(uint64_t delay_sec) {
     auto top = top_witnesses();
     std::sort(top.begin(), top.end(), [](const auto& it1, const auto& it2) {
         return it1.value < it2.value;
@@ -368,6 +371,12 @@ vector<name> control::top_witnesses() {
     return top;
 }
 
+void control::update_auths_timer(uint64_t delay_sec) {
+    transaction trx;
+    trx.actions.emplace_back(action{permission_level(_self, config::active_name), _self, "updateauths"_n, delay_sec});
+    trx.delay_sec = delay_sec;
+    trx.send((static_cast<uint128_t>(delay_sec) << 64) | now(), _self);
+}
 
 } // golos
 
@@ -375,4 +384,5 @@ DISPATCH_WITH_TRANSFER(golos::control, on_transfer,
     (validateprms)(setparams)
     (attachacc)(detachacc)
     (regwitness)(unregwitness)
-    (votewitness)(unvotewitn)(changevest))
+    (votewitness)(unvotewitn)
+    (changevest)(updateauths))

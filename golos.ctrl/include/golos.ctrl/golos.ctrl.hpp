@@ -88,6 +88,7 @@ public:
     [[eosio::action]] void unvotewitn(name voter, name witness);
 
     [[eosio::action]] void changevest(name who, asset diff);
+    [[eosio::action]] void updateauths(uint64_t delay_sec = 1);
     void on_transfer(name from, name to, asset quantity, std::string memo);
 
 private:
@@ -112,7 +113,7 @@ private:
     void change_voter_vests(name voter, share_type diff);
     void apply_vote_weight(name voter, name witness, bool add);
     void update_witnesses_weights(std::vector<name> witnesses, share_type diff);
-    void update_auths();
+    void update_auths_timer(uint64_t delay_sec);
     void send_witness_event(const witness_info& wi);
 };
 
