@@ -92,7 +92,8 @@ void publication::create_message(structures::mssgid message_id,
                               std::string jsonmetadata) {
     require_auth(message_id.author);
 
-    eosio_assert(message_id.ref_block_num == tapos_block_num(), "ref_block_num mismatch");
+    int ref_block_num = message_id.ref_block_num % 65536;
+    eosio_assert((tapos_block_num()<ref_block_num?65536:0)+tapos_block_num()-ref_block_num < 2*60*60/3, "ref_block_num mismatch");
 
     posting_params_singleton cfg(_self, _self.value);
     const auto &cashout_window_param = cfg.get().cashout_window_param;
