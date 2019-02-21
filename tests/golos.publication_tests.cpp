@@ -202,7 +202,7 @@ BOOST_FIXTURE_TEST_CASE(create_message, golos_publication_tester) try {
     BOOST_TEST_MESSAGE("Create message testing.");
     init();
     auto ref_block_num_brucelee_and_chucknorris = control->head_block_header().block_num();
-    BOOST_CHECK_EQUAL(err.not_valid_ref_block_num, post.create_msg({N(brucelee), "permlink", 0}));
+    BOOST_CHECK_EQUAL(err.not_valid_ref_block_num, post.create_msg({N(brucelee), "permlink", ref_block_num_brucelee_and_chucknorris+1}));
     BOOST_CHECK_EQUAL(success(), post.create_msg({N(brucelee), "permlink", ref_block_num_brucelee_and_chucknorris}));
 
     BOOST_TEST_MESSAGE("--- checking that another user can create a message with the same permlink.");
