@@ -117,7 +117,7 @@
             "name": "update_auth",
             "base": "",
             "fields": [
-                {"type": "uint64", "name": "period"}]
+                {"type": "uint32", "name": "period"}]
         }, {
             "name": "ctrl_state",
             "fields": [
@@ -178,9 +178,6 @@
         }, {
             "name": "votewitness",
             "type": "votewitness"
-        }, {
-            "name": "updateauths",
-            "type": "update_auth"
         }
     ],
     "tables": [

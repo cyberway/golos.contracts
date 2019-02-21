@@ -93,7 +93,7 @@ void control::setparams(vector<ctrl_param> params) {
     if (setter.recheck_msig_perms) {
         setter.check_msig_perms(setter.state.msig_perms);
     }
-    update_auths_timer(props().update_auth_period.period);
+    // TODO: auto-change auths on params change
 }
 
 void control::on_transfer(name from, name to, asset quantity, string memo) {
@@ -172,7 +172,7 @@ void control::regwitness(name witness, eosio::public_key key, string url) {
         };
     });
 
-    updateauths();
+    update_auths();
 }
 
 // TODO: special action to free memory?
@@ -189,7 +189,7 @@ void control::unregwitness(name witness) {
     }, false);
     eosio_assert(exists, "witness not found");
 
-    updateauths();
+    update_auths();
 }
 
 // Note: if not weighted, it's possible to pass all witnesses in vector like in BP actions
@@ -286,16 +286,21 @@ void control::update_witnesses_weights(vector<name> witnesses, share_type diff) 
         }
     }
 
-    updateauths();
+    update_auths();
 }
 
-void control::updateauths(uint64_t delay_sec) {
+void control::update_auths() {
+    msig_auth_singleton_tbl top_witnesses_tbl(_self, _self.value);
+
+    auto last_update = top_witnesses_tbl.get_or_default().last_update.utc_seconds;
+
+    if (last_update && props().update_auth_period.period < now() - last_update)
+        return;
     auto top = top_witnesses();
     std::sort(top.begin(), top.end(), [](const auto& it1, const auto& it2) {
         return it1.value < it2.value;
     });
 
-    msig_auth_singleton_tbl top_witnesses_tbl(_self, _self.value);
     const auto &old_top = top_witnesses_tbl.get_or_default().witnesses;
 
     if (old_top.size() > 0 && old_top.size() == top.size()) {
@@ -371,18 +376,10 @@ vector<name> control::top_witnesses() {
     return top;
 }
 
-void control::update_auths_timer(uint64_t delay_sec) {
-    transaction trx;
-    trx.actions.emplace_back(action{permission_level(_self, config::active_name), _self, "updateauths"_n, delay_sec});
-    trx.delay_sec = delay_sec;
-    trx.send((static_cast<uint128_t>(delay_sec) << 64) | now(), _self);
-}
-
 } // golos
 
 DISPATCH_WITH_TRANSFER(golos::control, on_transfer,
     (validateprms)(setparams)
     (attachacc)(detachacc)
     (regwitness)(unregwitness)
-    (votewitness)(unvotewitn)
-    (changevest)(updateauths))
+    (votewitness)(unvotewitn)(changevest))

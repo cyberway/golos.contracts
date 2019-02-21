@@ -59,7 +59,7 @@ struct msig_permissions: parameter {
 };
 
 struct update_auth_period: parameter {
-    uint64_t period = 1;
+    uint32_t period = 30*60;
 
     void validate() const override {
         eosio_assert(period > 0, "update auth period can't be 0");
