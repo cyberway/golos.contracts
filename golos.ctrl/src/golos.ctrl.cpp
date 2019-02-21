@@ -294,8 +294,9 @@ void control::update_auths() {
 
     auto last_update = top_witnesses_tbl.get_or_default().last_update.utc_seconds;
 
-    if (last_update && props().update_auth_period.period < now() - last_update)
+    if (last_update && props().update_auth_period.period + last_update > now())
         return;
+
     auto top = top_witnesses();
     std::sort(top.begin(), top.end(), [](const auto& it1, const auto& it2) {
         return it1.value < it2.value;
