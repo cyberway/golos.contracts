@@ -95,6 +95,11 @@ void publication::create_message(structures::mssgid message_id,
     int ref_block_num = message_id.ref_block_num % 65536;
     eosio_assert((tapos_block_num()<ref_block_num?65536:0)+tapos_block_num()-ref_block_num < 2*60*60/3, "ref_block_num mismatch");
 
+    eosio_assert(message_id.permlink.length() && message_id.permlink.length() < config::max_length, "Permlink length is empty or more than 256.");
+    eosio_assert(check_permlink_correctness(message_id.permlink), "Permlink contains wrong symbol.");
+    eosio_assert(headermssg.length() < config::max_length, "Title length is more than 256.");
+    eosio_assert(bodymssg.length(), "Body is empty.");
+
     posting_params_singleton cfg(_self, _self.value);
     const auto &cashout_window_param = cfg.get().cashout_window_param;
     const auto &max_beneficiaries_param = cfg.get().max_beneficiaries_param;
@@ -851,6 +856,19 @@ int64_t publication::pay_delegators(int64_t claim, name voter,
         dlg_payout_sum += dlg_payout;
     }
     return dlg_payout_sum;
+}
+
+bool publication::check_permlink_correctness(std::string permlink) {
+    for (auto symbol : permlink) {
+        if ((symbol >= '0' && symbol <= '9') || 
+            (symbol >= 'a' && symbol <= 'z') ||
+             symbol == '-') {
+            continue;
+        } else {
+            return false;
+        }
+    }
+    return true;
 }
 
 } // golos
