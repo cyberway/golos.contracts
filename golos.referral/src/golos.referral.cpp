@@ -39,7 +39,7 @@ void referral::setparams(std::vector<referral_params> params) {
 
 void referral::addreferral(name referrer, name referral, uint32_t percent,
                            uint64_t expire, asset breakout) {
-    require_auth(referrer);
+    require_auth(_self);
 
     referrals_table referrals(_self, _self.value);
     auto it_referral = referrals.find(referral.value);

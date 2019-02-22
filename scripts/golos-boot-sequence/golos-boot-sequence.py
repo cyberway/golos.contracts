@@ -235,6 +235,7 @@ def createGolosAccounts():
     updateAuth('cyber',       'createuser', 'active', ['GLS5a2eDuRETEg7uy8eHbiCqGZM3wnh2pLjiXrFduLWBKVZKCkB62'], [])
     linkAuth('cyber', 'cyber', 'newaccount', 'createuser')
     linkAuth('cyber', 'gls.vesting', 'open', 'createuser')
+    linkAuth('cyber', 'gls.referral', 'addreferral', 'createuser')
 
 def stepInstallContracts():
     for acc in golosAccounts:
