@@ -39,4 +39,4 @@ struct base_contract_api {
 };
 
 
-} }
+}} // eosio::testing

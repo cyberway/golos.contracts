@@ -41,10 +41,8 @@ struct golos_posting_api: base_contract_api {
     }
 
     action_result create_msg(
-        account_name author,
-        std::string permlink,
-        account_name parent_author = N(),
-        std::string parent_permlink = "parentprmlnk",
+        mssgid message_id,
+        mssgid parent_id = {N(), "parentprmlnk", 0},
         std::vector<beneficiary> beneficiaries = {},
         int64_t token_prop = 5000,
         bool vest_payment = false,
@@ -54,11 +52,9 @@ struct golos_posting_api: base_contract_api {
         std::vector<tags> tags = {{"tag"}},
         std::string json_metadata = "jsonmetadata"
     ) {
-        return push(N(createmssg), author, args()
-            ("account", author)
-            ("permlink", permlink)
-            ("parentacc", parent_author)
-            ("parentprmlnk", parent_permlink)
+        return push(N(createmssg), message_id.author, args()
+            ("message_id", message_id)
+            ("parent_id", parent_id)
             ("beneficiaries", beneficiaries)
             ("tokenprop", token_prop)
             ("vestpayment", vest_payment)
@@ -71,17 +67,15 @@ struct golos_posting_api: base_contract_api {
     }
 
     action_result update_msg(
-        account_name author,
-        std::string permlink,
+        mssgid message_id,
         std::string title,
         std::string body,
         std::string language,
         std::vector<tags> tags,
         std::string json_metadata
     ) {
-        return push(N(updatemssg), author, args()
-            ("account", author)
-            ("permlink", permlink)
+        return push(N(updatemssg), message_id.author, args()
+            ("message_id", message_id)
             ("headermssg", title)
             ("bodymssg", body)
             ("languagemssg", language)
@@ -90,34 +84,30 @@ struct golos_posting_api: base_contract_api {
         );
     }
 
-    action_result delete_msg(account_name author, std::string permlink) {
-        return push(N(deletemssg), author, args()
-            ("account", author)
-            ("permlink", permlink)
+    action_result delete_msg(mssgid message_id) {
+        return push(N(deletemssg), message_id.author, args()
+            ("message_id", message_id)
         );
     }
 
-    action_result upvote(account_name voter, account_name author, std::string permlink, uint16_t weight) {
+    action_result upvote(account_name voter, mssgid message_id, uint16_t weight) {
         return push(N(upvote), voter, args()
             ("voter", voter)
-            ("author", author)
-            ("permlink", permlink)
+            ("message_id", message_id)
             ("weight", weight)
         );
     }
-    action_result downvote(account_name voter, account_name author, std::string permlink, uint16_t weight) {
+    action_result downvote(account_name voter, mssgid message_id, uint16_t weight) {
         return push(N(downvote), voter, args()
             ("voter", voter)
-            ("author", author)
-            ("permlink", permlink)
+            ("message_id", message_id)
             ("weight", weight)
         );
     }
-    action_result unvote(account_name voter, account_name author, std::string permlink) {
+    action_result unvote(account_name voter, mssgid message_id) {
         return push(N(unvote), voter, args()
             ("voter", voter)
-            ("author", author)
-            ("permlink", permlink)
+            ("message_id", message_id)
         );
     }
     action_result set_params(std::string json_params) {
@@ -175,20 +165,22 @@ struct golos_posting_api: base_contract_api {
         return _tester->get_chaindb_struct(_code, acc, N(content), id, "content");
     }
 
-    variant get_message(account_name acc, const std::string& permlink) {
-        variant obj = _tester->get_chaindb_lower_bound_struct(_code, acc, N(message), N(bypermlink), permlink, "message");
+
+    variant get_message(mssgid message_id) {
+        variant obj = _tester->get_chaindb_lower_bound_struct(_code, message_id.author, N(message), N(bypermlink),
+                                                                message_id.get_unique_key(), "message");
         if (!obj.is_null()) {
-            if(obj["permlink"].as<std::string>() != permlink) {
+            if(obj["permlink"].as<std::string>() != message_id.permlink || obj["ref_block_num"].as<uint64_t>() != message_id.ref_block_num) {
                 return variant();
             }
         }
         return obj;
     }
 
-    variant get_content(account_name acc, const std::string& permlink) {
-        variant obj = get_message(acc, permlink);
+    variant get_content(mssgid message_id) {
+        variant obj = get_message(message_id);
         if(!obj.is_null()) {
-            return get_content(acc, obj["id"].as<uint64_t>());
+            return get_content(message_id.author, obj["id"].as<uint64_t>());
         }
         return variant();
     }

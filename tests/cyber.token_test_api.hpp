@@ -16,10 +16,10 @@ struct cyber_token_api: base_contract_api {
         if (invoicers.size()) {
             authority auth(1, {});
             for (auto invoicer : invoicers) {
-                auth.accounts.emplace_back(permission_level_weight{.permission = {invoicer, N(eosio.code)}, .weight = 1});
+                auth.accounts.emplace_back(permission_level_weight{.permission = {invoicer, config::eosio_code_name}, .weight = 1});
             }
             if (std::find(invoicers.begin(), invoicers.end(), issuer) == invoicers.end()) {
-                auth.accounts.emplace_back(permission_level_weight{.permission = {issuer, N(eosio.code)}, .weight = 1});
+                auth.accounts.emplace_back(permission_level_weight{.permission = {issuer, config::eosio_code_name}, .weight = 1});
             }
             std::sort(auth.accounts.begin(), auth.accounts.end(),
                 [](const permission_level_weight& l, const permission_level_weight& r) {
@@ -28,7 +28,7 @@ struct cyber_token_api: base_contract_api {
                 });
             _tester->set_authority(issuer, golos::config::invoice_name, auth, "owner");
         }
-        
+
         return push(N(create), _code, args()
             ("issuer", issuer)
             ("maximum_supply", maximum_supply)

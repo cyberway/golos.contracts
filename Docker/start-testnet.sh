@@ -2,7 +2,7 @@
 set -e
 
 function call_hook {
-    [[ -x hooks.sh ]] && ./hooks.sh "$@"
+    [[ ! -x hooks.sh ]] || ./hooks.sh "$@"
 }
 
 script_path=$(dirname $(readlink -f $0))
@@ -46,6 +46,8 @@ exit 0
 DONE
 chmod a+x shutdown.sh down.sh up.sh
 
+call_hook "files-preextract"
+
 CYBERWAY_IMAGE=$REPOSITORY/cyberway:$BUILDTYPE
 echo "=== Extract cyberway startup scripts from $CYBERWAY_IMAGE"
 rm -fR startup || true
@@ -59,10 +61,11 @@ rm -fR scripts || true
 docker create --name extract-golos-scripts $GOLOS_IMAGE
 docker cp extract-golos-scripts:/opt/golos.contracts/scripts scripts
 docker rm extract-golos-scripts
+call_hook "files-extracted"
 
 echo "=== Start cyberway containers"
 startup/run-with-events.sh
-sleep 10
+sleep 20
 call_hook "nodeos-started"
 
 echo "=== Deploy cyberway & golos contracts"

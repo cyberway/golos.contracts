@@ -14,23 +14,22 @@ public:
     void set_rules(const funcparams& mainfunc, const funcparams& curationfunc, const funcparams& timepenalty,
         int64_t curatorsprop, int64_t maxtokenprop, symbol tokensymbol);
     void on_transfer(name from, name to, asset quantity, std::string memo);
-    void create_message(name account, std::string permlink, name parentacc, std::string parentprmlnk,
+    void create_message(structures::mssgid message_id, structures::mssgid parent_id,
         std::vector<structures::beneficiary> beneficiaries, int64_t tokenprop, bool vestpayment,
         std::string headermssg, std::string bodymssg, std::string languagemssg, std::vector<structures::tag> tags,
         std::string jsonmetadata);
-    void update_message(name account, std::string permlink,
-        std::string headermssg, std::string bodymssg, std::string languagemssg, std::vector<structures::tag> tags,
-        std::string jsonmetadata);
-    void delete_message(name account, std::string permlink);
-    void upvote(name voter, name author, std::string permlink, uint16_t weight);
-    void downvote(name voter, name author, std::string permlink, uint16_t weight);
-    void unvote(name voter, name author, std::string permlink);
-    void close_message(name account, uint64_t id);
+    void update_message(structures::mssgid message_id, std::string headermssg, std::string bodymssg,
+                        std::string languagemssg, std::vector<structures::tag> tags, std::string jsonmetadata);
+    void delete_message(structures::mssgid message_id);
+    void upvote(name voter, structures::mssgid message_id, uint16_t weight);
+    void downvote(name voter, structures::mssgid message_id, uint16_t weight);
+    void unvote(name voter, structures::mssgid message_id);
+    void close_message(structures::mssgid message_id);
     void set_params(std::vector<posting_params> params);
-    void reblog(name rebloger, name author, std::string permlink);
+    void reblog(name rebloger, structures::mssgid message_id);
 private:
-    void close_message_timer(name account, uint64_t id, uint64_t delay_sec);
-    void set_vote(name voter, name author, std::string permlink, int16_t weight);
+    void close_message_timer(structures::mssgid message_id, uint64_t id, uint64_t delay_sec);
+    void set_vote(name voter, const structures::mssgid &message_id, int16_t weight);
     uint16_t notify_parent(bool increase, name parentacc, uint64_t parent_id);
     void fill_depleted_pool(tables::reward_pools& pools, asset quantity,
         tables::reward_pools::const_iterator excluded);
@@ -60,6 +59,7 @@ private:
 
     fixp_t calc_available_rshares(name voter, int16_t weight, uint64_t cur_time, const structures::rewardpool& pool);
     void check_upvote_time(uint64_t cur_time, uint64_t mssg_date);
+    bool check_permlink_correctness(std::string permlink);
 };
 
 } // golos
