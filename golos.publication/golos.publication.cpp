@@ -293,7 +293,7 @@ void publication::delete_message(structures::mssgid message_id) {
         remove_postbw_charge(message_id.author, get_pool(pools, mssg_itr->date)->state.funds.symbol.code(), mssg_itr->id);
     }
 
-    cancel_deferred((static_cast<uint128_t>(mssg_itr->id) << 64) | account.value);
+    cancel_deferred((static_cast<uint128_t>(mssg_itr->id) << 64) | message_id.author.value);
 
     message_index.erase(mssg_itr);
     content_table.erase(cont_itr);
