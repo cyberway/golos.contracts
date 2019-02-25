@@ -187,6 +187,7 @@ void publication::create_message(structures::mssgid message_id,
         tables::message_table message_table(_self, parent_id.author.value);
         auto message_index = message_table.get_index<"bypermlink"_n>();
         auto message_itr = message_index.find({parent_id.permlink, parent_id.ref_block_num});
+        eosio_assert(message_itr != message_index.end(), "parent message not found");
         parent_pk = message_itr->id;
     }
 
