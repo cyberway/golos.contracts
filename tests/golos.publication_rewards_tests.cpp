@@ -308,13 +308,12 @@ public:
                 auto msgs = post.get_messages(user);
                 for (auto itr = msgs.begin(); itr != msgs.end(); ++itr) {
                     auto cur = *itr;
-                    if (!cur["closed"].as<bool>()) {
-                        s.set_message(mssgid{user, cur["permlink"].as<std::string>(), cur["ref_block_num"].as<uint64_t>()}, {
-                            static_cast<double>(FP(cur["state"]["netshares"].as<base_t>())),
-                            static_cast<double>(FP(cur["state"]["voteshares"].as<base_t>())),
-                            static_cast<double>(FP(cur["state"]["sumcuratorsw"].as<base_t>()))
-                        });
-                    }
+                    s.set_message(mssgid{user, cur["permlink"].as<std::string>(), cur["ref_block_num"].as<uint64_t>()}, {
+                                      static_cast<double>(FP(cur["state"]["netshares"].as<base_t>())),
+                                      static_cast<double>(FP(cur["state"]["voteshares"].as<base_t>())),
+                                      static_cast<double>(FP(cur["state"]["sumcuratorsw"].as<base_t>()))
+                                  });
+
                 }
             }
         }
