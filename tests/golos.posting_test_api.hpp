@@ -163,13 +163,13 @@ struct golos_posting_api: base_contract_api {
 
     variant get_message(mssgid message_id) {
         variant obj = _tester->get_chaindb_lower_bound_struct(_code, message_id.author, N(message), N(bypermlink),
-                                                                message_id.get_unique_key(), "message");
-        if (!obj.is_null()) {
-            if(obj["permlink"].as<std::string>() != message_id.permlink || obj["ref_block_num"].as<uint64_t>() != message_id.ref_block_num) {
-                return variant();
+                                                                message_id.get_unique_key(), "message");        
+        if (!obj.is_null() && obj.get_object().size()) {
+            if(obj["permlink"].as<std::string>() == message_id.permlink && obj["ref_block_num"].as<uint64_t>() == message_id.ref_block_num) {
+                return obj;
             }
         }
-        return obj;
+        return variant();
     }
 
     variant get_vote(account_name acc, uint64_t id) {

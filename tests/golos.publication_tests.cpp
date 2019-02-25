@@ -100,7 +100,6 @@ public:
         BOOST_CHECK_EQUAL(a["rewardweight"].as<uint64_t>(), b["rewardweight"].as<uint64_t>());
         CHECK_EQUAL_OBJECTS(a["state"], b["state"]);
         BOOST_CHECK_EQUAL(a["childcount"].as<uint64_t>(), b["childcount"].as<uint64_t>());
-        BOOST_CHECK_EQUAL(a["closed"].as<bool>(), b["closed"].as<bool>());
         BOOST_CHECK_EQUAL(a["level"].as<uint16_t>(), b["level"].as<uint16_t>());
     }
 
@@ -133,7 +132,6 @@ protected:
         ("rewardweight", 4611686018427387904ull)    // TODO: fix
         ("state", mvo()("netshares",0)("voteshares",0)("sumcuratorsw",0))
         ("childcount", 0)
-        ("closed", false)
         ("level", 0);
 
     struct errors: contract_error_messages {
@@ -221,6 +219,13 @@ BOOST_FIXTURE_TEST_CASE(create_message, golos_publication_tester) try {
     auto msg = post.get_message({N(brucelee), "permlink", ref_block_num_brucelee_and_chucknorris});
     BOOST_CHECK_EQUAL(msg.is_null(), false);
 
+    auto ref_block_num_jackiechan = control->head_block_header().block_num();
+    BOOST_CHECK_EQUAL(success(), post.create_msg({N(jackiechan), "permlink1", ref_block_num_jackiechan},
+    {N(brucelee), "permlink", ref_block_num_brucelee_and_chucknorris}));
+
+    msg = post.get_message({N(brucelee), "permlink", ref_block_num_brucelee_and_chucknorris});
+    BOOST_CHECK_EQUAL(msg["childcount"].as<uint64_t>(), 1);
+
     BOOST_TEST_MESSAGE("--- checking that message was closed.");
     produce_block();
     msg = post.get_message({N(brucelee), "permlink", ref_block_num_brucelee_and_chucknorris});
@@ -228,11 +233,8 @@ BOOST_FIXTURE_TEST_CASE(create_message, golos_publication_tester) try {
 
     auto ref_block_num_jackiechan_and_larimer = control->head_block_header().block_num();
 
-    //    BOOST_CHECK_EQUAL(success(), post.create_msg({N(jackiechan), "permlink1", ref_block_num_jackiechan_and_larimer},
-    //                                                 {N(brucelee), "permlink", ref_block_num_brucelee_and_chucknorris}));
-
-    //    msg = post.get_message({N(brucelee), "permlink", ref_block_num_brucelee_and_chucknorris});
-    //    BOOST_CHECK_EQUAL(msg["childcount"].as<uint64_t>(), 1);
+    BOOST_CHECK_EQUAL(err.parent_no_message, post.create_msg({N(jackiechan), "permlink2", ref_block_num_jackiechan_and_larimer},
+    {N(brucelee), "permlink", ref_block_num_brucelee_and_chucknorris}));
 
     BOOST_CHECK_EQUAL(err.unregistered_user_ + "dan.larimer", post.create_msg({N(dan.larimer), "hi", ref_block_num_jackiechan_and_larimer}));
 } FC_LOG_AND_RETHROW()
