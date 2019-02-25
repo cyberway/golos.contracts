@@ -159,36 +159,6 @@
     ]
   },
   {
-    "name": "content",
-    "base": "",
-    "fields": [
-      {
-        "name": "id",
-        "type": "uint64"
-      },
-      {
-        "name": "headermssg",
-        "type": "string"
-      },
-      {
-        "name": "bodymssg",
-        "type": "string"
-      },
-      {
-        "name": "languagemssg",
-        "type": "string"
-      },
-      {
-        "name": "tags",
-        "type": "tags[]"
-      },
-      {
-        "name": "jsonmetadata",
-        "type": "string"
-      }
-    ]
-  },
-  {
     "name": "messagestate",
     "base": "",
     "fields": [
@@ -253,10 +223,6 @@
       {
         "name": "childcount",
         "type": "uint64"
-      },
-      {
-        "name": "closed",
-        "type": "bool"
       },
       {
         "name": "level",
@@ -848,19 +814,6 @@
           "orders": [
               {"field": "permlink", "order": "asc"},
               {"field": "ref_block_num", "order": "asc"}
-          ]
-       }
-    ]
-  },
-  {
-    "name": "content",
-    "type": "content",
-    "indexes": [
-       {
-          "name": "primary",
-          "unique": "true",
-          "orders": [
-              {"field": "id", "order": "asc"}
           ]
        }
     ]
