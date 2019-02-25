@@ -313,7 +313,8 @@ void control::update_auths() {
             return;
     }
 
-    top_witnesses_tbl.set({top, time_point_sec(now())}, _self);
+    if (top.size())
+        top_witnesses_tbl.set({top, time_point_sec(now())}, _self);
 
     auto max_witn = props().witnesses.max;
     if (top.size() < max_witn) {           // TODO: ?restrict only just after creation and allow later

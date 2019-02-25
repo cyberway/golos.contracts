@@ -46,7 +46,7 @@ public:
     }
 
     // constants
-    const uint32_t _update_auth_period = 30*60;
+    const uint32_t _update_auth_period = 30;
     const uint16_t _max_witnesses = 2;
     const uint16_t _max_witness_votes = 4;
     const uint16_t _smajor_witn_count = _max_witnesses * 2 / 3 + 1;
@@ -270,7 +270,7 @@ BOOST_FIXTURE_TEST_CASE(register_update_witness, golos_ctrl_tester) try {
         BOOST_CHECK_EQUAL(success(), ctrl.vote_witness(std::get<0>(v), std::get<1>(v)));
         BOOST_TEST_MESSAGE("--- check top witnesses");
 
-        produce_block();
+        produce_blocks(_update_auth_period/3);  
         auto current_time = control->head_block_time().time_since_epoch();
 
         auto top_witnesses = ctrl.get_top_witnesses();
@@ -302,7 +302,7 @@ BOOST_FIXTURE_TEST_CASE(register_update_witness, golos_ctrl_tester) try {
         std::sort(top.begin(), top.end(), [](const auto &it1, const auto &it2) {
             return it1.value < it2.value;
         });
-
+         
         auto result = std::equal(save_top_witnesses.begin(), save_top_witnesses.end(), top.begin(), [&] (const auto &old_element, const auto &new_element) {
             return old_element.value == new_element.value;
         });
@@ -436,22 +436,25 @@ BOOST_FIXTURE_TEST_CASE(change_vesting, golos_ctrl_tester) try {
 BOOST_FIXTURE_TEST_CASE(update_auths, golos_ctrl_tester) try {
     BOOST_TEST_MESSAGE("Checking update auths period");
     prepare(step_only_create);
+    prepare_balances();
     
     BOOST_TEST_MESSAGE("--- checking that update auths possible only once");
     BOOST_CHECK_EQUAL(success(), ctrl.reg_witness(_w[0], _test_key, "localhost"));
-    auto top_witnesses = ctrl.get_top_witnesses();
+    BOOST_CHECK_EQUAL(success(), ctrl.vote_witness(_bob, _w[0]));
     produce_blocks(_update_auth_period/3-1);  
     BOOST_CHECK_EQUAL(success(), ctrl.reg_witness(_w[1], _test_key, "localhost"));
-    CHECK_MATCHING_OBJECT(ctrl.get_top_witnesses(), top_witnesses);
+    BOOST_CHECK_EQUAL(success(), ctrl.vote_witness(_bob, _w[1]));
+    auto top_witnesses = ctrl.get_top_witnesses();
+    std::vector<name> wtns = {_w[0]};
+    BOOST_CHECK(top_witnesses["witnesses"].as<std::vector<name>>().size() ==  wtns.size());
 
     BOOST_TEST_MESSAGE("--- checking that update auths possible again");
     produce_blocks(2);
-    BOOST_CHECK_EQUAL(success(), ctrl.reg_witness(_w[2], _test_key, "localhost"));
-    BOOST_REQUIRE(ctrl.get_top_witnesses()["last_update"].as<time_point_sec>().sec_since_epoch() > 
-            top_witnesses["last_update"].as<time_point_sec>().sec_since_epoch() + _update_auth_period);   
+    BOOST_CHECK_EQUAL(success(), ctrl.vote_witness(_alice, _w[1]));
+    wtns.push_back(_w[1]);
     top_witnesses = ctrl.get_top_witnesses();
-    BOOST_CHECK_EQUAL(success(), ctrl.reg_witness(_w[3], _test_key, "localhost"));
-    CHECK_MATCHING_OBJECT(ctrl.get_top_witnesses(), top_witnesses);
+    BOOST_CHECK(top_witnesses["witnesses"].as<std::vector<name>>().size() == wtns.size());
+    BOOST_TEST_MESSAGE(top_witnesses["witnesses"].as<std::vector<name>>().size());
 } FC_LOG_AND_RETHROW()
 
 
