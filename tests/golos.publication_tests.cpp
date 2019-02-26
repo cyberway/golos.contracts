@@ -504,4 +504,38 @@ BOOST_FIXTURE_TEST_CASE(data_validation, golos_publication_tester) try {
                                                              ""));
 } FC_LOG_AND_RETHROW()
 
+BOOST_FIXTURE_TEST_CASE(upvote_near_close, golos_publication_tester) try {
+    BOOST_TEST_MESSAGE("Upvote near close testing.");
+    init();
+
+    auto permlink = "permlink";
+    auto ref_block_num = control->head_block_header().block_num();
+    auto vote_brucelee = [&](auto weight){ return post.upvote(N(brucelee), {N(brucelee), permlink, ref_block_num}, weight); };
+    auto vote_jackie = [&](auto weight){ return post.upvote(N(jackiechan), {N(brucelee), permlink, ref_block_num}, weight); };
+    auto vote_chucknorris = [&](auto weight){ return post.upvote(N(chucknorris), {N(brucelee), permlink, ref_block_num}, weight); };
+
+    BOOST_TEST_MESSAGE("--- succeed on initial upvote");
+    BOOST_CHECK_EQUAL(success(), post.create_msg({N(brucelee), permlink, ref_block_num}));
+    BOOST_CHECK_EQUAL(success(), vote_brucelee(123));
+    auto _vote = mvo()("id",0)("message_id",1)("voter","brucelee")("count",1);   // TODO: time
+    CHECK_MATCHING_OBJECT(post.get_vote(N(brucelee), 0), _vote);
+    produce_block();
+
+    BOOST_TEST_MESSAGE("--- succeed on revote with different weight");
+    BOOST_CHECK_EQUAL(success(), vote_brucelee(cfg::_100percent));
+
+    BOOST_TEST_MESSAGE("--- succeed max_vote_changes revotes and fail on next vote");
+    for (auto i = 0; i < post.max_vote_changes - 1; i++) {
+        BOOST_CHECK_EQUAL(success(), vote_jackie(i+1));
+        produce_block();
+    }
+
+    produce_blocks(seconds_to_blocks(post.window - post.upvote_lockout) - post.max_vote_changes + 1);
+    BOOST_TEST_MESSAGE("--- fail while upvote lockout");
+
+    BOOST_CHECK_EQUAL(err.upvote_near_close, vote_jackie(cfg::_100percent));          // TODO Fix broken test GolosChain/golos-smart#410
+//    produce_blocks(seconds_to_blocks(post.upvote_lockout) - 2);
+//    BOOST_CHECK_EQUAL(err.upvote_near_close, vote_chucknorris(cfg::_100percent));          // TODO Fix broken test GolosChain/golos-smart#410
+} FC_LOG_AND_RETHROW()
+
 BOOST_AUTO_TEST_SUITE_END()
