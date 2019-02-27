@@ -11,10 +11,10 @@ using namespace eosio::testing;
 using namespace eosio::chain;
 using namespace fc;
 
-class golos_referral_tester : public extended_tester {
+class golos_referral_tester : public golos_tester {
 public:
     golos_referral_tester()
-        : extended_tester(cfg::referral_name)
+        : golos_tester(cfg::referral_name)
         , _sym(3, "GLS")
         , post( {this, cfg::publish_name, _sym} )
         , vest({this, cfg::vesting_name, _sym})
@@ -24,7 +24,7 @@ public:
     {
         create_accounts({N(sania), N(pasha), N(tania), N(vania), N(issuer), _code,
                         cfg::publish_name, cfg::token_name, cfg::emission_name, cfg::vesting_name, cfg::social_name });
-        step(2);
+        produce_blocks(2);
 
         install_contract(_code, contracts::referral_wasm(), contracts::referral_abi());
         install_contract(cfg::token_name, contracts::token_wasm(), contracts::token_abi());
@@ -45,7 +45,7 @@ public:
     void init_params_posts() {
         BOOST_CHECK_EQUAL(success(), token.create(cfg::emission_name, token.make_asset(1)));
         BOOST_CHECK_EQUAL(success(), token.open(cfg::publish_name, _sym, cfg::publish_name));
-        step();
+        produce_blocks();
 
         funcparams fn{"0", 1};
         BOOST_CHECK_EQUAL(success(), post.set_rules(fn ,fn ,fn , 0, 0));
@@ -53,12 +53,12 @@ public:
         BOOST_CHECK_EQUAL(success(), post.set_limit("comment"));
         BOOST_CHECK_EQUAL(success(), post.set_limit("vote"));
         BOOST_CHECK_EQUAL(success(), post.set_limit("post bandwidth"));
-        step();
+        produce_blocks();
 
         for (auto& u : _users) {
             BOOST_CHECK_EQUAL(success(), vest.open(u, _sym, u));
         }
-        step();
+        produce_blocks();
 
         auto vote_changes = post.get_str_vote_changes(post.max_vote_changes);
         auto cashout_window = post.get_str_cashout_window(post.window, post.upvote_lockout);
@@ -70,7 +70,7 @@ public:
         auto params = "[" + vote_changes + "," + cashout_window + "," + beneficiaries + "," + comment_depth +
                 "," + social_acc + "," + referral_acc + "]";
         BOOST_CHECK_EQUAL(success(), post.set_params(params));
-        step();
+        produce_blocks();
    }
 
 protected:
@@ -115,13 +115,13 @@ BOOST_AUTO_TEST_SUITE(golos_referral_tests)
  BOOST_FIXTURE_TEST_CASE(set_params, golos_referral_tester) try {
      BOOST_TEST_MESSAGE("Test vesting parameters");
      BOOST_TEST_MESSAGE("--- prepare");
-     step();
+     produce_blocks();
 
      BOOST_TEST_MESSAGE("--- check that global params not exist");
      BOOST_TEST_CHECK(referral.get_params().is_null());
 
      init_params();
-     step();
+     produce_blocks();
 
      auto obj_params = referral.get_params();
      BOOST_TEST_MESSAGE("--- " + fc::json::to_string(obj_params));
@@ -145,26 +145,26 @@ BOOST_AUTO_TEST_SUITE(golos_referral_tests)
      BOOST_TEST_MESSAGE("Test creating referral");
 
      init_params();
-     step();
-
-     update_cur_time();
+     produce_blocks();
 
      auto time_now = static_cast<uint32_t>(time(nullptr));
+     const auto current_time = control->head_block_time().sec_since_epoch();
+
      BOOST_CHECK_EQUAL(err.referral_equal, referral.create_referral(N(issuer), N(issuer), time_now, 0, token.make_asset(10)));
 
      BOOST_CHECK_EQUAL(err.min_expire, referral.create_referral(N(issuer), N(sania), time_now, 0, token.make_asset(10)));
      BOOST_CHECK_EQUAL(err.max_expire, referral.create_referral(N(issuer), N(sania), time_now + 5 /*5 sec*/, 999999999999, token.make_asset(10)));
 
      auto expire = 8; // sec
-     BOOST_CHECK_EQUAL(err.min_breakout, referral.create_referral(N(issuer), N(sania), 500, cur_time().to_seconds() + expire, token.make_asset(0)));
-     BOOST_CHECK_EQUAL(err.max_breakout, referral.create_referral(N(issuer), N(sania), 500, cur_time().to_seconds() + expire, token.make_asset(110)));
+     BOOST_CHECK_EQUAL(err.min_breakout, referral.create_referral(N(issuer), N(sania), 500, current_time + expire, token.make_asset(0)));
+     BOOST_CHECK_EQUAL(err.max_breakout, referral.create_referral(N(issuer), N(sania), 500, current_time + expire, token.make_asset(110)));
 
-     BOOST_CHECK_EQUAL(err.persent, referral.create_referral(N(issuer), N(sania), 9500, cur_time().to_seconds() + expire, token.make_asset(50)));
+     BOOST_CHECK_EQUAL(err.persent, referral.create_referral(N(issuer), N(sania), 9500, current_time + expire, token.make_asset(50)));
 
-     BOOST_CHECK_EQUAL(success(), referral.create_referral(N(issuer), N(sania), 500, cur_time().to_seconds() + expire, token.make_asset(50)));
+     BOOST_CHECK_EQUAL(success(), referral.create_referral(N(issuer), N(sania), 500, current_time + expire, token.make_asset(50)));
 
-     step();
-     BOOST_CHECK_EQUAL(err.referral_exist, referral.create_referral(N(issuer), N(sania), 500, cur_time().to_seconds() + expire, token.make_asset(50)));
+     produce_blocks();
+     BOOST_CHECK_EQUAL(err.referral_exist, referral.create_referral(N(issuer), N(sania), 500, current_time + expire, token.make_asset(50)));
 
  } FC_LOG_AND_RETHROW()
 
@@ -172,19 +172,19 @@ BOOST_FIXTURE_TEST_CASE(transfer_tests, golos_referral_tester) try {
     BOOST_TEST_MESSAGE("Transfer testing");
     
     init_params(); 
-    auto expire = 8;
-    auto breakout = 100;
+    const auto expire = 8;
+    const auto breakout = 100;
 
-    update_cur_time();
+    const auto current_time = control->head_block_time().sec_since_epoch();
 
     BOOST_TEST_MESSAGE("--- creating referral 'gls.referral'");
     BOOST_CHECK(!referral.get_referral(cfg::referral_name));
-    BOOST_CHECK_EQUAL(success(), referral.create_referral(N(issuer), cfg::referral_name, 500, cur_time().to_seconds() + expire, token.make_asset(breakout)));
+    BOOST_CHECK_EQUAL(success(), referral.create_referral(N(issuer), cfg::referral_name, 500, current_time + expire, token.make_asset(breakout)));
     BOOST_CHECK_EQUAL(referral.get_referral(cfg::referral_name)["referral"].as<name>(), cfg::referral_name);
 
     BOOST_TEST_MESSAGE("--- creating referral 'vania'");
     BOOST_CHECK(!referral.get_referral(N(vania)));
-    BOOST_CHECK_EQUAL(success(), referral.create_referral(N(issuer), N(vania), 500, cur_time().to_seconds() + expire, token.make_asset(breakout)));
+    BOOST_CHECK_EQUAL(success(), referral.create_referral(N(issuer), N(vania), 500, current_time + expire, token.make_asset(breakout)));
     BOOST_CHECK_EQUAL(referral.get_referral(N(vania))["referral"].as<name>(), N(vania));
 
     BOOST_TEST_MESSAGE("--- issue tokens for users");
@@ -209,23 +209,21 @@ BOOST_FIXTURE_TEST_CASE(close_referral_tests, golos_referral_tester) try {
 
     init_params();
 
-    auto expire = 8; // sec
-
-    update_cur_time();
-
-    BOOST_CHECK_EQUAL(success(), referral.create_referral(N(issuer), N(sania), 500, cur_time().to_seconds() + expire, token.make_asset(50)));
-    BOOST_CHECK_EQUAL(success(), referral.close_old_referrals(cur_time().to_seconds()));
-    step();
+    const auto expire = 8; // sec
+    const auto current_time = control->head_block_time().sec_since_epoch();
+    BOOST_CHECK_EQUAL(success(), referral.create_referral(N(issuer), N(sania), 500, current_time + expire, token.make_asset(50)));
+    BOOST_CHECK_EQUAL(success(), referral.close_old_referrals(current_time));
+    produce_blocks();
 
     auto v_referrals = referral.get_referrals();
     BOOST_TEST_CHECK(v_referrals.size() == 1);
     BOOST_TEST_CHECK(v_referrals.at(0)["referral"].as<name>() == N(sania));
     BOOST_TEST_CHECK(v_referrals.at(0)["referrer"].as<name>() == N(issuer));
 
-    step( golos::seconds_to_blocks(delay_clear_old_ref) );
+    produce_blocks( golos::seconds_to_blocks(delay_clear_old_ref) );
     v_referrals = referral.get_referrals();
     BOOST_TEST_CHECK(v_referrals.size() == 1);
-    step();
+    produce_blocks();
 
     v_referrals = referral.get_referrals();
     BOOST_TEST_CHECK(v_referrals.size() == 0);
@@ -236,16 +234,17 @@ BOOST_FIXTURE_TEST_CASE(create_referral_message_tests, golos_referral_tester) tr
     init_params();
     init_params_posts();
 
-    auto expire = 8; // sec
-    auto ref_block_num = control->head_block_header().block_num();
-    BOOST_CHECK_EQUAL(success(), referral.create_referral(N(issuer), N(sania), 500, cur_time().to_seconds() + expire, token.make_asset(50)));
+    const auto expire = 8; // sec
+    const auto ref_block_num = control->head_block_header().block_num();
+    const auto current_time = control->head_block_time().sec_since_epoch();
+    BOOST_CHECK_EQUAL(success(), referral.create_referral(N(issuer), N(sania), 500, current_time + expire, token.make_asset(50)));
     BOOST_CHECK_EQUAL(success(), post.create_msg({N(sania), "permlink", ref_block_num}));
 
     auto post_sania = post.get_message({N(sania), "permlink", ref_block_num});
     BOOST_CHECK_EQUAL (post_sania["beneficiaries"].size(), 1);
     BOOST_CHECK_EQUAL( post_sania["beneficiaries"][uint8_t(0)].as<beneficiary>().account, N(issuer) );
 
-    BOOST_CHECK_EQUAL(success(), referral.create_referral(N(issuer), N(pasha), 5000, cur_time().to_seconds() + expire, token.make_asset(50)));
+    BOOST_CHECK_EQUAL(success(), referral.create_referral(N(issuer), N(pasha), 5000, current_time + expire, token.make_asset(50)));
     BOOST_CHECK_EQUAL(err.limit_percents, post.create_msg({N(pasha), "permlink", ref_block_num}, {N(), "parentprmlnk", 0}, { beneficiary{N(tania), 7000} }));
     BOOST_CHECK_EQUAL(err.referrer_benif, post.create_msg({N(pasha), "permlink", ref_block_num}, {N(), "parentprmlnk", 0}, { beneficiary{N(issuer), 2000} }));
     BOOST_CHECK_EQUAL(success(), post.create_msg({N(pasha), "permlink", ref_block_num}, {N(), "parentprmlnk", 0}, { beneficiary{N(tania), 2000} }));
