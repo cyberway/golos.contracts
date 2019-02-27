@@ -46,11 +46,11 @@ public:
         , vest({this, cfg::vesting_name, _sym})
         , charge({this, cfg::charge_name, _sym})
         , token({this, cfg::token_name, _sym})
-        , _users{_code, N(jackiechan), N(brucelee), N(chucknorris)} {
+        , _users{_code, N(jackiechan), N(brucelee), N(chucknorris), N(dan.larimer)} {
 
         produce_block();
         create_accounts(_users);
-        create_accounts({cfg::charge_name, cfg::token_name, cfg::vesting_name, cfg::emission_name, N(dan.larimer)});
+        create_accounts({cfg::charge_name, cfg::token_name, cfg::vesting_name, cfg::emission_name, cfg::control_name, N(notify.acc)});
         produce_block();
 
         install_contract(_code, contracts::posting_wasm(), contracts::posting_abi());
@@ -60,7 +60,8 @@ public:
     }
 
     void init() {
-        BOOST_CHECK_EQUAL(success(), token.create(cfg::emission_name, asset(1, _sym)));
+//        BOOST_CHECK_EQUAL(success(), token.create(cfg::vesting_name, asset(1e5, _sym)));
+        prepare_balances();
         BOOST_CHECK_EQUAL(success(), token.open(_code, _sym, _code));
         funcparams fn{"0", 1};
         BOOST_CHECK_EQUAL(success(), post.set_rules(fn ,fn ,fn , 0, 0));
@@ -75,6 +76,14 @@ public:
         for (auto& u : _users) {
             BOOST_CHECK_EQUAL(success(), vest.open(u, _sym, u));
         }
+    }
+
+    void prepare_balances(int supply = 1e5, int issue1 = 500, int issue2 = 500, int buy1 = 100, int buy2 = 100) {
+        BOOST_CHECK_EQUAL(success(), token.create(cfg::emission_name, token.make_asset(supply), {cfg::charge_name, N(golos.pub)}));
+        produce_block();
+
+        BOOST_CHECK_EQUAL(success(), vest.create_vesting(cfg::emission_name));
+        produce_block();
     }
 
     void check_equal_post(const variant& a, const variant& b) {
@@ -510,6 +519,17 @@ BOOST_FIXTURE_TEST_CASE(upvote_near_close, golos_publication_tester) try {
 
     auto permlink = "permlink";
     auto ref_block_num = control->head_block_header().block_num();
+
+    BOOST_CHECK_EQUAL(success(), token.issue(cfg::emission_name, N(brucelee), token.make_asset(500), "issue tokens brucelee"));
+    BOOST_CHECK_EQUAL(success(), token.issue(cfg::emission_name, N(jackiechan), token.make_asset(500), "issue tokens jackiechan"));
+    BOOST_CHECK_EQUAL(success(), token.issue(cfg::emission_name, N(chucknorris), token.make_asset(500), "issue tokens chucknorris"));
+    produce_block();
+
+    BOOST_CHECK_EQUAL(success(), token.transfer(N(brucelee), cfg::vesting_name, token.make_asset(100), "buy vesting"));
+    BOOST_CHECK_EQUAL(success(), token.transfer(N(jackiechan), cfg::vesting_name, token.make_asset(100), "buy vesting"));
+    BOOST_CHECK_EQUAL(success(), token.transfer(N(chucknorris), cfg::vesting_name, token.make_asset(100), "buy vesting"));
+    produce_block();
+
     auto vote_brucelee = [&](auto weight){ return post.upvote(N(brucelee), {N(brucelee), permlink, ref_block_num}, weight); };
     auto vote_jackie = [&](auto weight){ return post.upvote(N(jackiechan), {N(brucelee), permlink, ref_block_num}, weight); };
     auto vote_chucknorris = [&](auto weight){ return post.upvote(N(chucknorris), {N(brucelee), permlink, ref_block_num}, weight); };
@@ -534,8 +554,8 @@ BOOST_FIXTURE_TEST_CASE(upvote_near_close, golos_publication_tester) try {
     BOOST_TEST_MESSAGE("--- fail while upvote lockout");
 
     BOOST_CHECK_EQUAL(err.upvote_near_close, vote_jackie(cfg::_100percent));          // TODO Fix broken test GolosChain/golos-smart#410
-//    produce_blocks(seconds_to_blocks(post.upvote_lockout) - 2);
-//    BOOST_CHECK_EQUAL(err.upvote_near_close, vote_chucknorris(cfg::_100percent));          // TODO Fix broken test GolosChain/golos-smart#410
+    produce_blocks(seconds_to_blocks(post.upvote_lockout) - 1);
+    BOOST_CHECK_EQUAL(err.upvote_near_close, vote_chucknorris(cfg::_100percent));          // TODO Fix broken test GolosChain/golos-smart#410
 } FC_LOG_AND_RETHROW()
 
 BOOST_AUTO_TEST_SUITE_END()
