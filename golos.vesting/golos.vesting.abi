@@ -146,7 +146,7 @@
         },
         {
           "name": "type",
-          "type": "asset"
+          "type": "symbol"
         }
       ]
     },
@@ -177,11 +177,11 @@
       "base": "",
       "fields": [
         {
-          "name": "sender",
+          "name": "from",
           "type": "name"
         },
         {
-          "name": "recipient",
+          "name": "to",
           "type": "name"
         },
         {
@@ -235,12 +235,7 @@
     {
       "name": "hash",
       "base": "",
-      "fields": [
-        {
-          "name": "hash",
-          "type": "uint64"
-        }
-      ]
+      "fields": []
     },
     {
        "name": "open",
@@ -260,7 +255,7 @@
        ]
     },
     {
-       "name": "createvest",
+       "name": "create",
        "base": "",
        "fields": [
           {"name":"symbol", "type":"symbol"},
@@ -319,7 +314,6 @@
           {"name": "voter", "type": "name"},
           {"name": "reward", "type": "asset"},
           {"name": "delegator", "type": "name"},
-          {"name": "interest_rate", "type": "uint16"},
           {"name": "payout_strategy", "type": "uint8"}
        ]
     }
@@ -338,10 +332,6 @@
       "type": "setparams"
     },
     {
-      "name": "buyvg",
-      "type": "transfer_vesting"
-    },
-    {
       "name": "retire",
       "type": "retire"
     },
@@ -350,19 +340,19 @@
       "type": "unlocklimit"
     },
     {
-      "name": "convertvg",
+      "name": "convert",
       "type": "transfer_vesting"
     },
     {
-      "name": "cancelvg",
+      "name": "cancelconv",
       "type": "cancel_convert_of_tokens"
     },
     {
-      "name": "delegatevg",
+      "name": "delegate",
       "type": "delegate_vesting"
     },
     {
-      "name": "undelegatevg",
+      "name": "undelegate",
       "type": "transfer_vesting"
     },
     {
@@ -378,8 +368,8 @@
       "type": "hash"
     },
     {
-      "name": "createvest",
-      "type": "createvest"
+      "name": "create",
+      "type": "create"
     },
     {
       "name": "open",
