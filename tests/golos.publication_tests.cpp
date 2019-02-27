@@ -46,11 +46,11 @@ public:
         , vest({this, cfg::vesting_name, _sym})
         , charge({this, cfg::charge_name, _sym})
         , token({this, cfg::token_name, _sym})
-        , _users{_code, N(jackiechan), N(brucelee), N(chucknorris), N(dan.larimer)} {
+        , _users{_code, N(jackiechan), N(brucelee), N(chucknorris)} {
 
         produce_block();
         create_accounts(_users);
-        create_accounts({cfg::charge_name, cfg::token_name, cfg::vesting_name, cfg::emission_name, cfg::control_name, N(notify.acc)});
+        create_accounts({cfg::charge_name, cfg::token_name, cfg::vesting_name, cfg::emission_name, cfg::control_name, N(notify.acc), N(dan.larimer)});
         produce_block();
 
         install_contract(_code, contracts::posting_wasm(), contracts::posting_abi());
