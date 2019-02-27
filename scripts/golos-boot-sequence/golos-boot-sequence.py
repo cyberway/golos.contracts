@@ -231,11 +231,12 @@ def createGolosAccounts():
     updateAuth('gls.vesting', 'active', 'owner', [args.public_key], ['gls.vesting@cyber.code'])
     updateAuth('gls.social',  'active', 'owner', [args.public_key], ['gls.publish@cyber.code'])
     updateAuth('gls.emit',    'active', 'owner', [args.public_key], ['gls.emit@cyber.code'])
+    updateAuth('gls.referral','active', 'owner', [args.public_key], ['gls.referral@cyber.code'])
 
     updateAuth('cyber',       'createuser', 'active', ['GLS5a2eDuRETEg7uy8eHbiCqGZM3wnh2pLjiXrFduLWBKVZKCkB62'], [])
     linkAuth('cyber', 'cyber', 'newaccount', 'createuser')
     linkAuth('cyber', 'gls.vesting', 'open', 'createuser')
-    linkAuth('cyber', 'gls.referral', 'addreferral', 'createuser')
+    linkAuth('gls.referral', 'gls.referral', 'addreferral', 'gls.referral')
 
 def stepInstallContracts():
     for acc in golosAccounts:
