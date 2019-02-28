@@ -128,7 +128,6 @@ void vesting::convert(name from, name to, asset quantity) {
     }
 }
 
-// TODO: pass symbol name instead of asset
 void vesting::cancelconv(name sender, symbol type) {
     require_auth(sender);
 

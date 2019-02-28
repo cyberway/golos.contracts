@@ -233,7 +233,7 @@
       ]
     },
     {
-      "name": "hash",
+      "name": "timeout",
       "base": "",
       "fields": []
     },
@@ -357,15 +357,15 @@
     },
     {
       "name": "timeoutrdel",
-      "type": "hash"
+      "type": "timeout"
     },
     {
       "name": "timeoutconv",
-      "type": "hash"
+      "type": "timeout"
     },
     {
       "name": "timeout",
-      "type": "hash"
+      "type": "timeout"
     },
     {
       "name": "create",
