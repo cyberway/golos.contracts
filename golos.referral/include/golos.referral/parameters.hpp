@@ -21,9 +21,9 @@ struct breakout_parametrs : parameter {
 
    template<typename T>
    bool compare(const T& other) const {
-       return (this->max_breakout.symbol != other.max_breakout.symbol) &&
-              (this->min_breakout.symbol != other.min_breakout.symbol) &&
-              (this->min_breakout.amount != other.min_breakout.amount) &&
+       return (this->max_breakout.symbol != other.max_breakout.symbol) ||
+              (this->min_breakout.symbol != other.min_breakout.symbol) ||
+              (this->min_breakout.amount != other.min_breakout.amount) ||
               (this->min_breakout.amount != other.min_breakout.amount);
    };
 };
