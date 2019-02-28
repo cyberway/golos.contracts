@@ -50,7 +50,7 @@ public:
 
         produce_block();
         create_accounts(_users);
-        create_accounts({cfg::charge_name, cfg::token_name, cfg::vesting_name, cfg::emission_name, cfg::control_name, N(notify.acc), N(dan.larimer)});
+        create_accounts({cfg::charge_name, cfg::token_name, cfg::vesting_name, cfg::emission_name, cfg::control_name, N(dan.larimer)});
         produce_block();
 
         install_contract(_code, contracts::posting_wasm(), contracts::posting_abi());
@@ -60,7 +60,6 @@ public:
     }
 
     void init() {
-//        BOOST_CHECK_EQUAL(success(), token.create(cfg::vesting_name, asset(1e5, _sym)));
         prepare_balances();
         BOOST_CHECK_EQUAL(success(), token.open(_code, _sym, _code));
         funcparams fn{"0", 1};
@@ -78,8 +77,8 @@ public:
         }
     }
 
-    void prepare_balances(int supply = 1e5, int issue1 = 500, int issue2 = 500, int buy1 = 100, int buy2 = 100) {
-        BOOST_CHECK_EQUAL(success(), token.create(cfg::emission_name, token.make_asset(supply), {cfg::charge_name, N(golos.pub)}));
+    void prepare_balances() {
+        BOOST_CHECK_EQUAL(success(), token.create(cfg::emission_name, token.make_asset(1e5), {_code}));
         produce_block();
 
         BOOST_CHECK_EQUAL(success(), vest.create_vesting(cfg::emission_name));
