@@ -310,5 +310,23 @@ BOOST_FIXTURE_TEST_CASE(golos_accountmeta_test, golos_social_tester) try {
     produce_block();
 } FC_LOG_AND_RETHROW()
 
+BOOST_FIXTURE_TEST_CASE(delete_reputation, golos_social_tester) try {
+    BOOST_TEST_MESSAGE("Delete reputation test");
+    init(1000000, 10);
+
+    BOOST_TEST_MESSAGE("--- checking that reputation was added");
+    auto ref_block_num_erin = control->head_block_header().block_num();
+    BOOST_CHECK_EQUAL(success(), post.create_msg({"erin"_n, "permlink", ref_block_num_erin}));
+    BOOST_CHECK_EQUAL(success(), post.upvote("dave"_n, {"erin"_n, "permlink", ref_block_num_erin}, 1000));
+    produce_block();
+    auto erin_rep = social.get_reputation("erin"_n);
+    BOOST_CHECK(!erin_rep.is_null());
+    BOOST_CHECK_GT(erin_rep["reputation"].as<int64_t>(), 0);
+
+    BOOST_TEST_MESSAGE("--- checking that reputation was deleted");
+    BOOST_CHECK_EQUAL(success(), social.deletereput("erin"_n));
+    erin_rep = social.get_reputation("erin"_n);
+    BOOST_CHECK(erin_rep.is_null());
+} FC_LOG_AND_RETHROW()
 
 BOOST_AUTO_TEST_SUITE_END()

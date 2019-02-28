@@ -246,7 +246,7 @@
     ]
   },
   {
-    "name": "deletemeta",
+    "name": "delete",
     "base": "",
     "fields": [
       {
@@ -287,8 +287,13 @@
   },
   {
     "name": "deletemeta",
-    "type": "deletemeta"
+    "type": "delete"
+  },
+  {
+    "name": "deletereput",
+    "type": "delete"
   }
+
   ],
   "events": [
      {"name": "changereput","type": "changereput_event"}

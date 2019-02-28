@@ -5,7 +5,7 @@ namespace golos {
 
 using namespace eosio;
 
-EOSIO_DISPATCH(social, (pin)(unpin)(block)(unblock)(createreput)(changereput)(updatemeta)(deletemeta))
+EOSIO_DISPATCH(social, (pin)(unpin)(block)(unblock)(createreput)(changereput)(updatemeta)(deletemeta)(deletereput))
 
 void social::pin(name pinner, name pinning) {
     require_auth(pinner);
@@ -140,6 +140,13 @@ void social::updatemeta(name account, accountmeta meta) {
 
 void social::deletemeta(name account) {
     require_auth(account);
+}
+
+void social::deletereput(name account) {
+    require_auth(account);
+
+    tables::reputation_singleton reputation_tbl(_self, account.value);
+    reputation_tbl.remove();
 }
 
 
