@@ -218,6 +218,8 @@ BOOST_FIXTURE_TEST_CASE(golos_reputation_test, golos_social_tester) try {
     new_permlink();
     auto ref_block_num_erin = control->head_block_header().block_num();
     BOOST_CHECK_EQUAL(success(), post.create_msg({"erin"_n, permlink, ref_block_num_erin}));
+    BOOST_CHECK_EQUAL(success(), social.create_reput({"erin"_n}));
+    BOOST_CHECK_EQUAL(success(), social.create_reput({"dave"_n}));
     BOOST_CHECK_EQUAL(success(), post.upvote("dave"_n, {"erin"_n, permlink, ref_block_num_erin}, 1000));
     produce_block();
 

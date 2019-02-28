@@ -105,8 +105,8 @@ private:
         return golos::upsert_tbl<T>(_self, scope, payer, key, std::forward<F&&>(get_update_fn), allow_insert);
     }
     template<typename T, typename F>
-    bool upsert_tbl(uint64_t key, F&& get_update_fn, bool allow_insert = true) {
-        return upsert_tbl<T>(_self.value, _self, key, std::forward<F&&>(get_update_fn), allow_insert);
+    bool upsert_tbl(name payer, F&& get_update_fn, bool allow_insert = true) {
+        return upsert_tbl<T>(_self.value, payer, payer.value, std::forward<F&&>(get_update_fn), allow_insert);
     }
 
     void change_voter_vests(name voter, share_type diff);
