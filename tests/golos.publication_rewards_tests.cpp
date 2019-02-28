@@ -446,7 +446,7 @@ public:
                 parent_message_id.author ? limits::COMM : limits::POST,
                 _state.pools.back().charges[message_id.author],
                 _state.balances[message_id.author].vestamount,
-                control->head_block_time().time_since_epoch().count(),
+                seconds(current_time).count(),
                 vestpayment);
             BOOST_REQUIRE_MESSAGE(((ret == success()) == (reward_weight >= 0.0)), "wrong ret_str: " + ret_str
                 + "; vesting = " + std::to_string(_state.balances[message_id.author].vestamount)
@@ -484,7 +484,7 @@ public:
         if ((ret == success()) || (ret_str.find("forum::apply_limits:") != string::npos)) {
             auto apply_ret = _state.pools.back().lims.apply(
                 limits::VOTE, _state.pools.back().charges[voter],
-                _state.balances[voter].vestamount, control->head_block_time().time_since_epoch().count(), get_prop(std::abs(weight)));
+                _state.balances[voter].vestamount, seconds(current_time).count(), get_prop(std::abs(weight)));
             BOOST_REQUIRE_MESSAGE(((ret == success()) == (apply_ret >= 0.0)), "wrong ret_str: " + ret_str
                 + "; vesting = " + std::to_string(_state.balances[voter].vestamount)
                 + "; apply_ret = " + std::to_string(apply_ret));
@@ -591,7 +591,7 @@ BOOST_FIXTURE_TEST_CASE(basic_tests, reward_calcs_tester) try {
     check();
 
     BOOST_TEST_MESSAGE("--- waiting");
-    produce_blocks(33);   // TODO: remove magic number
+    produce_blocks(golos::seconds_to_blocks(99));   // TODO: remove magic number
     check();
     BOOST_TEST_MESSAGE("--- create_message: why");
     auto ref_block_num_why = control->head_block_header().block_num();
@@ -604,7 +604,7 @@ BOOST_FIXTURE_TEST_CASE(basic_tests, reward_calcs_tester) try {
     BOOST_CHECK_EQUAL(success(), addvote(N(why), {N(why), "why-not", ref_block_num_why}, 10000));
     produce_blocks();     // push transactions before run() call
     check();
-    produce_blocks(33);   // TODO: remove magic number
+    produce_blocks(golos::seconds_to_blocks(99));   // TODO: remove magic number
     BOOST_TEST_MESSAGE("--- rewards");
     check();
     show();
@@ -632,7 +632,7 @@ BOOST_FIXTURE_TEST_CASE(timepenalty_test, reward_calcs_tester) try {
         check();
         produce_blocks();    // TODO: remove magic number
     }
-    produce_blocks(30);       // TODO: remove magic number
+    produce_blocks(golos::seconds_to_blocks(120));       // TODO: remove magic number
     BOOST_TEST_MESSAGE("--- rewards");
     check();
     show();
@@ -685,13 +685,13 @@ BOOST_FIXTURE_TEST_CASE(limits_test, reward_calcs_tester) try {
     produce_blocks();     // push transactions before run() call
 
     BOOST_TEST_MESSAGE("--- waiting");
-    produce_blocks(50);  // TODO: remove magic number
+    produce_blocks(golos::seconds_to_blocks(150));  // TODO: remove magic number
     check();
-    produce_blocks(50);  // TODO: remove magic number
+    produce_blocks(golos::seconds_to_blocks(150));  // TODO: remove magic number
     check();
     auto ref_block_num_bob1 = control->head_block_header().block_num();
     BOOST_CHECK_EQUAL(err.limit_no_power, create_message({N(bob), "limit-no-power", ref_block_num_bob1}));
-    produce_blocks(15);   // TODO: remove magic number
+    produce_blocks(golos::seconds_to_blocks(45));   // TODO: remove magic number
     auto ref_block_num_bob2 = control->head_block_header().block_num();
     BOOST_CHECK_EQUAL(success(), create_message({N(bob), "test", ref_block_num_bob2}));
     check();
@@ -773,7 +773,7 @@ BOOST_FIXTURE_TEST_CASE(golos_curation_test, reward_calcs_tester) try {
         BOOST_CHECK_EQUAL(success(), addvote(_users[i], {_users[0], "permlink", ref_block_num}, 10000));
         check();
     }
-    produce_blocks(57);
+    produce_blocks(golos::seconds_to_blocks(150));
     check();
 } FC_LOG_AND_RETHROW()
 
