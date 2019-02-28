@@ -235,8 +235,6 @@ struct set_params_visitor {
         }
         return changed;
     }
-    
-};
 
 // TODO: combine both visitors to reduce boilerplate required to write in contract
 /**
