@@ -51,6 +51,11 @@ struct reward_pools: parameter {
         }
         eosio_assert(have0, "1 of pools must have 0% value (remainig to 100%)");
     }
+
+    template<typename T>
+    bool compare(const T& other) const {
+        return *this != other;
+    };
 };
 using reward_pools_param = param_wrapper<reward_pools,1>;
 
@@ -63,6 +68,11 @@ struct inflation_rate: parameter {
         eosio_assert(start >= stop, "inflation_rate: start can not be less than stop");
         eosio_assert(start != stop || narrowing == 0, "inflation_rate: if start == stop then narrowing must be 0");
     }
+
+    template<typename T>
+    bool compare(const T& other) const {
+        return *this != other;
+    };
 };
 using infrate_params = param_wrapper<inflation_rate,3>;
 

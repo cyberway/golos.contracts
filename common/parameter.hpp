@@ -226,7 +226,6 @@ struct set_params_visitor {
     bool set_param(const P& value, F field, bool is_asset = false) {
         auto obj = state.*field;
         bool changed = is_asset ? obj.compare(value) : (obj != value);
-
         if (no_same) {
             eosio_assert(changed, "can't set same parameter value");   // TODO: add parameter name to assert message
         }

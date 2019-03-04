@@ -11,11 +11,7 @@ struct referral_params_setter: set_params_visitor<referral_state> {
     using set_params_visitor::set_params_visitor; // enable constructor
 
    bool operator()(const breakout_param& p) {
-<<<<<<< HEAD
        return set_param(p, &referral_state::breakout_params, true);
-=======
-       return set_asset_param(p, &referral_state::breakout_params);
->>>>>>> add set_asset_param
    }
 
     bool operator()(const expire_param& p) {

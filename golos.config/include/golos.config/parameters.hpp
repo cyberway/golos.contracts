@@ -15,6 +15,11 @@ struct base_threshold: parameter {
         // TODO: must check value realted to max_witnesses
         eosio_assert(value > 0, (std::string(*N) + " can't be 0").c_str());
     }
+
+    template<typename T>
+    bool compare(const T& other) const {
+        return *this != other;
+    };
 };
 
 const std::string _name_pools = "emit_pools_threshold";     // just PoC; TODO: better way
