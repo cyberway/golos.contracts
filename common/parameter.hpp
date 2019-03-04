@@ -222,25 +222,13 @@ struct set_params_visitor {
 
     template<typename P, typename F>
     bool set_param(const P& value, F field) {
-        bool changed = state.*field != value;
-        if (no_same) {
-            eosio_assert(changed, "can't set same parameter value");   // TODO: add parameter name to assert message
-        }
-        if (changed) {
-            state.*field = value;
-        }
-        return changed;
-    }
-
-    template<typename P, typename F>
-    bool set_asset_param(const P& value, F field) {
         auto obj = state.*field;
         bool changed = obj.compare(value);
+//        bool changed = state.*field != value;
         if (no_same) {
             eosio_assert(changed, "can't set same parameter value");   // TODO: add parameter name to assert message
         }
         if (changed) {
-
             state.*field = value;
         }
         return changed;

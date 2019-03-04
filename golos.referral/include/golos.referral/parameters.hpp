@@ -21,9 +21,9 @@ struct breakout_parametrs : parameter {
 
    template<typename T>
    bool compare(const T& other) const {
-       return (this->max_breakout.symbol != other.max_breakout.symbol) &&
-              (this->min_breakout.symbol != other.min_breakout.symbol) &&
-              (this->min_breakout.amount != other.min_breakout.amount) &&
+       return (this->max_breakout.symbol != other.max_breakout.symbol) ||
+              (this->min_breakout.symbol != other.min_breakout.symbol) ||
+              (this->min_breakout.amount != other.min_breakout.amount) ||
               (this->min_breakout.amount != other.min_breakout.amount);
    };
 };
@@ -33,6 +33,11 @@ struct expire_parametrs : parameter {
    uint64_t max_expire;
 
    void validate() const override {}
+
+   template<typename T>
+   bool compare(const T& other) const {
+       return *this != other;
+   };
 };
 using expire_param = param_wrapper<expire_parametrs,1>;
 
@@ -42,6 +47,11 @@ struct percent_parametrs : parameter {
    void validate() const override {
         eosio_assert(max_percent <= 10000, "max_percent > 100.00%");
    }
+
+   template<typename T>
+   bool compare(const T& other) const {
+       return *this != other;
+   };
 };
 using percent_param = param_wrapper<percent_parametrs,1>;
 
@@ -49,6 +59,11 @@ struct delay_parametrs : parameter {
    uint32_t delay_clear_old_ref;
 
    void validate() const override {}
+
+   template<typename T>
+   bool compare(const T& other) const {
+       return *this != other;
+   };
 };
 using delay_param = param_wrapper<delay_parametrs,1>;
 
