@@ -190,6 +190,16 @@
     ]
   },
   {
+      "name": "createreput",
+      "base": "",
+      "fields": [
+        {
+          "name": "account",
+          "type": "name"
+        }
+      ]
+  },
+  {
     "name": "changereput",
     "base": "",
     "fields": [
@@ -262,6 +272,10 @@
   {
     "name": "unblock",
     "type": "block"
+  },
+  {
+      "name": "createreput",
+      "type": "createreput"
   },
   {
     "name": "changereput",

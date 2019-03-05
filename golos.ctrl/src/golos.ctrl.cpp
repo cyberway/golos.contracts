@@ -132,7 +132,7 @@ void control::on_transfer(name from, name to, asset quantity, string memo) {
 void control::attachacc(name user) {
     assert_started();
     require_auth(_self);
-    upsert_tbl<bw_user_tbl>(user.value, [&](bool exists) {
+    upsert_tbl<bw_user_tbl>(user, [&](bool exists) {
         return [&,exists](bw_user& u) {
             eosio_assert(!exists || !u.attached, "already attached");   //TODO: maybe it's better to check this earlier (not inside modify())
             u.name = user;
@@ -144,7 +144,7 @@ void control::attachacc(name user) {
 void control::detachacc(name user) {
     assert_started();
     require_auth(_self);
-    bool exist = upsert_tbl<bw_user_tbl>(user.value, [&](bool) {
+    bool exist = upsert_tbl<bw_user_tbl>(user, [&](bool) {
         return [&](bw_user& u) {
             eosio_assert(u.attached, "user already detached");
             u.attached = false;         // TODO: maybe delete?
@@ -159,7 +159,7 @@ void control::regwitness(name witness, eosio::public_key key, string url) {
     eosio_assert(key != eosio::public_key(), "public key should not be the default value");
     require_auth(witness);
 
-    upsert_tbl<witness_tbl>(witness.value, [&](bool exists) {
+    upsert_tbl<witness_tbl>(witness, [&](bool exists) {
         return [&,exists](witness_info& w) {
             eosio_assert(!exists || w.key != key || w.url != url, "already updated in the same way");
             w.name = witness;
@@ -178,7 +178,7 @@ void control::unregwitness(name witness) {
     require_auth(witness);
 
     // TODO: simplify upsert to allow passing just inner lambda
-    bool exists = upsert_tbl<witness_tbl>(witness.value, [&](bool) {
+    bool exists = upsert_tbl<witness_tbl>(witness, [&](bool) {
         return [&](witness_info& w) {
             eosio_assert(w.active, "witness already unregistered");
             w.active = false;

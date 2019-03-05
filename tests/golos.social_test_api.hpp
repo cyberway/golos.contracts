@@ -53,6 +53,12 @@ struct golos_social_api: base_contract_api {
         );
     }
 
+    action_result create_reput(account_name account) {
+        return push("createreput"_n, account, args()
+            ("account", account)
+        );
+    }
+
     //// social tables
     std::vector<variant> get_pinblocks(account_name pinner_blocker) {
         return _tester->get_all_chaindb_rows(_code, pinner_blocker, N(pinblock), false);

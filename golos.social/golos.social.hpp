@@ -15,6 +15,7 @@ public:
     void block(name blocker, name blocking);
     void unblock(name blocker, name blocking);
 
+    void createreput(name account);
     void changereput(name voter, name author, int64_t rshares);
 
     void updatemeta(name account, accountmeta meta);

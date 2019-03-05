@@ -475,7 +475,7 @@ void vesting::add_balance(name owner, asset value, name ram_payer) {
             // TODO Add notify about vesting changed
         });
     } else {
-        account.modify(to, ram_payer, [&](auto& a) {
+        account.modify(to, name(), [&](auto& a) {
             a.vesting += value;
             // TODO Add notify about vesting changed
         });
