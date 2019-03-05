@@ -317,6 +317,7 @@ def createWitnessAccounts():
     for i in range(firstWitness, firstWitness + numWitness):
         a = accounts[i]
         createAccount('cyber', a['name'], a['pub'])
+        openVestingBalance(a['name'])
         buyVesting(a['name'], intToToken(10000000*10000))
         registerWitness('gls.ctrl', a['name'], a['pub'])
         voteWitness('gls.ctrl', a['name'], a['name'], 10000)
