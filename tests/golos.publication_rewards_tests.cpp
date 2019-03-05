@@ -30,27 +30,7 @@ std::string func_str = std::to_string(_m) + " / ((" + std::to_string(_2s) + " / 
 auto func = [](double x){ return static_cast<double>(_m) / ((static_cast<double>(_2s) / std::max(x, 0.000000000001)) + 1.0); };
 }
 
-class extended_tester : public golos_tester {
-    using golos_tester::golos_tester;
-    fc::microseconds _cur_time;
-    void update_cur_time() { _cur_time = control->head_block_time().time_since_epoch();};
-
-protected:
-    const fc::microseconds& cur_time()const { return _cur_time; };
-
-public:
-    void step(uint32_t n = 1) {
-        produce_blocks(n);
-        update_cur_time();
-    }
-
-    void run(const fc::microseconds& t) {
-        _produce_block(t);  // it produces only 1 block. this can cause expired transactions. use step() to push current txs into blockchain
-        update_cur_time();
-    }
-};
-
-class reward_calcs_tester : public extended_tester {
+class reward_calcs_tester : public golos_tester {
     symbol _token_symbol;
     golos_posting_api post;
     golos_vesting_api vest;
@@ -81,24 +61,24 @@ protected:
 
         auto total_funds = issuer_funds + _users.size() * user_vesting_funds;
         BOOST_CHECK_EQUAL(success(), token.create(_issuer, asset(total_funds, _token_symbol), {_issuer, cfg::charge_name, _forum_name}));
-        step();
+        produce_blocks();
 
         BOOST_CHECK_EQUAL(success(), token.issue(_issuer, _issuer, asset(total_funds, _token_symbol), "HERE COULD BE YOUR ADVERTISEMENT"));
-        step();
+        produce_blocks();
 
         BOOST_CHECK_EQUAL(success(), token.open(_forum_name, _token_symbol, _forum_name));
         BOOST_CHECK_EQUAL(success(), vest.create_vesting(_issuer, _token_symbol, cfg::control_name));
         charge.link_invoice_permission(_issuer);
-        step();
+        produce_blocks();
 
         BOOST_CHECK_EQUAL(success(), vest.open(_forum_name, _token_symbol, _forum_name));
         for (auto& u : _users) {
             BOOST_CHECK_EQUAL(success(), vest.open(u, _token_symbol, u));
-            step();
+            produce_blocks();
             BOOST_CHECK_EQUAL(success(), add_funds_to(u, user_vesting_funds));
-            step();
+            produce_blocks();
             BOOST_CHECK_EQUAL(success(), buy_vesting_for(u, user_vesting_funds));
-            step();
+            produce_blocks();
         }
         check();
         _req.clear();
@@ -107,7 +87,7 @@ protected:
 
 public:
     reward_calcs_tester()
-        : extended_tester(N(reward.calcs))
+        : golos_tester(N(reward.calcs))
         , _token_symbol(PRECESION, TOKEN_NAME)
         , post({this, _code, _token_symbol})
         , vest({this, cfg::vesting_name, _token_symbol})
@@ -122,10 +102,10 @@ public:
             N(why), N(has), N(my), N(imagination), N(become), N(poor)}
         , _stranger(N(dan.larimer)) {
 
-        step(2);    // why 2?
+        produce_blocks(2);    // why 2?
         create_accounts({_forum_name, _issuer, cfg::vesting_name, cfg::token_name, cfg::control_name, cfg::charge_name, _stranger});
         create_accounts(_users);
-        step(2);
+        produce_blocks(2);
 
         install_contract(_forum_name, contracts::posting_wasm(), contracts::posting_abi());
         install_contract(cfg::token_name, contracts::token_wasm(), contracts::token_abi());
@@ -203,7 +183,9 @@ public:
         for (size_t i = 0; i < act_strings.size(); i++) {
             BOOST_REQUIRE_EQUAL(success(), charge.set_restorer(_issuer, lims.limitedacts[i].chargenum,
                 lims.restorers[lims.limitedacts[i].restorernum], max_arg, max_arg, max_arg));
-            step();
+
+            produce_blocks();
+
             BOOST_REQUIRE_EQUAL(success(), post.set_limit(
                 act_strings[i],
                 lims.limitedacts[i].chargenum,
@@ -212,7 +194,7 @@ public:
                 lims.vestingprices.size() > i ? lims.vestingprices[i] : 0,
                 lims.minvestings.size() > i ? lims.minvestings[i] : 0
             ));
-            step();
+            produce_blocks();
         }
 
         auto ret =  post.set_rules(mainfunc, curationfunc, timepenalty, curatorsprop, MAXTOKENPROB);
@@ -354,7 +336,8 @@ public:
         for (auto itr_p = _state.pools.begin(); itr_p != _state.pools.end(); itr_p++) {
             auto& p = *itr_p;
             for (auto itr_m = p.messages.begin(); itr_m != p.messages.end();) {
-                if ((cur_time().to_seconds() - itr_m->created) > post.window) {
+                const auto current_time = control->head_block_time().sec_since_epoch();
+                if ((current_time - itr_m->created) > post.window) {
                     auto m = *itr_m;
                     double pool_rsharesfn_sum = p.get_rsharesfn_sum();
 
@@ -430,7 +413,7 @@ public:
         pay_rewards_in_state();
         if (!s.empty())
             BOOST_TEST_MESSAGE(s);
-        step();
+        produce_blocks();
         fill_from_tables(_res);
         fill_from_state(_req);
 
@@ -452,6 +435,7 @@ public:
         bool vestpayment = false
     ) {
         auto ref_block_num = control->head_block_header().block_num();
+        const auto current_time = control->head_block_time().sec_since_epoch();
         auto ret = post.create_msg(message_id, parent_message_id, beneficiaries, tokenprop, vestpayment);
 //        message_key key{author, permlink};
 
@@ -462,7 +446,7 @@ public:
                 parent_message_id.author ? limits::COMM : limits::POST,
                 _state.pools.back().charges[message_id.author],
                 _state.balances[message_id.author].vestamount,
-                cur_time().count(),
+                seconds(current_time).count(),
                 vestpayment);
             BOOST_REQUIRE_MESSAGE(((ret == success()) == (reward_weight >= 0.0)), "wrong ret_str: " + ret_str
                 + "; vesting = " + std::to_string(_state.balances[message_id.author].vestamount)
@@ -473,7 +457,7 @@ public:
             _state.pools.back().messages.emplace_back(message(
                 message_id,
                 static_cast<double>(std::min(tokenprop, MAXTOKENPROB)) / static_cast<double>(cfg::_100percent),
-                static_cast<double>(cur_time().to_seconds()),
+                static_cast<double>(current_time),
                 beneficiaries, reward_weight));
         } else {
             message_id.permlink = std::string();
@@ -496,10 +480,11 @@ public:
 //        message_key msg_key{author, permlink};
 
         string ret_str = ret;
+        const auto current_time = control->head_block_time().sec_since_epoch();
         if ((ret == success()) || (ret_str.find("forum::apply_limits:") != string::npos)) {
             auto apply_ret = _state.pools.back().lims.apply(
                 limits::VOTE, _state.pools.back().charges[voter],
-                _state.balances[voter].vestamount, cur_time().count(), get_prop(std::abs(weight)));
+                _state.balances[voter].vestamount, seconds(current_time).count(), get_prop(std::abs(weight)));
             BOOST_REQUIRE_MESSAGE(((ret == success()) == (apply_ret >= 0.0)), "wrong ret_str: " + ret_str
                 + "; vesting = " + std::to_string(_state.balances[voter].vestamount)
                 + "; apply_ret = " + std::to_string(apply_ret));
@@ -515,7 +500,7 @@ public:
                                 voter,
                                 std::min(get_prop(weight), 1.0),
                                 _state.balances[voter].vestamount,
-                                static_cast<double>(cur_time().to_seconds())
+                                static_cast<double>(current_time)
                             });
                         else {
                             vote_itr->revote_diff = std::min(get_prop(weight), 1.0) - vote_itr->weight;
@@ -537,7 +522,7 @@ BOOST_FIXTURE_TEST_CASE(basic_tests, reward_calcs_tester) try {
     BOOST_TEST_MESSAGE("Basic publication_rewards tests");
     auto bignum = 500000000000;
     init(bignum, 500000);
-    step();
+    produce_blocks();
     BOOST_TEST_MESSAGE("--- setrules");
     BOOST_CHECK_EQUAL(err.not_monotonic,
         setrules({"x", bignum}, {"log2(x + 1.0)", bignum}, {"1-x", bignum}, 2500,
@@ -602,11 +587,11 @@ BOOST_FIXTURE_TEST_CASE(basic_tests, reward_calcs_tester) try {
 
     BOOST_TEST_MESSAGE("--- add_funds_to_forum");
     BOOST_CHECK_EQUAL(success(), add_funds_to_forum(100000));
-    step();     // push transactions before run() call
+    produce_blocks();     // push transactions before run() call
     check();
 
     BOOST_TEST_MESSAGE("--- waiting");
-    run(seconds(99));   // TODO: remove magic number
+    produce_blocks(golos::seconds_to_blocks(99));   // TODO: remove magic number
     check();
     BOOST_TEST_MESSAGE("--- create_message: why");
     auto ref_block_num_why = control->head_block_header().block_num();
@@ -617,9 +602,9 @@ BOOST_FIXTURE_TEST_CASE(basic_tests, reward_calcs_tester) try {
     check();
     BOOST_TEST_MESSAGE("--- why voted (100%) for why");
     BOOST_CHECK_EQUAL(success(), addvote(N(why), {N(why), "why-not", ref_block_num_why}, 10000));
-    step();     // push transactions before run() call
+    produce_blocks();     // push transactions before run() call
     check();
-    run(seconds(99));   // TODO: remove magic number
+    produce_blocks(golos::seconds_to_blocks(99));   // TODO: remove magic number
     BOOST_TEST_MESSAGE("--- rewards");
     check();
     show();
@@ -629,7 +614,7 @@ BOOST_FIXTURE_TEST_CASE(timepenalty_test, reward_calcs_tester) try {
     BOOST_TEST_MESSAGE("Simple timepenalty test");
     auto bignum = 500000000000;
     init(bignum, 500000);
-    step();
+    produce_blocks();
 
     BOOST_CHECK_EQUAL(success(), setrules({"x", bignum}, {"x", bignum}, {"x/50", 50}, 2500,
         [](double x){ return x; }, [](double x){ return x; }, [](double x){ return x / 50.0; }));
@@ -645,9 +630,9 @@ BOOST_FIXTURE_TEST_CASE(timepenalty_test, reward_calcs_tester) try {
     for (size_t i = 0; i < 6; i++) {    // TODO: remove magic number, 6 must be derived from some constant used in rules
         BOOST_CHECK_EQUAL(success(), addvote(_users[i], {N(bob), "permlink", ref_block_num_bob}, 10000));
         check();
-        run(seconds(3));    // TODO: remove magic number
+        produce_blocks();    // TODO: remove magic number
     }
-    run(seconds(90));       // TODO: remove magic number
+    produce_blocks(golos::seconds_to_blocks(120));       // TODO: remove magic number
     BOOST_TEST_MESSAGE("--- rewards");
     check();
     show();
@@ -697,16 +682,16 @@ BOOST_FIXTURE_TEST_CASE(limits_test, reward_calcs_tester) try {
     BOOST_CHECK_EQUAL(success(), addvote(N(alice), {N(bob), "i-can-pay-for-posting", ref_block_num_bob}, 10000));
     BOOST_CHECK_EQUAL(success(), addvote(N(bob), {N(bob), "i-can-pay-for-posting", ref_block_num_bob}, 10000)); //He can also vote
     BOOST_CHECK_EQUAL(success(), create_message({N(bob1), "permlink", ref_block_num_bob}));
-    step();     // push transactions before run() call
+    produce_blocks();     // push transactions before run() call
 
     BOOST_TEST_MESSAGE("--- waiting");
-    run(seconds(150));  // TODO: remove magic number
+    produce_blocks(golos::seconds_to_blocks(150));  // TODO: remove magic number
     check();
-    run(seconds(150));  // TODO: remove magic number
+    produce_blocks(golos::seconds_to_blocks(150));  // TODO: remove magic number
     check();
     auto ref_block_num_bob1 = control->head_block_header().block_num();
     BOOST_CHECK_EQUAL(err.limit_no_power, create_message({N(bob), "limit-no-power", ref_block_num_bob1}));
-    run(seconds(45));   // TODO: remove magic number
+    produce_blocks(golos::seconds_to_blocks(45));   // TODO: remove magic number
     auto ref_block_num_bob2 = control->head_block_header().block_num();
     BOOST_CHECK_EQUAL(success(), create_message({N(bob), "test", ref_block_num_bob2}));
     check();
@@ -740,7 +725,7 @@ BOOST_FIXTURE_TEST_CASE(rshares_sum_overflow_test, reward_calcs_tester) try {
     auto bignum = 500000000000;
     auto fixp_max = std::numeric_limits<fixp_t>::max();
     init(bignum, fixp_max / 2);
-    step();
+    produce_blocks();
 
     BOOST_TEST_MESSAGE("--- setrules");
     BOOST_CHECK_EQUAL(success(), setrules({"x", fixp_max}, {"sqrt(x)", fixp_max}, {"1", fixp_max}, 2500,
@@ -767,7 +752,7 @@ BOOST_FIXTURE_TEST_CASE(golos_curation_test, reward_calcs_tester) try {
     int64_t maxfp = std::numeric_limits<fixp_t>::max();
     auto bignum = 500000000000;
     init(bignum, 500000);
-    step();
+    produce_blocks();
     BOOST_TEST_MESSAGE("--- setrules");
     using namespace golos_curation;
     BOOST_CHECK_EQUAL(success(), setrules({"x", maxfp}, {golos_curation::func_str, maxfp}, {"1", bignum}, 2500,
@@ -788,7 +773,7 @@ BOOST_FIXTURE_TEST_CASE(golos_curation_test, reward_calcs_tester) try {
         BOOST_CHECK_EQUAL(success(), addvote(_users[i], {_users[0], "permlink", ref_block_num}, 10000));
         check();
     }
-    run(seconds(170));
+    produce_blocks(golos::seconds_to_blocks(150));
     check();
 } FC_LOG_AND_RETHROW()
 
