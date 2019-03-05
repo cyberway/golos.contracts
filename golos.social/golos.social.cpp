@@ -146,6 +146,8 @@ void social::deletereput(name account) {
     require_auth(account);
 
     tables::reputation_singleton reputation_tbl(_self, account.value);
+    auto acc_rep = reputation_tbl.get_or_default();
+    eosio_assert(acc_rep.reputation != 0, "The reputation has already removed");
     reputation_tbl.remove();
 }
 

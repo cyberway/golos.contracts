@@ -92,6 +92,7 @@ protected:
         const string cannot_unblock_not_blocked = amsg("You have not blocked this account");
         const string already_blocked            = amsg("You already have blocked this account");
         const string you_are_blocked            = amsg("You are blocked by this account");
+        const string no_reputation              = amsg("The reputation has already removed");
     } err;
 };
 
@@ -317,6 +318,7 @@ BOOST_FIXTURE_TEST_CASE(delete_reputation, golos_social_tester) try {
     BOOST_TEST_MESSAGE("--- checking that reputation was added");
     auto ref_block_num_erin = control->head_block_header().block_num();
     BOOST_CHECK_EQUAL(success(), post.create_msg({"erin"_n, "permlink", ref_block_num_erin}));
+    BOOST_CHECK_EQUAL(success(), social.create_reput({"erin"_n}));
     BOOST_CHECK_EQUAL(success(), post.upvote("dave"_n, {"erin"_n, "permlink", ref_block_num_erin}, 1000));
     produce_block();
     auto erin_rep = social.get_reputation("erin"_n);
@@ -327,6 +329,10 @@ BOOST_FIXTURE_TEST_CASE(delete_reputation, golos_social_tester) try {
     BOOST_CHECK_EQUAL(success(), social.deletereput("erin"_n));
     erin_rep = social.get_reputation("erin"_n);
     BOOST_CHECK(erin_rep.is_null());
+    produce_block();
+
+    BOOST_TEST_MESSAGE("--- checking that reputation has already deleted");
+    BOOST_CHECK_EQUAL(err.no_reputation, social.deletereput("erin"_n));
 } FC_LOG_AND_RETHROW()
 
 BOOST_AUTO_TEST_SUITE_END()
