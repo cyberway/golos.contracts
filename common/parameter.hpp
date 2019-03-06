@@ -232,8 +232,9 @@ struct set_params_visitor {
         if (changed) {
             state.*field = value;
         }
-        return changed;
-    }
+        return changed; 
+    }   
+};
 
 // TODO: combine both visitors to reduce boilerplate required to write in contract
 /**

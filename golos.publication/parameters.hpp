@@ -9,11 +9,6 @@ namespace golos {
 
     struct st_max_vote_changes : parameter {
         uint8_t max_vote_changes;
-
-        template<typename T>
-        bool compare(const T& other) const {
-            return *this != other;
-        };
     };
     using max_vote_changes_prm = param_wrapper<st_max_vote_changes, 1>;
 
@@ -25,21 +20,11 @@ namespace golos {
             eosio_assert(window > 0, "Cashout window must be greater than 0.");
             eosio_assert(window > upvote_lockout, "Cashout window can't be less than upvote lockout.");
         }
-
-        template<typename T>
-        bool compare(const T& other) const {
-            return *this != other;
-        };
     };
     using cashout_window_prm = param_wrapper<st_cashout_window, 2>;
 
     struct st_max_beneficiaries : parameter {
         uint8_t max_beneficiaries;
-
-        template<typename T>
-        bool compare(const T& other) const {
-            return *this != other;
-        };
     };
     using max_beneficiaries_prm = param_wrapper<st_max_beneficiaries, 1>;
 
@@ -49,11 +34,6 @@ namespace golos {
         void validate() const override {
             eosio_assert(max_comment_depth > 0, "Max comment depth must be greater than 0.");
         }
-
-        template<typename T>
-        bool compare(const T& other) const {
-            return *this != other;
-        };
     };
     using max_comment_depth_prm = param_wrapper<st_max_comment_depth, 1>;
 
@@ -65,11 +45,6 @@ namespace golos {
                 eosio_assert(is_account(account), "Social account doesn't exist.");
             }
         }
-
-        template<typename T>
-        bool compare(const T& other) const {
-            return *this != other;
-        };
     };
     using social_acc_prm = param_wrapper<st_social_acc, 1>;
     
@@ -81,11 +56,6 @@ namespace golos {
                 eosio_assert(is_account(account), "Referral account doesn't exist.");
             }
         }
-
-        template<typename T>
-        bool compare(const T& other) const {
-            return *this != other;
-        };
     };
     using referral_acc_prm = param_wrapper<st_referral_acc, 1>;
 

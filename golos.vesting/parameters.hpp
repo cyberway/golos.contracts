@@ -18,22 +18,12 @@ struct vesting_withdraw : parameter {
         eosio_assert(intervals > 0, "intervals <= 0");
         eosio_assert(interval_seconds > 0, "interval_seconds <= 0");
     }
-
-    template<typename T>
-    bool compare(const T& other) const {
-        return *this != other;
-    };
 };
 using vesting_withdraw_param = param_wrapper<vesting_withdraw,2>;
 
 
 struct vesting_min_amount : parameter {
     uint64_t min_amount;
-
-    template<typename T>
-    bool compare(const T& other) const {
-        return *this != other;
-    };
 };
 using vesting_min_amount_param = param_wrapper<vesting_min_amount,1>;
 
@@ -51,11 +41,6 @@ struct delegation : parameter {
         eosio_assert(max_interest <= 10000, "delegation max_interest > 10000");
         eosio_assert(return_time > 0, "delegation return_time <= 0");
     }
-
-    template<typename T>
-    bool compare(const T& other) const {
-        return *this != other;
-    };
 };
 using delegation_param = param_wrapper<delegation,5>;
 
