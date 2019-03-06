@@ -14,11 +14,6 @@ struct token: immutable_parameter {
     void validate() const override {
         eosio_assert(code.is_valid(), "invalid token");
     }
-
-    template<typename T>
-    bool compare(const T& other) const {
-        return *this != other;
-    };
 };
 
 struct multisig: parameter {
@@ -27,11 +22,6 @@ struct multisig: parameter {
     void validate() const override {
         eosio_assert(is_account(name), "multisig account doesn't exists");
     }
-
-    template<typename T>
-    bool compare(const T& other) const {
-        return *this != other;
-    };
 };
 
 // set to immutable for now coz it requires weights recalculation if decreasing `max` value
@@ -41,11 +31,6 @@ struct witness_votes: immutable_parameter {
     void validate() const override {
         eosio_assert(max > 0, "max witness votes can't be 0");
     }
-
-    template<typename T>
-    bool compare(const T& other) const {
-        return *this != other;
-    };
 };
 
 struct witnesses: parameter {
@@ -54,11 +39,6 @@ struct witnesses: parameter {
     void validate() const override {
         eosio_assert(max > 0, "max witnesses can't be 0");
     }
-
-    template<typename T>
-    bool compare(const T& other) const {
-        return *this != other;
-    };
 };
 
 struct msig_permissions: parameter {
