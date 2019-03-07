@@ -21,6 +21,8 @@ public:
     void updatemeta(name account, accountmeta meta);
     void deletemeta(name account);
 
+    void deletereput(name account);
+
     static inline bool is_blocking(name code, name blocker, name blocking) {
         tables::pinblock_table table(code, blocker.value);
         auto itr = table.find(blocking.value);
