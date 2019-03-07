@@ -18,6 +18,13 @@ struct breakout_parametrs : parameter {
         eosio_assert(min_breakout.amount >= 0, "min_breakout < 0");
         eosio_assert(max_breakout.amount >= 0, "max_breakout < 0");
    }
+
+   static bool compare(const breakout_parametrs& obj, const breakout_parametrs& other) {
+      return (obj.max_breakout.symbol != other.max_breakout.symbol) ||
+             (obj.min_breakout.symbol != other.min_breakout.symbol) ||
+             (obj.min_breakout.amount != other.min_breakout.amount) ||
+             (obj.min_breakout.amount != other.min_breakout.amount); 
+   }
 };
 using breakout_param = param_wrapper<breakout_parametrs,2>;
 
