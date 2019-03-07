@@ -65,11 +65,13 @@ call_hook "files-extracted"
 
 echo "=== Start cyberway containers"
 startup/run-with-events.sh
-sleep 20
+
+echo "=== Waiting for nodeosd started"
+docker run --rm --network cyberway_cyberway-net -ti $GOLOS_IMAGE /bin/bash -c 'retry=30; until /opt/cyberway/bin/cleos --url http://nodeosd:8888 get info; do sleep 10; let retry--; [ $retry -gt 0 ] || exit 1; done; exit 0'
 call_hook "nodeos-started"
 
 echo "=== Deploy cyberway & golos contracts"
-sudo docker run --rm --network cyberway_cyberway-net -ti $GOLOS_IMAGE /opt/golos.contracts/scripts/boot-sequence.py
+docker run --rm --network cyberway_cyberway-net -ti $GOLOS_IMAGE /opt/golos.contracts/scripts/boot-sequence.py
 call_hook "contracts-loaded"
 
 if [[ -n "$GOLOS_DB" ]]; then
