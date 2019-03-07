@@ -220,17 +220,20 @@ struct set_params_visitor {
 
     set_params_visitor(T& s, bool fail_on_same = false): state(s), no_same(fail_on_same) {}
 
-    template<typename P, typename F>
-    bool set_param(const P& value, F field) {
-        bool changed = state.*field != value;
+    template<typename P, typename F, typename L = std::function<bool(const P& obj, const P& other)> >
+    bool set_param(const P& value, F field, L is_changed = [](const auto& obj, const auto& other){
+        return obj != other;
+    }) {
+        auto obj = state.*field;
+        bool changed = is_changed(obj, value);
         if (no_same) {
             eosio_assert(changed, "can't set same parameter value");   // TODO: add parameter name to assert message
         }
         if (changed) {
             state.*field = value;
         }
-        return changed;
-    }
+        return changed; 
+    }   
 };
 
 // TODO: combine both visitors to reduce boilerplate required to write in contract

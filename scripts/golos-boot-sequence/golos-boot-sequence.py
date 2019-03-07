@@ -235,6 +235,11 @@ def createGolosAccounts():
     updateAuth('cyber',       'createuser', 'active', ['GLS5a2eDuRETEg7uy8eHbiCqGZM3wnh2pLjiXrFduLWBKVZKCkB62'], [])
     linkAuth('cyber', 'cyber', 'newaccount', 'createuser')
     linkAuth('cyber', 'gls.vesting', 'open', 'createuser')
+    linkAuth('cyber', 'cyber.token', 'open', 'createuser')
+
+    updateAuth('gls.issuer',  'issue', 'active', ['GLS5a2eDuRETEg7uy8eHbiCqGZM3wnh2pLjiXrFduLWBKVZKCkB62'], [])
+    linkAuth('gls.issuer', 'cyber.token', 'issue', 'issue')
+    linkAuth('gls.issuer', 'cyber.token', 'transfer', 'issue')
 
 def stepInstallContracts():
     for acc in golosAccounts:
@@ -317,6 +322,7 @@ def createWitnessAccounts():
     for i in range(firstWitness, firstWitness + numWitness):
         a = accounts[i]
         createAccount('cyber', a['name'], a['pub'])
+        openVestingBalance(a['name'])
         buyVesting(a['name'], intToToken(10000000*10000))
         registerWitness('gls.ctrl', a['name'], a['pub'])
         voteWitness('gls.ctrl', a['name'], a['name'], 10000)

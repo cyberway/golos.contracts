@@ -190,6 +190,16 @@
     ]
   },
   {
+      "name": "createreput",
+      "base": "",
+      "fields": [
+        {
+          "name": "account",
+          "type": "name"
+        }
+      ]
+  },
+  {
     "name": "changereput",
     "base": "",
     "fields": [
@@ -236,7 +246,7 @@
     ]
   },
   {
-    "name": "deletemeta",
+    "name": "delete",
     "base": "",
     "fields": [
       {
@@ -264,6 +274,10 @@
     "type": "block"
   },
   {
+      "name": "createreput",
+      "type": "createreput"
+  },
+  {
     "name": "changereput",
     "type": "changereput"
   },
@@ -273,8 +287,13 @@
   },
   {
     "name": "deletemeta",
-    "type": "deletemeta"
+    "type": "delete"
+  },
+  {
+    "name": "deletereput",
+    "type": "delete"
   }
+
   ],
   "events": [
      {"name": "changereput","type": "changereput_event"}
