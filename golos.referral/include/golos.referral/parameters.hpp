@@ -10,13 +10,20 @@ namespace golos {
 using namespace eosio;
 
 struct breakout_parametrs : parameter {
-   asset min_breakout = asset(0, symbol("GLS",3));
-   asset max_breakout = asset(0, symbol("GLS",3));
+   asset min_breakout;
+   asset max_breakout;
 
    void validate() const override {
         eosio_assert(min_breakout <= max_breakout, "min_breakout > max_breakout");
         eosio_assert(min_breakout.amount >= 0, "min_breakout < 0");
         eosio_assert(max_breakout.amount >= 0, "max_breakout < 0");
+   }
+
+   static bool compare(const breakout_parametrs& obj, const breakout_parametrs& other) {
+      return (obj.max_breakout.symbol != other.max_breakout.symbol) ||
+             (obj.min_breakout.symbol != other.min_breakout.symbol) ||
+             (obj.min_breakout.amount != other.min_breakout.amount) ||
+             (obj.min_breakout.amount != other.min_breakout.amount); 
    }
 };
 using breakout_param = param_wrapper<breakout_parametrs,2>;
