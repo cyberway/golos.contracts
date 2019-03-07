@@ -53,11 +53,6 @@ struct msig_permissions: parameter {
         eosio_assert(!majority || !minority || majority >= minority, "majority must not be less than minority");
     }
 
-    template<typename T>
-    bool compare(const T& other) const {
-        return *this != other;
-    };
-
     uint16_t super_majority_threshold(uint16_t top) const;
     uint16_t majority_threshold(uint16_t top) const;
     uint16_t minority_threshold(uint16_t top) const;

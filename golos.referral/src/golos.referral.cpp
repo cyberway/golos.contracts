@@ -11,7 +11,13 @@ struct referral_params_setter: set_params_visitor<referral_state> {
     using set_params_visitor::set_params_visitor; // enable constructor
 
    bool operator()(const breakout_param& p) {
-       return set_param(p, &referral_state::breakout_params, true);
+       return set_param(p, &referral_state::breakout_params, [](const auto& obj, const auto& other){
+            return (obj.max_breakout.symbol != other.max_breakout.symbol) ||
+                   (obj.min_breakout.symbol != other.min_breakout.symbol) ||
+                   (obj.min_breakout.amount != other.min_breakout.amount) ||
+                   (obj.min_breakout.amount != other.min_breakout.amount);    
+       }
+    );
    }
 
     bool operator()(const expire_param& p) {
