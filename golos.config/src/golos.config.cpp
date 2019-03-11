@@ -12,11 +12,11 @@ using std::vector;
 struct emit_params_setter: set_params_visitor<emit_state> {
     using set_params_visitor::set_params_visitor; // enable constructor
 
-    void operator()(const infrate_params& p) {
-        set_param(p, &emit_state::infrate);
+    bool operator()(const infrate_params& p) {
+        return set_param(p, &emit_state::infrate);
     }
-    void operator()(const reward_pools_param& p) {
-        set_param(p, &emit_state::pools);
+    bool operator()(const reward_pools_param& p) {
+        return set_param(p, &emit_state::pools);
     }
     bool operator()(const emit_token_symbol_params& p) {
         return set_param(p, &emit_state::token_symbol);
@@ -39,7 +39,7 @@ void configer::updateparamse(name who, std::vector<emit_param> params) {
     auto current = update ? acc_params.get() : emit_state{};
     auto setter = emit_params_setter(current, update);
     for (const auto& param: params) {
-//        std::visit(setter, param);
+        std::visit(setter, param);
     }
     acc_params.set(setter.state, who);
 
