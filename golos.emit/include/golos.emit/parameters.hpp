@@ -68,7 +68,7 @@ struct inflation_rate: parameter {
 using infrate_params = param_wrapper<inflation_rate,3>;
 
 struct emit_token_symbol: parameter {
-    name symbol;
+    symbol symbol;
 };
 using emit_token_symbol_params = param_wrapper<emit_token_symbol,1>;
 
