@@ -31,7 +31,6 @@ public:
 
 private:
     void recalculate_state(std::vector<emit_param>);
-    symbol _token{"GLS",3};     // TODO: make configurable
     state_singleton _state;
     emit_params_singleton _cfg;
 
