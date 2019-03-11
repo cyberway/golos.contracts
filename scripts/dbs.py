@@ -13,10 +13,10 @@ cyberway_client = MongoClient(cyberway_url)
 
 golos_db = golos_client['Golos']
 cyberway_db = cyberway_client[CYBERWAY_PREFIX]
-cyberway_cyber_token_db = cyberway_client[CYBERWAY_PREFIX+'cyber-token']
-cyberway_gls_vesting_db = cyberway_client[CYBERWAY_PREFIX+'gls-vesting']
-cyberway_gls_ctrl_db = cyberway_client[CYBERWAY_PREFIX+'gls-ctrl']
-cyberway_gls_publish_db = cyberway_client[CYBERWAY_PREFIX+'gls-publish']
+cyberway_cyber_token_db = cyberway_client[CYBERWAY_PREFIX+'cyber_token']
+cyberway_gls_vesting_db = cyberway_client[CYBERWAY_PREFIX+'gls_vesting']
+cyberway_gls_ctrl_db = cyberway_client[CYBERWAY_PREFIX+'gls_ctrl']
+cyberway_gls_publish_db = cyberway_client[CYBERWAY_PREFIX+'gls_publish']
 
 def createIndexes(collection, indexes):
     db_indexes = collection.index_information()
