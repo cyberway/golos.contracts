@@ -29,6 +29,9 @@ struct emit_params_setter: set_params_visitor<emit_state> {
     bool operator()(const reward_pools_param& p) {
         return set_param(p, &emit_state::pools);
     }
+    bool operator()(const emit_token_symbol_params& p) {
+        return set_param(p, &emit_state::token_symbol);
+    }
 };
 
 void emission::validateprms(vector<emit_param> params) {
