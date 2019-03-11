@@ -839,6 +839,7 @@ void publication::set_params(std::vector<posting_params> params) {
 }
 
 void publication::reblog(name rebloger, structures::mssgid message_id) {
+    require_auth(rebloger);
     tables::message_table message_table(_self, message_id.author.value);
     auto message_index = message_table.get_index<"bypermlink"_n>();
     auto mssg_itr = message_index.find({message_id.permlink, message_id.ref_block_num});
