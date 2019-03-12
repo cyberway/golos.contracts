@@ -81,15 +81,26 @@ struct emit_interval: parameter {
 };
 using emit_interval_param = param_wrapper<emit_interval,1>;
 
-using emit_param = std::variant<infrate_params, reward_pools_param, emit_token_params, emit_interval_param>;
+struct st_vesting_acc : parameter {
+    name account;
+
+    void validate() const override {
+        eosio_assert(is_account(account), "Vesting account doesn't exist.");
+    }
+};
+using vesting_acc_prm = param_wrapper<st_vesting_acc, 1>;
+
+
+using emit_param = std::variant<infrate_params, reward_pools_param, emit_token_params, emit_interval_param, vesting_acc_prm>;
 
 struct [[eosio::table]] emit_state {
     infrate_params infrate;
     reward_pools_param pools;
     emit_token_params token;
     emit_interval_param interval; 
+    vesting_acc_prm vesting_acc_param;
 
-    static constexpr int params_count = 4;
+    static constexpr int params_count = 5;
 };
 using emit_params_singleton = eosio::singleton<"emitparams"_n, emit_state>;
 

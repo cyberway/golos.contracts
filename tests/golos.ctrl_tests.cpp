@@ -29,7 +29,7 @@ public:
     {
         create_accounts({_code, BLOG, N(witn1), N(witn2), N(witn3), N(witn4), N(witn5),
             _alice, _bob, _carol, _issuer,
-            cfg::vesting_name, cfg::token_name, cfg::workers_name, cfg::emission_name});
+            cfg::token_name, cfg::workers_name, cfg::emission_name, cfg::vesting_name});
         produce_block();
 
         install_contract(_code, contracts::ctrl_wasm(), contracts::ctrl_abi());
@@ -107,6 +107,7 @@ public:
         const string already_detached   = amsg("user already detached");
         const string no_account         = amsg("user not found");
         const string auth_period0       = amsg("update auth period can't be 0");
+        const string no_vesting_acc     = amsg("Vesting account doesn't exist.");
     } err;
 
     // prepare
@@ -185,6 +186,7 @@ BOOST_FIXTURE_TEST_CASE(create_community, golos_ctrl_tester) try {
     BOOST_CHECK_EQUAL(err.smaj_lt_maj, ctrl.set_params(ctrl.default_params(BLOG, _token, 21, 30, _update_auth_period, 3,5,0)));
     BOOST_CHECK_EQUAL(err.smaj_lt_min, ctrl.set_params(ctrl.default_params(BLOG, _token, 21, 30, _update_auth_period, 3,0,5)));
     BOOST_CHECK_EQUAL(err.maj_lt_min,  ctrl.set_params(ctrl.default_params(BLOG, _token, 21, 30, _update_auth_period, 0,2,5)));
+    BOOST_CHECK_EQUAL(err.no_vesting_acc,  ctrl.set_params(ctrl.default_params(BLOG, _token, 21, _update_auth_period, 30, 15,1,0, N(testacc))));
 
     BOOST_CHECK_EQUAL(err.smaj_gt_max, ctrl.set_params(ctrl.default_params(BLOG, _token, 21, 30, _update_auth_period, 22,2,1)));
     BOOST_CHECK_EQUAL(err.maj_gt_max,  ctrl.set_params(ctrl.default_params(BLOG, _token, 21, 30, _update_auth_period, 0,22,1)));
@@ -192,7 +194,7 @@ BOOST_FIXTURE_TEST_CASE(create_community, golos_ctrl_tester) try {
     BOOST_CHECK_EQUAL(err.maj_gt_smaj, ctrl.set_params(ctrl.default_params(BLOG, _token, 21, 30, _update_auth_period, 2,0,0)));
     BOOST_CHECK_EQUAL(err.min_gt_smaj, ctrl.set_params(ctrl.default_params(BLOG, _token, 21, 30, _update_auth_period, 2,1,0)));
     BOOST_CHECK_EQUAL(err.min_gt_maj,  ctrl.set_params(ctrl.default_params(BLOG, _token, 21, 30, _update_auth_period, 15,1,0)));
-
+    
     BOOST_TEST_MESSAGE("--- create community with valid parameters succeed");
     BOOST_CHECK_EQUAL(success(), ctrl.set_params(_test_params));
     BOOST_TEST_MESSAGE("--- created, check state");
@@ -203,6 +205,7 @@ BOOST_FIXTURE_TEST_CASE(create_community, golos_ctrl_tester) try {
     CHECK_EQUAL_OBJECTS(t["msig_perms"], json_str_to_obj(ctrl.msig_perms_param())[1]);
     CHECK_EQUAL_OBJECTS(t["witness_votes"], json_str_to_obj(ctrl.max_witness_votes_param(_max_witness_votes))[1]);
     CHECK_EQUAL_OBJECTS(t["update_auth_period"], json_str_to_obj(ctrl.update_auth_param(_update_auth_period))[1]);
+    CHECK_EQUAL_OBJECTS(t["vesting_acc"], json_str_to_obj(ctrl.vesting_acc_param(cfg::vesting_name))[1]);
     produce_block();
 
     BOOST_TEST_MESSAGE("--- test fail when trying to create again");
@@ -243,6 +246,7 @@ BOOST_FIXTURE_TEST_CASE(register_witness, golos_ctrl_tester) try {
 BOOST_FIXTURE_TEST_CASE(register_update_witness, golos_ctrl_tester) try {
     BOOST_TEST_MESSAGE("Witness registration");
 
+    prepare_balances();
     BOOST_CHECK_EQUAL(success(), ctrl.set_params(_test_params));
     produce_block();
 
@@ -255,7 +259,6 @@ BOOST_FIXTURE_TEST_CASE(register_update_witness, golos_ctrl_tester) try {
     produce_block();
     BOOST_TEST_MESSAGE("--- check registration success");
 
-    prepare_balances();
     vector<std::tuple<name,name,bool>> votes = {
         {_alice, _w[1], true}, {_alice, _w[2], true}, {_alice, _w[3], false},
         {_alice, _w[0], true}, {_bob, _w[0], false}, {_w[0], _w[0], false}
@@ -389,6 +392,7 @@ BOOST_FIXTURE_TEST_CASE(set_params, golos_ctrl_tester) try {
     BOOST_CHECK_EQUAL(err.same_params, ctrl.set_param(ctrl.multisig_param(BLOG)));
     BOOST_CHECK_EQUAL(err.same_params, ctrl.set_param(ctrl.max_witnesses_param(_max_witnesses)));
     BOOST_CHECK_EQUAL(err.same_params, ctrl.set_param(ctrl.msig_perms_param()));
+    BOOST_CHECK_EQUAL(err.same_params, ctrl.set_param(ctrl.vesting_acc_param(cfg::vesting_name)));
 
     BOOST_TEST_MESSAGE("--- check that setting invalid parameters fail");
     // TODO: maybe move to separate parameters validation test

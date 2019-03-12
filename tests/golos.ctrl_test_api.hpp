@@ -1,5 +1,6 @@
 #pragma once
 #include "test_api_helper.hpp"
+#include "common/config.hpp"
 
 namespace eosio { namespace testing {
 
@@ -132,15 +133,19 @@ struct golos_ctrl_api: base_contract_api {
     static std::string update_auth_param(uint32_t delay_sec = 30*60) {
         return std::string() + "['update_auth',{'period':"+std::to_string(delay_sec)+"}]";
     }
-    static std::string default_params(name owner, symbol token, uint16_t witnesses = 21, uint16_t witness_votes = 30,
-        uint32_t delay_sec = 30*60, uint16_t smajor = 0, uint16_t major = 0, uint16_t minor = 0) {
+    static std::string vesting_acc_param(name vesting_acc) {
+        return std::string() + "['vesting_acc',{'value':"+vesting_acc.to_string()+"}]";
+    }
+    static std::string default_params(name owner, symbol token, uint16_t witnesses = 21, 
+            uint16_t witness_votes = 30, uint32_t delay_sec = 30*60, uint16_t smajor = 0, uint16_t major = 0, uint16_t minor = 0, name vest_acc = N(gls.vesting)) {
         return std::string() + "[" +
             token_param(token) + "," +
             multisig_param(owner) + "," +
             max_witnesses_param(witnesses) + "," +
             msig_perms_param(smajor, major, minor) + "," +
             max_witness_votes_param(witness_votes) + "," +
-            update_auth_param(delay_sec) + "]";
+            update_auth_param(delay_sec) + "," +
+            vesting_acc_param(vest_acc) + "]";
     }
 
     // sets permissions for "multisig" account

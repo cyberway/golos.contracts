@@ -50,13 +50,13 @@ public:
 
         produce_block();
         create_accounts(_users);
-        create_accounts({cfg::charge_name, cfg::token_name, cfg::vesting_name, cfg::emission_name, cfg::control_name, N(dan.larimer)});
+        create_accounts({cfg::charge_name, cfg::token_name, cfg::emission_name, cfg::control_name, N(dan.larimer), cfg::vesting_name});
         produce_block();
 
         install_contract(_code, contracts::posting_wasm(), contracts::posting_abi());
-        install_contract(cfg::vesting_name, contracts::vesting_wasm(), contracts::vesting_abi());
         install_contract(cfg::charge_name, contracts::charge_wasm(), contracts::charge_abi());
         install_contract(cfg::token_name, contracts::token_wasm(), contracts::token_abi());
+        install_contract(cfg::vesting_name, contracts::vesting_wasm(), contracts::vesting_abi());
     }
 
     void init() {
@@ -152,6 +152,7 @@ protected:
         const string max_cmmnt_dpth_less_0 = amsg("Max comment depth must be greater than 0.");
         const string no_social_acc         = amsg("Social account doesn't exist.");
         const string no_referral_acc       = amsg("Referral account doesn't exist.");
+        const string no_vesting_acc        = amsg("Vesting account doesn't exist.");
         const string not_valid_ref_block_num = amsg("ref_block_num mismatch");
         const string wrong_prmlnk_length   = amsg("Permlink length is empty or more than 256.");
         const string wrong_prmlnk          = amsg("Permlink contains wrong symbol.");
@@ -174,7 +175,7 @@ BOOST_FIXTURE_TEST_CASE(set_params, golos_publication_tester) try {
     BOOST_TEST_CHECK(post.get_params().is_null());
 
     post.init_default_params();
-
+    
     auto obj_params = post.get_params();
     BOOST_TEST_MESSAGE("--- all params were initialized successful");
 
@@ -185,6 +186,7 @@ BOOST_FIXTURE_TEST_CASE(set_params, golos_publication_tester) try {
     BOOST_CHECK_EQUAL(obj_params["max_comment_depth"]["value"], post.max_comment_depth);
     BOOST_CHECK_EQUAL(obj_params["social_acc"]["value"].as_string(), "");
     BOOST_CHECK_EQUAL(obj_params["referral_acc"]["value"].as_string(), "");
+    BOOST_CHECK_EQUAL(obj_params["vesting_acc"]["value"].as_string(), post.vesting_acc.to_string());
 
     auto params = "[" + post.get_str_cashout_window(0, post.upvote_lockout) + "]";
     BOOST_CHECK_EQUAL(err.window_less_0, post.set_params(params));
@@ -199,7 +201,10 @@ BOOST_FIXTURE_TEST_CASE(set_params, golos_publication_tester) try {
     BOOST_CHECK_EQUAL(err.no_social_acc, post.set_params(params));
     
     params = "[" + post.get_str_referral_acc(N(gls.referral)) + "]";
-    BOOST_CHECK_EQUAL(err.no_referral_acc, post.set_params(params));
+    BOOST_CHECK_EQUAL(err.no_referral_acc, post.set_params(params));    
+    
+    params = "[" + post.get_str_vesting_acc(N(testacc)) + "]";
+    BOOST_CHECK_EQUAL(err.no_vesting_acc, post.set_params(params));
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE(create_message, golos_publication_tester) try {

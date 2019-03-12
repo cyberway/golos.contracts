@@ -64,6 +64,7 @@ public:
 
         auto params = "[" + vesting_withdraw + "," + vesting_amount + "," + delegation + "]";
         BOOST_CHECK_EQUAL(success(), vest.set_params(cfg::emission_name, _vesting_sym, params));
+        BOOST_CHECK_EQUAL(success(), charge.init_default_params());
     }
 
 protected:

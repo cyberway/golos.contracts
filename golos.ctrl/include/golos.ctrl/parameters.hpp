@@ -57,6 +57,13 @@ struct msig_permissions: parameter {
     uint16_t majority_threshold(uint16_t top) const;
     uint16_t minority_threshold(uint16_t top) const;
 };
+struct st_vesting_acc : parameter {
+    name account;
+
+    void validate() const override {
+        eosio_assert(is_account(account), "Vesting account doesn't exist.");
+    }
+};
 
 struct update_auth_period: parameter {
     uint32_t period = 30*60;
@@ -74,9 +81,11 @@ using max_witnesses_param = param_wrapper<param::witnesses,1>;
 using msig_perms_param = param_wrapper<param::msig_permissions,3>;
 using witness_votes_param = param_wrapper<param::witness_votes,1>;
 using update_auth_param = param_wrapper<param::update_auth_period,1>;
+using vesting_acc_param = param_wrapper<param::st_vesting_acc, 1>;
 
-using ctrl_param = std::variant<ctrl_token_param, multisig_acc_param, max_witnesses_param, 
-                                msig_perms_param, witness_votes_param, update_auth_param>;
+using ctrl_param =
+    std::variant<ctrl_token_param, multisig_acc_param, max_witnesses_param, 
+    msig_perms_param, witness_votes_param, update_auth_param, vesting_acc_param>;
 
 struct [[eosio::table]] ctrl_state {
     ctrl_token_param    token;
@@ -85,8 +94,9 @@ struct [[eosio::table]] ctrl_state {
     msig_perms_param    msig_perms;
     witness_votes_param witness_votes;
     update_auth_param   update_auth_period;
+    vesting_acc_param   vesting_acc;
 
-    static constexpr int params_count = 6;
+    static constexpr int params_count = 7;
 };
 using ctrl_params_singleton = eosio::singleton<"ctrlparams"_n, ctrl_state>;
 

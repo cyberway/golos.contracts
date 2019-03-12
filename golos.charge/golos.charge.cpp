@@ -7,21 +7,31 @@ using namespace atmsp::storable;
 
 static constexpr auto max_arg = static_cast<base_t>(std::numeric_limits<fixp_t>::max());
 
+struct charge_params_setter: set_params_visitor<charge_state> {
+    using set_params_visitor::set_params_visitor;
+
+    bool operator()(const vest_acc_param& param) {
+        return set_param(param, &charge_state::vesting_acc);
+    }
+};
+
 fixp_t charge::consume_charge(name issuer, name user, symbol_code token_code, uint8_t charge_id, int64_t price_arg, int64_t cutoff_arg, int64_t vesting_price) {
     eosio_assert(cutoff_arg < 0 || price_arg <= cutoff_arg, "price > cutoff");
     eosio_assert(price_arg <= max_arg, "price > max_input");
     eosio_assert(cutoff_arg < 0 || cutoff_arg <= max_arg, "cutoff > max_input");
     fixp_t price = to_fixp(price_arg);
     
+    charge_params_singleton cfg(_self, _self.value);
+    const auto &vesting_acc_param = cfg.get().vesting_acc.account;
     auto charge_symbol = symbol(token_code, charge_id);
     balances balances_table(_self, user.value);
     balances::const_iterator itr = balances_table.find(charge_symbol.raw());
     auto new_val = (itr != balances_table.end()) ? calc_value(_self, user, token_code, *itr, price) : price;
     if(cutoff_arg > 0 && new_val > to_fixp(cutoff_arg)) {
         eosio_assert(vesting_price > 0, "not enough power");
-        auto user_vesting = golos::vesting::get_account_unlocked_vesting(config::vesting_name, user, token_code);
+        auto user_vesting = golos::vesting::get_account_unlocked_vesting(vesting_acc_param, user, token_code);
         eosio_assert(user_vesting.amount >= vesting_price, "insufficient vesting amount");
-        INLINE_ACTION_SENDER(golos::vesting, retire) (config::vesting_name,
+        INLINE_ACTION_SENDER(golos::vesting, retire) (vesting_acc_param,
             {eosio::token::get_issuer(config::token_name, token_code), golos::config::invoice_name},
             {eosio::asset(vesting_price, user_vesting.symbol), user});
         return FP(itr->value);
@@ -130,7 +140,14 @@ void charge::send_charge_event(name user, const balance& state) {
     eosio::event(_self, "chargestate"_n, std::make_tuple(user, state)).send();
 }
 
-EOSIO_DISPATCH(charge, (use)(useandstore)(removestored)(setrestorer) )
+void charge::setparams(std::vector<charge_params> params) {
+    require_auth(_self);
+    charge_params_singleton cfg(_self, _self.value);
+    param_helper::set_parameters<charge_params_setter>(params, cfg, _self);
+}
+
+
+EOSIO_DISPATCH(charge, (use)(useandstore)(removestored)(setrestorer)(setparams) )
 
 } /// namespace golos
 

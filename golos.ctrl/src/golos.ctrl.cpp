@@ -81,6 +81,9 @@ struct ctrl_params_setter: set_params_visitor<ctrl_state> {
     bool operator()(const update_auth_param& p) {
         return set_param(p, &ctrl_state::update_auth_period);
     }
+    bool operator()(const vesting_acc_param& param) {
+        return set_param(param, &ctrl_state::vesting_acc);
+    }
 };
 
 void control::validateprms(vector<ctrl_param> params) {
@@ -243,7 +246,7 @@ void control::unvotewitn(name voter, name witness) {
 
 void control::changevest(name who, asset diff) {
     if (!_cfg.exists()) return;       // allow silent exit if changing vests before community created
-    require_auth(config::vesting_name);
+    require_auth(_cfg.get().vesting_acc.account);
     eosio_assert(diff.amount != 0, "diff is 0. something broken");          // in normal conditions sender must guarantee it
     eosio_assert(diff.symbol.code() == props().token.code, "wrong symbol. something broken");  // in normal conditions sender must guarantee it
     change_voter_vests(who, diff.amount);
@@ -263,7 +266,8 @@ void control::change_voter_vests(name voter, share_type diff) {
 }
 
 void control::apply_vote_weight(name voter, name witness, bool add) {
-    const auto power = vesting::get_account_vesting(config::vesting_name, voter, props().token.code).amount;
+    const auto power = 
+        vesting::get_account_vesting(_cfg.get().vesting_acc.account, voter, props().token.code).amount;
     if (power > 0) {
         update_witnesses_weights({witness}, add ? power : -power);
     }

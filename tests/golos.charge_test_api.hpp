@@ -55,6 +55,27 @@ struct golos_charge_api: base_contract_api {
             ("stamp_id", stamp_id)
         );
     }
+    
+    action_result set_params(std::string json_params) {
+        return push(N(setparams), _code, args()
+            ("params", json_str_to_obj(json_params)));
+    }
+
+    action_result init_default_params() {
+        auto vesting = get_str_vesting_acc(N(gls.vesting));
+
+        auto params = "[" + vesting + "]";
+        return set_params(params); 
+    } 
+    
+    variant get_params() const {
+        return base_contract_api::get_struct(_code, N(chrgparams), N(chrgparams), "charge_state");
+    }
+
+    string get_str_vesting_acc(name vesting_acc) {
+        return string("['vesting_acc', {'value':'") + name{vesting_acc}.to_string() + "'}]";
+    } 
+
 };
 
 

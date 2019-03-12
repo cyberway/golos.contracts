@@ -58,10 +58,19 @@ namespace golos {
         }
     };
     using referral_acc_prm = param_wrapper<st_referral_acc, 1>;
+    
+    struct st_vesting_acc : parameter {
+        name account;
+
+        void validate() const override {
+            eosio_assert(is_account(account), "Vesting account doesn't exist.");
+        }
+    };
+    using vesting_acc_prm = param_wrapper<st_vesting_acc, 1>;
 
 
     using posting_params = std::variant<max_vote_changes_prm, cashout_window_prm, max_beneficiaries_prm, 
-          max_comment_depth_prm, social_acc_prm, referral_acc_prm>;
+          max_comment_depth_prm, social_acc_prm, referral_acc_prm, vesting_acc_prm>;
 
     struct [[eosio::table]] posting_state {
         max_vote_changes_prm max_vote_changes_param;
@@ -70,8 +79,9 @@ namespace golos {
         max_comment_depth_prm max_comment_depth_param;
         social_acc_prm social_acc_param;
         referral_acc_prm referral_acc_param;
+        vesting_acc_prm vesting_acc_param;
 
-        static constexpr int params_count = 6;
+        static constexpr int params_count = 7;
     };
     using posting_params_singleton = eosio::singleton<"pstngparams"_n, posting_state>;
 

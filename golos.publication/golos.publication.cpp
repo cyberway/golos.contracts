@@ -79,6 +79,10 @@ struct posting_params_setter: set_params_visitor<posting_state> {
     bool operator()(const referral_acc_prm& param) {
         return set_param(param, &posting_state::referral_acc_param);
     }
+    
+    bool operator()(const vesting_acc_prm& param) {
+        return set_param(param, &posting_state::vesting_acc_param);
+    }
 };
 
 void publication::create_message(structures::mssgid message_id,
@@ -104,14 +108,15 @@ void publication::create_message(structures::mssgid message_id,
 
     posting_params_singleton cfg(_self, _self.value);
     const auto &cashout_window_param = cfg.get().cashout_window_param;
-    const auto &max_beneficiaries_param = cfg.get().max_beneficiaries_param;
-    const auto &max_comment_depth_param = cfg.get().max_comment_depth_param;
-    const auto &social_acc_param = cfg.get().social_acc_param;
-    const auto &referral_acc_param = cfg.get().referral_acc_param;
+    const auto &max_beneficiaries_param = cfg.get().max_beneficiaries_param.max_beneficiaries;
+    const auto &max_comment_depth_param = cfg.get().max_comment_depth_param.max_comment_depth;
+    const auto &social_acc_param = cfg.get().social_acc_param.account;
+    const auto &referral_acc_param = cfg.get().referral_acc_param.account;
+    const auto &vesting_acc_param = cfg.get().vesting_acc_param.account;
 
     if (parent_id.author) {
-        if (social_acc_param.account) {
-            eosio_assert(!social::is_blocking(social_acc_param.account, parent_id.author, message_id.author), "You are blocked by this account");
+        if (social_acc_param) {
+            eosio_assert(!social::is_blocking(social_acc_param, parent_id.author, message_id.author), "You are blocked by this account");
         }
     }
 
@@ -125,7 +130,7 @@ void publication::create_message(structures::mssgid message_id,
     tables::limit_table lims(_self, _self.value);
 
     use_charge(lims, parent_id.author ? structures::limitparams::COMM : structures::limitparams::POST, issuer, message_id.author,
-        golos::vesting::get_account_effective_vesting(config::vesting_name, message_id.author, token_code).amount, token_code, vestpayment);
+        golos::vesting::get_account_effective_vesting(vesting_acc_param, message_id.author, token_code).amount, token_code, vestpayment);
 
     tables::message_table message_table(_self, message_id.author.value);
     uint64_t message_pk = message_table.available_primary_key();
@@ -144,8 +149,8 @@ void publication::create_message(structures::mssgid message_id,
         benefic_map[ben.account] += ben.deductprcnt; //several entries for one user? ok.
     }
 
-    if (referral_acc_param.account != name()) {
-        auto obj_referral = golos::referral::account_referrer( referral_acc_param.account, message_id.author );
+    if (referral_acc_param != name()) {
+        auto obj_referral = golos::referral::account_referrer( referral_acc_param, message_id.author );
         if ( !obj_referral.is_empty() ) {
             auto& referrer = obj_referral.referrer;
             const auto& itr = std::find_if( beneficiaries.begin(), beneficiaries.end(),
@@ -171,7 +176,7 @@ void publication::create_message(structures::mssgid message_id,
             .deductprcnt = static_cast<base_t>(get_limit_prop(ben.second).data())
         });
 
-    eosio_assert((benefic_map.size() <= max_beneficiaries_param.max_beneficiaries), "publication::create_message: benafic_map.size() > MAX_BENEFICIARIES");
+    eosio_assert((benefic_map.size() <= max_beneficiaries_param), "publication::create_message: benafic_map.size() > MAX_BENEFICIARIES");
 
     auto cur_time = current_time();
     atmsp::machine<fixp_t> machine;
@@ -208,7 +213,7 @@ void publication::create_message(structures::mssgid message_id,
             }, record);
         }
     }
-    eosio_assert(level <= max_comment_depth_param.max_comment_depth, "publication::create_message: level > MAX_COMMENT_DEPTH");
+    eosio_assert(level <= max_comment_depth_param, "publication::create_message: level > MAX_COMMENT_DEPTH");
 
     auto mssg_itr = message_table.emplace(message_id.author, [&]( auto &item ) {
         item.id = message_pk;
@@ -310,11 +315,14 @@ void publication::payto(name user, eosio::asset quantity, enum_t mode) {
     if(quantity.amount == 0)
         return;
 
+    posting_params_singleton cfg(_self, _self.value);
+    const auto &vesting_acc_param = cfg.get().vesting_acc_param.account;
+
     if(static_cast<payment_t>(mode) == payment_t::TOKEN)
         INLINE_ACTION_SENDER(eosio::token, payment) (config::token_name, {_self, config::active_name}, {_self, user, quantity, ""});
     else if(static_cast<payment_t>(mode) == payment_t::VESTING)
         INLINE_ACTION_SENDER(eosio::token, transfer) (config::token_name, {_self, config::active_name},
-            {_self, config::vesting_name, quantity, config::send_prefix + name{user}.to_string()});
+            {_self, vesting_acc_param, quantity, config::send_prefix + name{user}.to_string()});
     else
         eosio_assert(false, "publication::payto: unknown kind of payment");
 }
@@ -516,10 +524,12 @@ void publication::check_upvote_time(uint64_t cur_time, uint64_t mssg_date) {
 }
 
 fixp_t publication::calc_available_rshares(name voter, int16_t weight, uint64_t cur_time, const structures::rewardpool& pool) {
+    posting_params_singleton cfg(_self, _self.value);
+    const auto &vesting_acc_param = cfg.get().vesting_acc_param.account;
     elaf_t abs_w = get_limit_prop(abs(weight));
     tables::limit_table lims(_self, _self.value);
     auto token_code = pool.state.funds.symbol.code();
-    int64_t eff_vesting = golos::vesting::get_account_effective_vesting(config::vesting_name, voter, token_code).amount;
+    int64_t eff_vesting = golos::vesting::get_account_effective_vesting(vesting_acc_param, voter, token_code).amount;
     use_charge(lims, structures::limitparams::VOTE, eosio::token::get_issuer(config::token_name, token_code),
         voter, eff_vesting, token_code, false, abs_w);
     fixp_t abs_rshares = fp_cast<fixp_t>(eff_vesting, false) * abs_w;
@@ -530,8 +540,9 @@ void publication::set_vote(name voter, const structures::mssgid& message_id, int
     require_auth(voter);
 
     posting_params_singleton cfg(_self, _self.value);
-    const auto &max_vote_changes_param = cfg.get().max_vote_changes_param;
-    const auto &social_acc_param = cfg.get().social_acc_param;
+    const auto &max_vote_changes_param = cfg.get().max_vote_changes_param.max_vote_changes;
+    const auto &social_acc_param = cfg.get().social_acc_param.account;
+    const auto &vesting_acc_param = cfg.get().vesting_acc_param.account;
 
     tables::message_table message_table(_self, message_id.author.value);
     auto message_index = message_table.get_index<"bypermlink"_n>();
@@ -549,7 +560,7 @@ void publication::set_vote(name voter, const structures::mssgid& message_id, int
     auto vote_itr = votetable_index.find(std::make_tuple(mssg_itr->id, voter));
     if (vote_itr != votetable_index.end()) {
         eosio_assert(weight != vote_itr->weight, "Vote with the same weight has already existed.");
-        eosio_assert(vote_itr->count != max_vote_changes_param.max_vote_changes, "You can't revote anymore.");
+        eosio_assert(vote_itr->count != max_vote_changes_param, "You can't revote anymore.");
 
         atmsp::machine<fixp_t> machine;
         fixp_t rshares = calc_available_rshares(voter, weight, cur_time, *pool);
@@ -620,8 +631,8 @@ void publication::set_vote(name voter, const structures::mssgid& message_id, int
 
     std::vector<structures::delegate_voter> delegators;
     auto token_code = pool->state.funds.symbol.code();
-    auto list_delegate_voter = golos::vesting::get_list_delegate(config::vesting_name, voter, token_code);
-    auto effective_vesting = golos::vesting::get_account_effective_vesting(config::vesting_name, voter, token_code);
+    auto list_delegate_voter = golos::vesting::get_list_delegate(vesting_acc_param, voter, token_code);
+    auto effective_vesting = golos::vesting::get_account_effective_vesting(vesting_acc_param, voter, token_code);
     
     for (auto record : list_delegate_voter) {
         auto interest_rate = static_cast<uint16_t>(static_cast<uint128_t>(record.quantity.amount) * 
@@ -646,9 +657,9 @@ void publication::set_vote(name voter, const structures::mssgid& message_id, int
         send_votestate_event(voter, item, message_id.author, *mssg_itr);
     });
 
-    if (social_acc_param.account) {
+    if (social_acc_param) {
         INLINE_ACTION_SENDER(golos::social, changereput)
-            (social_acc_param.account, {social_acc_param.account, config::active_name},
+            (social_acc_param, {social_acc_param, config::active_name},
             {voter, message_id.author, (rshares.data() >> 6)});
     }
 }
@@ -794,7 +805,9 @@ fixp_t publication::get_delta(atmsp::machine<fixp_t>& machine, fixp_t old_val, f
 }
 
 void publication::check_account(name user, eosio::symbol tokensymbol) {
-    eosio_assert(golos::vesting::balance_exist(config::vesting_name, user, tokensymbol.code()),
+    posting_params_singleton cfg(_self, _self.value);
+    const auto &vesting_acc_param = cfg.get().vesting_acc_param.account;
+    eosio_assert(golos::vesting::balance_exist(vesting_acc_param, user, tokensymbol.code()),
         ("unregistered user: " + name{user}.to_string()).c_str());
 }
 
@@ -816,11 +829,13 @@ void publication::reblog(name rebloger, structures::mssgid message_id) {
 
 int64_t publication::pay_delegators(int64_t claim, name voter, 
         eosio::symbol tokensymbol, std::vector<structures::delegate_voter> delegate_list) {
+    posting_params_singleton cfg(_self, _self.value);
+    const auto &vesting_acc = cfg.get().vesting_acc_param.account;
     int64_t dlg_payout_sum = 0;
     for (auto delegate_obj : delegate_list) {
         auto dlg_payout = claim * delegate_obj.interest_rate / config::_100percent;
-        INLINE_ACTION_SENDER(golos::vesting, paydelegator) (config::vesting_name, 
-            {config::vesting_name, config::active_name}, 
+        INLINE_ACTION_SENDER(golos::vesting, paydelegator) (vesting_acc, 
+            {vesting_acc, config::active_name}, 
             {voter, eosio::asset(dlg_payout, tokensymbol), delegate_obj.delegator, 
             delegate_obj.payout_strategy});
         dlg_payout_sum += dlg_payout;

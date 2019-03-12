@@ -17,6 +17,12 @@
       "type": "uint64"
     }
   ],
+  "variants": [{
+    "name": "charge_param",
+    "types": [
+      "vesting_acc"
+    ]
+  }],
   "structs": [
   {
     "name": "value",
@@ -274,6 +280,40 @@
         }
     ]
   },
+  {
+    "name": "vesting_acc",
+    "base": "",
+    "fields": [
+      {
+        "name": "value",
+        "type": "name"
+      }
+    ]
+  },
+  {
+    "name": "charge_state",
+    "base": "",
+    "fields": [
+      {
+        "name": "id",
+        "type": "uint64"
+      },
+      {
+        "name": "vesting_acc",
+        "type": "vesting_acc"
+      }
+    ]
+  },
+  {
+    "name": "setparams",
+    "base": "",
+    "fields": [
+      {
+        "name": "params",
+        "type": "charge_param[]"
+      }
+    ]
+  }
   ],
   "events": [
     {"name": "chargestate", "type": "chargestate"},
@@ -294,6 +334,10 @@
   {
     "name": "removestored",
     "type": "removestored"
+  },
+  {
+    "name": "setparams",
+    "type": "setparams"
   }
   ],
   "tables": [
@@ -339,6 +383,19 @@
           "unique": "true",
           "orders": [
               {"field": "symbol_stamp", "order": "asc"}
+          ]
+       }
+    ]
+  },
+  {
+    "name": "chrgparams",
+    "type": "charge_state",
+    "indexes": [
+       {
+          "name": "primary",
+          "unique": "true",
+          "orders": [
+              {"field": "id", "order": "asc"}
           ]
        }
     ]

@@ -34,6 +34,9 @@ struct emit_params_setter: set_params_visitor<emit_state> {
     bool operator()(const emit_interval_param& p) {
         return set_param(p, &emit_state::interval);
     }
+    bool operator()(const vesting_acc_prm& p) {
+        return set_param(p, &emit_state::vesting_acc_param);
+    }
 };
 
 void emission::validateprms(vector<emit_param> params) {
@@ -92,9 +95,11 @@ void emission::emit() {
     }
     // TODO: maybe limit elapsed to avoid instant high value emission
 
-    auto token = _cfg.get().token;
-    auto pools = _cfg.get().pools.pools;
-    auto infrate = _cfg.get().infrate;
+    auto cfg = _cfg.get();
+    auto token = cfg.token;
+    auto pools = cfg.pools.pools;
+    auto infrate = cfg.infrate;
+    auto vesting_acc = cfg.vesting_acc_param.account;
     auto narrowed = microseconds(now - s.start_time).to_seconds() / infrate.narrowing;
     auto inf_rate = std::max(int64_t(infrate.start) - narrowed, int64_t(infrate.stop));
 
@@ -114,7 +119,7 @@ void emission::emit() {
 
         auto transfer = [&](auto from, auto to, auto amount) {
             if (amount > 0) {
-                auto memo = to == config::vesting_name ? "" : trans_memo;   // vesting contract requires empty memo to add to supply
+                auto memo = to == vesting_acc ? "" : trans_memo;   // vesting contract requires empty memo to add to supply
                 INLINE_ACTION_SENDER(eosio::token, transfer)(config::token_name, {from, config::active_name},
                     {from, to, asset(amount, token.symbol), memo});
             }

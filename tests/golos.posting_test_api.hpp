@@ -1,6 +1,7 @@
 #pragma once
 #include "test_api_helper.hpp"
 #include "golos.publication_rewards_types.hpp"
+#include "common/config.hpp"
 
 namespace eosio { namespace testing {
 
@@ -124,9 +125,10 @@ struct golos_posting_api: base_contract_api {
         auto comment_depth = get_str_comment_depth(max_comment_depth);
         auto social = get_str_social_acc(name());
         auto referral = get_str_referral_acc(name());
+        auto vesting = get_str_vesting_acc(vesting_acc);
 
         auto params = "[" + vote_changes + "," + cashout_window + "," + beneficiaries + "," + comment_depth + 
-            "," + social + "," + referral + "]";
+            "," + social + "," + referral + "," + vesting + "]";
         return set_params(params); 
     } 
 
@@ -156,7 +158,11 @@ struct golos_posting_api: base_contract_api {
     
     string get_str_referral_acc(name referral_acc) {
         return string("['st_referral_acc', {'value':'") + name{referral_acc}.to_string() + "'}]";
-    }   
+    }
+    
+    string get_str_vesting_acc(name vesting_acc) {
+        return string("['st_vesting_acc', {'value':'") + name{vesting_acc}.to_string() + "'}]";
+    }    
 
     //// posting tables
     variant get_message(account_name acc, uint64_t id) {
@@ -199,6 +205,7 @@ struct golos_posting_api: base_contract_api {
     const uint32_t upvote_lockout = 15;
     const uint8_t max_beneficiaries = 64;
     const uint16_t max_comment_depth = 127;
+    const name vesting_acc = golos::config::vesting_name;
 };
 
 

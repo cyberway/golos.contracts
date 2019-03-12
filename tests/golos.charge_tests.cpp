@@ -29,21 +29,22 @@ protected:
 public:
 
     golos_charge_tester()
-        : golos_tester(cfg::vesting_name)
+        : golos_tester(cfg::charge_name)
         , vest({this, cfg::vesting_name, _vesting_sym})
         , token({this, cfg::token_name, _token_sym})
         , charge({this, cfg::charge_name, _token_sym})
         , _users{N(alice), N(bob)}
     {
-        create_accounts({_code, cfg::token_name, cfg::charge_name, cfg::control_name, cfg::emission_name});
+        create_accounts({_code, cfg::token_name, cfg::control_name, cfg::emission_name, cfg::vesting_name});
         create_accounts(_users);
         produce_blocks(2);
-        install_contract(_code, contracts::vesting_wasm(), contracts::vesting_abi());
         install_contract(cfg::token_name, contracts::token_wasm(), contracts::token_abi());
-        install_contract(cfg::charge_name, contracts::charge_wasm(), contracts::charge_abi());
+        install_contract(_code, contracts::charge_wasm(), contracts::charge_abi());
+        install_contract(cfg::vesting_name, contracts::vesting_wasm(), contracts::vesting_abi());
     }
 
     void init(int64_t issuer_funds, int64_t user_vesting_funds) {
+        charge.init_default_params();
         auto total_funds = issuer_funds + _users.size() * user_vesting_funds;
         BOOST_CHECK_EQUAL(success(), token.create(cfg::emission_name, asset(total_funds, _token_sym), {cfg::charge_name}));
         produce_block();
@@ -70,6 +71,7 @@ protected:
         const string cutoff = amsg("not enough power");
         const string stored_not_found = amsg("itr == storedvals_index.end()");
         const string insufficient_vesting = amsg("insufficient vesting amount");
+        const string no_vesting_acc = amsg("Vesting account doesn't exist.");
         
     } err;
 
@@ -125,6 +127,27 @@ BOOST_FIXTURE_TEST_CASE(basic_tests, golos_charge_tester) try {
     BOOST_CHECK_EQUAL(err.stored_not_found, charge.remove_stored(cfg::emission_name, _users[0], 'c', 42));
     produce_block();
     
+} FC_LOG_AND_RETHROW()
+
+BOOST_FIXTURE_TEST_CASE(set_params, golos_charge_tester) try {
+    BOOST_TEST_MESSAGE("Test charge parameters");
+    
+    produce_block();
+    
+    BOOST_TEST_MESSAGE("--- check that global params not exist");
+    BOOST_TEST_CHECK(charge.get_params().is_null());
+
+    produce_block();
+
+    auto params = "[" + charge.get_str_vesting_acc(N(testacc)) + "]";
+    BOOST_CHECK_EQUAL(err.no_vesting_acc, charge.set_params(params));
+
+    charge.init_default_params();
+    
+    auto obj_params = charge.get_params();
+    BOOST_TEST_MESSAGE("--- all params were initialized successful");
+
+    BOOST_CHECK_EQUAL(obj_params["vesting_acc"]["value"].as_string(), cfg::vesting_name);
 } FC_LOG_AND_RETHROW()
 
 BOOST_AUTO_TEST_SUITE_END()

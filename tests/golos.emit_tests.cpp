@@ -25,7 +25,7 @@ public:
         , token({this, cfg::token_name, _token})
     {
         create_accounts({_code, BLOG, N(witn1), N(witn2), N(witn3), N(witn4), N(witn5), _alice, _bob, _carol,
-            cfg::control_name, cfg::vesting_name, cfg::token_name, cfg::workers_name});
+            cfg::control_name, cfg::token_name, cfg::workers_name, cfg::vesting_name});
         produce_block();
 
         install_contract(_code, contracts::emit_wasm(), contracts::emit_abi());
@@ -62,6 +62,7 @@ public:
     struct errors: contract_error_messages {
         const string no_pool_account   = amsg("pool account must exist");
         const string interval0         = amsg("interval must be positive");
+        const string no_vesting_acc    = amsg("Vesting account doesn't exist.");
     } err;
 
     const string _test_key = string(fc::crypto::config::public_key_legacy_prefix)
@@ -97,7 +98,8 @@ BOOST_FIXTURE_TEST_CASE(start_emission_test, golos_emit_tester) try {
     auto workers_pool = emit.pool_json(cfg::workers_name, 1000);
     auto pools = "{'pools':[" + content_pool + "," + witness_pool + "," + vesting_pool + "," + workers_pool + "]}";
     auto interval = "['emit_interval',{'value':'" + std::to_string(_interval) + "'}]";
-    auto params = "[" + emit.infrate_json(1500, 95, 250000) + ",['reward_pools'," + pools + "]," + emit.token_symbol_json(_token) + "," + interval + "]";
+    auto vesting_acc = "['vesting_acc',{'value':'" + cfg::vesting_name.to_string() + "'}]";
+    auto params = "[" + emit.infrate_json(1500, 95, 250000) + ",['reward_pools'," + pools + "]," + emit.token_symbol_json(_token) + "," + interval + "," + vesting_acc + "]";
     BOOST_CHECK_EQUAL(success(), emit.set_params(params));
 
     BOOST_TEST_MESSAGE("--- start succeed");
@@ -137,13 +139,19 @@ BOOST_FIXTURE_TEST_CASE(set_params, golos_emit_tester) try {
     const string infrate = "{'start':1,'stop':1,'narrowing':0}";
     auto interval = "['emit_interval',{'value':'" + std::to_string(_interval) + "'}]";
     auto interval0 = "['emit_interval',{'value':'" + std::to_string(0) + "'}]";
-    auto params = "[['inflation_rate'," + infrate + "], ['reward_pools'," + pools + "]," + emit.token_symbol_json(_token) + "," + interval0 + "]";
+    auto testacc = "{'value':'testacc'}";
+    auto params = "[['inflation_rate'," + infrate + "], ['reward_pools'," + pools + "]," + emit.token_symbol_json(_token) + "," + interval0 + ",['vesting_acc'," + testacc + "]" + "]";
     BOOST_CHECK_EQUAL(err.no_pool_account, emit.set_params(params));
     create_accounts({N(test), N(less), N(zero)});
     produce_block();
 
     BOOST_CHECK_EQUAL(err.interval0, emit.set_params(params));
-    params = "[['inflation_rate'," + infrate + "], ['reward_pools'," + pools + "]," + emit.token_symbol_json(_token) + "," + interval + "]";
+    params = "[['inflation_rate'," + infrate + "], ['reward_pools'," + pools + "]," + emit.token_symbol_json(_token) + "," + interval + ",['vesting_acc'," + testacc + "]" + "]";
+    BOOST_CHECK_EQUAL(err.no_vesting_acc, emit.set_params(params));
+    produce_block();
+    
+    auto vesting_acc = "{'value':'" + cfg::vesting_name.to_string() + "'}";
+    params = "[['inflation_rate'," + infrate + "], ['reward_pools'," + pools + "]," + emit.token_symbol_json(_token) + "," + interval + ",['vesting_acc'," + vesting_acc + "]" + "]";
     BOOST_CHECK_EQUAL(success(), emit.set_params(params));
     auto t = emit.get_params();
     BOOST_TEST_MESSAGE("--- " + fc::json::to_string(t));

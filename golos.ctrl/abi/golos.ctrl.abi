@@ -9,7 +9,8 @@
             "max_witnesses",
             "multisig_perms",
             "max_witness_votes",
-            "update_auth"
+            "update_auth",
+            "vesting_acc"
         ]
     }],
     "structs": [
@@ -116,6 +117,12 @@
             "fields": [
                 {"type": "uint32", "name": "period"}]
         }, {
+            "name": "vesting_acc",
+            "base": "",
+            "fields": [
+                {"type": "name", "name": "value"}
+            ]
+        }, {
             "name": "ctrl_state",
             "fields": [
                 {"type": "uint64",              "name": "id"},
@@ -124,7 +131,9 @@
                 {"type": "max_witnesses",       "name": "witnesses"},
                 {"type": "multisig_perms",      "name": "msig_perms"},
                 {"type": "max_witness_votes",   "name": "witness_votes"},
-                {"type": "update_auth",         "name": "update_auth_period"}]
+                {"type": "update_auth",         "name": "update_auth_period"},
+                {"type": "vesting_acc",         "name": "vesting_acc"}
+            ]
         }, {
             "name": "setparams",
             "fields": [

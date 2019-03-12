@@ -66,9 +66,10 @@ public:
         auto comment_depth = post.get_str_comment_depth(post.max_comment_depth);
         auto social_acc = post.get_str_social_acc(cfg::social_name);
         auto referral_acc = post.get_str_referral_acc(cfg::referral_name);
+        auto vesting_acc = post.get_str_vesting_acc(cfg::vesting_name);
 
         auto params = "[" + vote_changes + "," + cashout_window + "," + beneficiaries + "," + comment_depth +
-                "," + social_acc + "," + referral_acc + "]";
+                "," + social_acc + "," + referral_acc + "," + vesting_acc + "]";
         BOOST_CHECK_EQUAL(success(), post.set_params(params));
         produce_blocks();
    }

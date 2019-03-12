@@ -12,6 +12,7 @@
 #include <common/config.hpp>
 #include <cyber.token/cyber.token.hpp>
 #include <golos.vesting/golos.vesting.hpp>
+#include "parameters.hpp"
 
 namespace golos {
 using namespace eosio;
@@ -39,6 +40,8 @@ public:
     
     [[eosio::action]] void setrestorer(symbol_code token_code, uint8_t charge_id, std::string func_str, 
         int64_t max_prev, int64_t max_vesting, int64_t max_elapsed);
+
+    [[eosio::action]] void setparams(std::vector<charge_params> params);
         
     void on_transfer(name from, name to, asset quantity, std::string memo);
     //TODO:? user can restore a charge by transferring some amount to this contract (it will send these funds to the issuer)
@@ -92,7 +95,8 @@ private:
         eosio_assert(cur_time >= user_balance.last_update, "LOGIC ERROR! charge::calc_value: cur_time < user_balance.last_update");
         fixp_t restored = fixp_t(0);
         if (cur_time > user_balance.last_update) {
-            
+            charge_params_singleton cfg(code, code.value);
+
             restorers restorers_table(code, code.value);
             auto restorer_itr = restorers_table.find(user_balance.charge_symbol);
             eosio_assert(restorer_itr != restorers_table.end(), "charge::calc_value restorer_itr == restorers_table.end()");
@@ -100,7 +104,8 @@ private:
             
             int64_t elapsed_seconds = static_cast<int64_t>((cur_time - user_balance.last_update) / eosio::seconds(1).count());        
             auto prev = FP(user_balance.value);
-            int64_t vesting = golos::vesting::get_account_effective_vesting(config::vesting_name, user, token_code).amount;
+            int64_t vesting = 
+                golos::vesting::get_account_effective_vesting(cfg.get().vesting_acc.account, user, token_code).amount;
             restorer_itr->func.to_machine(machine);
             restored = machine.run(
                 {prev, fp_cast<fixp_t>(vesting, false), fp_cast<fixp_t>(elapsed_seconds, false)}, {

@@ -26,7 +26,8 @@
       "st_max_beneficiaries",
       "st_max_comment_depth",
       "st_social_acc",
-      "st_referral_acc"
+      "st_referral_acc",
+      "st_vesting_acc"
     ]
   }],
   "structs": [
@@ -643,6 +644,16 @@
     ]
   },
   {
+    "name": "st_vesting_acc",
+    "base": "",
+    "fields": [
+      {
+        "name": "value",
+        "type": "name"
+      }
+    ]
+  },
+  {
     "name": "posting_state",
     "base": "",
     "fields": [
@@ -673,6 +684,10 @@
       {
         "name": "referral_acc",
         "type": "st_referral_acc"
+      },
+      {
+        "name": "vesting_acc",
+        "type": "st_vesting_acc"
       }
     ]
   },

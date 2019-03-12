@@ -24,6 +24,9 @@ struct emit_params_setter: set_params_visitor<emit_state> {
     bool operator()(const emit_interval_param& p) {
         return set_param(p, &emit_state::interval);
     }
+    bool operator()(const vesting_acc_prm& p) {
+        return set_param(p, &emit_state::vesting_acc_param);
+    }
 };
 
 void configer::updateparamse(name who, std::vector<emit_param> params) {

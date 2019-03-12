@@ -51,12 +51,13 @@ protected:
         const string not_monotonic      = amsg("check monotonic failed for time penalty func");
         const string fp_cast_overflow   = amsg("fp_cast: overflow");
         const string limit_no_power     = amsg("not enough power");
-        const string limit_no_vesting     = amsg("insufficient effective vesting amount");
+        const string limit_no_vesting   = amsg("insufficient effective vesting amount");
         const string delete_upvoted     = amsg("Cannot delete a comment with net positive votes.");
     } err;
 
     void init(int64_t issuer_funds, int64_t user_vesting_funds) {
 
+        BOOST_CHECK_EQUAL(success(), charge.init_default_params());
         BOOST_CHECK_EQUAL(success(), post.init_default_params());
 
         auto total_funds = issuer_funds + _users.size() * user_vesting_funds;
