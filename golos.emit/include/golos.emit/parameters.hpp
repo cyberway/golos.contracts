@@ -67,17 +67,17 @@ struct inflation_rate: parameter {
 };
 using infrate_params = param_wrapper<inflation_rate,3>;
 
-struct emit_token_symbol: parameter {
+struct emit_token: parameter {
     symbol symbol;
 };
-using emit_token_symbol_params = param_wrapper<emit_token_symbol,1>;
+using emit_token_params = param_wrapper<emit_token,1>;
 
-using emit_param = std::variant<infrate_params, reward_pools_param, emit_token_symbol_params>;
+using emit_param = std::variant<infrate_params, reward_pools_param, emit_token_params>;
 
 struct [[eosio::table]] emit_state {
     infrate_params infrate;
     reward_pools_param pools;
-    emit_token_symbol_params token_symbol;
+    emit_token_params token;
 
     static constexpr int params_count = 3;
 };

@@ -18,8 +18,8 @@ struct emit_params_setter: set_params_visitor<emit_state> {
     bool operator()(const reward_pools_param& p) {
         return set_param(p, &emit_state::pools);
     }
-    bool operator()(const emit_token_symbol_params& p) {
-        return set_param(p, &emit_state::token_symbol);
+    bool operator()(const emit_token_params& p) {
+        return set_param(p, &emit_state::token);
     }
 };
 
@@ -59,8 +59,8 @@ struct emit_state_updater: state_params_update_visitor<emit_state> {
     void operator()(const reward_pools_param& p) {
         update_state(&emit_state::pools, THRESHOLD);
     }
-    bool operator()(const emit_token_symbol_params& p) {
-        update_state(&emit_state::token_symbol, THRESHOLD);
+    bool operator()(const emit_token_params& p) {
+        update_state(&emit_state::token, THRESHOLD);
     }
 };
 

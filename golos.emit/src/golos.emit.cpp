@@ -29,8 +29,8 @@ struct emit_params_setter: set_params_visitor<emit_state> {
     bool operator()(const reward_pools_param& p) {
         return set_param(p, &emit_state::pools);
     }
-    bool operator()(const emit_token_symbol_params& p) {
-        return set_param(p, &emit_state::token_symbol);
+    bool operator()(const emit_token_params& p) {
+        return set_param(p, &emit_state::token);
     }
 };
 
@@ -88,14 +88,14 @@ void emission::emit() {
     }
     // TODO: maybe limit elapsed to avoid instant high value emission
 
+    auto token = _cfg.get().token;
     auto pools = _cfg.get().pools.pools;
     auto infrate = _cfg.get().infrate;
-    auto token_symbol = _cfg.get().token_symbol;
     auto narrowed = microseconds(now - s.start_time).to_seconds() / infrate.narrowing;
     auto inf_rate = std::max(int64_t(infrate.start) - narrowed, int64_t(infrate.stop));
 
-    auto supply = eosio::token::get_supply(config::token_name, token_symbol.symbol.code());
-    auto issuer = eosio::token::get_issuer(config::token_name, token_symbol.symbol.code());
+    auto supply = eosio::token::get_supply(config::token_name, token.symbol.code());
+    auto issuer = eosio::token::get_issuer(config::token_name, token.symbol.code());
     auto new_tokens = static_cast<int64_t>(
         supply.amount * static_cast<uint128_t>(inf_rate) * time_to_blocks(elapsed)
         / (int64_t(config::blocks_per_year) * config::_100percent));
@@ -106,13 +106,13 @@ void emission::emit() {
         auto from = _self;
         INLINE_ACTION_SENDER(eosio::token, issue)(config::token_name,
             {{issuer, config::active_name}},
-            {_self, asset(new_tokens, token_symbol.symbol), issue_memo});
+            {_self, asset(new_tokens, token.symbol), issue_memo});
 
         auto transfer = [&](auto from, auto to, auto amount) {
             if (amount > 0) {
                 auto memo = to == config::vesting_name ? "" : trans_memo;   // vesting contract requires empty memo to add to supply
                 INLINE_ACTION_SENDER(eosio::token, transfer)(config::token_name, {from, config::active_name},
-                    {from, to, asset(amount, token_symbol.symbol), memo});
+                    {from, to, asset(amount, token.symbol), memo});
             }
         };
         auto total = new_tokens;
@@ -138,7 +138,7 @@ void emission::emit() {
 }
 
 void emission::schedule_next(state& s, uint32_t delay) {
-    auto sender_id = (uint128_t(_cfg.get().token_symbol.symbol.raw()) << 64) | s.prev_emit;
+    auto sender_id = (uint128_t(_cfg.get().token.symbol.raw()) << 64) | s.prev_emit;
 
     transaction trx;
     trx.actions.emplace_back(action{permission_level(_self, config::active_name), _self, "emit"_n, std::tuple<>()});
