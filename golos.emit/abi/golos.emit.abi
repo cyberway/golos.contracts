@@ -9,7 +9,7 @@
         "types": [
             "inflation_rate",
             "reward_pools",
-            "emit_token_symbol"
+            "emit_token"
         ]
     }],
     "structs": [
@@ -29,7 +29,7 @@
                 {"type": "account_name", "name": "name"},
                 {"type": "uint16",       "name": "percent"}]
         }, {
-            "name": "emit_token_symbol",
+            "name": "emit_token",
             "base": "",
             "fields": [{"type": "symbol", "name": "symbol"}]
         }, {
@@ -38,7 +38,7 @@
                 {"type": "uint64",         "name": "id"},
                 {"type": "inflation_rate", "name": "infrate"},
                 {"type": "reward_pools",   "name": "pools"},
-                {"type": "emit_token_symbol", "name": "token_symbol"}]
+                {"type": "emit_token", "name": "token"}]
 
         }, {
             "name": "setparams",
