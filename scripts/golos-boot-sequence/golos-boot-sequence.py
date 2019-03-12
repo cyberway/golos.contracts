@@ -251,7 +251,7 @@ def stepCreateTokens():
     #totalAllocation = allocateFunds(0, len(accounts))
     #totalAllocation = 10000000*10000
     #retry(args.cleos + 'push action cyber.token issue ' + jsonArg(["gls.publish", intToToken(totalAllocation), "memo"]) + ' -p gls.publish')
-    retry(args.cleos + 'push action gls.vesting createvest ' + jsonArg([args.vesting, 'gls.ctrl']) + '-p gls.issuer')
+    retry(args.cleos + 'push action gls.vesting create ' + jsonArg([args.vesting, 'gls.ctrl']) + '-p gls.issuer')
     for acc in golosAccounts:
         openTokenBalance(acc.name)
     sleep(1)
