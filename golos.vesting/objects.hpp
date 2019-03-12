@@ -124,11 +124,6 @@ struct convert_of_tokens {
                       (payout_part)(balance_amount) )
 };
 
-struct shash {          // ???
-    uint64_t hash;
-
-    EOSLIB_SERIALIZE(shash, (hash))
-};
 } // structures
 
 namespace tables {

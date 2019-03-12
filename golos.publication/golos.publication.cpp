@@ -854,7 +854,7 @@ int64_t publication::pay_delegators(int64_t claim, name voter,
         INLINE_ACTION_SENDER(golos::vesting, paydelegator) (config::vesting_name, 
             {config::vesting_name, config::active_name}, 
             {voter, eosio::asset(dlg_payout, tokensymbol), delegate_obj.delegator, 
-            delegate_obj.interest_rate, delegate_obj.payout_strategy});
+            delegate_obj.payout_strategy});
         dlg_payout_sum += dlg_payout;
     }
     return dlg_payout_sum;

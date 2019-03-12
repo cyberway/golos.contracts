@@ -16,7 +16,7 @@ struct golos_vesting_api: base_contract_api {
         return create_vesting(creator, _symbol, golos::config::control_name);
     }
     action_result create_vesting(name creator, symbol vesting_symbol, name notify_acc = N(notify.acc)) {
-        action_result result = push(N(createvest), creator, args()
+        action_result result = push(N(create), creator, args()
             ("symbol", vesting_symbol)
             ("notify_acc", notify_acc)
         );
@@ -45,15 +45,15 @@ struct golos_vesting_api: base_contract_api {
     }
 
     action_result convert_vesting(name sender, name recipient, asset quantity) {
-        return push(N(convertvg), sender, args()
-            ("sender", sender)
-            ("recipient", recipient)
+        return push(N(convert), sender, args()
+            ("from", sender)
+            ("to", recipient)
             ("quantity", quantity)
         );
     }
 
-    action_result cancel_convert_vesting(name sender, asset type) {
-        return push(N(cancelvg), sender, args()
+    action_result cancel_convert_vesting(name sender, symbol type) {
+        return push(N(cancelconv), sender, args()
             ("sender", sender)
             ("type", type)
         );
@@ -62,9 +62,9 @@ struct golos_vesting_api: base_contract_api {
     action_result delegate_vesting(name sender, name recipient, asset quantity,
         uint16_t interest_rate = 0, uint8_t payout_strategy = 0
     ) {
-        return push(N(delegatevg), sender, args()
-            ("sender", sender)
-            ("recipient", recipient)
+        return push(N(delegate), sender, args()
+            ("from", sender)
+            ("to", recipient)
             ("quantity", quantity)
             ("interest_rate", interest_rate)
             ("payout_strategy", payout_strategy)
@@ -72,9 +72,9 @@ struct golos_vesting_api: base_contract_api {
     }
 
     action_result undelegate_vesting(name sender, name recipient, asset quantity) {
-        return push(N(undelegatevg), sender, args()
-            ("sender", sender)
-            ("recipient", recipient)
+        return push(N(undelegate), sender, args()
+            ("from", sender)
+            ("to", recipient)
             ("quantity", quantity)
         );
     }
