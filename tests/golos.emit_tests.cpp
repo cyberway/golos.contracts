@@ -95,7 +95,7 @@ BOOST_FIXTURE_TEST_CASE(start_emission_test, golos_emit_tester) try {
     auto witness_pool = emit.pool_json(cfg::control_name, 0);
     auto workers_pool = emit.pool_json(cfg::workers_name, 1000);
     auto pools = "{'pools':[" + content_pool + "," + witness_pool + "," + vesting_pool + "," + workers_pool + "]}";
-    auto params = "[" + emit.infrate_json(1500, 95, 250000) + ",['reward_pools'," + pools + "]]";
+    auto params = "[" + emit.infrate_json(1500, 95, 250000) + ",['reward_pools'," + pools + "]," + emit.token_symbol_json(_token) + "]";
     BOOST_CHECK_EQUAL(success(), emit.set_params(params));
 
     BOOST_TEST_MESSAGE("--- start succeed");
@@ -133,7 +133,7 @@ BOOST_FIXTURE_TEST_CASE(set_params, golos_emit_tester) try {
     string pool3 = "{'name':'more','percent':5001}";
     const auto pools = "{'pools':[" + pool2 + "," + pool1 + "," + pool0 + "]}";
     const string infrate = "{'start':1,'stop':1,'narrowing':0}";
-    auto params = "[['inflation_rate'," + infrate + "], ['reward_pools'," + pools + "]]";
+    auto params = "[['inflation_rate'," + infrate + "], ['reward_pools'," + pools + "]," + emit.token_symbol_json(_token) + "]";
     BOOST_CHECK_EQUAL(err.no_pool_account, emit.set_params(params));
     create_accounts({N(test), N(less), N(zero)});
     produce_block();

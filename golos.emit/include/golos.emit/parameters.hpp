@@ -2,6 +2,7 @@
 #include <common/parameter.hpp>
 #include <common/config.hpp>
 #include <eosiolib/singleton.hpp>
+#include <eosiolib/symbol.hpp>
 
 namespace golos {
 
@@ -66,13 +67,19 @@ struct inflation_rate: parameter {
 };
 using infrate_params = param_wrapper<inflation_rate,3>;
 
-using emit_param = std::variant<infrate_params, reward_pools_param>;
+struct emit_token: parameter {
+    symbol symbol;
+};
+using emit_token_params = param_wrapper<emit_token,1>;
+
+using emit_param = std::variant<infrate_params, reward_pools_param, emit_token_params>;
 
 struct [[eosio::table]] emit_state {
     infrate_params infrate;
     reward_pools_param pools;
+    emit_token_params token;
 
-    static constexpr int params_count = 2;
+    static constexpr int params_count = 3;
 };
 using emit_params_singleton = eosio::singleton<"emitparams"_n, emit_state>;
 
