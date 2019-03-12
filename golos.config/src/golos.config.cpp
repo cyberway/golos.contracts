@@ -84,7 +84,7 @@ void configer::recalculate_state(vector<emit_param> changed_params) {
     auto top_params = param_helper::get_top_params<emit_params_singleton, emit_state>(_self, top);
     auto v = emit_state_updater(s, top_params);
     for (const auto& param: changed_params) {
-//        std::visit(v, param);
+//        std::visit(v, param); // TODO: fix compilation
     }
     if (v.changed) {
         state.set(v.state, _self);
