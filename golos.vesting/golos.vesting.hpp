@@ -12,28 +12,28 @@ class vesting : public contract {
 public:
     using contract::contract;
 
-    void validateprms(symbol symbol, std::vector<vesting_params>);
-    void setparams(symbol symbol, std::vector<vesting_params>);
+    [[eosio::action]] void validateprms(symbol symbol, std::vector<vesting_params>);
+    [[eosio::action]] void setparams(symbol symbol, std::vector<vesting_params>);
+
+    [[eosio::action]] void retire(asset quantity, name user);
+    [[eosio::action]] void unlocklimit(name owner, asset quantity);
+
+    [[eosio::action]] void convert(name from, name to, asset quantity);
+    [[eosio::action]] void cancelconv(name sender, symbol type);
+    [[eosio::action]] void delegate(name sender, name recipient, asset quantity, uint16_t interest_rate, uint8_t payout_strategy);
+    [[eosio::action]] void undelegate(name sender, name recipient, asset quantity);
+
+    [[eosio::action]] void create(symbol symbol, name notify_acc);
+
+    [[eosio::action]] void open(name owner, symbol symbol, name ram_payer);
+    [[eosio::action]] void close(name owner, symbol symbol);
+
+    [[eosio::action]] void timeout();
+    [[eosio::action]] void timeoutconv();
+    [[eosio::action]] void timeoutrdel();
+    [[eosio::action]] void paydelegator(name account, asset reward, name delegator, uint8_t payout_strategy);
 
     void on_transfer(name from, name to, asset quantity, std::string memo);
-    void retire(asset quantity, name user);
-    void unlock_limit(name owner, asset quantity);
-
-    void convert_vesting(name from, name to, asset quantity);
-    void cancel_convert_vesting(name sender, asset type);
-    void delegate_vesting(name sender, name recipient, asset quantity, uint16_t interest_rate, uint8_t payout_strategy);
-    void undelegate_vesting(name sender, name recipient, asset quantity);
-
-    void create(symbol symbol, name notify_acc);
-
-    void open(name owner, symbol symbol, name ram_payer);
-    void close(name owner, symbol symbol);
-
-    void timeout_delay_trx();
-    void calculate_convert_vesting();
-    void calculate_delegate_vesting();
-    void paydelegator(name account, asset reward, name delegator, 
-        uint16_t interest_rate, uint8_t payout_strategy);
 
     static inline asset get_account_vesting(name code, name account, symbol_code sym) {
         tables::account_table accounts(code, account.value);

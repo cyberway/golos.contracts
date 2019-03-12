@@ -290,7 +290,7 @@ BOOST_FIXTURE_TEST_CASE(cancel_convert, golos_vesting_tester) try {
     CHECK_MATCHING_OBJECT(token.get_account(N(sania)), mvo()("balance", token.asset_str(401)));
 
     BOOST_TEST_MESSAGE("--- cancel convert and check convert object deleted");
-    BOOST_CHECK_EQUAL(success(), vest.cancel_convert_vesting(N(sania), vest.make_asset(0)));
+    BOOST_CHECK_EQUAL(success(), vest.cancel_convert_vesting(N(sania), vest.make_asset(0).get_symbol()));
     BOOST_TEST_CHECK(vest.get_convert_obj(N(sania)).is_null());
 
     BOOST_TEST_MESSAGE("--- go to next withdrawal time and check it not happens");

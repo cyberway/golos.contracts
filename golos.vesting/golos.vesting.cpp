@@ -4,60 +4,12 @@
 #include <eosiolib/event.hpp>
 #include <cyber.token/cyber.token.hpp>
 #include <golos.charge/golos.charge.hpp>
+#include <common/dispatchers.hpp>
 
 namespace golos {
 
 
 using namespace eosio;
-
-extern "C" {
-    void apply(uint64_t receiver, uint64_t code, uint64_t action) {
-        // vesting(receiver).apply(code, action);
-    auto execute_action = [&](const auto fn) {
-        return eosio::execute_action(eosio::name(receiver), eosio::name(code), fn);
-    };
-#define NN(x) N(x).value
-
-    if (NN(transfer) == action && config::token_name.value == code)
-        execute_action(&vesting::on_transfer);
-
-    else if (NN(retire) == action)
-        execute_action(&vesting::retire);
-    else if (NN(unlocklimit) == action)
-        execute_action(&vesting::unlock_limit);
-    else if (NN(convertvg) == action)
-        execute_action(&vesting::convert_vesting);
-    else if (NN(cancelvg) == action)
-        execute_action(&vesting::cancel_convert_vesting);
-    else if (NN(delegatevg) == action)
-        execute_action(&vesting::delegate_vesting);
-    else if (NN(undelegatevg) == action)
-        execute_action(&vesting::undelegate_vesting);
-
-    else if (NN(open) == action)
-        execute_action(&vesting::open);
-    else if (NN(close) == action)
-        execute_action(&vesting::close);
-
-    else if (NN(createvest) == action)
-        execute_action(&vesting::create);
-
-    else if (NN(timeoutrdel) == action)
-        execute_action(&vesting::calculate_delegate_vesting);
-    else if (NN(timeoutconv) == action)
-        execute_action(&vesting::calculate_convert_vesting);
-    else if (NN(timeout) == action)
-        execute_action(&vesting::timeout_delay_trx);
-
-    else if (NN(validateprms) == action)
-        execute_action(&vesting::validateprms);
-    else if (NN(setparams) == action)
-        execute_action(&vesting::setparams);
-    else if (NN(paydelegator) == action)
-        execute_action(&vesting::paydelegator);
-    }
-#undef NN
-}
 
 struct vesting_params_setter: set_params_visitor<vesting_state> {
     using set_params_visitor::set_params_visitor; // enable constructor
@@ -137,7 +89,7 @@ void vesting::retire(asset quantity, name user) {
     });
 }
 
-void vesting::convert_vesting(name from, name to, asset quantity) {
+void vesting::convert(name from, name to, asset quantity) {
     require_auth(from);
 
     vesting_params_singleton cfg(_self, quantity.symbol.code().raw());
@@ -176,18 +128,17 @@ void vesting::convert_vesting(name from, name to, asset quantity) {
     }
 }
 
-// TODO: pass symbol name instead of asset
-void vesting::cancel_convert_vesting(name sender, asset type) {
+void vesting::cancelconv(name sender, symbol type) {
     require_auth(sender);
 
-    tables::convert_table table(_self, type.symbol.code().raw());
+    tables::convert_table table(_self, type.code().raw());
     auto record = table.find(sender.value);
     eosio_assert(record != table.end(), "Not found convert record sender");
 
     table.erase(record);
 }
 
-void vesting::unlock_limit(name owner, asset quantity) {
+void vesting::unlocklimit(name owner, asset quantity) {
     require_auth(owner);
     auto sym = quantity.symbol;
     eosio_assert(quantity.is_valid(), "invalid quantity");
@@ -201,7 +152,7 @@ void vesting::unlock_limit(name owner, asset quantity) {
     });
 }
 
-void vesting::delegate_vesting(name sender, name recipient, asset quantity, uint16_t interest_rate, uint8_t payout_strategy) {
+void vesting::delegate(name sender, name recipient, asset quantity, uint16_t interest_rate, uint8_t payout_strategy) {
     require_auth(sender);
 
     vesting_params_singleton cfg(_self, quantity.symbol.code().raw());
@@ -276,7 +227,7 @@ void vesting::delegate_vesting(name sender, name recipient, asset quantity, uint
     eosio_assert(balance_recipient->received_vesting.amount >= delegation_params.min_remainder, "delegated vesting withdrawn");
 }
 
-void vesting::undelegate_vesting(name sender, name recipient, asset quantity) {
+void vesting::undelegate(name sender, name recipient, asset quantity) {
     require_auth(sender);
 
     vesting_params_singleton cfg(_self, quantity.symbol.code().raw());
@@ -333,7 +284,7 @@ void vesting::create(symbol symbol, name notify_acc) {
     });
 }
 
-void vesting::calculate_convert_vesting() {
+void vesting::timeoutconv() {
     require_auth(_self);
     tables::vesting_table table_vesting(_self, _self.value);
 
@@ -386,7 +337,7 @@ void vesting::calculate_convert_vesting() {
     }
 }
 
-void vesting::calculate_delegate_vesting() {
+void vesting::timeoutrdel() {
     require_auth(_self);
     tables::return_delegate_table table_delegate_vesting(_self, _self.value);
     auto index = table_delegate_vesting.get_index<"date"_n>();
@@ -532,18 +483,17 @@ const asset vesting::convert_to_vesting(const asset& src, const structures::vest
     return asset(amount, vinfo.supply.symbol);
 }
 
-void vesting::timeout_delay_trx() {
+void vesting::timeout() {
     require_auth(_self);
     transaction trx;
-    trx.actions.emplace_back(action{permission_level(_self, config::active_name), _self, "timeoutrdel"_n, structures::shash{now()}});
-    trx.actions.emplace_back(action{permission_level(_self, config::active_name), _self, "timeoutconv"_n, structures::shash{now()}});
-    trx.actions.emplace_back(action{permission_level(_self, config::active_name), _self, "timeout"_n,     structures::shash{now()}});
+    trx.actions.emplace_back(action{permission_level(_self, config::active_name), _self, "timeoutrdel"_n, ""});
+    trx.actions.emplace_back(action{permission_level(_self, config::active_name), _self, "timeoutconv"_n, ""});
+    trx.actions.emplace_back(action{permission_level(_self, config::active_name), _self, "timeout"_n,     ""});
     trx.delay_sec = config::vesting_delay_tx_timeout;
     trx.send(_self.value, _self);
 }
 
-void vesting::paydelegator(name account, asset reward, name delegator, 
-        uint16_t interest_rate, uint8_t payout_strategy) {
+void vesting::paydelegator(name account, asset reward, name delegator, uint8_t payout_strategy) {
     require_auth(_self);
     if (payout_strategy == config::payout_strategy::to_delegated_vesting) {
         tables::delegate_table table(_self, reward.symbol.code().raw());
@@ -569,3 +519,7 @@ void vesting::paydelegator(name account, asset reward, name delegator,
 }
 
 } // golos
+
+DISPATCH_WITH_TRANSFER(golos::vesting, on_transfer, (validateprms)(setparams)
+        (retire)(unlocklimit)(convert)(cancelconv)(delegate)(undelegate)(create)
+        (open)(close)(timeout)(timeoutconv)(timeoutrdel)(paydelegator))
