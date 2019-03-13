@@ -8,7 +8,8 @@
             "multisig_acc",
             "max_witnesses",
             "multisig_perms",
-            "max_witness_votes"
+            "max_witness_votes",
+            "update_auth"
         ]
     }],
     "structs": [
@@ -113,6 +114,11 @@
             "fields": [
                 {"type": "uint16", "name": "max"}]
         }, {
+            "name": "update_auth",
+            "base": "",
+            "fields": [
+                {"type": "uint32", "name": "period"}]
+        }, {
             "name": "ctrl_state",
             "fields": [
                 {"type": "uint64",              "name": "id"},
@@ -120,7 +126,8 @@
                 {"type": "multisig_acc",        "name": "multisig"},
                 {"type": "max_witnesses",       "name": "witnesses"},
                 {"type": "multisig_perms",      "name": "msig_perms"},
-                {"type": "max_witness_votes",   "name": "witness_votes"}]
+                {"type": "max_witness_votes",   "name": "witness_votes"},
+                {"type": "update_auth",         "name": "update_auth_period"}]
         }, {
             "name": "setparams",
             "fields": [

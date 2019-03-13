@@ -78,6 +78,9 @@ struct ctrl_params_setter: set_params_visitor<ctrl_state> {
     bool operator()(const witness_votes_param& p) {
         return set_param(p, &ctrl_state::witness_votes);
     }
+    bool operator()(const update_auth_param& p) {
+        return set_param(p, &ctrl_state::update_auth_period);
+    }
 };
 
 void control::validateprms(vector<ctrl_param> params) {
@@ -287,12 +290,18 @@ void control::update_witnesses_weights(vector<name> witnesses, share_type diff) 
 }
 
 void control::update_auths() {
+    msig_auth_singleton_tbl top_witnesses_tbl(_self, _self.value);
+
+    auto last_update = top_witnesses_tbl.get_or_default().last_update.utc_seconds;
+
+    if (last_update && props().update_auth_period.period + last_update > now())
+        return;
+
     auto top = top_witnesses();
     std::sort(top.begin(), top.end(), [](const auto& it1, const auto& it2) {
         return it1.value < it2.value;
     });
 
-    msig_auth_singleton_tbl top_witnesses_tbl(_self, _self.value);
     const auto &old_top = top_witnesses_tbl.get_or_default().witnesses;
 
     if (old_top.size() > 0 && old_top.size() == top.size()) {
@@ -304,7 +313,8 @@ void control::update_auths() {
             return;
     }
 
-    top_witnesses_tbl.set({top, time_point_sec(now())}, _self);
+    if (top.size())
+        top_witnesses_tbl.set({top, time_point_sec(now())}, _self);
 
     auto max_witn = props().witnesses.max;
     if (top.size() < max_witn) {           // TODO: ?restrict only just after creation and allow later
@@ -367,7 +377,6 @@ vector<name> control::top_witnesses() {
     });
     return top;
 }
-
 
 } // golos
 

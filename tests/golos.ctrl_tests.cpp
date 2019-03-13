@@ -37,7 +37,7 @@ public:
         install_contract(cfg::token_name, contracts::token_wasm(), contracts::token_abi());
         install_contract(cfg::vesting_name, contracts::vesting_wasm(), contracts::vesting_abi());
 
-        _test_params = ctrl.default_params(BLOG, _token, _max_witnesses, _max_witness_votes);
+        _test_params = ctrl.default_params(BLOG, _token, _max_witnesses, _max_witness_votes, _update_auth_period);
     }
 
 
@@ -46,6 +46,7 @@ public:
     }
 
     // constants
+    const uint32_t _update_auth_period = 3;
     const uint16_t _max_witnesses = 2;
     const uint16_t _max_witness_votes = 4;
     const uint16_t _smajor_witn_count = _max_witnesses * 2 / 3 + 1;
@@ -109,6 +110,7 @@ public:
         const string already_attached   = amsg("already attached");
         const string already_detached   = amsg("user already detached");
         const string no_account         = amsg("user not found");
+        const string auth_period0       = amsg("update auth period can't be 0");
     } err;
 
     // prepare
@@ -184,16 +186,16 @@ BOOST_FIXTURE_TEST_CASE(create_community, golos_ctrl_tester) try {
     BOOST_CHECK_EQUAL(err.max_wit_votes0, ctrl.set_params(ctrl.default_params(BLOG, _token, 21, 0)));
 
     BOOST_TEST_MESSAGE("------- permission thresholds");
-    BOOST_CHECK_EQUAL(err.smaj_lt_maj, ctrl.set_params(ctrl.default_params(BLOG, _token, 21, 30, 3,5,0)));
-    BOOST_CHECK_EQUAL(err.smaj_lt_min, ctrl.set_params(ctrl.default_params(BLOG, _token, 21, 30, 3,0,5)));
-    BOOST_CHECK_EQUAL(err.maj_lt_min,  ctrl.set_params(ctrl.default_params(BLOG, _token, 21, 30, 0,2,5)));
+    BOOST_CHECK_EQUAL(err.smaj_lt_maj, ctrl.set_params(ctrl.default_params(BLOG, _token, 21, 30, _update_auth_period, 3,5,0)));
+    BOOST_CHECK_EQUAL(err.smaj_lt_min, ctrl.set_params(ctrl.default_params(BLOG, _token, 21, 30, _update_auth_period, 3,0,5)));
+    BOOST_CHECK_EQUAL(err.maj_lt_min,  ctrl.set_params(ctrl.default_params(BLOG, _token, 21, 30, _update_auth_period, 0,2,5)));
 
-    BOOST_CHECK_EQUAL(err.smaj_gt_max, ctrl.set_params(ctrl.default_params(BLOG, _token, 21, 30, 22,2,1)));
-    BOOST_CHECK_EQUAL(err.maj_gt_max,  ctrl.set_params(ctrl.default_params(BLOG, _token, 21, 30, 0,22,1)));
-    BOOST_CHECK_EQUAL(err.min_gt_max,  ctrl.set_params(ctrl.default_params(BLOG, _token, 21, 30, 0,0,22)));
-    BOOST_CHECK_EQUAL(err.maj_gt_smaj, ctrl.set_params(ctrl.default_params(BLOG, _token, 21, 30, 2,0,0)));
-    BOOST_CHECK_EQUAL(err.min_gt_smaj, ctrl.set_params(ctrl.default_params(BLOG, _token, 21, 30, 2,1,0)));
-    BOOST_CHECK_EQUAL(err.min_gt_maj,  ctrl.set_params(ctrl.default_params(BLOG, _token, 21, 30, 15,1,0)));
+    BOOST_CHECK_EQUAL(err.smaj_gt_max, ctrl.set_params(ctrl.default_params(BLOG, _token, 21, 30, _update_auth_period, 22,2,1)));
+    BOOST_CHECK_EQUAL(err.maj_gt_max,  ctrl.set_params(ctrl.default_params(BLOG, _token, 21, 30, _update_auth_period, 0,22,1)));
+    BOOST_CHECK_EQUAL(err.min_gt_max,  ctrl.set_params(ctrl.default_params(BLOG, _token, 21, 30, _update_auth_period, 0,0,22)));
+    BOOST_CHECK_EQUAL(err.maj_gt_smaj, ctrl.set_params(ctrl.default_params(BLOG, _token, 21, 30, _update_auth_period, 2,0,0)));
+    BOOST_CHECK_EQUAL(err.min_gt_smaj, ctrl.set_params(ctrl.default_params(BLOG, _token, 21, 30, _update_auth_period, 2,1,0)));
+    BOOST_CHECK_EQUAL(err.min_gt_maj,  ctrl.set_params(ctrl.default_params(BLOG, _token, 21, 30, _update_auth_period, 15,1,0)));
 
     BOOST_TEST_MESSAGE("--- create community with valid parameters succeed");
     BOOST_CHECK_EQUAL(success(), ctrl.set_params(_test_params));
@@ -204,6 +206,7 @@ BOOST_FIXTURE_TEST_CASE(create_community, golos_ctrl_tester) try {
     CHECK_EQUAL_OBJECTS(t["witnesses"], json_str_to_obj(ctrl.max_witnesses_param(_max_witnesses))[1]);
     CHECK_EQUAL_OBJECTS(t["msig_perms"], json_str_to_obj(ctrl.msig_perms_param())[1]);
     CHECK_EQUAL_OBJECTS(t["witness_votes"], json_str_to_obj(ctrl.max_witness_votes_param(_max_witness_votes))[1]);
+    CHECK_EQUAL_OBJECTS(t["update_auth_period"], json_str_to_obj(ctrl.update_auth_param(_update_auth_period))[1]);
     produce_block();
 
     BOOST_TEST_MESSAGE("--- test fail when trying to create again");
@@ -267,15 +270,15 @@ BOOST_FIXTURE_TEST_CASE(register_update_witness, golos_ctrl_tester) try {
         BOOST_CHECK_EQUAL(success(), ctrl.vote_witness(std::get<0>(v), std::get<1>(v)));
         BOOST_TEST_MESSAGE("--- check top witnesses");
 
-        produce_block();
+        produce_blocks(golos::seconds_to_blocks(_update_auth_period));
         auto current_time = control->head_block_time().time_since_epoch();
 
-        auto top_withnesses = ctrl.get_top_witnesses();
-        auto last_update_top_withnesses = top_withnesses["last_update"].as<fc::time_point>().time_since_epoch();
+        auto top_witnesses = ctrl.get_top_witnesses();
+        auto last_update_top_witnesses = top_witnesses["last_update"].as<fc::time_point>().time_since_epoch();
+        
+        BOOST_CHECK_EQUAL(last_update_top_witnesses == current_time, std::get<2>(v));
 
-        BOOST_CHECK_EQUAL(last_update_top_withnesses == current_time, std::get<2>(v));
-
-        auto save_top_witnesses = top_withnesses["witnesses"].as<vector<name>>();
+        auto save_top_witnesses = top_witnesses["witnesses"].as<vector<name>>();
         auto list_top_witnesses = ctrl.get_all_witnesses();
 
         std::sort(list_top_witnesses.begin(), list_top_witnesses.end(), [](const auto &it1, const auto &it2) {
@@ -299,7 +302,7 @@ BOOST_FIXTURE_TEST_CASE(register_update_witness, golos_ctrl_tester) try {
         std::sort(top.begin(), top.end(), [](const auto &it1, const auto &it2) {
             return it1.value < it2.value;
         });
-
+         
         auto result = std::equal(save_top_witnesses.begin(), save_top_witnesses.end(), top.begin(), [&] (const auto &old_element, const auto &new_element) {
             return old_element.value == new_element.value;
         });
@@ -396,6 +399,7 @@ BOOST_FIXTURE_TEST_CASE(set_params, golos_ctrl_tester) try {
     // TODO: maybe move to separate parameters validation test
     BOOST_CHECK_EQUAL(err.no_msig_acc, ctrl.set_param(ctrl.multisig_param(N(nobody))));
     BOOST_CHECK_EQUAL(err.max_witness0, ctrl.set_param(ctrl.max_witnesses_param(0)));
+    BOOST_CHECK_EQUAL(err.auth_period0, ctrl.set_param(ctrl.update_auth_param(0)));
 
     BOOST_TEST_MESSAGE("--- check that setting valid parameters succeed");
     BOOST_CHECK_EQUAL(success(), ctrl.set_param(ctrl.msig_perms_param(_max_witnesses)));
@@ -427,6 +431,29 @@ BOOST_FIXTURE_TEST_CASE(change_vesting, golos_ctrl_tester) try {
     produce_block();
 
     // TODO: check decreasing vesting and paths, other than `issue`+`transfer`
+} FC_LOG_AND_RETHROW()
+
+BOOST_FIXTURE_TEST_CASE(update_auths, golos_ctrl_tester) try {
+    BOOST_TEST_MESSAGE("Checking update auths period");
+    prepare(step_only_create);
+    prepare_balances();
+    
+    BOOST_TEST_MESSAGE("--- checking that update auths possible only once");
+    BOOST_CHECK_EQUAL(success(), ctrl.reg_witness(_w[0], _test_key, "localhost"));
+    BOOST_CHECK_EQUAL(success(), ctrl.vote_witness(_bob, _w[0]));
+    produce_blocks(golos::seconds_to_blocks(_update_auth_period)-1);  
+    BOOST_CHECK_EQUAL(success(), ctrl.reg_witness(_w[1], _test_key, "localhost"));
+    BOOST_CHECK_EQUAL(success(), ctrl.vote_witness(_bob, _w[1]));
+    auto top_witnesses = ctrl.get_top_witnesses();
+    std::vector<name> wtns = {_w[0]};
+    BOOST_CHECK(top_witnesses["witnesses"].as<std::vector<name>>().size() ==  wtns.size());
+
+    BOOST_TEST_MESSAGE("--- checking that update auths possible again");
+    produce_blocks(2);
+    BOOST_CHECK_EQUAL(success(), ctrl.vote_witness(_alice, _w[1]));
+    wtns.push_back(_w[1]);
+    top_witnesses = ctrl.get_top_witnesses();
+    BOOST_CHECK(top_witnesses["witnesses"].as<std::vector<name>>().size() == wtns.size());
 } FC_LOG_AND_RETHROW()
 
 
