@@ -57,10 +57,9 @@ struct golos_ctrl_api: base_contract_api {
         );
     }
 
-    action_result reg_witness(name witness, string key, string url) {
+    action_result reg_witness(name witness, string url) {
         return push(N(regwitness), witness, args()
             ("witness", witness)
-            ("key", key)    // TODO: remove
             ("url", url)
         );
     }
@@ -71,16 +70,17 @@ struct golos_ctrl_api: base_contract_api {
         );
     }
 
-    action_result vote_witness(name voter, name witness, uint16_t weight=10000) {
+    action_result vote_witness(name voter, name witness) {
         return push(N(votewitness), voter, args()
             ("voter", voter)
             ("witness", witness)
-            ("weight", weight));
+        );
     }
     action_result unvote_witness(name voter, name witness) {
         return push(N(unvotewitn), voter, args()
             ("voter", voter)
-            ("witness", witness));
+            ("witness", witness)
+        );
     }
 
     action_result change_vests(name who, asset diff) {
@@ -106,8 +106,8 @@ struct golos_ctrl_api: base_contract_api {
         return _tester->get_all_chaindb_rows(_code, _code, N(witness), false);
     }
 
-    variant get_top_witnesses() const {
-        return get_struct(_code, N(witnessauth), N(witnessauth), "witnesses_auth");
+    variant get_msig_auths() const {
+        return get_struct(_code, N(msigauths), N(msigauths), "msig_auths");
     }
 
     //// helpers

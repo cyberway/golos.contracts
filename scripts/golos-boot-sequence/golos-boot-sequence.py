@@ -155,16 +155,15 @@ def buyVesting(account, amount):
     issueToken(account, amount)
     transfer(account, 'gls.vesting', amount)   # buy vesting
 
-def registerWitness(ctrl, witness, key):
+def registerWitness(ctrl, witness):
     retry(args.cleos + 'push action ' + ctrl + ' regwitness' + jsonArg({
         'witness': witness,
-        'key': key,
         'url': 'http://%s.witnesses.golos.io' % witness
     }) + '-p %s'%witness)
 
-def voteWitness(ctrl, voter, witness, weight):
+def voteWitness(ctrl, voter, witness):
     retry(args.cleos + ' push action ' + ctrl + ' votewitness ' +
-        jsonArg([voter, witness, weight]) + '-p %s'%voter)
+        jsonArg([voter, witness]) + '-p %s'%voter)
 
 def createPost(author, permlink, header, body, *, beneficiaries=[]):
     retry(args.cleos + 'push action gls.publish createmssg' +
@@ -324,8 +323,8 @@ def createWitnessAccounts():
         createAccount('cyber', a['name'], a['pub'])
         openVestingBalance(a['name'])
         buyVesting(a['name'], intToToken(10000000*10000))
-        registerWitness('gls.ctrl', a['name'], a['pub'])
-        voteWitness('gls.ctrl', a['name'], a['name'], 10000)
+        registerWitness('gls.ctrl', a['name'])
+        voteWitness('gls.ctrl', a['name'], a['name'])
 
 def initCommunity():
     retry(args.cleos + 'push action gls.publish setparams ' + jsonArg([[
