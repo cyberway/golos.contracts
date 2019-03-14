@@ -49,7 +49,7 @@ void vesting::on_transfer(name from, name to, asset quantity, std::string memo) 
     if(token::get_issuer(config::token_name, quantity.symbol.code()) == from && recipient == name())
         return;     // just increase token supply
 
-    tables::vesting_table table_vesting(_self, _self.value);
+    tables::vesting_table table_vesting(_self, _self.value);    // TODO: use symbol as scope
     auto vesting = table_vesting.find(quantity.symbol.code().raw());
     eosio_assert(vesting != table_vesting.end(), "Token not found");
 

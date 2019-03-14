@@ -74,8 +74,6 @@ public:
     }
 
     string _test_params;
-    const string _test_key = string(fc::crypto::config::public_key_legacy_prefix)
-        + "6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV";
 
     struct errors: contract_error_messages {
         const string no_symbol          = amsg("not initialized");
@@ -97,7 +95,6 @@ public:
         const string same_params        = amsg("at least one parameter must change");
 
         const string bad_url            = amsg("url too long");
-        const string bad_pub_key        = amsg("public key should not be the default value");
         const string same_reg_props     = amsg("already updated in the same way");
         const string already_unreg      = amsg("witness already unregistered");
         const string no_witness         = amsg("witness not found");
@@ -130,7 +127,7 @@ public:
 
         if (state <= step_only_create) return;
         for (int i = 0; i < _n_w; i++) {
-            BOOST_CHECK_EQUAL(success(), ctrl.reg_witness(_w[i], _test_key, "localhost"));
+            BOOST_CHECK_EQUAL(success(), ctrl.reg_witness(_w[i], "localhost"));
         }
         produce_block();
 
@@ -172,7 +169,7 @@ BOOST_FIXTURE_TEST_CASE(create_community, golos_ctrl_tester) try {
     BOOST_TEST_MESSAGE("Test community creation");
     BOOST_TEST_MESSAGE("--- check that actions disabled before community created");
     BOOST_TEST_CHECK(ctrl.get_params().is_null());
-    BOOST_CHECK_EQUAL(err.no_symbol, ctrl.reg_witness(_w[0], _test_key, "localhost"));
+    BOOST_CHECK_EQUAL(err.no_symbol, ctrl.reg_witness(_w[0], "localhost"));
     BOOST_CHECK_EQUAL(err.no_symbol, ctrl.unreg_witness(_w[0]));
     BOOST_CHECK_EQUAL(err.no_symbol, ctrl.vote_witness(_alice, _w[0]));
     BOOST_CHECK_EQUAL(err.no_symbol, ctrl.unvote_witness(_alice, _w[0]));
@@ -219,23 +216,22 @@ BOOST_FIXTURE_TEST_CASE(register_witness, golos_ctrl_tester) try {
     prepare(step_only_create);
 
     BOOST_TEST_MESSAGE("--- check registration success");
-    BOOST_CHECK_EQUAL(success(), ctrl.reg_witness(_w[0], _test_key, "localhost"));
-    auto w = mvo()("name","witn1")("key",_test_key)("url","localhost")("active",true)("total_weight",0);
+    BOOST_CHECK_EQUAL(success(), ctrl.reg_witness(_w[0], "localhost"));
+    auto w = mvo()("name","witn1")("url","localhost")("active",true)("total_weight",0);
     CHECK_MATCHING_OBJECT(ctrl.get_witness(_w[0]), w);
 
     BOOST_TEST_MESSAGE("--- check properties update");
-    BOOST_CHECK_EQUAL(success(), ctrl.reg_witness(_w[0], _test_key, "-"));
+    BOOST_CHECK_EQUAL(success(), ctrl.reg_witness(_w[0], "-"));
     produce_block();
 
-    BOOST_CHECK_EQUAL(err.same_reg_props, ctrl.reg_witness(_w[0], _test_key, "-"));
-    // BOOST_CHECK_EQUAL(err.bad_pub_key, ctrl.reg_witness(_w[0], "", "-"));        // not needed, key will be removed
+    BOOST_CHECK_EQUAL(err.same_reg_props, ctrl.reg_witness(_w[0], "-"));
     string maxurl =
         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
         "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
-    BOOST_CHECK_EQUAL(success(), ctrl.reg_witness(_w[0], _test_key, maxurl));
-    BOOST_CHECK_EQUAL(err.bad_url, ctrl.reg_witness(_w[0], _test_key, maxurl+"!"));
+    BOOST_CHECK_EQUAL(success(), ctrl.reg_witness(_w[0], maxurl));
+    BOOST_CHECK_EQUAL(err.bad_url, ctrl.reg_witness(_w[0], maxurl+"!"));
 
     BOOST_TEST_MESSAGE("--- check unreg");
     BOOST_CHECK_EQUAL(success(), ctrl.unreg_witness(_w[0]));
@@ -255,7 +251,7 @@ BOOST_FIXTURE_TEST_CASE(register_update_witness, golos_ctrl_tester) try {
     produce_block();
 
     for (int i = 0; i < _n_w; i++) {
-        BOOST_CHECK_EQUAL(success(), ctrl.reg_witness(_w[i], _test_key, "localhost"));
+        BOOST_CHECK_EQUAL(success(), ctrl.reg_witness(_w[i], "localhost"));
     }
     produce_block();
     BOOST_TEST_MESSAGE("--- check registration success");
@@ -273,9 +269,9 @@ BOOST_FIXTURE_TEST_CASE(register_update_witness, golos_ctrl_tester) try {
         produce_blocks(golos::seconds_to_blocks(_update_auth_period));
         auto current_time = control->head_block_time().time_since_epoch();
 
-        auto top_witnesses = ctrl.get_top_witnesses();
+        auto top_witnesses = ctrl.get_msig_auths();
         auto last_update_top_witnesses = top_witnesses["last_update"].as<fc::time_point>().time_since_epoch();
-        
+
         BOOST_CHECK_EQUAL(last_update_top_witnesses == current_time, std::get<2>(v));
 
         auto save_top_witnesses = top_witnesses["witnesses"].as<vector<name>>();
@@ -302,7 +298,7 @@ BOOST_FIXTURE_TEST_CASE(register_update_witness, golos_ctrl_tester) try {
         std::sort(top.begin(), top.end(), [](const auto &it1, const auto &it2) {
             return it1.value < it2.value;
         });
-         
+
         auto result = std::equal(save_top_witnesses.begin(), save_top_witnesses.end(), top.begin(), [&] (const auto &old_element, const auto &new_element) {
             return old_element.value == new_element.value;
         });
@@ -334,7 +330,7 @@ BOOST_FIXTURE_TEST_CASE(vote_witness, golos_ctrl_tester) try {
     // TODO: check permissions
 
     BOOST_TEST_MESSAGE("--- Check witness weight");
-    auto wp = mvo()("name","witn1")("key",_test_key)("url","localhost")("active",true);
+    auto wp = mvo()("name","witn1")("url","localhost")("active",true);
     CHECK_MATCHING_OBJECT(ctrl.get_witness(_w[0]), wp("total_weight",(800+700+100)*_wmult));
     produce_block();
 
@@ -421,7 +417,7 @@ BOOST_FIXTURE_TEST_CASE(change_vesting, golos_ctrl_tester) try {
     produce_block();
 
     BOOST_TEST_MESSAGE("--- witness weight change when adding vesting");
-    auto wp = mvo()("name","witn1")("key",_test_key)("url","localhost")("active",true);
+    auto wp = mvo()("name","witn1")("url","localhost")("active",true);
     CHECK_MATCHING_OBJECT(ctrl.get_witness(_w[0]), wp("total_weight",_wmult*(800+700+100)));
     CHECK_MATCHING_OBJECT(ctrl.get_witness(_w[1]), wp("total_weight",_wmult*(800))("name","witn2"));
     BOOST_CHECK_EQUAL(success(), token.issue(_issuer, _alice, dasset(100), "issue"));
@@ -437,14 +433,14 @@ BOOST_FIXTURE_TEST_CASE(update_auths, golos_ctrl_tester) try {
     BOOST_TEST_MESSAGE("Checking update auths period");
     prepare(step_only_create);
     prepare_balances();
-    
+
     BOOST_TEST_MESSAGE("--- checking that update auths possible only once");
-    BOOST_CHECK_EQUAL(success(), ctrl.reg_witness(_w[0], _test_key, "localhost"));
+    BOOST_CHECK_EQUAL(success(), ctrl.reg_witness(_w[0], "localhost"));
     BOOST_CHECK_EQUAL(success(), ctrl.vote_witness(_bob, _w[0]));
-    produce_blocks(golos::seconds_to_blocks(_update_auth_period)-1);  
-    BOOST_CHECK_EQUAL(success(), ctrl.reg_witness(_w[1], _test_key, "localhost"));
+    produce_blocks(golos::seconds_to_blocks(_update_auth_period)-1);
+    BOOST_CHECK_EQUAL(success(), ctrl.reg_witness(_w[1], "localhost"));
     BOOST_CHECK_EQUAL(success(), ctrl.vote_witness(_bob, _w[1]));
-    auto top_witnesses = ctrl.get_top_witnesses();
+    auto top_witnesses = ctrl.get_msig_auths();
     std::vector<name> wtns = {_w[0]};
     BOOST_CHECK(top_witnesses["witnesses"].as<std::vector<name>>().size() ==  wtns.size());
 
@@ -452,7 +448,7 @@ BOOST_FIXTURE_TEST_CASE(update_auths, golos_ctrl_tester) try {
     produce_blocks(2);
     BOOST_CHECK_EQUAL(success(), ctrl.vote_witness(_alice, _w[1]));
     wtns.push_back(_w[1]);
-    top_witnesses = ctrl.get_top_witnesses();
+    top_witnesses = ctrl.get_msig_auths();
     BOOST_CHECK(top_witnesses["witnesses"].as<std::vector<name>>().size() == wtns.size());
 } FC_LOG_AND_RETHROW()
 

@@ -156,17 +156,15 @@ void control::detachacc(name user) {
     eosio_assert(exist, "user not found");
 }
 
-void control::regwitness(name witness, eosio::public_key key, string url) {
+void control::regwitness(name witness, string url) {
     assert_started();
     eosio_assert(url.length() <= config::witness_max_url_size, "url too long");
-    eosio_assert(key != eosio::public_key(), "public key should not be the default value");
     require_auth(witness);
 
     upsert_tbl<witness_tbl>(witness, [&](bool exists) {
         return [&,exists](witness_info& w) {
-            eosio_assert(!exists || w.key != key || w.url != url, "already updated in the same way");
+            eosio_assert(!exists || w.url != url || !w.active, "already updated in the same way");
             w.name = witness;
-            w.key = key;
             w.url = url;
             w.active = true;
         };
@@ -193,7 +191,7 @@ void control::unregwitness(name witness) {
 }
 
 // Note: if not weighted, it's possible to pass all witnesses in vector like in BP actions
-void control::votewitness(name voter, name witness, uint16_t weight/* = 10000*/) {
+void control::votewitness(name voter, name witness) {
     assert_started();
     require_auth(voter);
 
@@ -290,10 +288,10 @@ void control::update_witnesses_weights(vector<name> witnesses, share_type diff) 
 }
 
 void control::update_auths() {
-    msig_auth_singleton_tbl top_witnesses_tbl(_self, _self.value);
+    msig_auth_singleton tbl(_self, _self.value);
+    const auto& top_auths = tbl.get_or_default();
 
-    auto last_update = top_witnesses_tbl.get_or_default().last_update.utc_seconds;
-
+    auto last_update = top_auths.last_update.utc_seconds;
     if (last_update && props().update_auth_period.period + last_update > now())
         return;
 
@@ -302,19 +300,17 @@ void control::update_auths() {
         return it1.value < it2.value;
     });
 
-    const auto &old_top = top_witnesses_tbl.get_or_default().witnesses;
-
+    const auto& old_top = top_auths.witnesses;
     if (old_top.size() > 0 && old_top.size() == top.size()) {
-        bool result = std::equal(old_top.begin(), old_top.end(), top.begin(), [] (const auto& old_element, const auto& new_element) {
-            return old_element.value == new_element.value;
+        bool result = std::equal(old_top.begin(), old_top.end(), top.begin(), [](const auto& prev, const auto& cur) {
+            return prev.value == cur.value;
         });
-
-        if ( result )
+        if (result)
             return;
     }
 
     if (top.size())
-        top_witnesses_tbl.set({top, time_point_sec(now())}, _self);
+        tbl.set({top, time_point_sec(now())}, _self);
 
     auto max_witn = props().witnesses.max;
     if (top.size() < max_witn) {           // TODO: ?restrict only just after creation and allow later

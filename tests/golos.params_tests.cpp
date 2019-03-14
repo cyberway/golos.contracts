@@ -79,10 +79,8 @@ public:
         ctrl.prepare_multisig(BLOG);
         produce_block();
 
-        const string _test_key = string(fc::crypto::config::public_key_legacy_prefix)
-            + "6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV";
         for (int i = 0; i < _n_w; i++) {
-            BOOST_CHECK_EQUAL(success(), ctrl.reg_witness(_w[i], _test_key, "localhost"));
+            BOOST_CHECK_EQUAL(success(), ctrl.reg_witness(_w[i], "localhost"));
         }
         produce_block();
 

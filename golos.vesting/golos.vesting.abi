@@ -19,16 +19,6 @@
       ]
     },
     {
-      "name": "vesting_symbol",
-      "base": "",
-      "fields": [
-        {
-          "name": "vesting",
-          "type": "symbol"
-        }
-      ]
-    },
-    {
       "name": "user_balance",
       "base": "",
       "fields": [
