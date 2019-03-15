@@ -77,7 +77,7 @@ void emission::emit()
 
 На рис.1 приведена диаграмма, демонстрирующая выпуск токенов смарт-контрактом эмиссии на фоне инфляции и вызовов экшен-операций `start`, `stop` и `emit`.  
 
-![emit_contract.jpg](https://github.com/GolosChain/golos.contracts/tree/master/docs/ru-RU/images/emit_contract.jpg)
+![emit_contract.jpg](./images/emit_contract.jpg)
 
 Рис.1 — Диаграмма выпуска токенов смарт-контрактом эмиссия  
 
