@@ -1,5 +1,4 @@
 #include "golos.emit/golos.emit.hpp"
-#include "golos.emit/config.hpp"
 #include <common/parameter_ops.hpp>
 #include <cyber.token/cyber.token.hpp>
 #include <eosiolib/transaction.hpp>
@@ -32,6 +31,9 @@ struct emit_params_setter: set_params_visitor<emit_state> {
     bool operator()(const emit_token_params& p) {
         return set_param(p, &emit_state::token);
     }
+    bool operator()(const emit_interval_param& p) {
+        return set_param(p, &emit_state::interval);
+    }
 };
 
 void emission::validateprms(vector<emit_param> params) {
@@ -48,17 +50,18 @@ void emission::setparams(vector<emit_param> params) {
 void emission::start() {
     // TODO: disallow if no initial parameters set
     require_auth(_self);
+    auto interval = _cfg.get().interval;
     auto now = current_time();
     state s = {
         .start_time = now,
-        .prev_emit = now - seconds(config::emit_interval).count()   // instant emit. TODO: maybe delay on first start?
+        .prev_emit = now - seconds(interval.value).count()   // instant emit. TODO: maybe delay on first start?
     };
     s = _state.get_or_create(_self, s);
     eosio_assert(!s.active, "already active");
     s.active = true;
 
     uint32_t elapsed = microseconds(now - s.prev_emit).to_seconds();
-    auto delay = elapsed < config::emit_interval ? config::emit_interval - elapsed : 0;
+    auto delay = elapsed < interval.value ? interval.value - elapsed : 0;
     schedule_next(s, delay);
 }
 
@@ -81,7 +84,8 @@ void emission::emit() {
     eosio_assert(s.active, "emit called in inactive state");    // impossible?
     auto now = current_time();
     auto elapsed = now - s.prev_emit;
-    auto emit_interval = seconds(config::emit_interval).count();
+    auto interval = _cfg.get().interval;
+    auto emit_interval = seconds(interval.value).count();
     if (elapsed != emit_interval) {
         eosio_assert(elapsed > emit_interval, "emit called too early");   // possible only on manual call
         print("warning: emit call delayed. elapsed: ", elapsed);
@@ -134,7 +138,7 @@ void emission::emit() {
     }
 
     s.prev_emit = now;
-    schedule_next(s, config::emit_interval);
+    schedule_next(s, interval.value);
 }
 
 void emission::schedule_next(state& s, uint32_t delay) {

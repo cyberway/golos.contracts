@@ -59,6 +59,8 @@ public:
 
     const int emit_params_count = 2;
 
+    const uint16_t _interval = 15*60;
+
     struct errors: contract_error_messages {
         const string empty             = amsg("empty params not allowed");
         const string bad_variant_order = amsg("parameters must be ordered by variant index");
@@ -140,19 +142,20 @@ BOOST_FIXTURE_TEST_CASE(set_params, golos_params_tester) try {
     auto infrate = emit.infrate_json(0,0);
     auto infrate2 = emit.infrate_json(500,500);
     auto token_symbol = emit.token_symbol_json(_token);
-    BOOST_CHECK_EQUAL(err.bad_variant_order, emit.set_params("[" + pools + "," + infrate + "," + token_symbol + "]"));
-    BOOST_CHECK_EQUAL(err.duplicates, emit.set_params("[" + infrate + "," + infrate + "," + token_symbol + "]"));
-    BOOST_CHECK_EQUAL(err.duplicates, emit.set_params("[" + infrate + "," + infrate2 + "," + token_symbol + "]"));
-    BOOST_CHECK_EQUAL(err.duplicates, emit.set_params("[" + pools + "," + pools2 + "," + token_symbol + "]"));
+    auto interval = "['emit_interval',{'value':'" + std::to_string(_interval) + "'}]";
+    BOOST_CHECK_EQUAL(err.bad_variant_order, emit.set_params("[" + pools + "," + infrate + "," + token_symbol + "," + interval + "]"));
+    BOOST_CHECK_EQUAL(err.duplicates, emit.set_params("[" + infrate + "," + infrate + "," + token_symbol + "," + interval + "]"));
+    BOOST_CHECK_EQUAL(err.duplicates, emit.set_params("[" + infrate + "," + infrate2 + "," + token_symbol + "," + interval + "]"));
+    BOOST_CHECK_EQUAL(err.duplicates, emit.set_params("[" + pools + "," + pools2 + "," + token_symbol + "," + interval + "]"));
 
     BOOST_TEST_MESSAGE("--- setparams: fail if first call to setparams action contains not all parameters");
     BOOST_CHECK_EQUAL(err.incomplete, emit.set_params("[" + infrate + "]"));
     BOOST_CHECK_EQUAL(err.incomplete, emit.set_params("[" + emit.infrate_json(1,1) + "]"));
 
     BOOST_TEST_MESSAGE("--- success on valid parameters and changing parameters");
-    BOOST_CHECK_EQUAL(success(), emit.set_params("[" + infrate + "," + pools + "," + token_symbol + "]"));
+    BOOST_CHECK_EQUAL(success(), emit.set_params("[" + infrate + "," + pools + "," + token_symbol + "," + interval + "]"));
     produce_block();
-    BOOST_CHECK_EQUAL(success(), emit.set_params("[" + infrate2 + "," + pools2 + "," + token_symbol + "]"));
+    BOOST_CHECK_EQUAL(success(), emit.set_params("[" + infrate2 + "," + pools2 + "," + token_symbol + "," + interval + "]"));
     produce_block();
     BOOST_CHECK_EQUAL(success(), emit.set_params("[" + pools + "]"));
     produce_block();
@@ -173,9 +176,9 @@ BOOST_FIXTURE_TEST_CASE(set_params, golos_params_tester) try {
     BOOST_CHECK_EQUAL(err.nothing_changed, emit.set_params("[" + infrate + "]"));
     BOOST_CHECK_EQUAL(err.nothing_changed, emit.set_params("[" + pools + "]"));
     BOOST_CHECK_EQUAL(err.nothing_changed, emit.set_params("[" + infrate + "," + pools + "]"));
-    BOOST_CHECK_EQUAL(success(), emit.set_params("[" + infrate + "," + pools2 + "," + token_symbol + "]"));
-    BOOST_CHECK_EQUAL(success(), emit.set_params("[" + infrate2 + "," + pools2 + "," + token_symbol + "]"));
-    BOOST_CHECK_EQUAL(success(), emit.set_params("[" + infrate2 + "," + pools + "," + token_symbol + "]"));
+    BOOST_CHECK_EQUAL(success(), emit.set_params("[" + infrate + "," + pools2 + "," + token_symbol + "," + interval + "]"));
+    BOOST_CHECK_EQUAL(success(), emit.set_params("[" + infrate2 + "," + pools2 + "," + token_symbol + "," + interval + "]"));
+    BOOST_CHECK_EQUAL(success(), emit.set_params("[" + infrate2 + "," + pools + "," + token_symbol + "," + interval + "]"));
 
 } FC_LOG_AND_RETHROW()
 

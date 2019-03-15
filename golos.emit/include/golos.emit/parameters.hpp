@@ -72,14 +72,24 @@ struct emit_token: parameter {
 };
 using emit_token_params = param_wrapper<emit_token,1>;
 
-using emit_param = std::variant<infrate_params, reward_pools_param, emit_token_params>;
+struct emit_interval: parameter {
+    uint16_t value;
+    
+    void validate() const override {
+        eosio_assert(value > 0, "interval must be positive");
+    }
+};
+using emit_interval_param = param_wrapper<emit_interval,1>;
+
+using emit_param = std::variant<infrate_params, reward_pools_param, emit_token_params, emit_interval_param>;
 
 struct [[eosio::table]] emit_state {
     infrate_params infrate;
     reward_pools_param pools;
     emit_token_params token;
+    emit_interval_param interval; 
 
-    static constexpr int params_count = 3;
+    static constexpr int params_count = 4;
 };
 using emit_params_singleton = eosio::singleton<"emitparams"_n, emit_state>;
 
