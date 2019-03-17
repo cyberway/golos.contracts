@@ -4,7 +4,6 @@
 #include "golos.vesting_test_api.hpp"
 #include "cyber.token_test_api.hpp"
 #include "contracts.hpp"
-#include "../golos.emit/include/golos.emit/config.hpp"
 
 
 namespace cfg = golos::config;
@@ -106,12 +105,12 @@ BOOST_FIXTURE_TEST_CASE(start_emission_test, golos_emit_tester) try {
     emit.get_state();
     BOOST_TEST_MESSAGE("--- started");
     produce_block();    // `emit` being processed in next tx (deferred), go next block to be sure state updated
-    emit.get_params();
+    auto obj_params = emit.get_params();
     auto t = emit.get_state();
     auto tx = t["tx_id"];
 
     BOOST_TEST_MESSAGE("--- go to block just before emission");
-    auto emit_interval = cfg::emit_interval * 1000 / cfg::block_interval_ms;
+    auto emit_interval = obj_params["interval"]["value"].as<uint16_t>() * 1000 / cfg::block_interval_ms;
     produce_blocks(emit_interval - 1);      // actually we go to emission block now; TODO: resolve, why deferred tx sometimes applied before get_state() and sometimes we need to go next block
     BOOST_CHECK_EQUAL(tx, emit.get_state()["tx_id"]);
     BOOST_TEST_MESSAGE("--- next block, check emission");

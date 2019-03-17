@@ -3,7 +3,6 @@
 #include "golos.vesting_test_api.hpp"
 #include "cyber.token_test_api.hpp"
 #include "contracts.hpp"
-#include "../golos.emit/include/golos.emit/config.hpp"
 
 namespace cfg = golos::config;
 using namespace eosio::testing;
