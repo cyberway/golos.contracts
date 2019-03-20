@@ -182,12 +182,12 @@ void publication::create_message(structures::mssgid message_id,
     auto message_itr = message_index.find({message_id.permlink, message_id.ref_block_num});
     eosio_assert(message_itr == message_index.end(), "This message already exists.");
 
-    tables::content_table content_table(_self, message_id.author.value);
     uint64_t parent_pk = 0;
     if (parent_id.author) {
         tables::message_table message_table(_self, parent_id.author.value);
         auto message_index = message_table.get_index<"bypermlink"_n>();
         auto message_itr = message_index.find({parent_id.permlink, parent_id.ref_block_num});
+        eosio_assert(message_itr != message_index.end(), "parent message not found");
         parent_pk = message_itr->id;
     }
 
@@ -207,36 +207,24 @@ void publication::create_message(structures::mssgid message_id,
         item.beneficiaries = beneficiaries;
         item.rewardweight = static_cast<base_t>(elaf_t(1).data()); //we will get actual value from charge on post closing
         item.childcount = 0;
-        item.closed = false;
         item.level = level;
-    });
-    content_table.emplace(message_id.author, [&]( auto &item ) {
-        item.id = message_pk;
-        item.headermssg = headermssg;
-        item.bodymssg = bodymssg;
-        item.languagemssg = languagemssg;
-        item.tags = tags;
-        item.jsonmetadata = jsonmetadata;
     });
 
     structures::accandvalue parent {parent_id.author, parent_pk};
     uint64_t seconds_diff = 0;
-    bool closed = false;
     while (parent.account) {
         tables::message_table parent_message_table(_self, parent.account.value);
         auto parent_itr = parent_message_table.find(parent.value);
+        eosio_assert(parent_itr != parent_message_table.end(), "parent message not found");
         eosio_assert(cur_time >= parent_itr->date, "publication::create_message: cur_time < parent_itr->date");
         seconds_diff = cur_time - parent_itr->date;
         parent.account = parent_itr->parentacc;
         parent.value = parent_itr->parent_id;
-        closed = parent_itr->closed;
     }
     seconds_diff /= eosio::seconds(1).count();
     uint64_t delay_sec = cashout_window_param.window > seconds_diff ? cashout_window_param.window - seconds_diff : 0;
-    if (!closed && delay_sec)
+    if (delay_sec)
         close_message_timer(message_id, message_pk, delay_sec);
-    else //parent is already closed or is about to
-        message_table.modify(mssg_itr, _self, [&]( auto &item) { item.closed = true; });
 }
 
 void publication::update_message(structures::mssgid message_id,
@@ -248,18 +236,6 @@ void publication::update_message(structures::mssgid message_id,
     auto message_index = message_table.get_index<"bypermlink"_n>();
     auto message_itr = message_index.find({message_id.permlink, message_id.ref_block_num});
     eosio_assert(message_itr != message_index.end(), "Message doesn't exist.");
-
-    tables::content_table content_table(_self, message_id.author.value);
-    auto cont_itr = content_table.find(message_itr->id);
-    eosio_assert(cont_itr != content_table.end(), "Content doesn't exist.");
-
-    content_table.modify(cont_itr, message_id.author, [&]( auto &item ) {
-        item.headermssg = headermssg;
-        item.bodymssg = bodymssg;
-        item.languagemssg = languagemssg;
-        item.tags = tags;
-        item.jsonmetadata = jsonmetadata;
-    });
 }
 
 auto publication::get_pool(tables::reward_pools& pools, uint64_t time) {
@@ -275,7 +251,6 @@ void publication::delete_message(structures::mssgid message_id) {
     require_auth(message_id.author);
 
     tables::message_table message_table(_self, message_id.author.value);
-    tables::content_table content_table(_self, message_id.author.value);
     tables::vote_table vote_table(_self, message_id.author.value);
 
     auto message_index = message_table.get_index<"bypermlink"_n>();
@@ -283,8 +258,6 @@ void publication::delete_message(structures::mssgid message_id) {
     eosio_assert(mssg_itr != message_index.end(), "Message doesn't exist.");
     eosio_assert((mssg_itr->childcount) == 0, "You can't delete comment with child comments.");
     eosio_assert(FP(mssg_itr->state.netshares) <= 0, "Cannot delete a comment with net positive votes.");
-    auto cont_itr = content_table.find(mssg_itr->id);
-    eosio_assert(cont_itr != content_table.end(), "Content doesn't exist.");
 
     if(mssg_itr->parentacc)
         notify_parent(false, mssg_itr->parentacc, mssg_itr->parent_id);
@@ -296,7 +269,6 @@ void publication::delete_message(structures::mssgid message_id) {
     cancel_deferred((static_cast<uint128_t>(mssg_itr->id) << 64) | message_id.author.value);
 
     message_index.erase(mssg_itr);
-    content_table.erase(cont_itr);
 
     auto votetable_index = vote_table.get_index<"messageid"_n>();
     auto vote_itr = votetable_index.lower_bound(mssg_itr->id);
@@ -411,7 +383,6 @@ void publication::close_message(structures::mssgid message_id) {
     auto message_index = message_table.get_index<"bypermlink"_n>();
     auto mssg_itr = message_index.find({message_id.permlink, message_id.ref_block_num});
     eosio_assert(mssg_itr != message_index.end(), "Message doesn't exist.");
-    eosio_assert(!mssg_itr->closed, "Message is already closed.");
 
     tables::reward_pools pools(_self, _self.value);
     auto pool = get_pool(pools, mssg_itr->date);
@@ -485,12 +456,17 @@ void publication::close_message(structures::mssgid message_id) {
     payto(message_id.author, eosio::asset(token_payout, state.funds.symbol), static_cast<enum_t>(payment_t::TOKEN));
     payto(message_id.author, eosio::asset(payout - token_payout, state.funds.symbol), static_cast<enum_t>(payment_t::VESTING));
 
-    //message_table.erase(mssg_itr);
-    message_index.modify(mssg_itr, _self, [&]( auto &item) {
-        item.rewardweight = static_cast<base_t>(reward_weight.data()); //not used to calculate rewards, stored for stats only
-        item.closed = true;
-        send_postclose_event(message_id.author, item);
-    });
+    tables::vote_table vote_table(_self, message_id.author.value);
+    auto votetable_index = vote_table.get_index<"messageid"_n>();
+    auto vote_itr = votetable_index.lower_bound(mssg_itr->id);
+    for (auto vote_etr = votetable_index.end(); vote_itr != vote_etr;) {
+       auto& vote = *vote_itr;
+       ++vote_itr;
+       if (vote.message_id != mssg_itr->id) break;
+       vote_table.erase(vote);
+    }
+
+    message_index.erase(mssg_itr);
 
     bool pool_erased = false;
     state.msgs--;
@@ -560,14 +536,6 @@ void publication::set_vote(name voter, const structures::mssgid& message_id, int
     auto votetable_index = vote_table.get_index<"byvoter"_n>();
     auto vote_itr = votetable_index.find(std::make_tuple(mssg_itr->id, voter));
     if (vote_itr != votetable_index.end()) {
-        // it's not consensus part and can be moved to storage in future
-        if (mssg_itr->closed) {
-            votetable_index.modify(vote_itr, voter, [&]( auto &item ) {
-                item.count = -1;
-            });
-            return;
-        }
-
         eosio_assert(weight != vote_itr->weight, "Vote with the same weight has already existed.");
         eosio_assert(vote_itr->count != max_vote_changes_param.max_vote_changes, "You can't revote anymore.");
 
@@ -659,7 +627,7 @@ void publication::set_vote(name voter, const structures::mssgid& message_id, int
         item.voter = voter;
         item.weight = weight;
         item.time = cur_time;
-        item.count = mssg_itr->closed ? -1 : (item.count + 1);
+        item.count += 1;
         item.delegators = delegators;
         item.curatorsw = (fixp_t(sumcuratorsw_delta * curatorsw_factor)).data();
         item.rshares = rshares.data();
