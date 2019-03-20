@@ -62,7 +62,7 @@ struct emit_state_updater: state_params_update_visitor<emit_state> {
     void operator()(const reward_pools_param& p) {
         update_state(&emit_state::pools, THRESHOLD);
     }
-    bool operator()(const emit_token_params& p) {
+    void operator()(const emit_token_params& p) {
         update_state(&emit_state::token, THRESHOLD);
     }
 };
