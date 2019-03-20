@@ -4,7 +4,6 @@
 #include "golos.vesting_test_api.hpp"
 #include "cyber.token_test_api.hpp"
 #include "contracts.hpp"
-#include "../golos.emit/include/golos.emit/config.hpp"
 
 
 namespace cfg = golos::config;
@@ -48,6 +47,7 @@ public:
     const account_name _carol = N(carol);
     const uint64_t _w[5] = {N(witn1), N(witn2), N(witn3), N(witn4), N(witn5)};
     const size_t _n_w = sizeof(_w) / sizeof(_w[0]);
+    const uint16_t _interval = 15*60;
 
     vector<account_name> witness_vect(size_t n) const {
         vector<account_name> r;
@@ -61,6 +61,7 @@ public:
 
     struct errors: contract_error_messages {
         const string no_pool_account   = amsg("pool account must exist");
+        const string interval0         = amsg("interval must be positive");
     } err;
 
     const string _test_key = string(fc::crypto::config::public_key_legacy_prefix)
@@ -95,7 +96,8 @@ BOOST_FIXTURE_TEST_CASE(start_emission_test, golos_emit_tester) try {
     auto witness_pool = emit.pool_json(cfg::control_name, 0);
     auto workers_pool = emit.pool_json(cfg::workers_name, 1000);
     auto pools = "{'pools':[" + content_pool + "," + witness_pool + "," + vesting_pool + "," + workers_pool + "]}";
-    auto params = "[" + emit.infrate_json(1500, 95, 250000) + ",['reward_pools'," + pools + "]," + emit.token_symbol_json(_token) + "]";
+    auto interval = "['emit_interval',{'value':'" + std::to_string(_interval) + "'}]";
+    auto params = "[" + emit.infrate_json(1500, 95, 250000) + ",['reward_pools'," + pools + "]," + emit.token_symbol_json(_token) + "," + interval + "]";
     BOOST_CHECK_EQUAL(success(), emit.set_params(params));
 
     BOOST_TEST_MESSAGE("--- start succeed");
@@ -103,12 +105,12 @@ BOOST_FIXTURE_TEST_CASE(start_emission_test, golos_emit_tester) try {
     emit.get_state();
     BOOST_TEST_MESSAGE("--- started");
     produce_block();    // `emit` being processed in next tx (deferred), go next block to be sure state updated
-    emit.get_params();
+    auto obj_params = emit.get_params();
     auto t = emit.get_state();
     auto tx = t["tx_id"];
 
     BOOST_TEST_MESSAGE("--- go to block just before emission");
-    auto emit_interval = cfg::emit_interval * 1000 / cfg::block_interval_ms;
+    auto emit_interval = obj_params["interval"]["value"].as<uint16_t>() * 1000 / cfg::block_interval_ms;
     produce_blocks(emit_interval - 1);      // actually we go to emission block now; TODO: resolve, why deferred tx sometimes applied before get_state() and sometimes we need to go next block
     BOOST_CHECK_EQUAL(tx, emit.get_state()["tx_id"]);
     BOOST_TEST_MESSAGE("--- next block, check emission");
@@ -133,11 +135,15 @@ BOOST_FIXTURE_TEST_CASE(set_params, golos_emit_tester) try {
     string pool3 = "{'name':'more','percent':5001}";
     const auto pools = "{'pools':[" + pool2 + "," + pool1 + "," + pool0 + "]}";
     const string infrate = "{'start':1,'stop':1,'narrowing':0}";
-    auto params = "[['inflation_rate'," + infrate + "], ['reward_pools'," + pools + "]," + emit.token_symbol_json(_token) + "]";
+    auto interval = "['emit_interval',{'value':'" + std::to_string(_interval) + "'}]";
+    auto interval0 = "['emit_interval',{'value':'" + std::to_string(0) + "'}]";
+    auto params = "[['inflation_rate'," + infrate + "], ['reward_pools'," + pools + "]," + emit.token_symbol_json(_token) + "," + interval0 + "]";
     BOOST_CHECK_EQUAL(err.no_pool_account, emit.set_params(params));
     create_accounts({N(test), N(less), N(zero)});
     produce_block();
 
+    BOOST_CHECK_EQUAL(err.interval0, emit.set_params(params));
+    params = "[['inflation_rate'," + infrate + "], ['reward_pools'," + pools + "]," + emit.token_symbol_json(_token) + "," + interval + "]";
     BOOST_CHECK_EQUAL(success(), emit.set_params(params));
     auto t = emit.get_params();
     BOOST_TEST_MESSAGE("--- " + fc::json::to_string(t));
