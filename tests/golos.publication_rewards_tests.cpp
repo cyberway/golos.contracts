@@ -435,7 +435,7 @@ public:
     ) {
         auto ref_block_num = control->head_block_header().block_num();
         const auto current_time = control->head_block_time().sec_since_epoch();
-        auto ret = post.create_msg(message_id, parent_message_id, beneficiaries, tokenprop, vestpayment);
+        auto ret = post.create_msg(message_id, parent_message_id, 0, beneficiaries, tokenprop, vestpayment);
 //        message_key key{author, permlink};
 
         auto reward_weight = 0.0;

@@ -12,10 +12,6 @@ namespace golos { namespace structures {
 
 using namespace eosio;
 
-struct accandvalue {
-    name account;
-    uint64_t value;
-};
 using counter_t = uint64_t;
 struct beneficiary {
     name account;
@@ -37,8 +33,21 @@ struct mssgid {
     std::string permlink;
     uint64_t ref_block_num;
 
+    bool operator==(const mssgid& value) const {
+        return author == value.author &&
+               permlink == value.permlink &&
+               ref_block_num == value.ref_block_num;
+    }
+
     EOSLIB_SERIALIZE(mssgid, (author)(permlink)(ref_block_num))
 };
+
+struct archive_info_v1 {
+    mssgid id;
+    uint16_t level;
+};
+
+using archive_record = std::variant<archive_info_v1>;
 
 struct messagestate {
     base_t netshares = 0;
@@ -139,6 +148,10 @@ struct rewardpool {
 
     uint64_t primary_key() const { return created; }
     EOSLIB_SERIALIZE(rewardpool, (created)(rules)(state))
+};
+
+struct create_event {
+    uint64_t record_id;
 };
 
 struct post_event {
