@@ -1,6 +1,7 @@
 #include "golos.publication.hpp"
 #include <eosiolib/transaction.hpp>
 #include <eosiolib/event.hpp>
+#include <eosiolib/archive.hpp>
 #include <cyber.token/cyber.token.hpp>
 #include <golos.social/golos.social.hpp>
 #include <golos.vesting/golos.vesting.hpp>
@@ -82,6 +83,7 @@ struct posting_params_setter: set_params_visitor<posting_state> {
 
 void publication::create_message(structures::mssgid message_id,
                               structures::mssgid parent_id,
+                              uint64_t parent_recid,
                               std::vector<structures::beneficiary> beneficiaries,
                             //actually, beneficiaries[i].prop _here_ should be interpreted as (share * _100percent)
                             //but not as a raw data for elaf_t, may be it's better to use another type (with uint16_t field for prop).
@@ -183,17 +185,29 @@ void publication::create_message(structures::mssgid message_id,
     eosio_assert(message_itr == message_index.end(), "This message already exists.");
 
     uint64_t parent_pk = 0;
-    if (parent_id.author) {
-        tables::message_table message_table(_self, parent_id.author.value);
-        auto message_index = message_table.get_index<"bypermlink"_n>();
-        auto message_itr = message_index.find({parent_id.permlink, parent_id.ref_block_num});
-        eosio_assert(message_itr != message_index.end(), "parent message not found");
-        parent_pk = message_itr->id;
-    }
+    uint16_t level = 0;
+    if(parent_id.author) {
+        tables::message_table parent_table(_self, parent_id.author.value);
+        auto parent_index = parent_table.get_index<"bypermlink"_n>();
+        auto parent_itr = parent_index.find({parent_id.permlink, parent_id.ref_block_num});
 
-    uint8_t level = 0;
-    if(parent_id.author)
-        level = 1 + notify_parent(true, parent_id.author, parent_pk);
+        if(parent_itr != parent_index.end()) {
+            parent_index.modify(parent_itr, name(), [&]( auto &item ) {
+                    ++item.childcount;
+                });
+            parent_pk = parent_itr->id;
+            level = 1 + parent_itr->level;
+        } else {
+            // Try to found info about post in archive
+            structures::archive_record record;
+            bool found_in_archive = parent_recid ? eosio::lookup_record(parent_recid, _self, record) : false;
+            eosio_assert(found_in_archive, "Parent message doesn't exist");
+            std::visit([&](const structures::archive_info_v1& info) {
+                eosio_assert(info.id == parent_id, "Parent message is different with archive");
+                level = 1 + info.level;
+            }, record);
+        }
+    }
     eosio_assert(level <= max_comment_depth_param.max_comment_depth, "publication::create_message: level > MAX_COMMENT_DEPTH");
 
     auto mssg_itr = message_table.emplace(message_id.author, [&]( auto &item ) {
@@ -210,21 +224,13 @@ void publication::create_message(structures::mssgid message_id,
         item.level = level;
     });
 
-    structures::accandvalue parent {parent_id.author, parent_pk};
-    uint64_t seconds_diff = 0;
-    while (parent.account) {
-        tables::message_table parent_message_table(_self, parent.account.value);
-        auto parent_itr = parent_message_table.find(parent.value);
-        eosio_assert(parent_itr != parent_message_table.end(), "parent message not found");
-        eosio_assert(cur_time >= parent_itr->date, "publication::create_message: cur_time < parent_itr->date");
-        seconds_diff = cur_time - parent_itr->date;
-        parent.account = parent_itr->parentacc;
-        parent.value = parent_itr->parent_id;
-    }
-    seconds_diff /= eosio::seconds(1).count();
-    uint64_t delay_sec = cashout_window_param.window > seconds_diff ? cashout_window_param.window - seconds_diff : 0;
-    if (delay_sec)
-        close_message_timer(message_id, message_pk, delay_sec);
+    structures::archive_info_v1 info{message_id,level};
+    uint64_t record_id = eosio::save_record(structures::archive_record{info});
+
+    structures::create_event evt{record_id};
+    eosio::event(_self, "postcreate"_n, evt).send();
+
+    close_message_timer(message_id, message_pk, cashout_window_param.window);
 }
 
 void publication::update_message(structures::mssgid message_id,
@@ -259,9 +265,15 @@ void publication::delete_message(structures::mssgid message_id) {
     eosio_assert((mssg_itr->childcount) == 0, "You can't delete comment with child comments.");
     eosio_assert(FP(mssg_itr->state.netshares) <= 0, "Cannot delete a comment with net positive votes.");
 
-    if(mssg_itr->parentacc)
-        notify_parent(false, mssg_itr->parentacc, mssg_itr->parent_id);
-    else {
+    if(mssg_itr->parentacc) {
+        tables::message_table parent_table(_self, mssg_itr->parentacc.value);
+        auto parent_itr = parent_table.find(mssg_itr->parent_id);
+        if(parent_itr != parent_table.end()) {
+            parent_table.modify(parent_itr, name(), [&]( auto &item ) {
+                --item.childcount;
+            });
+        }
+    } else {
         tables::reward_pools pools(_self, _self.value);
         remove_postbw_charge(message_id.author, get_pool(pools, mssg_itr->date)->state.funds.symbol.code(), mssg_itr->id);
     }
@@ -639,19 +651,6 @@ void publication::set_vote(name voter, const structures::mssgid& message_id, int
             (social_acc_param.account, {social_acc_param.account, config::active_name},
             {voter, message_id.author, (rshares.data() >> 6)});
     }
-}
-
-uint16_t publication::notify_parent(bool increase, name parentacc, uint64_t parent_id) {
-    tables::message_table message_table(_self, parentacc.value);
-    auto mssg_itr = message_table.find(parent_id);
-    eosio_assert(mssg_itr != message_table.end(), "Parent message doesn't exist");
-    message_table.modify(mssg_itr, name(), [&]( auto &item ) {
-        if (increase)
-            ++item.childcount;
-        else
-            --item.childcount;
-    });
-    return mssg_itr->level;
 }
 
 void publication::fill_depleted_pool(tables::reward_pools& pools, eosio::asset quantity, tables::reward_pools::const_iterator excluded) {

@@ -158,7 +158,7 @@ protected:
         const string wrong_title_length    = amsg("Title length is more than 256.");
         const string wrong_body_length     = amsg("Body is empty.");
 
-        const string parent_no_message     = amsg("parent message not found");
+        const string parent_no_message     = amsg("Parent message doesn't exist");
     } err;
 };
 
@@ -235,6 +235,9 @@ BOOST_FIXTURE_TEST_CASE(create_message, golos_publication_tester) try {
 
     BOOST_CHECK_EQUAL(err.parent_no_message, post.create_msg({N(jackiechan), "permlink2", ref_block_num_jackiechan_and_larimer},
     {N(brucelee), "permlink", ref_block_num_brucelee_and_chucknorris}));
+
+    BOOST_CHECK_EQUAL(success(), post.create_msg({N(jackiechan), "permlink2", ref_block_num_jackiechan_and_larimer},
+    {N(brucelee), "permlink", ref_block_num_brucelee_and_chucknorris}, static_cast<uint64_t>(ref_block_num_brucelee_and_chucknorris+1)<<32 | 1));
 
     BOOST_CHECK_EQUAL(err.unregistered_user_ + "dan.larimer", post.create_msg({N(dan.larimer), "hi", ref_block_num_jackiechan_and_larimer}));
 } FC_LOG_AND_RETHROW()
@@ -451,12 +454,18 @@ BOOST_FIXTURE_TEST_CASE(comments_cashout_time_test, golos_publication_tester) tr
     
     BOOST_TEST_MESSAGE("--- checking that messages wasn't closed.");
     BOOST_CHECK_EQUAL(post.get_message({N(brucelee), "permlink", ref_block_num_brucelee}).is_null(), false);
-    BOOST_CHECK_EQUAL(post.get_message({N(chucknorris), "comment-permlink", ref_block_num_chucknorris}).is_null(), false);
     
     produce_block();
     
     BOOST_TEST_MESSAGE("--- checking that messages was closed.");
     BOOST_CHECK_EQUAL(post.get_message({N(brucelee), "permlink", ref_block_num_brucelee}).is_null(), true);
+
+    produce_blocks(wait_blocks-1);
+    BOOST_TEST_MESSAGE("--- checking that comment wasn't closed.");
+    BOOST_CHECK_EQUAL(post.get_message({N(chucknorris), "comment-permlink", ref_block_num_chucknorris}).is_null(), false);
+
+    produce_block();
+    BOOST_TEST_MESSAGE("--- checking that comment was closed.");
     BOOST_CHECK_EQUAL(post.get_message({N(chucknorris), "comment-permlink", ref_block_num_chucknorris}).is_null(), true);
     
     auto ref_block_num_jackiechan = control->head_block_header().block_num();
@@ -488,6 +497,7 @@ BOOST_FIXTURE_TEST_CASE(data_validation, golos_publication_tester) try {
     BOOST_CHECK_EQUAL(success(), post.create_msg({N(brucelee), "permlink", ref_block_num_brucelee}));
     BOOST_CHECK_EQUAL(err.wrong_title_length, post.create_msg({N(brucelee), "test-title", ref_block_num_brucelee},
                                                               {N(brucelee), "permlink", ref_block_num_brucelee},
+                                                              0,
                                                               {},
                                                               5000,
                                                               false,
@@ -496,6 +506,7 @@ BOOST_FIXTURE_TEST_CASE(data_validation, golos_publication_tester) try {
     BOOST_TEST_MESSAGE("--- checking body length.");
     BOOST_CHECK_EQUAL(err.wrong_body_length, post.create_msg({N(brucelee), "test-body", ref_block_num_brucelee},
                                                              {N(brucelee), "permlink", ref_block_num_brucelee},
+                                                             0,
                                                              {},
                                                              5000,
                                                              false,

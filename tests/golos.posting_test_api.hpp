@@ -43,6 +43,7 @@ struct golos_posting_api: base_contract_api {
     action_result create_msg(
         mssgid message_id,
         mssgid parent_id = {N(), "parentprmlnk", 0},
+        uint64_t parent_recid = 0,
         std::vector<beneficiary> beneficiaries = {},
         int64_t token_prop = 5000,
         bool vest_payment = false,
@@ -55,6 +56,7 @@ struct golos_posting_api: base_contract_api {
         return push(N(createmssg), message_id.author, args()
             ("message_id", message_id)
             ("parent_id", parent_id)
+            ("parent_recid", parent_recid)
             ("beneficiaries", beneficiaries)
             ("tokenprop", token_prop)
             ("vestpayment", vest_payment)

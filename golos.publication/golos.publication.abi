@@ -243,6 +243,10 @@
         "type": "mssgid"
       },
       {
+        "name": "parent_recid",
+        "type": "uint64"
+      },
+      {
         "name": "beneficiaries",
         "type": "beneficiary[]"
       },
@@ -697,6 +701,13 @@
     ]
   },
   {
+    "name": "create_event",
+    "base": "",
+    "fields": [
+        {"name": "record_id", "type": "uint64"}
+    ]
+  },
+  {
     "name": "post_event",
     "base": "",
     "fields": [
@@ -742,6 +753,7 @@
   "events": [
     {"name": "poolstate", "type": "pool_event"},
     {"name": "poolerase", "type": "uint64"},
+    {"name": "postcreate","type": "create_event"},
     {"name": "poststate", "type": "post_event"},
     {"name": "postclose", "type": "post_close"},
     {"name": "votestate", "type": "vote_event"}
