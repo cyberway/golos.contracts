@@ -22,22 +22,22 @@ logFile = None
 unlockTimeout = 999999999
 
 _golosAccounts = [
-    # name           contract
-    ('gls.issuer',   None),
-    ('gls.ctrl',     'golos.ctrl'),
-    ('gls.emit',     'golos.emit'),
-    ('gls.vesting',  'golos.vesting'),
-    ('gls.publish',  'golos.publication'),
-    ('gls.social',   'golos.social'),
-    ('gls.charge',   'golos.charge'),
-    ('gls.referral', 'golos.referral'),
-    ('gls.worker',   None),
+    # name           inGenesis    contract
+    ('gls.issuer',   False,       None),
+    ('gls.ctrl',     True,        'golos.ctrl'),
+    ('gls.emit',     False,       'golos.emit'),
+    ('gls.vesting',  True,        'golos.vesting'),
+    ('gls.publish',  True,        'golos.publication'),
+    ('gls.social',   False,       'golos.social'),
+    ('gls.charge',   False,       'golos.charge'),
+    ('gls.referral', False,       'golos.referral'),
+    ('gls.worker',   False,       None),
 ]
 
 golosAccounts = []
-for (name, contract) in _golosAccounts:
+for (name, inGenesis, contract) in _golosAccounts:
     acc = Struct()
-    (acc.name, acc.contract) = (name, contract)
+    (acc.name, acc.inGenesis, acc.contract) = (name, inGenesis, contract)
     golosAccounts.append(acc)
 
 def jsonArg(a):
@@ -220,7 +220,8 @@ def importKeys():
 
 def createGolosAccounts():
     for acc in golosAccounts:
-        createAccount('cyber', acc.name, args.public_key)
+        if not (args.golos_genesis and acc.inGenesis):
+            createAccount('cyber', acc.name, args.public_key)
     updateAuth('gls.issuer',  'witn.major', 'active', [args.public_key], [])
     updateAuth('gls.issuer',  'witn.minor', 'active', [args.public_key], [])
     updateAuth('gls.issuer',  'witn.smajor', 'active', [args.public_key], [])
@@ -269,6 +270,12 @@ def createCommunity():
                     {'name':'gls.publish','percent':6000},
                     {'name':'gls.vesting','percent':2400}
                 ]
+            }],
+            ['emit_token',{
+                'symbol':'3,GLS'
+            }],
+            ['emit_interval',{
+                'value':900
             }]
         ]]) + '-p gls.emit')
     cleos('push action gls.vesting setparams ' + jsonArg([
@@ -307,6 +314,9 @@ def createCommunity():
             }],
             ['max_witness_votes',{
                 'max':30
+            }],
+            ['update_auth',{
+                'period':300
             }]
         ]]) + '-p gls.ctrl')
 
@@ -419,6 +429,7 @@ parser.add_argument('--symbol', metavar='', help="The Golos community token symb
 parser.add_argument('--token-precision', metavar='', help="The Golos community token precision", type=int, default=3)
 parser.add_argument('--vesting-precision', metavar='', help="The Golos community vesting precision", type=int, default=6)
 parser.add_argument('--docker', action='store_true', help='Run actions only for Docker (used with -a)')
+parser.add_argument('--golos-genesis', action='store_true', help='Run action only for nodeos with golos-genesis')
 parser.add_argument('-a', '--all', action='store_true', help="Do everything marked with (*)")
 parser.add_argument('-H', '--http-port', type=int, default=8000, metavar='', help='HTTP port for cleos')
 
