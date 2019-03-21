@@ -620,17 +620,17 @@ void publication::set_vote(name voter, const structures::mssgid& message_id, int
 
     std::vector<structures::delegate_voter> delegators;
     auto token_code = pool->state.funds.symbol.code();
-    auto list_delegate_voter = golos::vesting::get_list_delegate(config::vesting_name, voter, token_code);
+    auto list_delegate_voter = golos::vesting::get_account_delegators(config::vesting_name, voter, token_code);
     auto effective_vesting = golos::vesting::get_account_effective_vesting(config::vesting_name, voter, token_code);
-    
+
     for (auto record : list_delegate_voter) {
-        auto interest_rate = static_cast<uint16_t>(static_cast<uint128_t>(record.quantity.amount) * 
+        auto interest_rate = static_cast<uint16_t>(static_cast<uint128_t>(record.quantity.amount) *
                     record.interest_rate / effective_vesting.amount);
 
         if (interest_rate == 0)
             continue;
- 
-        delegators.push_back( {record.sender, record.quantity, interest_rate, record.payout_strategy} );
+
+        delegators.push_back({record.delegator, record.quantity, interest_rate, record.payout_strategy});
     }
 
     vote_table.emplace(voter, [&]( auto &item ) {
@@ -814,14 +814,14 @@ void publication::reblog(name rebloger, structures::mssgid message_id) {
             "You can't reblog, because this message doesn't exist.");
 }
 
-int64_t publication::pay_delegators(int64_t claim, name voter, 
+int64_t publication::pay_delegators(int64_t claim, name voter,
         eosio::symbol tokensymbol, std::vector<structures::delegate_voter> delegate_list) {
     int64_t dlg_payout_sum = 0;
     for (auto delegate_obj : delegate_list) {
         auto dlg_payout = claim * delegate_obj.interest_rate / config::_100percent;
-        INLINE_ACTION_SENDER(golos::vesting, paydelegator) (config::vesting_name, 
-            {config::vesting_name, config::active_name}, 
-            {voter, eosio::asset(dlg_payout, tokensymbol), delegate_obj.delegator, 
+        INLINE_ACTION_SENDER(golos::vesting, paydelegator) (config::vesting_name,
+            {config::vesting_name, config::active_name},
+            {voter, eosio::asset(dlg_payout, tokensymbol), delegate_obj.delegator,
             delegate_obj.payout_strategy});
         dlg_payout_sum += dlg_payout;
     }
@@ -830,7 +830,7 @@ int64_t publication::pay_delegators(int64_t claim, name voter,
 
 bool publication::check_permlink_correctness(std::string permlink) {
     for (auto symbol : permlink) {
-        if ((symbol >= '0' && symbol <= '9') || 
+        if ((symbol >= '0' && symbol <= '9') ||
             (symbol >= 'a' && symbol <= 'z') ||
              symbol == '-') {
             continue;

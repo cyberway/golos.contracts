@@ -123,7 +123,7 @@ public:
 
     double get_converted_to_vesting(double arg) {
         double tokn_total = token.get_account(cfg::vesting_name)["balance"].as<asset>().to_real();
-        double vest_total = vest.get_vesting()["supply"].as<asset>().to_real();
+        double vest_total = vest.get_stats()["supply"].as<asset>().to_real();
         double price = (vest_total < 1.e-20) || (tokn_total < 1.e-20) ? 1.0 : (vest_total / tokn_total);
         return arg * price;
     }

@@ -29,7 +29,7 @@ public:
         , vest({this, cfg::vesting_name, _vesting_sym})
         , token({this, cfg::token_name, _token_sym})
         , charge({this, cfg::charge_name, _token_sym})
-        
+
     {
         create_accounts({N(sania), N(pasha), N(tania), N(vania), N(notify.acc),
             _code, cfg::token_name, cfg::control_name, cfg::emission_name, cfg::publish_name, cfg::charge_name});
@@ -58,9 +58,9 @@ public:
     }
 
     void init_params() {
-        auto vesting_withdraw = vest.vesting_withdraw(withdraw_intervals, withdraw_interval_seconds);
-        auto vesting_amount = vest.vesting_amount(vesting_min_amount);
-        auto delegation = vest.delegation(delegation_min_amount, delegation_min_remainder, delegation_min_time, delegation_max_interest, delegation_return_time);
+        auto vesting_withdraw = vest.withdraw_param(withdraw_intervals, withdraw_interval_seconds);
+        auto vesting_amount = vest.amount_param(vesting_min_amount);
+        auto delegation = vest.delegation_param(delegation_min_amount, delegation_min_remainder, delegation_min_time, delegation_max_interest, delegation_return_time);
 
         auto params = "[" + vesting_withdraw + "," + vesting_amount + "," + delegation + "]";
         BOOST_CHECK_EQUAL(success(), vest.set_params(cfg::emission_name, _vesting_sym, params));
@@ -148,32 +148,32 @@ BOOST_FIXTURE_TEST_CASE(set_params, golos_vesting_tester) try {
     auto obj_params = vest.get_params(_token_sym);
     BOOST_TEST_MESSAGE("--- " + fc::json::to_string(obj_params));
 
-    BOOST_TEST_CHECK(obj_params["vesting_withdraw_params"]["intervals"] == withdraw_intervals);
-    BOOST_TEST_CHECK(obj_params["vesting_withdraw_params"]["interval_seconds"] == withdraw_interval_seconds);
-    BOOST_TEST_CHECK(obj_params["amount_params"]["min_amount"] == vesting_min_amount);
+    BOOST_TEST_CHECK(obj_params["withdraw"]["intervals"] == withdraw_intervals);
+    BOOST_TEST_CHECK(obj_params["withdraw"]["interval_seconds"] == withdraw_interval_seconds);
+    BOOST_TEST_CHECK(obj_params["min_amount"]["min_amount"] == vesting_min_amount);
 
-    BOOST_TEST_CHECK(obj_params["delegation_params"]["min_amount"] == delegation_min_amount);
-    BOOST_TEST_CHECK(obj_params["delegation_params"]["min_remainder"] == delegation_min_remainder);
-    BOOST_TEST_CHECK(obj_params["delegation_params"]["min_time"] == delegation_min_time);
-    BOOST_TEST_CHECK(obj_params["delegation_params"]["max_interest"] == delegation_max_interest);
-    BOOST_TEST_CHECK(obj_params["delegation_params"]["return_time"] == delegation_return_time);
+    BOOST_TEST_CHECK(obj_params["delegation"]["min_amount"] == delegation_min_amount);
+    BOOST_TEST_CHECK(obj_params["delegation"]["min_remainder"] == delegation_min_remainder);
+    BOOST_TEST_CHECK(obj_params["delegation"]["min_time"] == delegation_min_time);
+    BOOST_TEST_CHECK(obj_params["delegation"]["max_interest"] == delegation_max_interest);
+    BOOST_TEST_CHECK(obj_params["delegation"]["return_time"] == delegation_return_time);
 
-    auto params = "[" + vest.vesting_withdraw(0, withdraw_interval_seconds) + "]";
+    auto params = "[" + vest.withdraw_param(0, withdraw_interval_seconds) + "]";
     BOOST_CHECK_EQUAL(err.withdraw_intervals, vest.set_params(issuer, _vesting_sym, params));
 
-    params = "[" + vest.vesting_withdraw(withdraw_intervals, 0) + "]";
+    params = "[" + vest.withdraw_param(withdraw_intervals, 0) + "]";
     BOOST_CHECK_EQUAL(err.withdraw_interval_seconds, vest.set_params(issuer, _vesting_sym, params));
 
-    params = "[" + vest.delegation(0, delegation_min_remainder, delegation_min_time, delegation_max_interest, delegation_return_time) + "]";
+    params = "[" + vest.delegation_param(0, delegation_min_remainder, delegation_min_time, delegation_max_interest, delegation_return_time) + "]";
     BOOST_CHECK_EQUAL(err.delegation_min_amount, vest.set_params(issuer, _vesting_sym, params));
 
-    params = "[" + vest.delegation(delegation_min_amount, 0, delegation_min_time, delegation_max_interest, delegation_return_time) + "]";
+    params = "[" + vest.delegation_param(delegation_min_amount, 0, delegation_min_time, delegation_max_interest, delegation_return_time) + "]";
     BOOST_CHECK_EQUAL(err.delegation_min_remainder, vest.set_params(issuer, _vesting_sym, params));
 
-    params = "[" + vest.delegation(delegation_min_amount, delegation_min_remainder, delegation_min_time, 10001, delegation_return_time) + "]";
+    params = "[" + vest.delegation_param(delegation_min_amount, delegation_min_remainder, delegation_min_time, 10001, delegation_return_time) + "]";
     BOOST_CHECK_EQUAL(err.delegation_max_interest, vest.set_params(issuer, _vesting_sym, params));
 
-    params = "[" + vest.delegation(delegation_min_amount, delegation_min_remainder, delegation_min_time, delegation_max_interest, 0) + "]";
+    params = "[" + vest.delegation_param(delegation_min_amount, delegation_min_remainder, delegation_min_time, delegation_max_interest, 0) + "]";
     BOOST_CHECK_EQUAL(err.delegation_return_time, vest.set_params(issuer, _vesting_sym, params));
 
 
@@ -215,14 +215,14 @@ BOOST_FIXTURE_TEST_CASE(convert, golos_vesting_tester) try {
     prepare_balances();
     init_params();
 
-    BOOST_CHECK_EQUAL(success(), vest.timeout(cfg::vesting_name));
+    BOOST_CHECK_EQUAL(success(), vest.timeout(_code));
 
     BOOST_TEST_MESSAGE("--- check that no convert object exists before start convering");
     BOOST_TEST_CHECK(vest.get_convert_obj(N(sania)).is_null());
 
     BOOST_TEST_MESSAGE("--- check that bad asset or precision fails to convert");
     auto start_convert = [&](auto amount, auto precision, auto name) {
-        return vest.convert_vesting(N(sania), N(sania), asset(amount, symbol(precision, name)));
+        return vest.withdraw(N(sania), N(sania), asset(amount, symbol(precision, name)));
     };
     BOOST_CHECK_EQUAL(err.vesting_params, start_convert(1e6, _vesting_precision, "GLS"));
     BOOST_CHECK_EQUAL(err.wrong_precision, start_convert(1e5, _vesting_precision-1, _token_name));
@@ -230,7 +230,7 @@ BOOST_FIXTURE_TEST_CASE(convert, golos_vesting_tester) try {
 
     BOOST_TEST_MESSAGE("--- succeed if start converting with correct asset");
 
-    BOOST_CHECK_EQUAL(success(), vest.convert_vesting(N(sania), N(sania), vest.make_asset(withdraw_intervals)));
+    BOOST_CHECK_EQUAL(success(), vest.withdraw(N(sania), N(sania), vest.make_asset(withdraw_intervals)));
 
     const auto steps = withdraw_intervals;
     BOOST_CHECK_EQUAL(vest.get_convert_obj(N(sania))["number_of_payments"], steps);
@@ -277,7 +277,7 @@ BOOST_FIXTURE_TEST_CASE(cancel_convert, golos_vesting_tester) try {
     BOOST_CHECK_EQUAL(success(), vest.timeout(cfg::vesting_name));
 
     BOOST_TEST_CHECK(vest.get_convert_obj(N(sania)).is_null());
-    BOOST_CHECK_EQUAL(success(), vest.convert_vesting(N(sania), N(sania), vest.make_asset(withdraw_intervals)));
+    BOOST_CHECK_EQUAL(success(), vest.withdraw(N(sania), N(sania), vest.make_asset(withdraw_intervals)));
     auto steps = withdraw_intervals;
     BOOST_CHECK_EQUAL(vest.get_convert_obj(N(sania))["number_of_payments"], steps);
 
@@ -290,7 +290,7 @@ BOOST_FIXTURE_TEST_CASE(cancel_convert, golos_vesting_tester) try {
     CHECK_MATCHING_OBJECT(token.get_account(N(sania)), mvo()("balance", token.asset_str(401)));
 
     BOOST_TEST_MESSAGE("--- cancel convert and check convert object deleted");
-    BOOST_CHECK_EQUAL(success(), vest.cancel_convert_vesting(N(sania), vest.make_asset(0).get_symbol()));
+    BOOST_CHECK_EQUAL(success(), vest.stop_withdraw(N(sania), vest.make_asset(0).get_symbol()));
     BOOST_TEST_CHECK(vest.get_convert_obj(N(sania)).is_null());
 
     BOOST_TEST_MESSAGE("--- go to next withdrawal time and check it not happens");
@@ -312,37 +312,37 @@ BOOST_FIXTURE_TEST_CASE(delegate_vesting, golos_vesting_tester) try {
     const auto charge_prop = 0.7;
 
     BOOST_TEST_MESSAGE("--- fail when delegate to self");
-    BOOST_CHECK_EQUAL(err.self_delegate, vest.delegate_vesting(N(sania), N(sania), amount));
+    BOOST_CHECK_EQUAL(err.self_delegate, vest.delegate(N(sania), N(sania), amount));
 
     BOOST_TEST_MESSAGE("--- fail on bad payout_strategy or interest rate");
-    BOOST_CHECK_EQUAL(err.bad_strategy, vest.delegate_vesting(N(sania), N(pasha), amount, 0, -1));
-    BOOST_CHECK_EQUAL(err.bad_strategy, vest.delegate_vesting(N(sania), N(pasha), amount, 0, 2));
-    BOOST_CHECK_EQUAL(err.interest_to_high, vest.delegate_vesting(N(sania), N(pasha), amount, 50*cfg::_1percent)); // TODO: test boundaries
+    BOOST_CHECK_EQUAL(err.bad_strategy, vest.delegate(N(sania), N(pasha), amount, 0, -1));
+    BOOST_CHECK_EQUAL(err.bad_strategy, vest.delegate(N(sania), N(pasha), amount, 0, 2));
+    BOOST_CHECK_EQUAL(err.interest_to_high, vest.delegate(N(sania), N(pasha), amount, 50*cfg::_1percent)); // TODO: test boundaries
 
     BOOST_TEST_MESSAGE("--- fail when delegate 0 or less than min_remainder");
-    BOOST_CHECK_EQUAL(err.tokens_lt0, vest.delegate_vesting(N(sania), N(pasha), vest.make_asset(0)));
-    BOOST_CHECK_EQUAL(err.delegation_no_funds, vest.delegate_vesting(N(sania), N(pasha), vest.make_asset(min_fract)));
-    BOOST_CHECK_EQUAL(err.delegated_withdraw, vest.delegate_vesting(N(sania), N(pasha), vest.make_asset(min_remainder - min_fract)));   //TODO: error must be same
+    BOOST_CHECK_EQUAL(err.tokens_lt0, vest.delegate(N(sania), N(pasha), vest.make_asset(0)));
+    BOOST_CHECK_EQUAL(err.delegation_no_funds, vest.delegate(N(sania), N(pasha), vest.make_asset(min_fract)));
+    BOOST_CHECK_EQUAL(err.delegated_withdraw, vest.delegate(N(sania), N(pasha), vest.make_asset(min_remainder - min_fract)));   //TODO: error must be same
 
     BOOST_TEST_MESSAGE("--- insufficient funds assert");
-    BOOST_CHECK_EQUAL(err.delegation_no_funds2, vest.delegate_vesting(N(sania), N(pasha), vest.make_asset(10000)));
+    BOOST_CHECK_EQUAL(err.delegation_no_funds2, vest.delegate(N(sania), N(pasha), vest.make_asset(10000)));
 
     BOOST_TEST_MESSAGE("--- succeed when correct arguments for both payout strategies");
-    BOOST_CHECK_EQUAL(success(), vest.delegate_vesting(N(sania), N(pasha), amount, 0, 0));  // amount = min_remainder
-    BOOST_CHECK_EQUAL(success(), vest.delegate_vesting(N(sania), N(tania), amount, 0, 1));  // TODO: disallow 0% + strategy
+    BOOST_CHECK_EQUAL(success(), vest.delegate(N(sania), N(pasha), amount, 0, 0));  // amount = min_remainder
+    BOOST_CHECK_EQUAL(success(), vest.delegate(N(sania), N(tania), amount, 0, 1));  // TODO: disallow 0% + strategy
 
     BOOST_TEST_MESSAGE("--- fail when delegate more than scheduled to withdraw");
-    BOOST_CHECK_EQUAL(success(), vest.convert_vesting(N(sania), N(sania), vest.make_asset(100-3*min_remainder)));
-    BOOST_CHECK_EQUAL(err.delegation_no_funds2, vest.delegate_vesting(N(sania), N(vania), vest.make_asset(min_remainder+1)));
+    BOOST_CHECK_EQUAL(success(), vest.withdraw(N(sania), N(sania), vest.make_asset(100-3*min_remainder)));
+    BOOST_CHECK_EQUAL(err.delegation_no_funds2, vest.delegate(N(sania), N(vania), vest.make_asset(min_remainder+1)));
     BOOST_TEST_MESSAGE("--- succeed when withdraval counted");
-    BOOST_CHECK_EQUAL(success(), vest.delegate_vesting(N(sania), N(vania), amount));
-    
+    BOOST_CHECK_EQUAL(success(), vest.delegate(N(sania), N(vania), amount));
+
     BOOST_TEST_MESSAGE("--- charge limit test");
     BOOST_CHECK_EQUAL(success(), charge.use(cfg::emission_name, N(pasha), 0, charge_prop * cfg::_100percent, cfg::_100percent));
-    BOOST_CHECK_EQUAL(err.cutoff, vest.delegate_vesting(N(pasha), N(vania), vest.make_asset(default_vesting_amount * (1.01 - charge_prop))));
-    BOOST_CHECK_EQUAL(success(), vest.delegate_vesting(N(pasha), N(vania), vest.make_asset(default_vesting_amount * (1.0 - charge_prop))));
+    BOOST_CHECK_EQUAL(err.cutoff, vest.delegate(N(pasha), N(vania), vest.make_asset(default_vesting_amount * (1.01 - charge_prop))));
+    BOOST_CHECK_EQUAL(success(), vest.delegate(N(pasha), N(vania), vest.make_asset(default_vesting_amount * (1.0 - charge_prop))));
 
-//    // BOOST_CHECK_EQUAL(success(), vest.delegate_vesting(N(sania), N(issuer), amount));    // TODO: fix: sending to issuer instead of vania fails
+//    // BOOST_CHECK_EQUAL(success(), vest.delegate(N(sania), N(issuer), amount));    // TODO: fix: sending to issuer instead of vania fails
 //    // TODO: check delegation to account without balance
 //    // TODO: check change delegation
 //    // TODO: check min step
@@ -362,7 +362,7 @@ BOOST_FIXTURE_TEST_CASE(undelegate_vesting, golos_vesting_tester) try {
     const int min_remainder = delegation_min_remainder / divider;
     const int amount = min_step + min_remainder;
 
-    BOOST_CHECK_EQUAL(success(), vest.delegate_vesting(N(sania), N(pasha), vest.make_asset(amount)));
+    BOOST_CHECK_EQUAL(success(), vest.delegate(N(sania), N(pasha), vest.make_asset(amount)));
     CHECK_MATCHING_OBJECT(vest.get_balance(N(sania)), vest.make_balance(100, amount));
     CHECK_MATCHING_OBJECT(vest.get_balance(N(pasha)), vest.make_balance(100, 0, amount));
     produce_block();
@@ -370,22 +370,22 @@ BOOST_FIXTURE_TEST_CASE(undelegate_vesting, golos_vesting_tester) try {
     if (delegation_min_time > 0) {
         // TODO: test it when config allowed to be changed with `ctrl`
         BOOST_TEST_MESSAGE("--- fail when undelegate earlier than min_time");
-        BOOST_CHECK_EQUAL(err.tokens_frozen, vest.undelegate_vesting(N(sania), N(pasha), vest.make_asset(min_step)));
+        BOOST_CHECK_EQUAL(err.tokens_frozen, vest.undelegate(N(sania), N(pasha), vest.make_asset(min_step)));
         produce_blocks(golos::seconds_to_blocks(delegation_min_time));
     }
 
     BOOST_TEST_MESSAGE("--- fail when undelegate more than delegated");
-    BOOST_CHECK_EQUAL(err.not_enough_delegation, vest.undelegate_vesting(N(sania), N(pasha), vest.make_asset(amount + 1))); // TODO: boundary
+    BOOST_CHECK_EQUAL(err.not_enough_delegation, vest.undelegate(N(sania), N(pasha), vest.make_asset(amount + 1))); // TODO: boundary
 
     BOOST_TEST_MESSAGE("--- fail when step is less than min_amount");
-    BOOST_CHECK_EQUAL(err.undelegation_no_funds, vest.undelegate_vesting(N(sania), N(pasha), vest.make_asset(min_step - 1))); // TODO: boundary
+    BOOST_CHECK_EQUAL(err.undelegation_no_funds, vest.undelegate(N(sania), N(pasha), vest.make_asset(min_step - 1))); // TODO: boundary
 
     BOOST_TEST_MESSAGE("--- fail when remainder less than min_remainder");
-    BOOST_CHECK_EQUAL(err.delegated_withdraw, vest.undelegate_vesting(N(sania), N(pasha), vest.make_asset(min_step + 1))); // TODO: boundaries
-    BOOST_CHECK_EQUAL(err.delegated_withdraw, vest.undelegate_vesting(N(sania), N(pasha), vest.make_asset(amount - 1)));
+    BOOST_CHECK_EQUAL(err.delegated_withdraw, vest.undelegate(N(sania), N(pasha), vest.make_asset(min_step + 1))); // TODO: boundaries
+    BOOST_CHECK_EQUAL(err.delegated_withdraw, vest.undelegate(N(sania), N(pasha), vest.make_asset(amount - 1)));
 
     BOOST_TEST_MESSAGE("--- succed in normal conditions");
-    BOOST_CHECK_EQUAL(success(), vest.undelegate_vesting(N(sania), N(pasha), vest.make_asset(min_step)));
+    BOOST_CHECK_EQUAL(success(), vest.undelegate(N(sania), N(pasha), vest.make_asset(min_step)));
     CHECK_MATCHING_OBJECT(vest.get_balance(N(sania)), vest.make_balance(100, amount));
     CHECK_MATCHING_OBJECT(vest.get_balance(N(pasha)), vest.make_balance(100, 0, amount - min_step));
 

@@ -11,7 +11,7 @@ namespace golos {
 using namespace eosio;
 
 struct vesting_withdraw : parameter {
-    uint32_t intervals;
+    uint32_t intervals;         // TODO: this value is uint8 inside withdraw_object, we should either limit it here, or change type here or in object
     uint32_t interval_seconds;
 
     void validate() const override {
@@ -28,12 +28,12 @@ struct vesting_min_amount : parameter {
 using vesting_min_amount_param = param_wrapper<vesting_min_amount,1>;
 
 
-struct delegation : parameter {
+struct vesting_delegation : parameter {
     uint64_t min_amount;
     uint64_t min_remainder;
-    uint32_t min_time;
-    uint16_t max_interest;
     uint32_t return_time;
+    uint32_t min_time;
+    uint16_t max_interest;  // TODO: should be moved to it's own parameter if we want to change it independently
 
     void validate() const override {
         eosio_assert(min_amount > 0, "delegation min_amount <= 0");
@@ -42,17 +42,17 @@ struct delegation : parameter {
         eosio_assert(return_time > 0, "delegation return_time <= 0");
     }
 };
-using delegation_param = param_wrapper<delegation,5>;
+using delegation_param = param_wrapper<vesting_delegation,5>;
 
-using vesting_params = std::variant<vesting_withdraw_param, vesting_min_amount_param, delegation_param>;
+using vesting_param = std::variant<vesting_withdraw_param, vesting_min_amount_param, delegation_param>;
 
 struct [[eosio::table]] vesting_state {
-    vesting_withdraw_param vesting_withdraw_params;
-    vesting_min_amount_param amount_params;
-    delegation_param delegation_params;
+    vesting_withdraw_param withdraw;
+    vesting_min_amount_param min_amount;
+    delegation_param delegation;
 
     static constexpr int params_count = 3;
 };
-using vesting_params_singleton = eosio::singleton<"vstngparams"_n, vesting_state>;
+using vesting_params_singleton = eosio::singleton<"vestparams"_n, vesting_state>;
 
 } // golos
