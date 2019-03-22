@@ -257,7 +257,7 @@ def stepCreateTokens():
     sleep(1)
 
 def createCommunity():
-    retry('push action gls.emit setparams ' + jsonArg([
+    retry(args.cleos + 'push action gls.emit setparams ' + jsonArg([
         [
             ['inflation_rate',{
                 'start':1500,
@@ -278,7 +278,7 @@ def createCommunity():
                 'value':900
             }]
         ]]) + '-p gls.emit')
-    retry('push action gls.vesting setparams ' + jsonArg([
+    retry(args.cleos + 'push action gls.vesting setparams ' + jsonArg([
         args.vesting,
         [
             ['vesting_withdraw',{
@@ -296,7 +296,7 @@ def createCommunity():
                 'return_time':120
             }]
         ]]) + '-p gls.issuer')
-    retry('push action gls.ctrl setparams ' + jsonArg([
+    retry(args.cleos + 'push action gls.ctrl setparams ' + jsonArg([
         [
             ['ctrl_token',{
                 'code':args.symbol
@@ -320,7 +320,7 @@ def createCommunity():
             }]
         ]]) + '-p gls.ctrl')
 
-    retry('push action gls.referral setparams ' + jsonArg([[
+    retry(args.cleos + 'push action gls.referral setparams ' + jsonArg([[
         ['breakout_parametrs', {'min_breakout': intToToken(10000), 'max_breakout': intToToken(100000)}],
         ['expire_parametrs', {'max_expire': 7*24*3600}],  # sec
         ['percent_parametrs', {'max_percent': 5000}],     # 50.00%
