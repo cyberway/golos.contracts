@@ -12,10 +12,6 @@ namespace golos { namespace structures {
 
 using namespace eosio;
 
-struct accandvalue {
-    name account;
-    uint64_t value;
-};
 using counter_t = uint64_t;
 struct beneficiary {
     name account;
@@ -37,24 +33,21 @@ struct mssgid {
     std::string permlink;
     uint64_t ref_block_num;
 
+    bool operator==(const mssgid& value) const {
+        return author == value.author &&
+               permlink == value.permlink &&
+               ref_block_num == value.ref_block_num;
+    }
+
     EOSLIB_SERIALIZE(mssgid, (author)(permlink)(ref_block_num))
 };
 
-struct content {
-    content() = default;
-
-    uint64_t id;
-    //std::string permlink; //?
-    std::string headermssg;
-    std::string bodymssg;
-    std::string languagemssg;
-    std::vector<structures::tag> tags;
-    std::string jsonmetadata;
-
-    uint64_t primary_key() const {
-        return id;
-    }
+struct archive_info_v1 {
+    mssgid id;
+    uint16_t level;
 };
+
+using archive_record = std::variant<archive_info_v1>;
 
 struct messagestate {
     base_t netshares = 0;
@@ -76,7 +69,6 @@ struct message {
     base_t rewardweight;//elaf_t
     messagestate state;
     uint64_t childcount;
-    bool closed;
     uint16_t level;
 
     uint64_t primary_key() const {
@@ -158,6 +150,10 @@ struct rewardpool {
     EOSLIB_SERIALIZE(rewardpool, (created)(rules)(state))
 };
 
+struct create_event {
+    uint64_t record_id;
+};
+
 struct post_event {
     name author;
     std::string permlink;
@@ -216,9 +212,6 @@ using namespace eosio;
 using id_index = indexed_by<N(id), const_mem_fun<structures::message, uint64_t, &structures::message::primary_key>>;
 using permlink_index = indexed_by<N(bypermlink), const_mem_fun<structures::message, std::tuple<std::string, uint64_t>, &structures::message::secondary_key>>;
 using message_table = multi_index<N(message), structures::message, id_index, permlink_index>;
-
-using content_id_index = indexed_by<N(id), const_mem_fun<structures::content, uint64_t, &structures::content::primary_key>>;
-using content_table = multi_index<N(content), structures::content, content_id_index>;
 
 using vote_id_index = indexed_by<N(id), const_mem_fun<structures::voteinfo, uint64_t, &structures::voteinfo::primary_key>>;
 using vote_messageid_index = indexed_by<N(messageid), const_mem_fun<structures::voteinfo, uint64_t, &structures::voteinfo::by_message>>;

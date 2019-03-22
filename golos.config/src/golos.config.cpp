@@ -12,11 +12,17 @@ using std::vector;
 struct emit_params_setter: set_params_visitor<emit_state> {
     using set_params_visitor::set_params_visitor; // enable constructor
 
-    void operator()(const infrate_params& p) {
-        set_param(p, &emit_state::infrate);
+    bool operator()(const infrate_params& p) {
+        return set_param(p, &emit_state::infrate);
     }
-    void operator()(const reward_pools_param& p) {
-        set_param(p, &emit_state::pools);
+    bool operator()(const reward_pools_param& p) {
+        return set_param(p, &emit_state::pools);
+    }
+    bool operator()(const emit_token_params& p) {
+        return set_param(p, &emit_state::token);
+    }
+    bool operator()(const emit_interval_param& p) {
+        return set_param(p, &emit_state::interval);
     }
 };
 
@@ -48,13 +54,16 @@ void configer::updateparamse(name who, std::vector<emit_param> params) {
 struct emit_state_updater: state_params_update_visitor<emit_state> {
     using state_params_update_visitor::state_params_update_visitor;
 
-    static const int THRESHOLD = 2; // test only; TODO: get from cfg_params_singleton
+    static const int THRESHOLD = 3; // test only; TODO: get from cfg_params_singleton
 
     void operator()(const infrate_params& p) {
         update_state(&emit_state::infrate, THRESHOLD);
     }
     void operator()(const reward_pools_param& p) {
         update_state(&emit_state::pools, THRESHOLD);
+    }
+    void operator()(const emit_token_params& p) {
+        update_state(&emit_state::token, THRESHOLD);
     }
 };
 
@@ -78,7 +87,7 @@ void configer::recalculate_state(vector<emit_param> changed_params) {
     auto top_params = param_helper::get_top_params<emit_params_singleton, emit_state>(_self, top);
     auto v = emit_state_updater(s, top_params);
     for (const auto& param: changed_params) {
-        std::visit(v, param);
+//        std::visit(v, param); // TODO: fix compilation
     }
     if (v.changed) {
         state.set(v.state, _self);
@@ -105,6 +114,9 @@ struct cfg_params_setter: set_params_visitor<cfg_state> {
     bool operator()(const emit_infrate_threshold_param& p) {
         return set_param(p, &cfg_state::infrate_threshold);
     }
+    bool operator()(const emit_token_symbol_threshold_param& p) {
+        return set_param(p, &cfg_state::token_symbol_threshold);
+    }
 };
 
 void configer::validateprms(vector<cfg_param> params) {
@@ -130,4 +142,4 @@ void configer::setparams(vector<cfg_param> params) {
 
 }
 
-EOSIO_DISPATCH(golos::configer, (validateprms)(setparams)(updateparamse)(notifytop));
+EOSIO_DISPATCH(golos::configer, (validateprms)(setparams)(notifytop));

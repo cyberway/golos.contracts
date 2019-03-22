@@ -14,7 +14,7 @@ public:
     void set_rules(const funcparams& mainfunc, const funcparams& curationfunc, const funcparams& timepenalty,
         int64_t curatorsprop, int64_t maxtokenprop, symbol tokensymbol);
     void on_transfer(name from, name to, asset quantity, std::string memo);
-    void create_message(structures::mssgid message_id, structures::mssgid parent_id,
+    void create_message(structures::mssgid message_id, structures::mssgid parent_id, uint64_t parent_recid,
         std::vector<structures::beneficiary> beneficiaries, int64_t tokenprop, bool vestpayment,
         std::string headermssg, std::string bodymssg, std::string languagemssg, std::vector<structures::tag> tags,
         std::string jsonmetadata);
@@ -30,7 +30,6 @@ public:
 private:
     void close_message_timer(structures::mssgid message_id, uint64_t id, uint64_t delay_sec);
     void set_vote(name voter, const structures::mssgid &message_id, int16_t weight);
-    uint16_t notify_parent(bool increase, name parentacc, uint64_t parent_id);
     void fill_depleted_pool(tables::reward_pools& pools, asset quantity,
         tables::reward_pools::const_iterator excluded);
     auto get_pool(tables::reward_pools& pools, uint64_t time);

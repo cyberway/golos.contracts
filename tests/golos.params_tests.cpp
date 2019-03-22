@@ -59,6 +59,8 @@ public:
 
     const int emit_params_count = 2;
 
+    const uint16_t _interval = 15*60;
+
     struct errors: contract_error_messages {
         const string empty             = amsg("empty params not allowed");
         const string bad_variant_order = amsg("parameters must be ordered by variant index");
@@ -79,10 +81,8 @@ public:
         ctrl.prepare_multisig(BLOG);
         produce_block();
 
-        const string _test_key = string(fc::crypto::config::public_key_legacy_prefix)
-            + "6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV";
         for (int i = 0; i < _n_w; i++) {
-            BOOST_CHECK_EQUAL(success(), ctrl.reg_witness(_w[i], _test_key, "localhost"));
+            BOOST_CHECK_EQUAL(success(), ctrl.reg_witness(_w[i], "localhost"));
         }
         produce_block();
 
@@ -141,19 +141,21 @@ BOOST_FIXTURE_TEST_CASE(set_params, golos_params_tester) try {
     auto pools2 = "['reward_pools',{'pools':[" + emit.pool_json(_alice,1000) + "," + emit.pool_json(_bob,0) + "]}]";
     auto infrate = emit.infrate_json(0,0);
     auto infrate2 = emit.infrate_json(500,500);
-    BOOST_CHECK_EQUAL(err.bad_variant_order, emit.set_params("[" + pools + "," + infrate + "]"));
-    BOOST_CHECK_EQUAL(err.duplicates, emit.set_params("[" + infrate + "," + infrate + "]"));
-    BOOST_CHECK_EQUAL(err.duplicates, emit.set_params("[" + infrate + "," + infrate2 + "]"));
-    BOOST_CHECK_EQUAL(err.duplicates, emit.set_params("[" + pools + "," + pools2 + "]"));
+    auto token_symbol = emit.token_symbol_json(_token);
+    auto interval = "['emit_interval',{'value':'" + std::to_string(_interval) + "'}]";
+    BOOST_CHECK_EQUAL(err.bad_variant_order, emit.set_params("[" + pools + "," + infrate + "," + token_symbol + "," + interval + "]"));
+    BOOST_CHECK_EQUAL(err.duplicates, emit.set_params("[" + infrate + "," + infrate + "," + token_symbol + "," + interval + "]"));
+    BOOST_CHECK_EQUAL(err.duplicates, emit.set_params("[" + infrate + "," + infrate2 + "," + token_symbol + "," + interval + "]"));
+    BOOST_CHECK_EQUAL(err.duplicates, emit.set_params("[" + pools + "," + pools2 + "," + token_symbol + "," + interval + "]"));
 
     BOOST_TEST_MESSAGE("--- setparams: fail if first call to setparams action contains not all parameters");
     BOOST_CHECK_EQUAL(err.incomplete, emit.set_params("[" + infrate + "]"));
     BOOST_CHECK_EQUAL(err.incomplete, emit.set_params("[" + emit.infrate_json(1,1) + "]"));
 
     BOOST_TEST_MESSAGE("--- success on valid parameters and changing parameters");
-    BOOST_CHECK_EQUAL(success(), emit.set_params("[" + infrate + "," + pools + "]"));
+    BOOST_CHECK_EQUAL(success(), emit.set_params("[" + infrate + "," + pools + "," + token_symbol + "," + interval + "]"));
     produce_block();
-    BOOST_CHECK_EQUAL(success(), emit.set_params("[" + infrate2 + "," + pools2 + "]"));
+    BOOST_CHECK_EQUAL(success(), emit.set_params("[" + infrate2 + "," + pools2 + "," + token_symbol + "," + interval + "]"));
     produce_block();
     BOOST_CHECK_EQUAL(success(), emit.set_params("[" + pools + "]"));
     produce_block();
@@ -174,9 +176,9 @@ BOOST_FIXTURE_TEST_CASE(set_params, golos_params_tester) try {
     BOOST_CHECK_EQUAL(err.nothing_changed, emit.set_params("[" + infrate + "]"));
     BOOST_CHECK_EQUAL(err.nothing_changed, emit.set_params("[" + pools + "]"));
     BOOST_CHECK_EQUAL(err.nothing_changed, emit.set_params("[" + infrate + "," + pools + "]"));
-    BOOST_CHECK_EQUAL(success(), emit.set_params("[" + infrate + "," + pools2 + "]"));
-    BOOST_CHECK_EQUAL(success(), emit.set_params("[" + infrate2 + "," + pools2 + "]"));
-    BOOST_CHECK_EQUAL(success(), emit.set_params("[" + infrate2 + "," + pools + "]"));
+    BOOST_CHECK_EQUAL(success(), emit.set_params("[" + infrate + "," + pools2 + "," + token_symbol + "," + interval + "]"));
+    BOOST_CHECK_EQUAL(success(), emit.set_params("[" + infrate2 + "," + pools2 + "," + token_symbol + "," + interval + "]"));
+    BOOST_CHECK_EQUAL(success(), emit.set_params("[" + infrate2 + "," + pools + "," + token_symbol + "," + interval + "]"));
 
 } FC_LOG_AND_RETHROW()
 

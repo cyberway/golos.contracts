@@ -6,260 +6,176 @@
       "types": [
           "vesting_withdraw",
           "vesting_amount",
-          "delegation"
+          "vesting_delegation"
       ]
   }],
   "structs": [
     {
-      "name": "balance_vesting",
+      "name": "vesting_stats",
       "base": "",
       "fields": [
-        {"name": "supply", "type": "asset"},
-        {"name": "notify_acc", "type": "name"}
+        {"name":"supply",     "type":"asset"},
+        {"name":"notify_acc", "type":"name"}
       ]
     },
     {
-      "name": "vesting_symbol",
+      "name": "account",
       "base": "",
       "fields": [
-        {
-          "name": "vesting",
-          "type": "symbol"
-        }
-      ]
-    },
-    {
-      "name": "user_balance",
-      "base": "",
-      "fields": [
-        {
-          "name": "vesting",
-          "type": "asset"
-        },
-        {
-          "name": "delegate_vesting",
-          "type": "asset"
-        },
-        {
-          "name": "received_vesting",
-          "type": "asset"
-        },
-        {
-          "name": "unlocked_limit",
-          "type": "asset"
-        }
+        {"name":"vesting",        "type":"asset"},
+        {"name":"delegated",      "type":"asset"},
+        {"name":"received",       "type":"asset"},
+        {"name":"unlocked_limit", "type":"asset"}
       ]
     },
     {
       "name": "balance_event",
       "base": "",
       "fields": [
-        {
-          "name": "account",
-          "type": "name"
-        },
-        {
-          "name": "vesting",
-          "type": "asset"
-        },
-        {
-          "name": "delegate_vesting",
-          "type": "asset"
-        },
-        {
-          "name": "received_vesting",
-          "type": "asset"
-        }
+        {"name":"account",    "type":"name"},
+        {"name":"vesting",    "type":"asset"},
+        {"name":"delegated",  "type":"asset"},
+        {"name":"received",   "type":"asset"}
       ]
     },
     {
-      "name": "delegate_record",
+      "name": "delegation",
       "base": "",
       "fields": [
-        {
-          "name": "id",
-          "type": "uint64"
-        },
-        {
-          "name": "sender",
-          "type": "name"
-        },
-        {
-          "name": "recipient",
-          "type": "name"
-        },
-        {
-          "name": "quantity",
-          "type": "asset"
-        },
-        {
-          "name": "interest_rate",
-          "type": "uint16"
-        },
-        {
-          "name": "payout_strategy",
-          "type": "uint8"
-        },
-        {
-          "name": "return_date",
-          "type": "time_point_sec"
-        }
+        {"name":"id",                   "type":"uint64"},
+        {"name":"delegator",            "type":"name"},
+        {"name":"delegatee",            "type":"name"},
+        {"name":"quantity",             "type":"asset"},
+        {"name":"interest_rate",        "type":"uint16"},
+        {"name":"payout_strategy",      "type":"uint8"},
+        {"name":"min_delegation_time",  "type":"time_point_sec"}
       ]
     },
     {
-      "name": "convert_of_tokens",
+      "name": "return_delegation",
       "base": "",
       "fields": [
-        {
-          "name": "sender",
-          "type": "name"
-        },
-        {
-          "name": "recipient",
-          "type": "name"
-        },
-        {
-          "name": "number_of_payments",
-          "type": "uint8"
-        },
-        {
-          "name": "payout_time",
-          "type": "time_point_sec"
-        },
-        {
-          "name": "payout_part",
-          "type": "asset"
-        },
-        {
-          "name": "balance_amount",
-          "type": "asset"
-        }
+        {"name":"id",         "type":"uint64"},
+        {"name":"delegator",  "type":"name"},
+        {"name":"quantity",   "type":"asset"},
+        {"name":"date",       "type":"time_point_sec"}
       ]
     },
     {
-      "name": "cancel_convert_of_tokens",
+      "name": "withdrawal",
       "base": "",
       "fields": [
-        {
-          "name": "sender",
-          "type": "name"
-        },
-        {
-          "name": "type",
-          "type": "symbol"
-        }
+        {"name":"owner",              "type":"name"},
+        {"name":"to",                 "type":"name"},
+        {"name":"number_of_payments", "type":"uint8"},
+        {"name":"next_payout",        "type":"time_point_sec"},
+        {"name":"withdraw_rate",      "type":"asset"},
+        {"name":"target_amount",      "type":"asset"}
       ]
     },
+
     {
-      "name": "return_delegate",
-      "base": "",
-      "fields": [
-        {
-          "name": "id",
-          "type": "uint64"
-        },
-        {
-          "name": "recipient",
-          "type": "name"
-        },
-        {
-          "name": "amount",
-          "type": "asset"
-        },
-        {
-          "name": "date",
-          "type": "time_point_sec"
-        }
-      ]
-    },
-    {
-      "name": "transfer_vesting",
-      "base": "",
-      "fields": [
-        {
-          "name": "from",
-          "type": "name"
-        },
-        {
-          "name": "to",
-          "type": "name"
-        },
-        {
-          "name": "quantity",
-          "type": "asset"
-        }
-      ]
-    },
-    {
-      "name": "retire",
-      "base": "",
-      "fields": [
-        {
-          "name": "quantity",
-          "type": "asset"
-        },
-        {
-          "name": "user",
-          "type": "name"
-        }
-      ]
-    },
-    {
-      "name": "unlocklimit",
-      "base": "",
-      "fields": [
-        {
-          "name": "owner",
-          "type": "name"
-        },
-        {
-          "name": "quantity",
-          "type": "asset"
-        }
-      ]
-    },
-    {
-      "name": "delegate_vesting",
-      "base": "transfer_vesting",
-      "fields": [
-        {
-          "name": "interest_rate",
-          "type": "uint16"
-        },
-        {
-          "name": "payout_strategy",
-          "type": "uint8"
-        }
-      ]
-    },
-    {
-      "name": "timeout",
+      "name": "empty",
       "base": "",
       "fields": []
+    },
+    {
+      "name": "base_transfer",
+      "base": "",
+      "fields": [
+        {"name":"from",     "type":"name"},
+        {"name":"to",       "type":"name"},
+        {"name":"quantity", "type":"asset"}
+      ]
+    },
+
+    {
+       "name": "setparams",
+       "base": "",
+       "fields": [
+          {"name":"symbol", "type":"symbol"},
+          {"name":"params", "type":"vesting_param[]"}
+       ]
+    },
+
+    {
+       "name": "create",
+       "base": "",
+       "fields": [
+          {"name":"symbol",     "type":"symbol"},
+          {"name":"notify_acc", "type":"name"}
+       ]
     },
     {
        "name": "open",
        "base": "",
        "fields": [
-          {"name":"owner", "type":"name"},
-          {"name":"symbol", "type":"symbol"},
-          {"name":"ram_payer", "type":"name"}
+          {"name":"owner",      "type":"name"},
+          {"name":"symbol",     "type":"symbol"},
+          {"name":"ram_payer",  "type":"name"}
        ]
     },
     {
        "name": "close",
        "base": "",
        "fields": [
-          {"name":"owner", "type":"name"},
+          {"name":"owner",  "type":"name"},
           {"name":"symbol", "type":"symbol"}
        ]
     },
     {
-       "name": "create",
+      "name": "retire",
+      "base": "",
+      "fields": [
+        {"name":"quantity", "type":"asset"},
+        {"name":"user",     "type":"name"}
+      ]
+    },
+    {
+      "name": "unlocklimit",
+      "base": "",
+      "fields": [
+        {"name":"owner",    "type":"name"},
+        {"name":"quantity", "type":"asset"}
+      ]
+    },
+
+    {
+      "name": "stop_withdraw",
+      "base": "",
+      "fields": [
+        {"name":"owner",  "type":"name"},
+        {"name":"symbol", "type":"symbol"}
+      ]
+    },
+    {
+      "name": "delegate",
+      "base": "base_transfer",
+      "fields": [
+        {"name":"interest_rate",    "type":"uint16"},
+        {"name":"payout_strategy",  "type":"uint8"}
+      ]
+    },
+    {
+       "name": "paydelegator",
        "base": "",
        "fields": [
-          {"name":"symbol", "type":"symbol"},
-          {"name":"notify_acc", "type":"name"}
+          {"name":"voter",            "type":"name"},
+          {"name":"reward",           "type":"asset"},
+          {"name":"delegator",        "type":"name"},
+          {"name":"payout_strategy",  "type":"uint8"}
+       ]
+    }
+
+    {
+       "name": "vesting_state",
+       "base": "",
+       "fields": [
+          {"name":"id",         "type":"uint64"},
+          {"name":"withdraw",   "type":"vesting_withdraw"},
+          {"name":"min_amount", "type":"vesting_amount"},
+          {"name":"delegation", "type":"vesting_delegation"}
+
        ]
     },
     {
@@ -274,121 +190,47 @@
        "name": "vesting_amount",
        "base": "",
        "fields": [
-          {"name":"min_amount",       "type":"uint64"}
+          {"name":"min_amount", "type":"uint64"}
        ]
     },
     {
-       "name": "delegation",
+       "name": "vesting_delegation",
        "base": "",
        "fields": [
-          {"name":"min_amount",    "type":"uint64"},
-          {"name":"min_remainder", "type":"uint64"},
-          {"name":"min_time",      "type":"uint32"},
-          {"name":"max_interest",  "type":"uint16"},
-          {"name":"return_time",   "type":"uint32"}
-       ]
-    },
-    {
-       "name": "vesting_state",
-       "base": "",
-       "fields": [
-          {"name": "id",                     "type": "uint64"},
-          {"name":"vesting_withdraw_params", "type":"vesting_withdraw"},
-          {"name":"amount_params",           "type":"vesting_amount"},
-          {"name":"delegation_params",       "type":"delegation"}
-
-       ]
-    },
-    {
-       "name": "setparams",
-       "base": "",
-       "fields": [
-          {"name": "symbol", "type": "symbol"},
-          {"name": "params", "type": "vesting_param[]"}
-       ]
-    },
-    {
-       "name": "paydelegator",
-       "base": "",
-       "fields": [
-          {"name": "voter", "type": "name"},
-          {"name": "reward", "type": "asset"},
-          {"name": "delegator", "type": "name"},
-          {"name": "payout_strategy", "type": "uint8"}
+          {"name":"min_amount",     "type":"uint64"},
+          {"name":"min_remainder",  "type":"uint64"},
+          {"name":"return_time",    "type":"uint32"},
+          {"name":"min_time",       "type":"uint32"},
+          {"name":"max_interest",   "type":"uint16"}
        ]
     }
   ],
   "events": [
-    {"name": "balance", "type": "balance_event"},
-    {"name": "vesting", "type": "asset"}
+    {"name":"balance",  "type":"balance_event"},
+    {"name":"vesting",  "type":"asset"}
   ],
   "actions": [
-    {
-      "name": "setparams",
-      "type": "setparams"
-    },
-    {
-      "name": "validateprms",
-      "type": "setparams"
-    },
-    {
-      "name": "retire",
-      "type": "retire"
-    },
-    {
-      "name": "unlocklimit",
-      "type": "unlocklimit"
-    },
-    {
-      "name": "convert",
-      "type": "transfer_vesting"
-    },
-    {
-      "name": "cancelconv",
-      "type": "cancel_convert_of_tokens"
-    },
-    {
-      "name": "delegate",
-      "type": "delegate_vesting"
-    },
-    {
-      "name": "undelegate",
-      "type": "transfer_vesting"
-    },
-    {
-      "name": "timeoutrdel",
-      "type": "timeout"
-    },
-    {
-      "name": "timeoutconv",
-      "type": "timeout"
-    },
-    {
-      "name": "timeout",
-      "type": "timeout"
-    },
-    {
-      "name": "create",
-      "type": "create"
-    },
-    {
-      "name": "open",
-      "type": "open"
-    },
-    {
-      "name": "close",
-      "type": "close"
-    },
-    {
-      "name": "paydelegator",
-      "type": "paydelegator"
-    }
+    {"name":"setparams",    "type":"setparams"},
+    {"name":"validateprms", "type":"setparams"},
+    {"name":"create",       "type":"create"},
+    {"name":"open",         "type":"open"},
+    {"name":"close",        "type":"close"},
+    {"name":"retire",       "type":"retire"},
+    {"name":"unlocklimit",  "type":"unlocklimit"},
+    {"name":"withdraw",     "type":"base_transfer"},
+    {"name":"stopwithdraw", "type":"stop_withdraw"},
+    {"name":"delegate",     "type":"delegate"},
+    {"name":"undelegate",   "type":"base_transfer"},
+    {"name":"paydelegator", "type":"paydelegator"},
+    {"name":"timeoutrdel",  "type":"empty"},
+    {"name":"timeoutconv",  "type":"empty"},
+    {"name":"timeout",      "type":"empty"}
   ],
   "tables": [
     {
-      "name": "vesting",
-      "type": "balance_vesting",
-      "indexes" : [{
+      "name": "stat",
+      "type": "vesting_stats",
+      "indexes": [{
           "name": "primary",
           "unique": true,
           "orders": [{"field": "supply.sym", "order": "asc"}]
@@ -396,41 +238,37 @@
     },
     {
       "name": "accounts",
-      "type": "user_balance",
-      "indexes" : [{
+      "type": "account",
+      "indexes": [{
           "name": "primary",
           "unique": true,
           "orders": [{"field": "vesting.sym", "order": "asc"}]
       }]
     },
     {
-      "name": "delegate",
-      "type": "delegate_record",
-      "indexes" : [{
+      "name": "delegation",
+      "type": "delegation",
+      "indexes": [{
           "name": "primary",
           "unique": true,
           "orders": [{"field": "id", "order": "asc"}]
       },{
-          "name": "sender",
-          "unique": false,
-          "orders": [{"field": "sender", "order": "asc"}]
-      },{
-          "name": "recipient",
-          "unique": false,
-          "orders": [{"field": "recipient", "order": "asc"}]
-      },{
-          "name": "unique",
+          "name": "delegator",
           "unique": true,
           "orders": [
-            {"field": "sender", "order": "asc"},
-            {"field": "recipient", "order": "asc"}
+            {"field": "delegator", "order": "asc"},
+            {"field": "delegatee", "order": "asc"}
           ]
+      },{
+          "name": "delegatee",
+          "unique": false,
+          "orders": [{"field": "delegatee", "order": "asc"}]
       }]
     },
     {
-      "name": "rdelegate",
-      "type": "return_delegate",
-      "indexes" : [{
+      "name": "rdelegation",
+      "type": "return_delegation",
+      "indexes": [{
           "name": "primary",
           "unique": true,
           "orders": [{"field": "id", "order": "asc"}]
@@ -441,22 +279,22 @@
       }]
     },
     {
-      "name": "convert",
-      "type": "convert_of_tokens",
-      "indexes" : [{
+      "name": "withdrawal",
+      "type": "withdrawal",
+      "indexes": [{
           "name": "primary",
           "unique": true,
-          "orders": [{"field": "sender", "order": "asc"}]
+          "orders": [{"field": "owner", "order": "asc"}]
       },{
-          "name": "payouttime",
+          "name": "nextpayout",
           "unique": false,
-          "orders": [{"field": "payout_time", "order": "asc"}]
+          "orders": [{"field": "next_payout", "order": "asc"}]
       }]
     },
     {
-      "name": "vstngparams",
+      "name": "vestparams",
       "type": "vesting_state",
-      "indexes" : [{
+      "indexes": [{
           "name": "primary",
           "unique": true,
           "orders": [{"field": "id", "order": "asc"}]

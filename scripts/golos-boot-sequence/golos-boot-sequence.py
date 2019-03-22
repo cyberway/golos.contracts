@@ -22,22 +22,22 @@ logFile = None
 unlockTimeout = 999999999
 
 _golosAccounts = [
-    # name           contract
-    ('gls.issuer',   None),
-    ('gls.ctrl',     'golos.ctrl'),
-    ('gls.emit',     'golos.emit'),
-    ('gls.vesting',  'golos.vesting'),
-    ('gls.publish',  'golos.publication'),
-    ('gls.social',   'golos.social'),
-    ('gls.charge',   'golos.charge'),
-    ('gls.referral', 'golos.referral'),
-    ('gls.worker',   None),
+    # name           inGenesis    contract
+    ('gls.issuer',   False,       None),
+    ('gls.ctrl',     True,        'golos.ctrl'),
+    ('gls.emit',     False,       'golos.emit'),
+    ('gls.vesting',  True,        'golos.vesting'),
+    ('gls.publish',  True,        'golos.publication'),
+    ('gls.social',   False,       'golos.social'),
+    ('gls.charge',   False,       'golos.charge'),
+    ('gls.referral', False,       'golos.referral'),
+    ('gls.worker',   False,       None),
 ]
 
 golosAccounts = []
-for (name, contract) in _golosAccounts:
+for (name, inGenesis, contract) in _golosAccounts:
     acc = Struct()
-    (acc.name, acc.contract) = (name, contract)
+    (acc.name, acc.inGenesis, acc.contract) = (name, inGenesis, contract)
     golosAccounts.append(acc)
 
 def jsonArg(a):
@@ -155,16 +155,15 @@ def buyVesting(account, amount):
     issueToken(account, amount)
     transfer(account, 'gls.vesting', amount)   # buy vesting
 
-def registerWitness(ctrl, witness, key):
+def registerWitness(ctrl, witness):
     retry(args.cleos + 'push action ' + ctrl + ' regwitness' + jsonArg({
         'witness': witness,
-        'key': key,
         'url': 'http://%s.witnesses.golos.io' % witness
     }) + '-p %s'%witness)
 
-def voteWitness(ctrl, voter, witness, weight):
+def voteWitness(ctrl, voter, witness):
     retry(args.cleos + ' push action ' + ctrl + ' votewitness ' +
-        jsonArg([voter, witness, weight]) + '-p %s'%voter)
+        jsonArg([voter, witness]) + '-p %s'%voter)
 
 def createPost(author, permlink, header, body, *, beneficiaries=[]):
     retry(args.cleos + 'push action gls.publish createmssg' +
@@ -221,7 +220,8 @@ def importKeys():
 
 def createGolosAccounts():
     for acc in golosAccounts:
-        createAccount('cyber', acc.name, args.public_key)
+        if not (args.golos_genesis and acc.inGenesis):
+            createAccount('cyber', acc.name, args.public_key)
     updateAuth('gls.issuer',  'witn.major', 'active', [args.public_key], [])
     updateAuth('gls.issuer',  'witn.minor', 'active', [args.public_key], [])
     updateAuth('gls.issuer',  'witn.smajor', 'active', [args.public_key], [])
@@ -257,7 +257,7 @@ def stepCreateTokens():
     sleep(1)
 
 def createCommunity():
-    cleos('push action gls.emit setparams ' + jsonArg([
+    retry(args.cleos + 'push action gls.emit setparams ' + jsonArg([
         [
             ['inflation_rate',{
                 'start':1500,
@@ -270,9 +270,15 @@ def createCommunity():
                     {'name':'gls.publish','percent':6000},
                     {'name':'gls.vesting','percent':2400}
                 ]
+            }],
+            ['emit_token',{
+                'symbol':'3,GLS'
+            }],
+            ['emit_interval',{
+                'value':900
             }]
         ]]) + '-p gls.emit')
-    cleos('push action gls.vesting setparams ' + jsonArg([
+    retry(args.cleos + 'push action gls.vesting setparams ' + jsonArg([
         args.vesting,
         [
             ['vesting_withdraw',{
@@ -282,7 +288,7 @@ def createCommunity():
             ['vesting_amount',{
                 'min_amount':10000
             }],
-            ['delegation',{
+            ['vesting_delegation',{
                 'min_amount':5000000,
                 'min_remainder':15000000,
                 'min_time':0,
@@ -290,7 +296,7 @@ def createCommunity():
                 'return_time':120
             }]
         ]]) + '-p gls.issuer')
-    cleos('push action gls.ctrl setparams ' + jsonArg([
+    retry(args.cleos + 'push action gls.ctrl setparams ' + jsonArg([
         [
             ['ctrl_token',{
                 'code':args.symbol
@@ -308,10 +314,13 @@ def createCommunity():
             }],
             ['max_witness_votes',{
                 'max':30
+            }],
+            ['update_auth',{
+                'period':300
             }]
         ]]) + '-p gls.ctrl')
 
-    cleos('push action gls.referral setparams ' + jsonArg([[
+    retry(args.cleos + 'push action gls.referral setparams ' + jsonArg([[
         ['breakout_parametrs', {'min_breakout': intToToken(10000), 'max_breakout': intToToken(100000)}],
         ['expire_parametrs', {'max_expire': 7*24*3600}],  # sec
         ['percent_parametrs', {'max_percent': 5000}],     # 50.00%
@@ -324,8 +333,8 @@ def createWitnessAccounts():
         createAccount('cyber', a['name'], a['pub'])
         openVestingBalance(a['name'])
         buyVesting(a['name'], intToToken(10000000*10000))
-        registerWitness('gls.ctrl', a['name'], a['pub'])
-        voteWitness('gls.ctrl', a['name'], a['name'], 10000)
+        registerWitness('gls.ctrl', a['name'])
+        voteWitness('gls.ctrl', a['name'], a['name'])
 
 def initCommunity():
     retry(args.cleos + 'push action gls.publish setparams ' + jsonArg([[
@@ -420,6 +429,7 @@ parser.add_argument('--symbol', metavar='', help="The Golos community token symb
 parser.add_argument('--token-precision', metavar='', help="The Golos community token precision", type=int, default=3)
 parser.add_argument('--vesting-precision', metavar='', help="The Golos community vesting precision", type=int, default=6)
 parser.add_argument('--docker', action='store_true', help='Run actions only for Docker (used with -a)')
+parser.add_argument('--golos-genesis', action='store_true', help='Run action only for nodeos with golos-genesis')
 parser.add_argument('-a', '--all', action='store_true', help="Do everything marked with (*)")
 parser.add_argument('-H', '--http-port', type=int, default=8000, metavar='', help='HTTP port for cleos')
 

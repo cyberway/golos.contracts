@@ -245,9 +245,9 @@ BOOST_FIXTURE_TEST_CASE(create_referral_message_tests, golos_referral_tester) tr
     BOOST_CHECK_EQUAL( post_sania["beneficiaries"][uint8_t(0)].as<beneficiary>().account, N(issuer) );
 
     BOOST_CHECK_EQUAL(success(), referral.create_referral(N(issuer), N(pasha), 5000, current_time + expire, token.make_asset(50)));
-    BOOST_CHECK_EQUAL(err.limit_percents, post.create_msg({N(pasha), "permlink", ref_block_num}, {N(), "parentprmlnk", 0}, { beneficiary{N(tania), 7000} }));
-    BOOST_CHECK_EQUAL(err.referrer_benif, post.create_msg({N(pasha), "permlink", ref_block_num}, {N(), "parentprmlnk", 0}, { beneficiary{N(issuer), 2000} }));
-    BOOST_CHECK_EQUAL(success(), post.create_msg({N(pasha), "permlink", ref_block_num}, {N(), "parentprmlnk", 0}, { beneficiary{N(tania), 2000} }));
+    BOOST_CHECK_EQUAL(err.limit_percents, post.create_msg({N(pasha), "permlink", ref_block_num}, {N(), "parentprmlnk", 0}, 0, { beneficiary{N(tania), 7000} }));
+    BOOST_CHECK_EQUAL(err.referrer_benif, post.create_msg({N(pasha), "permlink", ref_block_num}, {N(), "parentprmlnk", 0}, 0, { beneficiary{N(issuer), 2000} }));
+    BOOST_CHECK_EQUAL(success(), post.create_msg({N(pasha), "permlink", ref_block_num}, {N(), "parentprmlnk", 0}, 0, { beneficiary{N(tania), 2000} }));
 
     auto post_pasha = post.get_message({N(pasha), "permlink", ref_block_num});
     BOOST_CHECK_EQUAL (post_pasha["beneficiaries"].size(), 2);

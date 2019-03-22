@@ -57,10 +57,9 @@ struct golos_ctrl_api: base_contract_api {
         );
     }
 
-    action_result reg_witness(name witness, string key, string url) {
+    action_result reg_witness(name witness, string url) {
         return push(N(regwitness), witness, args()
             ("witness", witness)
-            ("key", key)    // TODO: remove
             ("url", url)
         );
     }
@@ -71,16 +70,17 @@ struct golos_ctrl_api: base_contract_api {
         );
     }
 
-    action_result vote_witness(name voter, name witness, uint16_t weight=10000) {
+    action_result vote_witness(name voter, name witness) {
         return push(N(votewitness), voter, args()
             ("voter", voter)
             ("witness", witness)
-            ("weight", weight));
+        );
     }
     action_result unvote_witness(name voter, name witness) {
         return push(N(unvotewitn), voter, args()
             ("voter", voter)
-            ("witness", witness));
+            ("witness", witness)
+        );
     }
 
     action_result change_vests(name who, asset diff) {
@@ -106,8 +106,8 @@ struct golos_ctrl_api: base_contract_api {
         return _tester->get_all_chaindb_rows(_code, _code, N(witness), false);
     }
 
-    variant get_top_witnesses() const {
-        return get_struct(_code, N(witnessauth), N(witnessauth), "witnesses_auth");
+    variant get_msig_auths() const {
+        return get_struct(_code, N(msigauths), N(msigauths), "msig_auths");
     }
 
     //// helpers
@@ -129,14 +129,18 @@ struct golos_ctrl_api: base_contract_api {
             ",'majority':"+std::to_string(major) +
             ",'minority':"+std::to_string(minor) + "}]";
     }
+    static std::string update_auth_param(uint32_t delay_sec = 30*60) {
+        return std::string() + "['update_auth',{'period':"+std::to_string(delay_sec)+"}]";
+    }
     static std::string default_params(name owner, symbol token, uint16_t witnesses = 21, uint16_t witness_votes = 30,
-        uint16_t smajor = 0, uint16_t major = 0, uint16_t minor = 0) {
+        uint32_t delay_sec = 30*60, uint16_t smajor = 0, uint16_t major = 0, uint16_t minor = 0) {
         return std::string() + "[" +
             token_param(token) + "," +
             multisig_param(owner) + "," +
             max_witnesses_param(witnesses) + "," +
             msig_perms_param(smajor, major, minor) + "," +
-            max_witness_votes_param(witness_votes) + "]";
+            max_witness_votes_param(witness_votes) + "," +
+            update_auth_param(delay_sec) + "]";
     }
 
     // sets permissions for "multisig" account
