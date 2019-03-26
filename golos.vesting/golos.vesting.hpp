@@ -51,7 +51,7 @@ public:
 
     struct [[eosio::table]] account {
         asset vesting;
-        asset delegated;        // TODO: this (incl. 2 fields below) can be share_type to reduce memory usage
+        asset delegated;        // TODO: this (incl. 2 fields below) can be share_type to reduce memory usage #554
         asset received;
         asset unlocked_limit;
 
@@ -133,7 +133,7 @@ public:
     }
     static inline const account& get_account(name code, name account, symbol_code sym) {
         account_table accounts(code, account.value);
-        return accounts.get(sym.raw());    // TODO: this can be cached in static if several calls occur in one action
+        return accounts.get(sym.raw());    // TODO: this can be cached in static if several calls occur in one action #554
     }
 
     static inline asset get_account_vesting(name code, name account, symbol_code sym) {
