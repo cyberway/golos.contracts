@@ -1,8 +1,8 @@
 #include "golos.vesting.hpp"
 #include "config.hpp"
+#include "headers.hpp"
 #include <eosiolib/transaction.hpp>
 #include <eosiolib/event.hpp>
-#include <cyber.token/cyber.token.hpp>
 #include <golos.charge/golos.charge.hpp>
 #include <common/dispatchers.hpp>
 
@@ -272,7 +272,7 @@ void vesting::undelegate(name from, name to, asset quantity) {
 }
 
 void vesting::create(symbol symbol, name notify_acc) {
-    require_auth(name(token::get_issuer(config::token_name, symbol.code())));
+    require_auth(name(token::get_issuer(name(account_token), symbol.code())));
 
     vesting_table table_vesting(_self, _self.value);
     auto vesting = table_vesting.find(symbol.code().raw());
@@ -327,7 +327,7 @@ void vesting::timeoutconv() {
                         item.supply -= quantity;
                         // TODO Add notify about supply change
                     });
-                    INLINE_ACTION_SENDER(eosio::token, transfer)(config::token_name, {_self, config::active_name},
+                    INLINE_ACTION_SENDER(token, transfer)(config::token_name, {_self, config::active_name},
                         {_self, obj->to, convert_to_token(quantity, *vest), "Convert vesting"});
                 });
 

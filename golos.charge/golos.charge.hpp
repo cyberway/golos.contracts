@@ -10,8 +10,8 @@
 #include <eosiolib/eosio.hpp>
 #include <string>
 #include <common/config.hpp>
-#include <cyber.token/cyber.token.hpp>
 #include <golos.vesting/golos.vesting.hpp>
+#include "headers.hpp"
 
 namespace golos {
 using namespace eosio;

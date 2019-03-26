@@ -37,6 +37,12 @@ macro(add_contract_with_abi TARGET ABIFILE)
    install (FILES ${CMAKE_CURRENT_BINARY_DIR}/${TARGET}.abi DESTINATION ${CMAKE_INSTALL_PREFIX}/${TARGET}/)
 endmacro()
 
+set(TOKEN_INCLUDE_PATH "cyberway.contracts/cyber.token/include")
+set(ACCOUNT_TOKEN "cyber.token")
+
+configure_file(${CMAKE_SOURCE_DIR}/headers.hpp.in ${CMAKE_BINARY_DIR}/headers.hpp)
+include_directories(${CMAKE_BINARY_DIR})
+
 # include_directories(AFTER ${BOOST_ROOT}/include)
 add_subdirectory(golos.ctrl)
 add_subdirectory(golos.emit)

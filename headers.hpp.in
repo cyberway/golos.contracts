@@ -1,0 +1,6 @@
+#pragma once
+
+#include <cyber.token/cyber.token.hpp>
+using token = golos::token;
+
+std::string account_token = "${ACCOUNT_TOKEN}";
