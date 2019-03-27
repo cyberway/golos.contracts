@@ -38,7 +38,9 @@ macro(add_contract_with_abi TARGET ABIFILE)
 endmacro()
 
 set(TOKEN_INCLUDE_PATH "cyberway.contracts/cyber.token/include")
-set(ACCOUNT_TOKEN "cyber.token")
+set(TOKEN_HEADER_FILE "cyber.token")
+set(TOKEN_CLASS "golos::token")
+set(TOKEN_NAME "cyber.token")
 
 configure_file(${CMAKE_SOURCE_DIR}/headers.hpp.in ${CMAKE_BINARY_DIR}/headers.hpp)
 include_directories(${CMAKE_BINARY_DIR})
