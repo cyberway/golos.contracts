@@ -2,7 +2,6 @@
 #include <eosiolib/transaction.hpp>
 #include <eosiolib/event.hpp>
 #include <eosiolib/archive.hpp>
-#include <cyber.token/cyber.token.hpp>
 #include <golos.social/golos.social.hpp>
 #include <golos.vesting/golos.vesting.hpp>
 #include <golos.referral/golos.referral.hpp>

@@ -1,6 +1,0 @@
-#pragma once
-
-#include <${TOKEN_HEADER_FILE}/${TOKEN_HEADER_FILE}.hpp>
-using token = ${TOKEN_CLASS};
-
-std::string account_token = "${TOKEN_NAME}";

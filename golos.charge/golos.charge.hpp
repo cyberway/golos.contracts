@@ -11,7 +11,6 @@
 #include <string>
 #include <common/config.hpp>
 #include <golos.vesting/golos.vesting.hpp>
-#include "headers.hpp"
 
 namespace golos {
 using namespace eosio;

@@ -1,6 +1,5 @@
 #include "golos.vesting.hpp"
 #include "config.hpp"
-#include "headers.hpp"
 #include <eosiolib/transaction.hpp>
 #include <eosiolib/event.hpp>
 #include <golos.charge/golos.charge.hpp>
@@ -272,7 +271,7 @@ void vesting::undelegate(name from, name to, asset quantity) {
 }
 
 void vesting::create(symbol symbol, name notify_acc) {
-    require_auth(name(token::get_issuer(name(account_token), symbol.code())));
+    require_auth(name(token::get_issuer(config::token_name, symbol.code())));
 
     vesting_table table_vesting(_self, _self.value);
     auto vesting = table_vesting.find(symbol.code().raw());

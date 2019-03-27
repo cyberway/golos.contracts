@@ -1,6 +1,5 @@
 #include "golos.emit/golos.emit.hpp"
 #include <common/parameter_ops.hpp>
-#include <cyber.token/cyber.token.hpp>
 #include <eosiolib/transaction.hpp>
 #include <eosiolib/time.hpp>
 

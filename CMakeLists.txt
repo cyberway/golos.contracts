@@ -39,10 +39,11 @@ endmacro()
 
 set(TOKEN_INCLUDE_PATH "cyberway.contracts/cyber.token/include")
 set(TOKEN_HEADER_FILE "cyber.token")
-set(TOKEN_CLASS "golos::token")
+set(TOKEN_CLASS "eosio::token")
 set(TOKEN_NAME "cyber.token")
+set(VESTING_NAME "gls.vesting")
 
-configure_file(${CMAKE_SOURCE_DIR}/headers.hpp.in ${CMAKE_BINARY_DIR}/headers.hpp)
+configure_file(${CMAKE_SOURCE_DIR}/common/config.hpp.in ${CMAKE_SOURCE_DIR}/common/config.hpp)
 include_directories(${CMAKE_BINARY_DIR})
 
 # include_directories(AFTER ${BOOST_ROOT}/include)
@@ -62,4 +63,4 @@ elseif (UNIX)
 endif()
 set(SECP256K1_ROOT "/usr/local")
 
-include(UnitTestsExternalProject.txt)
+#include(UnitTestsExternalProject.txt)

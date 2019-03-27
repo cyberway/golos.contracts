@@ -4,7 +4,6 @@
 #include <common/parameter_ops.hpp>
 #include <common/dispatchers.hpp>
 #include <cyber.system/native.hpp>
-#include <cyber.token/cyber.token.hpp>
 #include <eosiolib/transaction.hpp>
 #include <eosiolib/event.hpp>
 
