@@ -126,10 +126,6 @@ public:
         indexed_by<"nextpayout"_n, member<withdraw_record, time_point_sec, &withdraw_record::next_payout>>>;
 
 
-    static inline bool exist(name code, symbol_code sym_code) {
-        vesting_table statstable(code, code.value);
-        return statstable.find(sym_code.raw()) != statstable.end();
-    }
     // interface for external contracts
     static inline bool balance_exist(name code, name owner, symbol_code sym) {
         account_table accounts(code, owner.value);          // TODO: maybe combine with `get_account`
