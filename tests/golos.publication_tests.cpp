@@ -116,6 +116,7 @@ public:
             CHECK_EQUAL_OBJECTS(a_tags[i], b_tags[i]);
         }
         BOOST_CHECK_EQUAL(a["jsonmetadata"].as<std::string>(), b["jsonmetadata"].as<std::string>());
+        BOOST_CHECK_EQUAL(a["curators_prcnt"].as<uint16_t>(), b["curators_prcnt"].as<uint16_t>());
     }
 
 protected:
@@ -132,7 +133,8 @@ protected:
         ("rewardweight", 4611686018427387904ull)    // TODO: fix
         ("state", mvo()("netshares",0)("voteshares",0)("sumcuratorsw",0))
         ("childcount", 0)
-        ("level", 0);
+        ("level", 0)
+        ("curators_prcnt", 71);
 
     struct errors: contract_error_messages {
         const string msg_exists            = amsg("This message already exists.");
@@ -159,6 +161,15 @@ protected:
         const string wrong_body_length     = amsg("Body is empty.");
 
         const string parent_no_message     = amsg("Parent message doesn't exist");
+
+        const string wrong_min_cur_prcnt = 
+            amsg("Min curators percent must be greater than 0 and less than 100.");
+        const string max_less_min_cur_prcnt = 
+            amsg("Min curators percent must be less than max curators percent.");
+        const string wrong_max_cur_prcnt = amsg("Max curators percent must be less than 100.");
+        const string cur_prcnt_no_fit =
+            amsg("Curators percent is less than min curators percent or greater than max curators percent.");
+        const string no_cur_percent = amsg("Curators percent can be changed only before voting.");
     } err;
 };
 
@@ -185,6 +196,8 @@ BOOST_FIXTURE_TEST_CASE(set_params, golos_publication_tester) try {
     BOOST_CHECK_EQUAL(obj_params["max_comment_depth"]["value"], post.max_comment_depth);
     BOOST_CHECK_EQUAL(obj_params["social_acc"]["value"].as_string(), "");
     BOOST_CHECK_EQUAL(obj_params["referral_acc"]["value"].as_string(), "");
+    BOOST_CHECK_EQUAL(obj_params["curators_prcnt"]["min_curators_prcnt"], post.min_curators_prcnt);
+    BOOST_CHECK_EQUAL(obj_params["curators_prcnt"]["max_curators_prcnt"], post.max_curators_prcnt);
 
     auto params = "[" + post.get_str_cashout_window(0, post.upvote_lockout) + "]";
     BOOST_CHECK_EQUAL(err.window_less_0, post.set_params(params));
@@ -200,6 +213,18 @@ BOOST_FIXTURE_TEST_CASE(set_params, golos_publication_tester) try {
     
     params = "[" + post.get_str_referral_acc(N(gls.referral)) + "]";
     BOOST_CHECK_EQUAL(err.no_referral_acc, post.set_params(params));
+    
+    params = "[" + post.get_str_curators_prcnt(0, 33) + "]";
+    BOOST_CHECK_EQUAL(err.wrong_min_cur_prcnt, post.set_params(params));
+    
+    params = "[" + post.get_str_curators_prcnt(100, 33) + "]";
+    BOOST_CHECK_EQUAL(err.wrong_min_cur_prcnt, post.set_params(params));
+    
+    params = "[" + post.get_str_curators_prcnt(51, 33) + "]";
+    BOOST_CHECK_EQUAL(err.max_less_min_cur_prcnt, post.set_params(params));
+    
+    params = "[" + post.get_str_curators_prcnt(51, 100) + "]";
+    BOOST_CHECK_EQUAL(err.wrong_max_cur_prcnt, post.set_params(params));
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE(create_message, golos_publication_tester) try {
@@ -557,6 +582,28 @@ BOOST_FIXTURE_TEST_CASE(upvote_near_close, golos_publication_tester) try {
     BOOST_CHECK_EQUAL(err.upvote_near_close, vote_jackie(cfg::_100percent));          // TODO Fix broken test GolosChain/golos-smart#410
     produce_blocks(seconds_to_blocks(post.upvote_lockout) - 1);
     BOOST_CHECK_EQUAL(err.upvote_near_close, vote_chucknorris(cfg::_100percent));          // TODO Fix broken test GolosChain/golos-smart#410
+} FC_LOG_AND_RETHROW()
+
+BOOST_FIXTURE_TEST_CASE(set_curators_prcnt, golos_publication_tester) try {
+    BOOST_TEST_MESSAGE("Test curators percent");
+    
+    init();
+
+    auto ref_block_num_brucelee_and_chucknorris = control->head_block_header().block_num();
+    BOOST_CHECK_EQUAL(success(), post.create_msg({N(brucelee), "permlink", ref_block_num_brucelee_and_chucknorris}));
+
+    BOOST_TEST_MESSAGE("--- checking that curators percent fits");
+    BOOST_CHECK_EQUAL(err.cur_prcnt_no_fit, post.set_curators_prcnt({N(brucelee), "permlink", ref_block_num_brucelee_and_chucknorris}, 50));
+    BOOST_CHECK_EQUAL(err.cur_prcnt_no_fit, post.set_curators_prcnt({N(brucelee), "permlink", ref_block_num_brucelee_and_chucknorris}, 91));
+    BOOST_CHECK_EQUAL(success(), post.set_curators_prcnt({N(brucelee), "permlink", ref_block_num_brucelee_and_chucknorris}, 71));
+    BOOST_CHECK_EQUAL(post.get_message({N(brucelee), "permlink", ref_block_num_brucelee_and_chucknorris})["curators_prcnt"].as<uint16_t>(), 71);
+
+    BOOST_TEST_MESSAGE("--- checking that curators percent can't be changed");
+    BOOST_CHECK_EQUAL(success(), token.issue(cfg::emission_name, N(jackiechan), token.make_asset(500), "issue tokens jackiechan"));
+    BOOST_CHECK_EQUAL(success(), token.transfer(N(jackiechan), cfg::vesting_name, token.make_asset(100), "buy vesting"));
+    BOOST_CHECK_EQUAL(success(), post.upvote(N(jackiechan), {N(brucelee), "permlink", ref_block_num_brucelee_and_chucknorris}, 123));
+    BOOST_CHECK_EQUAL(err.no_cur_percent, post.set_curators_prcnt({N(brucelee), "permlink", ref_block_num_brucelee_and_chucknorris}, 75));
+    BOOST_CHECK_EQUAL(post.get_message({N(brucelee), "permlink", ref_block_num_brucelee_and_chucknorris})["curators_prcnt"].as<uint16_t>(), 71);
 } FC_LOG_AND_RETHROW()
 
 BOOST_AUTO_TEST_SUITE_END()

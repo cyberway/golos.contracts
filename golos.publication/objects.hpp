@@ -70,6 +70,7 @@ struct message {
     messagestate state;
     uint64_t childcount;
     uint16_t level;
+    uint16_t curators_prcnt;
 
     uint64_t primary_key() const {
         return id;

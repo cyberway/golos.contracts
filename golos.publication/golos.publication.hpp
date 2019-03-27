@@ -17,7 +17,7 @@ public:
     void create_message(structures::mssgid message_id, structures::mssgid parent_id, uint64_t parent_recid,
         std::vector<structures::beneficiary> beneficiaries, int64_t tokenprop, bool vestpayment,
         std::string headermssg, std::string bodymssg, std::string languagemssg, std::vector<structures::tag> tags,
-        std::string jsonmetadata);
+        std::string jsonmetadata, uint16_t curators_prcnt);
     void update_message(structures::mssgid message_id, std::string headermssg, std::string bodymssg,
                         std::string languagemssg, std::vector<structures::tag> tags, std::string jsonmetadata);
     void delete_message(structures::mssgid message_id);
@@ -27,6 +27,7 @@ public:
     void close_message(structures::mssgid message_id);
     void set_params(std::vector<posting_params> params);
     void reblog(name rebloger, structures::mssgid message_id);
+    void set_curators_prcnt(structures::mssgid message_id, uint16_t curators_prcnt);
 private:
     void close_message_timer(structures::mssgid message_id, uint64_t id, uint64_t delay_sec);
     void set_vote(name voter, const structures::mssgid &message_id, int16_t weight);
@@ -39,6 +40,7 @@ private:
     void check_account(name user, symbol tokensymbol);
     int64_t pay_delegators(int64_t claim, name voter, 
             eosio::symbol tokensymbol, std::vector<structures::delegate_voter> delegate_list); 
+    void check_curators_prcnt(uint16_t curators_prcnt);
 
     void send_poolstate_event(const structures::rewardpool& pool);
     void send_poolerase_event(const structures::rewardpool& pool);
