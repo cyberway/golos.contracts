@@ -17,10 +17,10 @@ inline eosio::chain::name operator ""_n() {
    return eosio::chain::name({Str...});
 }
 #pragma clang diagnostic pop
-#endif
-
+#else
 #include <${TOKEN_HEADER_FILE}/${TOKEN_HEADER_FILE}.hpp>
 using token = ${TOKEN_CLASS};
+#endif
 
 namespace golos { namespace config {
 
