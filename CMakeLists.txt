@@ -44,7 +44,6 @@ set(TOKEN_NAME "cyber.token")
 set(VESTING_NAME "gls.vesting")
 
 configure_file(${CMAKE_SOURCE_DIR}/common/config.hpp.in ${CMAKE_SOURCE_DIR}/common/config.hpp)
-include_directories(${CMAKE_BINARY_DIR})
 
 # include_directories(AFTER ${BOOST_ROOT}/include)
 add_subdirectory(golos.ctrl)
