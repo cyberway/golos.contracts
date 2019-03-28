@@ -231,7 +231,7 @@
       },
       {
         "name": "curators_prcnt",
-        "type": "uint16"
+        "type": "base_t"
       }
     ]
   },
@@ -285,7 +285,7 @@
       },
       {
         "name": "curators_prcnt",
-        "type": "uint16"
+        "type": "int64"
       }
     ]
   },
@@ -434,10 +434,6 @@
             "type": "funcinfo"
         },
         {
-            "name": "curatorsprop",
-            "type": "base_t"
-        },
-        {
             "name": "maxtokenprop",
             "type": "base_t"
         }
@@ -572,10 +568,6 @@
         {
             "name": "timepenalty",
             "type": "funcparams"
-        },
-        {
-            "name": "curatorsprop",
-            "type": "int64"
         },
         {
             "name": "maxtokenprop",
@@ -731,14 +723,14 @@
     "name": "setcurprcnt",
     "base": "",
     "fields": [
-      {
-        "name": "message_id",
-        "type": "mssgid"
-      },
-      {
-        "name": "curators_prcnt",
-        "type": "uint16"
-      }
+        {
+            "name": "message_id",
+            "type": "mssgid"
+        },
+        {
+            "name": "curators_prcnt",
+            "type": "int64"
+        }
     ]
   },
   {

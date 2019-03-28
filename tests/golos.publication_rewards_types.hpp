@@ -190,6 +190,7 @@ struct message {
     double created;         // time
     std::vector<beneficiary> beneficiaries;
     double reward_weight;
+    double curators_prcnt;
 
     double get_rshares_sum() const {
         double ret = 0.0;
@@ -198,8 +199,8 @@ struct message {
         return ret;
     };
 
-    message(mssgid k, double tokenprop_, double created_, const std::vector<beneficiary>& beneficiaries_, double reward_weight_) :
-        key(k), tokenprop(tokenprop_), created(created_), beneficiaries(beneficiaries_), reward_weight(reward_weight_) {};
+    message(mssgid k, double tokenprop_, double created_, const std::vector<beneficiary>& beneficiaries_, double reward_weight_, double curators_prcnt_) :
+        key(k), tokenprop(tokenprop_), created(created_), beneficiaries(beneficiaries_), reward_weight(reward_weight_), curators_prcnt(curators_prcnt_) {};
 };
 
 class cutted_func {
@@ -214,17 +215,14 @@ struct rewardrules {
     cutted_func mainfunc;
     cutted_func curationfunc;
     cutted_func timepenalty;
-    double curatorsprop;
     rewardrules(
         cutted_func&& mainfunc_,
         cutted_func&& curationfunc_,
-        cutted_func&& timepenalty_,
-        double curatorsprop_
+        cutted_func&& timepenalty_
     ) :
         mainfunc(std::move(mainfunc_)),
         curationfunc(std::move(curationfunc_)),
-        timepenalty(std::move(timepenalty_)),
-        curatorsprop(curatorsprop_) {};
+        timepenalty(std::move(timepenalty_)) {}
 };
 
 struct chargeinfo {

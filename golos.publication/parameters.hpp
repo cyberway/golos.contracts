@@ -2,6 +2,7 @@
 #include <eosiolib/singleton.hpp>
 #include <common/parameter.hpp>
 #include <common/parameter_ops.hpp>
+#include <common/config.hpp>
 
 namespace golos {
 
@@ -64,11 +65,11 @@ namespace golos {
         uint16_t max_curators_prcnt;
 
         void validate() const override {
-            eosio_assert(min_curators_prcnt > 0 && min_curators_prcnt < 100,
-                    "Min curators percent must be greater than 0 and less than 100.");
-            eosio_assert(min_curators_prcnt < max_curators_prcnt,
-                    "Min curators percent must be less than max curators percent.");
-            eosio_assert(max_curators_prcnt < 100, "Max curators percent must be less than 100.");
+            eosio_assert(min_curators_prcnt >= 0 && min_curators_prcnt <= config::_100percent,
+                    "Min curators percent must be greater than 0 and less than 100 or equal.");
+            eosio_assert(min_curators_prcnt <= max_curators_prcnt,
+                    "Min curators percent must be less than max curators percent or equal.");
+            eosio_assert(max_curators_prcnt <= config::_100percent, "Max curators percent must be less than 100 or equal.");
         }
     };
     using curators_prcnt_prm = param_wrapper<st_curators_prcnt, 2>;

@@ -16,13 +16,11 @@ struct golos_posting_api: base_contract_api {
         const funcparams& main_fn,
         const funcparams& curation_fn,
         const funcparams& time_penalty,
-        int64_t curators_prop,
         int64_t max_token_prop) {
         return push(N(setrules), _code, args()
             ("mainfunc", fn_to_mvo(main_fn))
             ("curationfunc", fn_to_mvo(curation_fn))
             ("timepenalty", fn_to_mvo(time_penalty))
-            ("curatorsprop", curators_prop)
             ("maxtokenprop", max_token_prop)
             ("tokensymbol", _symbol)
         );
@@ -52,7 +50,7 @@ struct golos_posting_api: base_contract_api {
         std::string language = "languagemssg",
         std::vector<tags> tags = {{"tag"}},
         std::string json_metadata = "jsonmetadata",
-        uint16_t curators_prcnt = 71 
+        int64_t curators_prcnt = 7100 
     ) {
         return push(N(createmssg), message_id.author, args()
             ("message_id", message_id)
@@ -114,7 +112,7 @@ struct golos_posting_api: base_contract_api {
             ("message_id", message_id)
         );
     }
-    action_result set_curators_prcnt(mssgid message_id, uint16_t curators_prcnt) {
+    action_result set_curators_prcnt(mssgid message_id, int64_t curators_prcnt) {
         return push(N(setcurprcnt), message_id.author, args()
             ("message_id", message_id)
             ("curators_prcnt", curators_prcnt)
@@ -168,7 +166,7 @@ struct golos_posting_api: base_contract_api {
         return string("['st_referral_acc', {'value':'") + name{referral_acc}.to_string() + "'}]";
     }   
     
-    string get_str_curators_prcnt(uint16_t min_curators_prcnt, uint16_t max_curators_prcnt) {
+    string get_str_curators_prcnt(int64_t min_curators_prcnt, int64_t max_curators_prcnt) {
         return string("['st_curators_prcnt', {'min_curators_prcnt':'") + std::to_string(min_curators_prcnt) + "','max_curators_prcnt':'" + std::to_string(max_curators_prcnt) + "'}]";
     }
 
@@ -213,8 +211,8 @@ struct golos_posting_api: base_contract_api {
     const uint32_t upvote_lockout = 15;
     const uint8_t max_beneficiaries = 64;
     const uint16_t max_comment_depth = 127;
-    const uint16_t min_curators_prcnt = 51;
-    const uint16_t max_curators_prcnt = 90;
+    const int64_t min_curators_prcnt = 0;
+    const int64_t max_curators_prcnt = 9000;
 };
 
 
