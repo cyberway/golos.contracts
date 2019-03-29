@@ -120,7 +120,7 @@ void publication::create_message(structures::mssgid message_id,
     pool = --pools.end();
     check_account(message_id.author, pool->state.funds.symbol);
     auto token_code = pool->state.funds.symbol.code();
-    auto issuer = eosio::token::get_issuer(config::token_name, token_code);
+    auto issuer = token::get_issuer(config::token_name, token_code);
     tables::limit_table lims(_self, _self.value);
 
     use_charge(lims, parent_id.author ? structures::limitparams::COMM : structures::limitparams::POST, issuer, message_id.author,
@@ -310,9 +310,9 @@ void publication::payto(name user, eosio::asset quantity, enum_t mode) {
         return;
 
     if(static_cast<payment_t>(mode) == payment_t::TOKEN)
-        INLINE_ACTION_SENDER(eosio::token, payment) (config::token_name, {_self, config::active_name}, {_self, user, quantity, ""});
+        INLINE_ACTION_SENDER(token, payment) (config::token_name, {_self, config::active_name}, {_self, user, quantity, ""});
     else if(static_cast<payment_t>(mode) == payment_t::VESTING)
-        INLINE_ACTION_SENDER(eosio::token, transfer) (config::token_name, {_self, config::active_name},
+        INLINE_ACTION_SENDER(token, transfer) (config::token_name, {_self, config::active_name},
             {_self, config::vesting_name, quantity, config::send_prefix + name{user}.to_string()});
     else
         eosio_assert(false, "publication::payto: unknown kind of payment");
@@ -341,7 +341,7 @@ int64_t publication::pay_curators(name author, uint64_t msgid, int64_t max_rewar
 }
 
 void publication::remove_postbw_charge(name account, symbol_code token_code, int64_t mssg_id, elaf_t* reward_weight_ptr) {
-    auto issuer = eosio::token::get_issuer(config::token_name, token_code);
+    auto issuer = token::get_issuer(config::token_name, token_code);
     tables::limit_table lims(_self, _self.value);
     auto bw_lim_itr = lims.find(structures::limitparams::POSTBW);
     eosio_assert(bw_lim_itr != lims.end(), "publication::remove_postbw_charge: limit parameters not set");
@@ -519,7 +519,7 @@ fixp_t publication::calc_available_rshares(name voter, int16_t weight, uint64_t 
     tables::limit_table lims(_self, _self.value);
     auto token_code = pool.state.funds.symbol.code();
     int64_t eff_vesting = golos::vesting::get_account_effective_vesting(config::vesting_name, voter, token_code).amount;
-    use_charge(lims, structures::limitparams::VOTE, eosio::token::get_issuer(config::token_name, token_code),
+    use_charge(lims, structures::limitparams::VOTE, token::get_issuer(config::token_name, token_code),
         voter, eff_vesting, token_code, false, abs_w);
     fixp_t abs_rshares = fp_cast<fixp_t>(eff_vesting, false) * abs_w;
     return (weight < 0) ? -abs_rshares : abs_rshares;
@@ -716,7 +716,7 @@ void publication::set_rules(const funcparams& mainfunc, const funcparams& curati
     reward_pools pools(_self, _self.value);
     uint64_t created = current_time();
 
-    eosio::asset unclaimed_funds = eosio::token::get_balance(config::token_name, _self, tokensymbol.code());
+    eosio::asset unclaimed_funds = token::get_balance(config::token_name, _self, tokensymbol.code());
 
     auto old_pool = pools.begin();
     while(old_pool != pools.end())

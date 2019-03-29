@@ -10,7 +10,7 @@ set(EOSIO_CDT_VERSION_SOFT_MAX "1.5")
 
 find_package(eosio.cdt)
 
-## Check the version of eosio.cdt
+### Check the version of eosio.cdt
 set(VERSION_MATCH_ERROR_MSG "")
 EOSIO_CHECK_VERSION(VERSION_OUTPUT "${EOSIO_CDT_VERSION}"
                                    "${EOSIO_CDT_VERSION_MIN}"

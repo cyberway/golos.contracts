@@ -1,5 +1,4 @@
 #include "golos.referral/golos.referral.hpp"
-#include <cyber.token/cyber.token.hpp>
 #include <common/dispatchers.hpp>
 #include <eosiolib/transaction.hpp>
 
@@ -76,7 +75,7 @@ void referral::on_transfer(name from, name to, asset quantity, std::string memo)
     eosio_assert(it_referral != referrals.end(), "A referral with this name doesn't exist.");
     eosio_assert(it_referral->breakout.amount == quantity.amount, "Amount of funds doesn't equal.");
     
-    INLINE_ACTION_SENDER(eosio::token, transfer)
+    INLINE_ACTION_SENDER(token, transfer)
         (config::token_name, {_self, config::active_name},
         {_self, it_referral->referrer, quantity, ""});
 
