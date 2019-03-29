@@ -165,6 +165,11 @@ def create_balance(doc):
         "decs": utils.UInt64(BALANCE_PRECISION),
         "sym": BALANCE_SYMBOL
     },
+    "payments": {
+        "amount" : utils.Int64(0),
+        "decs" : utils.UInt64(BALANCE_PRECISION),
+        "sym" : BALANCE_SYMBOL
+    },
     "_SERVICE_" : {
         "scope" : doc["name"],
         "rev" : utils.Int64(1),

@@ -12,7 +12,7 @@ cyberway_db = client['_CYBERWAY_TEST_']
 
 def convert_hash(param):
     hashobj = hashlib.sha256(param.encode('utf-8')).hexdigest()
-    return Decimal128(Decimal(int(hashobj[:16], 16))) 
+    return Decimal128(Decimal(int(hashobj[:16], 16)))
 
 def printProgressBar (iteration, total, prefix = '', suffix = '', decimals = 1, length = 100, fill = '█'):
     percent = ("{0:." + str(decimals) + "f}").format(100 * (iteration / float(total)))

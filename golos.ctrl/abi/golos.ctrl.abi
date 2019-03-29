@@ -8,7 +8,8 @@
             "multisig_acc",
             "max_witnesses",
             "multisig_perms",
-            "max_witness_votes"
+            "max_witness_votes",
+            "update_auth"
         ]
     }],
     "structs": [
@@ -36,7 +37,6 @@
             "base": "",
             "fields": [
                 {"type": "name", "name": "witness"},
-                {"type": "public_key", "name": "key"},
                 {"type": "string", "name": "url"}
             ]
         }, {
@@ -44,6 +44,13 @@
             "base": "",
             "fields": [
                 {"type": "name",   "name": "witness"}
+            ]
+        }, {
+            "name": "votewitness",
+            "base": "",
+            "fields": [
+                {"type": "name", "name": "voter"},
+                {"type": "name", "name": "witness"}
             ]
         }, {
             "name": "unvotewitn",
@@ -60,25 +67,16 @@
                 {"type": "asset", "name": "diff"}
             ]
         }, {
-            "name": "votewitness",
-            "base": "",
-            "fields": [
-                {"type": "name", "name": "voter"},
-                {"type": "name", "name": "witness"},
-                {"type": "uint16", "name": "weight"}
-            ]
-        }, {
             "name": "witness_info",
             "base": "",
             "fields": [
                 {"type": "name", "name": "name"},
-                {"type": "public_key", "name": "key"},
                 {"type": "string", "name": "url"},
                 {"type": "bool", "name": "active"},
                 {"type": "uint64", "name": "total_weight"}
             ]
         }, {
-            "name": "witness_voter_s",
+            "name": "witness_voter",
             "base": "",
             "fields": [
                 {"type": "name", "name": "voter"},
@@ -113,6 +111,11 @@
             "fields": [
                 {"type": "uint16", "name": "max"}]
         }, {
+            "name": "update_auth",
+            "base": "",
+            "fields": [
+                {"type": "uint32", "name": "period"}]
+        }, {
             "name": "ctrl_state",
             "fields": [
                 {"type": "uint64",              "name": "id"},
@@ -120,7 +123,8 @@
                 {"type": "multisig_acc",        "name": "multisig"},
                 {"type": "max_witnesses",       "name": "witnesses"},
                 {"type": "multisig_perms",      "name": "msig_perms"},
-                {"type": "max_witness_votes",   "name": "witness_votes"}]
+                {"type": "max_witness_votes",   "name": "witness_votes"},
+                {"type": "update_auth",         "name": "update_auth_period"}]
         }, {
             "name": "setparams",
             "fields": [
@@ -132,7 +136,7 @@
                 {"type": "uint64", "name": "weight"}
             ]
         }, {
-            "name": "witnesses_auth",
+            "name": "msig_auths",
             "fields": [
                 {"type": "uint64", "name": "id"},
                 {"type": "name[]", "name": "witnesses"},
@@ -163,14 +167,14 @@
             "name": "unregwitness",
             "type": "unregwitness"
         }, {
+            "name": "votewitness",
+            "type": "votewitness"
+        }, {
             "name": "unvotewitn",
             "type": "unvotewitn"
         }, {
             "name": "changevest",
             "type": "changevest"
-        }, {
-            "name": "votewitness",
-            "type": "votewitness"
         }
     ],
     "tables": [
@@ -196,7 +200,7 @@
             }]
         }, {
             "name": "witnessvote",
-            "type": "witness_voter_s",
+            "type": "witness_voter",
             "indexes" : [{
                 "name": "primary",
                 "unique": true,
@@ -211,8 +215,8 @@
                 "orders": [{"field": "id", "order": "asc"}]
             }]
         }, {
-            "name": "witnessauth",
-            "type": "witnesses_auth",
+            "name": "msigauths",
+            "type": "msig_auths",
             "indexes" : [{
                 "name": "primary",
                 "unique": true,

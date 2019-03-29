@@ -98,18 +98,17 @@ def buyVesting(account, amount):
     issueToken(account, amount)
     transfer(account, 'gls.vesting', amount)   # buy vesting
 
-def registerWitness(witness, key, url=None):
+def registerWitness(witness, url=None):
     if url == None:
         url = 'http://%s.witnesses.golos.io' % witness
     pushAction('gls.ctrl', 'regwitness', witness, {
         'domain': args.token,
         'witness': witness,
-        'key': key,
         'url': url
     })
 
-def voteWitness(voter, witness, weight):
-    pushAction('gls.ctrl', 'votewitness', voter, [voter, witness, weight])
+def voteWitness(voter, witness):
+    pushAction('gls.ctrl', 'votewitness', voter, [voter, witness])
 
 def createPost(author, permlink, category, header, body, *, beneficiaries=[]):
     pushAction('gls.publish', 'createmssg', author,

@@ -55,6 +55,9 @@ struct golos_emit_api: base_contract_api {
         return string("['inflation_rate',{'start':") + std::to_string(start) + ",'stop':" + std::to_string(stop)
             + ",'narrowing':" + std::to_string(narrowing) + "}]";
     }
+    string token_symbol_json(symbol symbol) {
+        return string("['emit_token',{'symbol':'" + std::to_string(symbol.decimals()) + "," + symbol.name() + "'}]");
+    }
 
 };
 

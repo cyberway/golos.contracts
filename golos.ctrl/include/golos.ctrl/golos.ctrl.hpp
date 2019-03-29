@@ -18,7 +18,6 @@ using share_type = int64_t;
 
 struct [[eosio::table]] witness_info {
     name name;
-    eosio::public_key key;
     std::string url;        // not sure it's should be in db (but can be useful to get witness info)
     bool active;            // can check key instead or even remove record
 
@@ -28,14 +27,14 @@ struct [[eosio::table]] witness_info {
         return name.value;
     }
     uint64_t weight_key() const {
-        return total_weight;     // TODO: resolve case where 2+ same weights exist (?extend key to 128bit)
+        return total_weight;
     }
 };
 using witness_weight_idx = indexed_by<"byweight"_n, const_mem_fun<witness_info, uint64_t, &witness_info::weight_key>>;
 using witness_tbl = eosio::multi_index<"witness"_n, witness_info, witness_weight_idx>;
 
 
-struct [[eosio::table]] witness_voter_s {
+struct [[eosio::table]] witness_voter {
     name voter;
     std::vector<name> witnesses;
 
@@ -43,7 +42,7 @@ struct [[eosio::table]] witness_voter_s {
         return voter.value;
     }
 };
-using witness_vote_tbl = eosio::multi_index<"witnessvote"_n, witness_voter_s>;
+using witness_vote_tbl = eosio::multi_index<"witnessvote"_n, witness_voter>;
 
 
 struct [[eosio::table]] bw_user {   // ?needed or simple names vector will be enough?
@@ -56,11 +55,11 @@ struct [[eosio::table]] bw_user {   // ?needed or simple names vector will be en
 };
 using bw_user_tbl = eosio::multi_index<"bwuser"_n, bw_user>;
 
-struct [[eosio::table]] msig_auth_singleton {
+struct [[eosio::table]] msig_auths {
     std::vector<name> witnesses;
     time_point_sec last_update;
 };
-using msig_auth_singleton_tbl = eosio::singleton<"witnessauth"_n, msig_auth_singleton>;
+using msig_auth_singleton = eosio::singleton<"msigauths"_n, msig_auths>;
 
 
 class control: public contract {
@@ -82,9 +81,9 @@ public:
         return itr != tbl.end() && itr->attached;
     }
 
-    [[eosio::action]] void regwitness(name witness, eosio::public_key key, std::string url);
+    [[eosio::action]] void regwitness(name witness, std::string url);
     [[eosio::action]] void unregwitness(name witness);
-    [[eosio::action]] void votewitness(name voter, name witness, uint16_t weight = 10000);
+    [[eosio::action]] void votewitness(name voter, name witness);
     [[eosio::action]] void unvotewitn(name voter, name witness);
 
     [[eosio::action]] void changevest(name who, asset diff);

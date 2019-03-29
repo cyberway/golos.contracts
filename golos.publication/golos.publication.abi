@@ -159,36 +159,6 @@
     ]
   },
   {
-    "name": "content",
-    "base": "",
-    "fields": [
-      {
-        "name": "id",
-        "type": "uint64"
-      },
-      {
-        "name": "headermssg",
-        "type": "string"
-      },
-      {
-        "name": "bodymssg",
-        "type": "string"
-      },
-      {
-        "name": "languagemssg",
-        "type": "string"
-      },
-      {
-        "name": "tags",
-        "type": "tags[]"
-      },
-      {
-        "name": "jsonmetadata",
-        "type": "string"
-      }
-    ]
-  },
-  {
     "name": "messagestate",
     "base": "",
     "fields": [
@@ -255,10 +225,6 @@
         "type": "uint64"
       },
       {
-        "name": "closed",
-        "type": "bool"
-      },
-      {
         "name": "level",
         "type": "uint16"
       }
@@ -275,6 +241,10 @@
       {
         "name": "parent_id",
         "type": "mssgid"
+      },
+      {
+        "name": "parent_recid",
+        "type": "uint64"
       },
       {
         "name": "beneficiaries",
@@ -731,6 +701,13 @@
     ]
   },
   {
+    "name": "create_event",
+    "base": "",
+    "fields": [
+        {"name": "record_id", "type": "uint64"}
+    ]
+  },
+  {
     "name": "post_event",
     "base": "",
     "fields": [
@@ -776,6 +753,7 @@
   "events": [
     {"name": "poolstate", "type": "pool_event"},
     {"name": "poolerase", "type": "uint64"},
+    {"name": "postcreate","type": "create_event"},
     {"name": "poststate", "type": "post_event"},
     {"name": "postclose", "type": "post_close"},
     {"name": "votestate", "type": "vote_event"}
@@ -848,19 +826,6 @@
           "orders": [
               {"field": "permlink", "order": "asc"},
               {"field": "ref_block_num", "order": "asc"}
-          ]
-       }
-    ]
-  },
-  {
-    "name": "content",
-    "type": "content",
-    "indexes": [
-       {
-          "name": "primary",
-          "unique": "true",
-          "orders": [
-              {"field": "id", "order": "asc"}
           ]
        }
     ]

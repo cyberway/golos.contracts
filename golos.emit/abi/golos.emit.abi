@@ -8,7 +8,9 @@
         "name": "emit_param",
         "types": [
             "inflation_rate",
-            "reward_pools"
+            "reward_pools",
+            "emit_token",
+            "emit_interval"
         ]
     }],
     "structs": [
@@ -28,11 +30,21 @@
                 {"type": "account_name", "name": "name"},
                 {"type": "uint16",       "name": "percent"}]
         }, {
+            "name": "emit_token",
+            "base": "",
+            "fields": [{"type": "symbol", "name": "symbol"}]
+        }, {
+            "name": "emit_interval",
+            "base": "",
+            "fields": [{"type": "uint16", "name": "value"}]
+        }, {
             "name": "emit_state",
             "fields": [
                 {"type": "uint64",         "name": "id"},
                 {"type": "inflation_rate", "name": "infrate"},
-                {"type": "reward_pools",   "name": "pools"}]
+                {"type": "reward_pools",   "name": "pools"},
+                {"type": "emit_token",     "name": "token"},
+                {"type": "emit_interval",  "name": "interval"}]
         }, {
             "name": "setparams",
             "fields": [

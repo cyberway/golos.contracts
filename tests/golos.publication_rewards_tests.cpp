@@ -123,7 +123,7 @@ public:
 
     double get_converted_to_vesting(double arg) {
         double tokn_total = token.get_account(cfg::vesting_name)["balance"].as<asset>().to_real();
-        double vest_total = vest.get_vesting()["supply"].as<asset>().to_real();
+        double vest_total = vest.get_stats()["supply"].as<asset>().to_real();
         double price = (vest_total < 1.e-20) || (tokn_total < 1.e-20) ? 1.0 : (vest_total / tokn_total);
         return arg * price;
     }
@@ -308,13 +308,12 @@ public:
                 auto msgs = post.get_messages(user);
                 for (auto itr = msgs.begin(); itr != msgs.end(); ++itr) {
                     auto cur = *itr;
-                    if (!cur["closed"].as<bool>()) {
-                        s.set_message(mssgid{user, cur["permlink"].as<std::string>(), cur["ref_block_num"].as<uint64_t>()}, {
-                            static_cast<double>(FP(cur["state"]["netshares"].as<base_t>())),
-                            static_cast<double>(FP(cur["state"]["voteshares"].as<base_t>())),
-                            static_cast<double>(FP(cur["state"]["sumcuratorsw"].as<base_t>()))
-                        });
-                    }
+                    s.set_message(mssgid{user, cur["permlink"].as<std::string>(), cur["ref_block_num"].as<uint64_t>()}, {
+                                      static_cast<double>(FP(cur["state"]["netshares"].as<base_t>())),
+                                      static_cast<double>(FP(cur["state"]["voteshares"].as<base_t>())),
+                                      static_cast<double>(FP(cur["state"]["sumcuratorsw"].as<base_t>()))
+                                  });
+
                 }
             }
         }
@@ -436,7 +435,7 @@ public:
     ) {
         auto ref_block_num = control->head_block_header().block_num();
         const auto current_time = control->head_block_time().sec_since_epoch();
-        auto ret = post.create_msg(message_id, parent_message_id, beneficiaries, tokenprop, vestpayment);
+        auto ret = post.create_msg(message_id, parent_message_id, 0, beneficiaries, tokenprop, vestpayment);
 //        message_key key{author, permlink};
 
         auto reward_weight = 0.0;
