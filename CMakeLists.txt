@@ -1,5 +1,8 @@
 cmake_minimum_required(VERSION 3.5)
-project(golos_dapp_contracts VERSION 0.1.0)
+
+if (NOT DEFINED PROJECT_NAME)
+    project(golos_dapp_contracts VERSION 0.1.0)
+endif(NOT DEFINED PROJECT_NAME)
 
 set(EOSIO_CDT_VERSION_MIN "1.4")
 set(EOSIO_CDT_VERSION_SOFT_MAX "1.5")
@@ -7,7 +10,7 @@ set(EOSIO_CDT_VERSION_SOFT_MAX "1.5")
 
 find_package(eosio.cdt)
 
-### Check the version of eosio.cdt
+## Check the version of eosio.cdt
 set(VERSION_MATCH_ERROR_MSG "")
 EOSIO_CHECK_VERSION(VERSION_OUTPUT "${EOSIO_CDT_VERSION}"
                                    "${EOSIO_CDT_VERSION_MIN}"
@@ -37,13 +40,27 @@ macro(add_contract_with_abi TARGET ABIFILE)
    install (FILES ${CMAKE_CURRENT_BINARY_DIR}/${TARGET}.abi DESTINATION ${CMAKE_INSTALL_PREFIX}/${TARGET}/)
 endmacro()
 
-set(TOKEN_INCLUDE_PATH "cyberway.contracts/cyber.token/include")
-set(TOKEN_HEADER_FILE "cyber.token")
-set(TOKEN_CLASS "eosio::token")
-set(TOKEN_NAME "cyber.token")
-set(VESTING_NAME "gls.vesting")
+if (NOT DEFINED TOKEN_INCLUDE_PATH)
+    set(TOKEN_INCLUDE_PATH "cyberway.contracts/cyber.token/include")
+endif(NOT DEFINED TOKEN_INCLUDE_PATH)
 
-configure_file(${CMAKE_SOURCE_DIR}/common/config.hpp.in ${CMAKE_SOURCE_DIR}/common/config.hpp)
+if (NOT DEFINED TOKEN_HEADER_FILE)
+    set(TOKEN_HEADER_FILE "cyber.token")
+endif(NOT DEFINED TOKEN_HEADER_FILE)
+
+if (NOT DEFINED TOKEN_CLASS)
+    set(TOKEN_CLASS "eosio::token")
+endif(NOT DEFINED TOKEN_CLASS)
+
+if (NOT DEFINED TOKEN_NAME)
+    set(TOKEN_NAME "cyber.token")
+endif(NOT DEFINED TOKEN_NAME)
+
+if (NOT DEFINED VESTING_NAME)
+    set(VESTING_NAME "gls.vesting")
+endif(NOT DEFINED VESTING_NAME)
+
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/common/config.hpp.in ${CMAKE_CURRENT_SOURCE_DIR}/common/config.hpp)
 
 # include_directories(AFTER ${BOOST_ROOT}/include)
 add_subdirectory(golos.ctrl)
