@@ -97,7 +97,7 @@ void publication::create_message(structures::mssgid message_id,
                               std::string bodymssg, std::string languagemssg,
                               std::vector<structures::tag> tags,
                               std::string jsonmetadata,
-                              int64_t curators_prcnt) {
+                              std::optional<uint16_t> curators_prcnt = std::nullopt) {
     require_auth(message_id.author);
 
     int ref_block_num = message_id.ref_block_num % 65536;
@@ -229,7 +229,7 @@ void publication::create_message(structures::mssgid message_id,
         item.rewardweight = static_cast<base_t>(elaf_t(1).data()); //we will get actual value from charge on post closing
         item.childcount = 0;
         item.level = level;
-        item.curators_prcnt = check_curators_prcnt(curators_prcnt);
+        item.curators_prcnt = get_checked_curators_prcnt(curators_prcnt);
     });
 
     structures::archive_info_v1 info{message_id,level};
@@ -848,18 +848,20 @@ bool publication::check_permlink_correctness(std::string permlink) {
     return true;
 }
 
-base_t publication::check_curators_prcnt(int64_t curators_prcnt) {
+base_t publication::get_checked_curators_prcnt(std::optional<uint16_t> curators_prcnt) {
     posting_params_singleton cfg(_self, _self.value);
     const auto &curators_prcnt_param = cfg.get().curators_prcnt_param;
 
-    auto cur_prcnt = static_cast<base_t>(get_limit_prop(static_cast<int64_t>(curators_prcnt_param.min_curators_prcnt)).data());
-    if (curators_prcnt >= static_cast<int64_t>(curators_prcnt_param.min_curators_prcnt) &&
-        curators_prcnt <= static_cast<int64_t>(curators_prcnt_param.max_curators_prcnt))
-        cur_prcnt = static_cast<base_t>(get_limit_prop(curators_prcnt).data());
-    return cur_prcnt;
+    if (curators_prcnt.has_value()) {
+        eosio_assert(curators_prcnt.value() >= curators_prcnt_param.min_curators_prcnt &&
+                     curators_prcnt.value() <= curators_prcnt_param.max_curators_prcnt,
+                     "Curators percent is less than min curators percent or greater than max curators percent.");
+            return static_cast<base_t>(get_limit_prop(static_cast<int64_t>(curators_prcnt.value())).data());
+    }
+    return static_cast<base_t>(get_limit_prop(static_cast<int64_t>(curators_prcnt_param.min_curators_prcnt)).data());
 }
 
-void publication::set_curators_prcnt(structures::mssgid message_id, int64_t curators_prcnt) {
+void publication::set_curators_prcnt(structures::mssgid message_id, uint16_t curators_prcnt) {
     require_auth(message_id.author);
     tables::message_table message_table(_self, message_id.author.value);
     auto message_index = message_table.get_index<"bypermlink"_n>();
@@ -870,7 +872,7 @@ void publication::set_curators_prcnt(structures::mssgid message_id, int64_t cura
             "Curators percent can be changed only before voting.");
 
     message_index.modify(message_itr, name(), [&]( auto &item ) {
-            item.curators_prcnt = check_curators_prcnt(curators_prcnt);
+            item.curators_prcnt = get_checked_curators_prcnt(curators_prcnt);
         });
 }
 

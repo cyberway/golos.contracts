@@ -168,6 +168,7 @@ protected:
             amsg("Min curators percent must be less than max curators percent or equal.");
         const string wrong_max_cur_prcnt = amsg("Max curators percent must be less than 100 or equal.");
         const string no_cur_percent = amsg("Curators percent can be changed only before voting.");
+        const string cur_prcnt_no_fit = amsg("Curators percent is less than min curators percent or greater than max curators percent.");
     } err;
 };
 
@@ -604,6 +605,10 @@ BOOST_FIXTURE_TEST_CASE(set_curators_prcnt, golos_publication_tester) try {
             curators_prcnt    
             );
     };
+
+    BOOST_TEST_MESSAGE("--- checking that curators percent doesn't fit");
+    BOOST_CHECK_EQUAL(err.cur_prcnt_no_fit, create_msg(-1));
+    BOOST_CHECK_EQUAL(err.cur_prcnt_no_fit, create_msg(9001));
 
     BOOST_TEST_MESSAGE("--- checking that curators percent was setted correctly");
     BOOST_CHECK_EQUAL(success(), create_msg(7100));

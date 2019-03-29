@@ -285,7 +285,7 @@
       },
       {
         "name": "curators_prcnt",
-        "type": "int64"
+        "type": "uint16?"
       }
     ]
   },
@@ -729,7 +729,7 @@
         },
         {
             "name": "curators_prcnt",
-            "type": "int64"
+            "type": "uint16"
         }
     ]
   },
