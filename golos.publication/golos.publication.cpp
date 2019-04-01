@@ -853,9 +853,10 @@ base_t publication::get_checked_curators_prcnt(std::optional<uint16_t> curators_
     const auto &curators_prcnt_param = cfg.get().curators_prcnt_param;
 
     if (curators_prcnt.has_value()) {
-        eosio_assert(curators_prcnt.value() >= curators_prcnt_param.min_curators_prcnt &&
-                     curators_prcnt.value() <= curators_prcnt_param.max_curators_prcnt,
-                     "Curators percent is less than min curators percent or greater than max curators percent.");
+        eosio_assert(curators_prcnt.value() >= curators_prcnt_param.min_curators_prcnt,
+                     "Curators percent is less than min curators percent.");
+        eosio_assert(curators_prcnt.value() <= curators_prcnt_param.max_curators_prcnt,
+                     "Curators percent is greater than max curators percent.");
             return static_cast<base_t>(get_limit_prop(static_cast<int64_t>(curators_prcnt.value())).data());
     }
     return static_cast<base_t>(get_limit_prop(static_cast<int64_t>(curators_prcnt_param.min_curators_prcnt)).data());

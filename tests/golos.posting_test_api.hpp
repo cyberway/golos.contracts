@@ -50,7 +50,7 @@ struct golos_posting_api: base_contract_api {
         std::string language = "languagemssg",
         std::vector<tags> tags = {{"tag"}},
         std::string json_metadata = "jsonmetadata",
-        uint16_t curators_prcnt = 7100 
+        optional<uint16_t> curators_prcnt = optional<uint16_t>() 
     ) {
         return push(N(createmssg), message_id.author, args()
             ("message_id", message_id)
@@ -211,7 +211,7 @@ struct golos_posting_api: base_contract_api {
     const uint32_t upvote_lockout = 15;
     const uint8_t max_beneficiaries = 64;
     const uint16_t max_comment_depth = 127;
-    const uint16_t min_curators_prcnt = 0;
+    const uint16_t min_curators_prcnt = 1000;
     const uint16_t max_curators_prcnt = 9000;
 };
 

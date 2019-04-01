@@ -65,8 +65,8 @@ namespace golos {
         uint16_t max_curators_prcnt;
 
         void validate() const override {
-            eosio_assert(min_curators_prcnt >= 0 && min_curators_prcnt <= config::_100percent,
-                    "Min curators percent must be greater than 0 and less than 100 or equal.");
+            eosio_assert(min_curators_prcnt <= config::_100percent,
+                    "Min curators percent must be between 0% and 100% (0-10000).");
             eosio_assert(min_curators_prcnt <= max_curators_prcnt,
                     "Min curators percent must be less than max curators percent or equal.");
             eosio_assert(max_curators_prcnt <= config::_100percent, "Max curators percent must be less than 100 or equal.");

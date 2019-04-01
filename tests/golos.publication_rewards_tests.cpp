@@ -31,13 +31,13 @@ auto func = [](double x){ return static_cast<double>(_m) / ((static_cast<double>
 }
 
 class reward_calcs_tester : public golos_tester {
+protected:
     symbol _token_symbol;
     golos_posting_api post;
     golos_vesting_api vest;
     golos_charge_api charge;
     cyber_token_api token;
 
-protected:
     account_name _forum_name;
     account_name _issuer;
     vector<account_name> _users;
@@ -647,6 +647,9 @@ BOOST_FIXTURE_TEST_CASE(limits_test, reward_calcs_tester) try {
     auto bignum = 500000000000;
     init(bignum, 500000);
 
+    auto params = "[" + post.get_str_curators_prcnt(0, post.max_curators_prcnt) + "]";
+    BOOST_CHECK_EQUAL(success(), post.set_params(params));
+
     BOOST_CHECK_EQUAL(success(), setrules({"x", bignum}, {"sqrt(x)", bignum}, {"x / 1800", 1800},
         [](double x){ return x; }, [](double x){ return sqrt(x); }, [](double x){ return x / 1800.0; },
         {
@@ -666,9 +669,9 @@ BOOST_FIXTURE_TEST_CASE(limits_test, reward_calcs_tester) try {
     
     auto create_msg = [&](
             mssgid message_id, 
-            auto curators_prcnt, 
             mssgid parent_id = {N(), "parentprmlnk", 0}, 
-            bool vest_payment = false) { 
+            bool vest_payment = false,
+            uint16_t curators_prcnt = 0) { 
         return create_message(
             message_id, 
             parent_id,
@@ -689,24 +692,22 @@ BOOST_FIXTURE_TEST_CASE(limits_test, reward_calcs_tester) try {
     check();
 
     auto ref_block_num_bob = control->head_block_header().block_num();
-    BOOST_CHECK_EQUAL(success(), create_msg({N(bob), "permlink", ref_block_num_bob}, 0));
-    BOOST_CHECK_EQUAL(success(), create_msg({N(bob), "permlink1", ref_block_num_bob}, 0));
-    BOOST_CHECK_EQUAL(err.limit_no_power, create_msg({N(bob), "permlink2", ref_block_num_bob}, 0));
+    BOOST_CHECK_EQUAL(success(), create_msg({N(bob), "permlink", ref_block_num_bob}));
+    BOOST_CHECK_EQUAL(success(), create_msg({N(bob), "permlink1", ref_block_num_bob}));
+    BOOST_CHECK_EQUAL(err.limit_no_power, create_msg({N(bob), "permlink2", ref_block_num_bob}));
     BOOST_TEST_MESSAGE("--- comments");
     for (size_t i = 0; i < 10; i++) {   // TODO: remove magic number, 10 must be derived from some constant used in rules
         BOOST_CHECK_EQUAL(success(), create_msg({N(bob), "comment" + std::to_string(i), ref_block_num_bob}, 
-                                                0,
                                                 {N(bob), "permlink", ref_block_num_bob}));
     }
     BOOST_CHECK_EQUAL(err.limit_no_power, create_msg({N(bob), "oops", ref_block_num_bob},
-                                                     0,
                                                      {N(bob), "permlink", ref_block_num_bob}));
-    BOOST_CHECK_EQUAL(success(), create_msg({N(bob), "i-can-pay-for-posting", ref_block_num_bob}, 0, {N(), "", 0}, true));
+    BOOST_CHECK_EQUAL(success(), create_msg({N(bob), "i-can-pay-for-posting", ref_block_num_bob}, {N(), "", 0}, true));
     BOOST_CHECK_EQUAL(err.limit_no_power,
-        create_msg({N(bob), "only-if-it-is-not-a-comment", ref_block_num_bob}, 0, {N(bob), "permlink", ref_block_num_bob}, true));
+        create_msg({N(bob), "only-if-it-is-not-a-comment", ref_block_num_bob}, {N(bob), "permlink", ref_block_num_bob}, true));
     BOOST_CHECK_EQUAL(success(), addvote(N(alice), {N(bob), "i-can-pay-for-posting", ref_block_num_bob}, 10000));
     BOOST_CHECK_EQUAL(success(), addvote(N(bob), {N(bob), "i-can-pay-for-posting", ref_block_num_bob}, 10000)); //He can also vote
-    BOOST_CHECK_EQUAL(success(), create_msg({N(bob1), "permlink", ref_block_num_bob}, 0));
+    BOOST_CHECK_EQUAL(success(), create_msg({N(bob1), "permlink", ref_block_num_bob}));
     produce_blocks();     // push transactions before run() call
 
     BOOST_TEST_MESSAGE("--- waiting");
@@ -715,10 +716,10 @@ BOOST_FIXTURE_TEST_CASE(limits_test, reward_calcs_tester) try {
     produce_blocks(golos::seconds_to_blocks(150));  // TODO: remove magic number
     check();
     auto ref_block_num_bob1 = control->head_block_header().block_num();
-    BOOST_CHECK_EQUAL(err.limit_no_power, create_msg({N(bob), "limit-no-power", ref_block_num_bob1}, 0));
+    BOOST_CHECK_EQUAL(err.limit_no_power, create_msg({N(bob), "limit-no-power", ref_block_num_bob1}));
     produce_blocks(golos::seconds_to_blocks(45));   // TODO: remove magic number
     auto ref_block_num_bob2 = control->head_block_header().block_num();
-    BOOST_CHECK_EQUAL(success(), create_msg({N(bob), "test", ref_block_num_bob2}, 0));
+    BOOST_CHECK_EQUAL(success(), create_msg({N(bob), "test", ref_block_num_bob2}));
     check();
     BOOST_CHECK_EQUAL(success(), setrules({"x", bignum}, {"sqrt(x)", bignum}, {"x / 1800", 1800},
         [](double x){ return x; }, [](double x){ return sqrt(x); }, [](double x){ return x / 1800.0; },
@@ -738,8 +739,8 @@ BOOST_FIXTURE_TEST_CASE(limits_test, reward_calcs_tester) try {
     );
     check();
     auto ref_block_num_bob3 = control->head_block_header().block_num();
-    BOOST_CHECK_EQUAL(err.limit_no_vesting, create_msg({N(bob), "limit-no-vesting", ref_block_num_bob3}, 0));
-    BOOST_CHECK_EQUAL(success(), create_msg({N(bob1), "test2", ref_block_num_bob3}, 0));
+    BOOST_CHECK_EQUAL(err.limit_no_vesting, create_msg({N(bob), "limit-no-vesting", ref_block_num_bob3}));
+    BOOST_CHECK_EQUAL(success(), create_msg({N(bob1), "test2", ref_block_num_bob3}));
     check();
     show();
 } FC_LOG_AND_RETHROW()
