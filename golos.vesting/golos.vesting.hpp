@@ -130,7 +130,6 @@ public:
     static inline bool exists(name code, symbol_code sym) {
         vesting_table table(code, code.value);
         return table.find(sym.raw()) != table.end();
-
     }
     static inline bool balance_exist(name code, name owner, symbol_code sym) {
         account_table accounts(code, owner.value);          // TODO: maybe combine with `get_account`
