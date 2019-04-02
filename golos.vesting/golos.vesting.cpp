@@ -2,7 +2,6 @@
 #include "config.hpp"
 #include <eosiolib/transaction.hpp>
 #include <eosiolib/event.hpp>
-#include <cyber.token/cyber.token.hpp>
 #include <golos.charge/golos.charge.hpp>
 #include <common/dispatchers.hpp>
 
@@ -325,7 +324,7 @@ void vesting::timeoutconv() {
                         item.supply -= quantity;
                         // TODO Add notify about supply change #548
                     });
-                    INLINE_ACTION_SENDER(eosio::token, transfer)(config::token_name, {_self, config::active_name},
+                    INLINE_ACTION_SENDER(token, transfer)(config::token_name, {_self, config::active_name},
                         {_self, obj->to, convert_to_token(quantity, *vest), "Convert vesting"});
                 });
 

@@ -22,7 +22,7 @@ fixp_t charge::consume_charge(name issuer, name user, symbol_code token_code, ui
         auto user_vesting = golos::vesting::get_account_unlocked_vesting(config::vesting_name, user, token_code);
         eosio_assert(user_vesting.amount >= vesting_price, "insufficient vesting amount");
         INLINE_ACTION_SENDER(golos::vesting, retire) (config::vesting_name,
-            {eosio::token::get_issuer(config::token_name, token_code), golos::config::invoice_name},
+            {token::get_issuer(config::token_name, token_code), golos::config::invoice_name},
             {eosio::asset(vesting_price, user_vesting.symbol), user});
         return FP(itr->value);
     }
