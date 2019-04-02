@@ -48,6 +48,8 @@ extern "C" {
             execute_action(&publication::set_params);
         if (NN(reblog) == action)
             execute_action(&publication::reblog);
+        if (NN(setcurprcnt) == action)
+            execute_action(&publication::set_curators_prcnt);
     }
 #undef NN
 }
@@ -78,6 +80,9 @@ struct posting_params_setter: set_params_visitor<posting_state> {
     bool operator()(const referral_acc_prm& param) {
         return set_param(param, &posting_state::referral_acc_param);
     }
+    bool operator()(const curators_prcnt_prm& param) {
+        return set_param(param, &posting_state::curators_prcnt_param);
+    }
 };
 
 void publication::create_message(structures::mssgid message_id,
@@ -90,7 +95,8 @@ void publication::create_message(structures::mssgid message_id,
                               std::string headermssg,
                               std::string bodymssg, std::string languagemssg,
                               std::vector<structures::tag> tags,
-                              std::string jsonmetadata) {
+                              std::string jsonmetadata,
+                              std::optional<uint16_t> curators_prcnt = std::nullopt) {
     require_auth(message_id.author);
 
     int ref_block_num = message_id.ref_block_num % 65536;
@@ -107,6 +113,7 @@ void publication::create_message(structures::mssgid message_id,
     const auto &max_comment_depth_param = cfg.get().max_comment_depth_param;
     const auto &social_acc_param = cfg.get().social_acc_param;
     const auto &referral_acc_param = cfg.get().referral_acc_param;
+    const auto &curators_prcnt_param = cfg.get().curators_prcnt_param;
 
     if (parent_id.author) {
         if (social_acc_param.account) {
@@ -221,6 +228,7 @@ void publication::create_message(structures::mssgid message_id,
         item.rewardweight = static_cast<base_t>(elaf_t(1).data()); //we will get actual value from charge on post closing
         item.childcount = 0;
         item.level = level;
+        item.curators_prcnt = get_checked_curators_prcnt(curators_prcnt);
     });
 
     structures::archive_info_v1 info{message_id,level};
@@ -441,7 +449,7 @@ void publication::close_message(structures::mssgid message_id) {
         state.rsharesfn = new_rsharesfn.data();
     }
 
-    auto curation_payout = int_cast(ELF(pool->rules.curatorsprop) * elai_t(payout));
+    auto curation_payout = int_cast(ELF(mssg_itr->curators_prcnt) * elai_t(payout));
 
     eosio_assert((curation_payout <= payout) && (curation_payout >= 0), "publication::payrewards: wrong curation_payout");
 
@@ -708,7 +716,7 @@ void publication::set_limit(std::string act_str, symbol_code token_code, uint8_t
 }
 
 void publication::set_rules(const funcparams& mainfunc, const funcparams& curationfunc, const funcparams& timepenalty,
-    int64_t curatorsprop, int64_t maxtokenprop, eosio::symbol tokensymbol) {
+    int64_t maxtokenprop, eosio::symbol tokensymbol) {
     //TODO: machine's constants
     using namespace tables;
     using namespace structures;
@@ -737,7 +745,6 @@ void publication::set_rules(const funcparams& mainfunc, const funcparams& curati
     newrules.curationfunc = load_func(curationfunc, "curation func", pa, machine, true);
     newrules.timepenalty  = load_func(timepenalty, "time penalty func", pa, machine, true);
 
-    newrules.curatorsprop = static_cast<base_t>(get_limit_prop(curatorsprop).data());
     newrules.maxtokenprop = static_cast<base_t>(get_limit_prop(maxtokenprop).data());
 
     pools.emplace(_self, [&](auto &item) {
@@ -838,6 +845,35 @@ bool publication::check_permlink_correctness(std::string permlink) {
         }
     }
     return true;
+}
+
+base_t publication::get_checked_curators_prcnt(std::optional<uint16_t> curators_prcnt) {
+    posting_params_singleton cfg(_self, _self.value);
+    const auto &curators_prcnt_param = cfg.get().curators_prcnt_param;
+
+    if (curators_prcnt.has_value()) {
+        eosio_assert(curators_prcnt.value() >= curators_prcnt_param.min_curators_prcnt,
+                     "Curators percent is less than min curators percent.");
+        eosio_assert(curators_prcnt.value() <= curators_prcnt_param.max_curators_prcnt,
+                     "Curators percent is greater than max curators percent.");
+            return static_cast<base_t>(get_limit_prop(static_cast<int64_t>(curators_prcnt.value())).data());
+    }
+    return static_cast<base_t>(get_limit_prop(static_cast<int64_t>(curators_prcnt_param.min_curators_prcnt)).data());
+}
+
+void publication::set_curators_prcnt(structures::mssgid message_id, uint16_t curators_prcnt) {
+    require_auth(message_id.author);
+    tables::message_table message_table(_self, message_id.author.value);
+    auto message_index = message_table.get_index<"bypermlink"_n>();
+    auto message_itr = message_index.find({message_id.permlink, message_id.ref_block_num});
+    eosio_assert(message_itr != message_index.end(), "Message doesn't exist.");
+
+    eosio_assert(message_itr->state.voteshares == 0,
+            "Curators percent can be changed only before voting.");
+
+    message_index.modify(message_itr, name(), [&]( auto &item ) {
+            item.curators_prcnt = get_checked_curators_prcnt(curators_prcnt);
+        });
 }
 
 } // golos

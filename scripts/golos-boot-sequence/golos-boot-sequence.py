@@ -165,14 +165,14 @@ def voteWitness(ctrl, voter, witness):
     retry(args.cleos + ' push action ' + ctrl + ' votewitness ' +
         jsonArg([voter, witness]) + '-p %s'%voter)
 
-def createPost(author, permlink, header, body, *, beneficiaries=[]):
+def createPost(author, permlink, header, body, curatorsPrcnt, *, beneficiaries=[]):
     retry(args.cleos + 'push action gls.publish createmssg' +
-        jsonArg([author, permlink, "", "", beneficiaries, 0, False, header, body, 'ru', [], '']) +
+        jsonArg([author, permlink, "", "", beneficiaries, 0, False, header, body, 'ru', [], '', curatorsPrcnt]) +
         '-p %s'%author)
 
-def createComment(author, permlink, pauthor, ppermlink, header, body, *, beneficiaries=[]):
+def createComment(author, permlink, pauthor, ppermlink, header, body, curatorsPrcnt, *, beneficiaries=[]):
     retry(args.cleos + 'push action gls.publish createmssg' +
-        jsonArg([author, permlink, pauthor, ppermlink, beneficiaries, 0, False, header, body, 'ru', [], '']) +
+        jsonArg([author, permlink, pauthor, ppermlink, beneficiaries, 0, False, header, body, 'ru', [], '', curatorsPrcnt]) +
         '-p %s'%author)
 
 def upvotePost(voter, author, permlink, weight):
@@ -343,14 +343,14 @@ def initCommunity():
         ['st_max_beneficiaries', {'value': 64}],
         ['st_max_comment_depth', {'value': 127}],
         ['st_social_acc', {'value': 'gls.social'}],
-        ['st_referral_acc', {'value': ''}] # TODO Add referral contract to posting-settings
+        ['st_referral_acc', {'value': ''}], # TODO Add referral contract to posting-settings
+        ['st_curators_prcnt', {'min_curators_prcnt': 0, 'max_curators_prcnt': 9000}]
     ]]) + '-p gls.publish')
 
     retry(args.cleos + 'push action gls.publish setrules ' + jsonArg({
         "mainfunc":{"str":"x","maxarg":fixp_max},
         "curationfunc":{"str":golos_curation_func_str,"maxarg":fixp_max},
         "timepenalty":{"str":"x/1800","maxarg":1800},
-        "curatorsprop":2500,
         "maxtokenprop":5000,
         "tokensymbol":args.token
     }) + '-p gls.publish')

@@ -2,6 +2,7 @@
 #include <eosiolib/singleton.hpp>
 #include <common/parameter.hpp>
 #include <common/parameter_ops.hpp>
+#include <common/config.hpp>
 
 namespace golos {
 
@@ -58,10 +59,24 @@ namespace golos {
         }
     };
     using referral_acc_prm = param_wrapper<st_referral_acc, 1>;
+    
+    struct st_curators_prcnt : parameter {
+        uint16_t min_curators_prcnt;
+        uint16_t max_curators_prcnt;
+
+        void validate() const override {
+            eosio_assert(min_curators_prcnt <= config::_100percent,
+                    "Min curators percent must be between 0% and 100% (0-10000).");
+            eosio_assert(min_curators_prcnt <= max_curators_prcnt,
+                    "Min curators percent must be less than max curators percent or equal.");
+            eosio_assert(max_curators_prcnt <= config::_100percent, "Max curators percent must be less than 100 or equal.");
+        }
+    };
+    using curators_prcnt_prm = param_wrapper<st_curators_prcnt, 2>;
 
 
     using posting_params = std::variant<max_vote_changes_prm, cashout_window_prm, max_beneficiaries_prm, 
-          max_comment_depth_prm, social_acc_prm, referral_acc_prm>;
+          max_comment_depth_prm, social_acc_prm, referral_acc_prm, curators_prcnt_prm>;
 
     struct [[eosio::table]] posting_state {
         max_vote_changes_prm max_vote_changes_param;
@@ -70,8 +85,9 @@ namespace golos {
         max_comment_depth_prm max_comment_depth_param;
         social_acc_prm social_acc_param;
         referral_acc_prm referral_acc_param;
+        curators_prcnt_prm curators_prcnt_param;
 
-        static constexpr int params_count = 6;
+        static constexpr int params_count = 7;
     };
     using posting_params_singleton = eosio::singleton<"pstngparams"_n, posting_state>;
 

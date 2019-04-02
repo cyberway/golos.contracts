@@ -16,13 +16,11 @@ struct golos_posting_api: base_contract_api {
         const funcparams& main_fn,
         const funcparams& curation_fn,
         const funcparams& time_penalty,
-        int64_t curators_prop,
         int64_t max_token_prop) {
         return push(N(setrules), _code, args()
             ("mainfunc", fn_to_mvo(main_fn))
             ("curationfunc", fn_to_mvo(curation_fn))
             ("timepenalty", fn_to_mvo(time_penalty))
-            ("curatorsprop", curators_prop)
             ("maxtokenprop", max_token_prop)
             ("tokensymbol", _symbol)
         );
@@ -51,7 +49,8 @@ struct golos_posting_api: base_contract_api {
         std::string body = "bodymssg",
         std::string language = "languagemssg",
         std::vector<tags> tags = {{"tag"}},
-        std::string json_metadata = "jsonmetadata"
+        std::string json_metadata = "jsonmetadata",
+        optional<uint16_t> curators_prcnt = optional<uint16_t>() 
     ) {
         return push(N(createmssg), message_id.author, args()
             ("message_id", message_id)
@@ -65,6 +64,7 @@ struct golos_posting_api: base_contract_api {
             ("languagemssg", language)
             ("tags", tags)
             ("jsonmetadata", json_metadata)
+            ("curators_prcnt", curators_prcnt)
         );
     }
 
@@ -112,10 +112,17 @@ struct golos_posting_api: base_contract_api {
             ("message_id", message_id)
         );
     }
+    action_result set_curators_prcnt(mssgid message_id, uint16_t curators_prcnt) {
+        return push(N(setcurprcnt), message_id.author, args()
+            ("message_id", message_id)
+            ("curators_prcnt", curators_prcnt)
+            );
+    }
     action_result set_params(std::string json_params) {
         return push(N(setparams), _code, args()
             ("params", json_str_to_obj(json_params)));
     }
+    
 
     action_result init_default_params() {
         auto vote_changes = get_str_vote_changes(max_vote_changes);
@@ -124,9 +131,10 @@ struct golos_posting_api: base_contract_api {
         auto comment_depth = get_str_comment_depth(max_comment_depth);
         auto social = get_str_social_acc(name());
         auto referral = get_str_referral_acc(name());
+        auto curators_prcnt = get_str_curators_prcnt(min_curators_prcnt, max_curators_prcnt);
 
         auto params = "[" + vote_changes + "," + cashout_window + "," + beneficiaries + "," + comment_depth + 
-            "," + social + "," + referral + "]";
+            "," + social + "," + referral + "," + curators_prcnt + "]";
         return set_params(params); 
     } 
 
@@ -157,6 +165,10 @@ struct golos_posting_api: base_contract_api {
     string get_str_referral_acc(name referral_acc) {
         return string("['st_referral_acc', {'value':'") + name{referral_acc}.to_string() + "'}]";
     }   
+    
+    string get_str_curators_prcnt(uint16_t min_curators_prcnt, uint16_t max_curators_prcnt) {
+        return string("['st_curators_prcnt', {'min_curators_prcnt':'") + std::to_string(min_curators_prcnt) + "','max_curators_prcnt':'" + std::to_string(max_curators_prcnt) + "'}]";
+    }
 
     //// posting tables
     variant get_message(account_name acc, uint64_t id) {
@@ -199,6 +211,8 @@ struct golos_posting_api: base_contract_api {
     const uint32_t upvote_lockout = 15;
     const uint8_t max_beneficiaries = 64;
     const uint16_t max_comment_depth = 127;
+    const uint16_t min_curators_prcnt = 1000;
+    const uint16_t max_curators_prcnt = 9000;
 };
 
 

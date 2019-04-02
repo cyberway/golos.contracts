@@ -70,6 +70,7 @@ struct message {
     messagestate state;
     uint64_t childcount;
     uint16_t level;
+    base_t curators_prcnt;
 
     uint64_t primary_key() const {
         return id;
@@ -120,7 +121,6 @@ struct rewardrules {
     funcinfo mainfunc;
     funcinfo curationfunc;
     funcinfo timepenalty;
-    base_t curatorsprop; //elaf_t
     base_t maxtokenprop; //elaf_t
     //uint64_t cashout_time; //TODO:
 };
