@@ -35,7 +35,7 @@ public:
         , charge({this, cfg::charge_name, _token_sym})
         , _users{N(alice), N(bob)}
     {
-        create_accounts({_code, cfg::token_name, cfg::charge_name, cfg::control_name, cfg::emission_name});
+        create_accounts({_code, cfg::token_name, cfg::charge_name, cfg::control_name, cfg::emission_name, cfg::publish_name});
         create_accounts(_users);
         produce_blocks(2);
         install_contract(_code, contracts::vesting_wasm(), contracts::vesting_abi());

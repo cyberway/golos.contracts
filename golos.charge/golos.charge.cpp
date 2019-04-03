@@ -1,5 +1,6 @@
 #include "golos.charge.hpp"
 #include <eosiolib/event.hpp>
+#include <golos.publication/golos.publication.hpp>
 
 namespace golos {
 using namespace eosio;
@@ -77,6 +78,10 @@ void charge::useandstore(name user, symbol_code token_code, uint8_t charge_id, i
             item.symbol_stamp = k;
             item.value = new_val.data();
         });
+
+    INLINE_ACTION_SENDER(golos::publication, calcrwrdwt) (config::publish_name,
+        {_self, config::active_name},
+        {user, token_code, stamp_id, new_val.data()});
 }
 
 void charge::removestored(name user, symbol_code token_code, uint8_t charge_id, int64_t stamp_id) {

@@ -163,7 +163,7 @@ struct post_event {
     base_t sumcuratorsw = 0;
 };
 
-struct post_close {
+struct reward_weight_event {
     name author;
     std::string permlink;
     base_t rewardweight;
@@ -183,6 +183,12 @@ struct pool_event {
     counter_t msgs;
     eosio::asset funds;
     wide_t rshares;
+};
+
+struct sharesfn_event {
+    name author;
+    std::string permlink;
+    base_t rsharesfn;
 };
 
 struct limitparams {

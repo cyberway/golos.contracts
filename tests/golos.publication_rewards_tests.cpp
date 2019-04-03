@@ -103,7 +103,7 @@ public:
         , _stranger(N(dan.larimer)) {
 
         produce_blocks(2);    // why 2?
-        create_accounts({_forum_name, _issuer, cfg::vesting_name, cfg::token_name, cfg::control_name, cfg::charge_name, _stranger});
+        create_accounts({_forum_name, _issuer, cfg::vesting_name, cfg::token_name, cfg::control_name, cfg::charge_name, _stranger, cfg::publish_name});
         create_accounts(_users);
         produce_blocks(2);
 
