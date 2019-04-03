@@ -38,6 +38,12 @@ struct messagestate {
     base_t sumcuratorsw = 0;
 };
 
+struct mssgrwrd {
+    eosio::asset funds;
+    wide_t rshares;
+    wide_t rsharesfn;
+};
+
 struct message {
     message() = default;
 
@@ -48,6 +54,8 @@ struct message {
     uint16_t rewardweight;  // percent
     messagestate state;
     uint16_t curators_prcnt;
+    bool closed;
+    mssgrwrd mssg_reward; 
 
     uint64_t primary_key() const {
         return id;

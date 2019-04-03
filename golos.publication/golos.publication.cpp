@@ -1,5 +1,5 @@
 #include "golos.publication.hpp"
-#include <eosiolib/transaction.hpp>
+#include <eosiolib/transaction.hpp> 
 #include <eosiolib/event.hpp>
 #include <golos.social/golos.social.hpp>
 #include <golos.vesting/golos.vesting.hpp>
@@ -52,6 +52,8 @@ extern "C" {
             execute_action(&publication::set_curators_prcnt);
         if (NN(calcrwrdwt) == action)
             execute_action(&publication::calcrwrdwt);
+        if (NN(paymssgrwrd) == action)
+            execute_action(&publication::paymssgrwrd);
     }
 #undef NN
 }
@@ -408,6 +410,7 @@ void publication::close_message(structures::mssgid message_id) {
     atmsp::machine<fixp_t> machine;
     fixp_t sharesfn = set_and_run(machine, pool->rules.mainfunc.code, {FP(mssg_itr->state.netshares)}, {{fixp_t(0), FP(pool->rules.mainfunc.maxarg)}});
 
+    structures::mssgrwrd mssg_reward;
     auto state = pool->state;
     int64_t payout = 0;
     if(state.msgs == 1) {
@@ -417,6 +420,9 @@ void publication::close_message(structures::mssgid message_id) {
         state.funds.amount = 0;
         state.rshares = 0;
         state.rsharesfn = 0;
+        
+        mssg_reward.rshares = 0;
+        mssg_reward.rsharesfn = 0;
     }
     else {
         auto total_rsharesfn = WP(state.rsharesfn);
@@ -435,15 +441,65 @@ void publication::close_message(structures::mssgid message_id) {
             eosio_assert(state.funds.amount >= 0, "LOGIC ERROR! publication::payrewards: state.funds < 0");
         }
 
-        auto new_rshares = WP(state.rshares) - wdfp_t(FP(mssg_itr->state.netshares));
-        auto new_rsharesfn = WP(state.rsharesfn) - wdfp_t(sharesfn);
+        auto rshares = wdfp_t(FP(mssg_itr->state.netshares));
+        auto new_rshares = WP(state.rshares) - rshares;
+
+        auto rsharesfn = wdfp_t(sharesfn);
+        auto new_rsharesfn = WP(state.rsharesfn) - rsharesfn;
 
         eosio_assert(new_rshares >= 0, "LOGIC ERROR! publication::payrewards: new_rshares < 0");
         eosio_assert(new_rsharesfn >= 0, "LOGIC ERROR! publication::payrewards: new_rsharesfn < 0");
 
         state.rshares = new_rshares.data();
         state.rsharesfn = new_rsharesfn.data();
+        
+        mssg_reward.rshares = rshares.data();
+        mssg_reward.rsharesfn = rsharesfn.data();
     }
+
+    mssg_reward.funds = asset(payout, state.funds.symbol); 
+
+    message_table.modify(mssg_itr, name(), [&]( auto &item ) {
+            item.closed = true;
+            item.mssg_reward = mssg_reward;
+        });
+
+    bool pool_erased = false;
+    state.msgs--;
+    if(state.msgs == 0) {
+        if(pool != --pools.end()) {
+            send_poolerase_event(*pool);
+
+            pools.erase(pool);
+            pool_erased = true;
+        }
+    }
+    if(!pool_erased)
+        pools.modify(pool, _self, [&](auto &item) {
+            item.state = state;
+            send_poolstate_event(item);
+        });
+
+    transaction trx;
+    trx.actions.emplace_back(action{permission_level(_self, config::active_name), _self, "paymssgrwrd"_n, std::make_tuple(payout, message_id, state)});
+    trx.delay_sec = 0;
+    trx.send((static_cast<uint128_t>(mssg_itr->id) << 64) | message_id.author.value, _self);
+}
+
+void publication::paymssgrwrd(int64_t payout, structures::mssgid message_id, structures::poolstate state) {
+    require_auth(_self);
+
+    tables::permlink_table permlink_table(_self, message_id.author.value);
+    auto permlink_index = permlink_table.get_index<"byvalue"_n>();
+    auto permlink_itr = permlink_index.find(message_id.permlink);
+    // rare case - not critical for performance
+    eosio::check(permlink_itr != permlink_index.end(), "Permlink doesn't exist.");
+
+    tables::message_table message_table(_self, message_id.author.value);
+    auto mssg_itr = message_table.find(permlink_itr->id);
+    eosio::check(mssg_itr != message_table.end(), "Message doesn't exist in cashout window.");
+
+    tables::reward_pools pools(_self, _self.value);
 
     elaf_t percent(elai_t(mssg_itr->curators_prcnt) / elai_t(config::_100percent));
     auto curation_payout = int_cast(percent * elai_t(payout));
@@ -452,10 +508,10 @@ void publication::close_message(structures::mssgid message_id) {
     auto unclaimed_rewards = pay_curators(message_id.author, mssg_itr->id, curation_payout, FP(mssg_itr->state.sumcuratorsw), state.funds.symbol, get_memo("curators", message_id));
 
     eosio_assert(unclaimed_rewards >= 0, "publication::payrewards: unclaimed_rewards < 0");
-
+    
     state.funds.amount += unclaimed_rewards;
     payout -= curation_payout;
-
+    
     int64_t ben_payout_sum = 0;
     for (auto& ben: mssg_itr->beneficiaries) {
         auto ben_payout = cyber::safe_pct(payout, ben.weight);
@@ -485,23 +541,7 @@ void publication::close_message(structures::mssgid message_id) {
     permlink_table.modify(*permlink_itr, _self, [&](auto&){}); // change payer to contract
     permlink_table.move_to_archive(*permlink_itr);
 
-    bool pool_erased = false;
-    state.msgs--;
-    if(state.msgs == 0) {
-        if(pool != --pools.end()) {//there is a pool after, so we can delete this one
-            eosio_assert(state.funds.amount == unclaimed_rewards, "LOGIC ERROR! publication::payrewards: state.funds != unclaimed_rewards");
-            fill_depleted_pool(pools, state.funds, pool);
-            send_poolerase_event(*pool);
-
-            pools.erase(pool);
-            pool_erased = true;
-        }
-    }
-    if(!pool_erased)
-        pools.modify(pool, _self, [&](auto &item) {
-            item.state = state;
-            send_poolstate_event(item);
-        });
+    fill_depleted_pool(pools, asset(unclaimed_rewards, state.funds.symbol), pools.end());
 }
 
 void publication::close_message_timer(structures::mssgid message_id, uint64_t id, uint64_t delay_sec) {

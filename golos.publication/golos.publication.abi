@@ -196,6 +196,14 @@
       {
         "name": "curators_prcnt",
         "type": "percent_t"
+      },
+      {
+        "name": "closed",
+        "type": "bool"
+      },
+      {
+        "name": "mssg_reward",
+        "type": "mssgrwrd"
       }
     ]
   },
@@ -437,6 +445,24 @@
             "name": "msgs",
             "type": "counter_t"
         },
+        {
+            "name": "funds",
+            "type": "asset"
+        },
+        {
+            "name": "rshares",
+            "type": "wide_t"
+        },
+        {
+            "name": "rsharesfn",
+            "type": "wide_t"
+        }
+    ]
+  },
+  {
+    "name": "mssgrwrd",
+    "base": "",
+    "fields": [
         {
             "name": "funds",
             "type": "asset"
@@ -750,6 +776,24 @@
     ]
   },
   {
+    "name": "paymssgrwrd",
+    "base": "",
+    "fields": [
+        {
+            "name": "payout",
+            "type": "int64"
+        },
+        {
+            "name": "message_id",
+            "type": "mssgid"
+        },
+        {
+            "name": "state",
+            "type": "poolstate"
+        }
+    ]
+  },
+  {
     "name": "post_event",
     "base": "",
     "fields": [
@@ -856,6 +900,10 @@
   {
     "name": "calcrwrdwt",
     "type": "calcrwrdwt"
+  },
+  {
+    "name": "paymssgrwrd",
+    "type": "paymssgrwrd"
   }
   ],
   "tables": [
