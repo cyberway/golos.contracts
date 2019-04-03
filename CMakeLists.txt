@@ -41,7 +41,7 @@ macro(add_contract_with_abi TARGET ABIFILE)
 endmacro()
 
 if (NOT DEFINED TOKEN_INCLUDE_PATH)
-    set(TOKEN_INCLUDE_PATH "cyberway.contracts/cyber.token/include")
+    set(TOKEN_INCLUDE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cyberway.contracts/cyber.token/include")
 endif(NOT DEFINED TOKEN_INCLUDE_PATH)
 
 if (NOT DEFINED TOKEN_HEADER_FILE)
