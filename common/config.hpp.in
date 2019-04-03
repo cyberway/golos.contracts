@@ -18,7 +18,7 @@ inline eosio::chain::name operator ""_n() {
 }
 #pragma clang diagnostic pop
 #else
-#include <${TOKEN_HEADER_FILE}/${TOKEN_HEADER_FILE}.hpp>
+#include <${TOKEN_HEADER_FILE}>
 using token = ${TOKEN_CLASS};
 #endif
 
