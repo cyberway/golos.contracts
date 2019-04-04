@@ -742,10 +742,6 @@
             "type": "name"
         },
         {
-            "name": "token_code",
-            "type": "symbol_code"
-        },
-        {
             "name": "mssg_id",
             "type": "int64"
         },
@@ -770,16 +766,8 @@
         {"name": "permlink", "type": "string"},
         {"name": "netshares", "type": "base_t"},
         {"name": "voteshares", "type": "base_t"},
-        {"name": "sumcuratorsw", "type": "base_t"}
-    ]
-  },
-  {
-    "name": "reward_weight_event",
-    "base": "",
-    "fields": [
-        {"name": "author", "type": "name"},
-        {"name": "permlink", "type": "string"},
-        {"name": "rewardweight", "type": "base_t"}
+        {"name": "sumcuratorsw", "type": "base_t"},
+        {"name": "sharesfn", "type": "base_t"}
     ]
   },
   {
@@ -805,11 +793,18 @@
     ]
   },
   {
+    "name": "reward_weight_event",
+    "base": "",
+    "fields": [
+        {"name": "message_id", "type": "mssgid"},
+        {"name": "rewardweight", "type": "base_t"}
+    ]
+  },
+  {
     "name": "sharesfn_event",
     "base": "",
     "fields": [
-        {"name": "author", "type": "name"},
-        {"name": "permlink", "type": "string"},
+        {"name": "message_id", "type": "mssgid"},
         {"name": "sharesfn", "type": "base_t"}
     ]
   }
@@ -819,10 +814,8 @@
     {"name": "poolerase", "type": "uint64"},
     {"name": "postcreate","type": "create_event"},
     {"name": "poststate", "type": "post_event"},
-    {"name": "postclose", "type": "reward_weight_event"},
     {"name": "votestate", "type": "vote_event"},
     {"name": "rewardweight", "type": "reward_weight_event"}
-    {"name": "sharesfn", "type": "sharesfn_event"}
   ],
   "actions": [
   {

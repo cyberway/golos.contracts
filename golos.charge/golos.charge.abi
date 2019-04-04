@@ -119,7 +119,7 @@
     ]
   },
   {
-    "name": "useandstore",
+    "name": "useandnotify",
     "base": "",
     "fields": [
         {
@@ -135,12 +135,16 @@
             "type": "uint8"
         },
         {
-            "name": "stamp_id",
+            "name": "message_id",
             "type": "uint64"
         },
         {
-            "name": "price",
+            "name": "price_arg",
             "type": "int64"
+        },
+        {
+            "name": "code",
+            "type": "name"
         }
     ]
   },
@@ -288,8 +292,8 @@
     "type": "use"
   },
   {
-    "name": "useandstore",
-    "type": "useandstore"
+    "name": "useandnotify",
+    "type": "useandnotify"
   },
   {
     "name": "removestored",

@@ -161,12 +161,8 @@ struct post_event {
     base_t netshares = 0;
     base_t voteshares = 0;
     base_t sumcuratorsw = 0;
-};
 
-struct reward_weight_event {
-    name author;
-    std::string permlink;
-    base_t rewardweight;
+    base_t sharesfn;
 };
 
 struct vote_event {
@@ -185,10 +181,9 @@ struct pool_event {
     wide_t rshares;
 };
 
-struct sharesfn_event {
-    name author;
-    std::string permlink;
-    base_t rsharesfn;
+struct reward_weight_event {
+    mssgid message_id;
+    base_t rewardweight;
 };
 
 struct limitparams {

@@ -33,7 +33,7 @@ public:
         return restorers_table.find(symbol(token_code, charge_id).raw()) != restorers_table.end();
     }
     [[eosio::action]] void use(name user, symbol_code token_code, uint8_t charge_id, int64_t price, int64_t cutoff, int64_t vesting_price);
-    [[eosio::action]] void useandstore(name user, symbol_code token_code, uint8_t charge_id, int64_t stamp_id, int64_t price);
+    [[eosio::action]] void useandnotify(name user, symbol_code token_code, uint8_t charge_id, int64_t message_id, int64_t price_arg, name code);
     [[eosio::action]] void removestored(name user, symbol_code token_code, uint8_t charge_id, int64_t stamp_id);
     
     [[eosio::action]] void setrestorer(symbol_code token_code, uint8_t charge_id, std::string func_str, 

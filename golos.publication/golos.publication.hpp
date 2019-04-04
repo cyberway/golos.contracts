@@ -28,7 +28,7 @@ public:
     void set_params(std::vector<posting_params> params);
     void reblog(name rebloger, structures::mssgid message_id);
     void set_curators_prcnt(structures::mssgid message_id, uint16_t curators_prcnt);
-    void calcrwrdwt(name account, symbol_code token_code, int64_t mssg_id, base_t post_charge);
+    void calcrwrdwt(name account, int64_t mssg_id, base_t post_charge);
 private:
     void close_message_timer(structures::mssgid message_id, uint64_t id, uint64_t delay_sec);
     void set_vote(name voter, const structures::mssgid &message_id, int16_t weight);
@@ -45,11 +45,10 @@ private:
 
     void send_poolstate_event(const structures::rewardpool& pool);
     void send_poolerase_event(const structures::rewardpool& pool);
-    void send_poststate_event(name author, const structures::message& post);
-    void send_postclose_event(name author, const structures::message& post);
+    void send_poststate_event(name author, const structures::message& post, base_t sharesfn);
     void send_votestate_event(name voter, const structures::voteinfo& vote, name author, const structures::message& post);
-    void send_rewardweight_event(name author, std::string permlink, base_t weight);
-    void send_sharesfn_event(name author, std::string permlink, base_t sharesfn);
+    void send_rewardweight_event(structures::mssgid message_id, base_t weight);
+    void send_sharesfn_event(structures::mssgid message_id, base_t sharesfn);
 
     static structures::funcinfo load_func(const funcparams& params, const std::string& name,
         const atmsp::parser<fixp_t>& pa, atmsp::machine<fixp_t>& machine, bool inc);
