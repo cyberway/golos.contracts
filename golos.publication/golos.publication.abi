@@ -799,14 +799,6 @@
         {"name": "message_id", "type": "mssgid"},
         {"name": "rewardweight", "type": "base_t"}
     ]
-  },
-  {
-    "name": "sharesfn_event",
-    "base": "",
-    "fields": [
-        {"name": "message_id", "type": "mssgid"},
-        {"name": "sharesfn", "type": "base_t"}
-    ]
   }
   ],
   "events": [

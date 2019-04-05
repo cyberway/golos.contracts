@@ -48,7 +48,6 @@ private:
     void send_poststate_event(name author, const structures::message& post, base_t sharesfn);
     void send_votestate_event(name voter, const structures::voteinfo& vote, name author, const structures::message& post);
     void send_rewardweight_event(structures::mssgid message_id, base_t weight);
-    void send_sharesfn_event(structures::mssgid message_id, base_t sharesfn);
 
     static structures::funcinfo load_func(const funcparams& params, const std::string& name,
         const atmsp::parser<fixp_t>& pa, atmsp::machine<fixp_t>& machine, bool inc);

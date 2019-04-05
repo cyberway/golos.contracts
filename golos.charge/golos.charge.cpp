@@ -61,25 +61,24 @@ void charge::use(name user, symbol_code token_code, uint8_t charge_id, int64_t p
     consume_charge(issuer, user, token_code, charge_id, price_arg, cutoff_arg, vesting_price);
 }
 
-// this function is not used
-//void charge::useandstore(name user, symbol_code token_code, uint8_t charge_id, int64_t stamp_id, int64_t price_arg) {
-//    auto issuer = token::get_issuer(config::token_name, token_code);
-//    require_auth(issuer);
-//    auto new_val = consume_charge(issuer, user, token_code, charge_id, price_arg);
-//    
-//    storedvals storedvals_table(_self, user.value);
-//    auto storedvals_index = storedvals_table.get_index<"symbolstamp"_n>();
-//    auto k = stored::get_key(token_code, charge_id, stamp_id);
-//    auto itr = storedvals_index.find(k);
-//    if (itr != storedvals_index.end())
-//        storedvals_index.modify(itr, issuer, [&]( auto &item ) { item.value = new_val.data(); });
-//    else
-//        storedvals_table.emplace(issuer, [&]( auto &item ) {
-//            item.id = storedvals_table.available_primary_key();
-//            item.symbol_stamp = k;
-//            item.value = new_val.data();
-//        });
-//}
+void charge::useandstore(name user, symbol_code token_code, uint8_t charge_id, int64_t stamp_id, int64_t price_arg) {
+    auto issuer = token::get_issuer(config::token_name, token_code);
+    require_auth(issuer);
+    auto new_val = consume_charge(issuer, user, token_code, charge_id, price_arg);
+    
+    storedvals storedvals_table(_self, user.value);
+    auto storedvals_index = storedvals_table.get_index<"symbolstamp"_n>();
+    auto k = stored::get_key(token_code, charge_id, stamp_id);
+    auto itr = storedvals_index.find(k);
+    if (itr != storedvals_index.end())
+        storedvals_index.modify(itr, issuer, [&]( auto &item ) { item.value = new_val.data(); });
+    else
+        storedvals_table.emplace(issuer, [&]( auto &item ) {
+            item.id = storedvals_table.available_primary_key();
+            item.symbol_stamp = k;
+            item.value = new_val.data();
+        });
+}
 
 void charge::removestored(name user, symbol_code token_code, uint8_t charge_id, int64_t stamp_id) {
     require_auth(name(token::get_issuer(config::token_name, token_code)));
@@ -132,17 +131,19 @@ void charge::send_charge_event(name user, const balance& state) {
     eosio::event(_self, "chargestate"_n, std::make_tuple(user, state)).send();
 }
 
-void charge::useandnotify(name user, symbol_code token_code, uint8_t charge_id, int64_t message_id, int64_t price_arg, name code) {
+void charge::useandnotify(name user, symbol_code token_code, uint8_t charge_id, int64_t id, int64_t price_arg, name code, name action_name) {
     auto issuer = token::get_issuer(config::token_name, token_code);
     require_auth(issuer);
     auto new_val = consume_charge(issuer, user, token_code, charge_id, price_arg);
     
-    INLINE_ACTION_SENDER(golos::publication, calcrwrdwt) (code,
-        {_self, config::active_name},
-        {user, message_id, new_val.data()});
+    action(
+        permission_level{_self, config::active_name},
+        code, action_name,
+        std::make_tuple(user, id, new_val.data())
+    ).send();
 }
 
-EOSIO_DISPATCH(charge, (use)(useandnotify)(removestored)(setrestorer) )
+EOSIO_DISPATCH(charge, (use)(useandnotify)(useandstore)(removestored)(setrestorer) )
 
 } /// namespace golos
 

@@ -356,14 +356,7 @@ void publication::remove_postbw_charge(name account, symbol_code token_code, int
     auto bw_lim_itr = lims.find(structures::limitparams::POSTBW);
     eosio_assert(bw_lim_itr != lims.end(), "publication::remove_postbw_charge: limit parameters not set");
     auto post_charge = golos::charge::get_stored(config::charge_name, account, token_code, bw_lim_itr->charge_id, mssg_id);
-    if(post_charge >= 0)
-        INLINE_ACTION_SENDER(charge, removestored) (config::charge_name,
-            {issuer, config::invoice_name}, {
-                account,
-                token_code,
-                bw_lim_itr->charge_id,
-                mssg_id
-            });
+
     if(reward_weight_ptr)
         *reward_weight_ptr = (post_charge > bw_lim_itr->cutoff) ?
             static_cast<elaf_t>(elai_t(bw_lim_itr->cutoff) / elai_t(post_charge)) : elaf_t(1);
@@ -395,7 +388,8 @@ void publication::use_postbw_charge(tables::limit_table& lims, name issuer, name
                 bw_lim_itr->charge_id,
                 mssg_id,
                 bw_lim_itr->price,
-                _self
+                _self,
+                "calcrwrdwt"_n
             });
 }
 

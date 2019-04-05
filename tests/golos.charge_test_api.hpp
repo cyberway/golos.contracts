@@ -10,6 +10,7 @@ struct golos_charge_api: base_contract_api {
     
     void link_invoice_permission(name issuer) {
         _tester->link_authority(issuer, _code, golos::config::invoice_name, N(use));
+        _tester->link_authority(issuer, _code, golos::config::invoice_name, N(useandnotify));
         _tester->link_authority(issuer, _code, golos::config::invoice_name, N(useandstore));
         _tester->link_authority(issuer, _code, golos::config::invoice_name, N(removestored));
     }
@@ -37,6 +38,18 @@ struct golos_charge_api: base_contract_api {
         );
     }
     
+    action_result use_and_notify(name issuer, name user, uint8_t charge_id, int64_t message_id, int64_t price_arg, name code, name action) {
+        return push(N(useandnotify), issuer, args()
+            ("user", user)
+            ("token_code", _symbol.to_symbol_code())
+            ("charge_id", charge_id)
+            ("message_id", message_id)
+            ("price_arg", price_arg)
+            ("code", code)
+            ("action", action)
+        );
+    }
+
     action_result use_and_store(name issuer, name user, uint8_t charge_id, int64_t stamp_id, int64_t price) {
         return push(N(useandstore), issuer, args()
             ("user", user)
