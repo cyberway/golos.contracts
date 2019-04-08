@@ -161,12 +161,12 @@
             "type": "uint8"
         },
         {
-            "name": "id",
-            "type": "uint64"
-        },
-        {
             "name": "price_arg",
             "type": "int64"
+        },
+        {
+            "name": "id",
+            "type": "uint64"
         },
         {
             "name": "code",
@@ -175,6 +175,10 @@
         {
             "name": "action_name",
             "type": "name"
+        },
+        {
+            "name": "cutoff",
+            "type": "int64"
         }
     ]
   },
@@ -322,7 +326,11 @@
     "type": "use"
   },
   {
-    "name": "useandnotify",
+    "name": "usentfmore",
+    "type": "useandnotify"
+  },
+  {
+    "name": "usentfless",
     "type": "useandnotify"
   },
   {

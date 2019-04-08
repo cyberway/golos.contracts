@@ -381,15 +381,16 @@ void publication::use_charge(tables::limit_table& lims, structures::limitparams:
 void publication::use_postbw_charge(tables::limit_table& lims, name issuer, name account, symbol_code token_code, int64_t mssg_id) {
     auto bw_lim_itr = lims.find(structures::limitparams::POSTBW);
     if(bw_lim_itr->price >= 0)
-        INLINE_ACTION_SENDER(charge, useandnotify) (config::charge_name,
+        INLINE_ACTION_SENDER(charge, usentfmore) (config::charge_name,
             {issuer, config::invoice_name}, {
                 account,
                 token_code,
                 bw_lim_itr->charge_id,
-                mssg_id,
                 bw_lim_itr->price,
+                mssg_id,
                 _self,
-                "calcrwrdwt"_n
+                "calcrwrdwt"_n,
+                bw_lim_itr->cutoff
             });
 }
 
@@ -896,7 +897,7 @@ void publication::set_curators_prcnt(structures::mssgid message_id, uint16_t cur
 }
 
 void publication::calcrwrdwt(name account, int64_t mssg_id, base_t post_charge) {
-    require_auth(_self);
+    require_auth(config::charge_name);
     tables::limit_table lims(_self, _self.value);
     auto bw_lim_itr = lims.find(structures::limitparams::POSTBW);
     eosio_assert(bw_lim_itr != lims.end(), "publication::calc_reward_weight: limit parameters not set");
