@@ -125,7 +125,7 @@ struct golos_vesting_api: base_contract_api {
         return _tester->get_all_chaindb_rows(_code, user, N(accounts), false);
     }
 
-    variant get_convert_obj(name from) {
+    variant get_withdraw_obj(name from) {
         return get_struct(_symbol.to_symbol_code().value, N(withdrawal), from, "withdraw_record");
     }
 

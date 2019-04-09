@@ -100,10 +100,11 @@ public:
     struct [[eosio::table]] withdraw_record {
         name from;
         name to;
-        uint8_t number_of_payments; // remaining payments
+        uint32_t interval_seconds;
+        uint8_t remaining_payments; // decreasing counter
         time_point_sec next_payout;
         asset withdraw_rate;        // amount of vesting to convert per one withdraw step
-        asset target_amount;        // total amount of vesting requiested to withdraw
+        asset to_withdraw;          // remaining amount of vesting to withdraw
 
         uint64_t primary_key() const {
             return from.value;
@@ -172,8 +173,8 @@ private:
     void send_account_event(name account, const struct account& balance);
     void send_vesting_event(const vesting_stats& info);
 
-    const asset convert_to_token(const asset& vesting, const vesting_stats& vinfo) const;
-    const asset convert_to_vesting(const asset& token, const vesting_stats& vinfo) const;
+    const asset vesting_to_token(const asset& vesting, const vesting_stats& vinfo, int64_t correction) const;
+    const asset token_to_vesting(const asset& token, const vesting_stats& vinfo, int64_t correction) const;
 };
 
 } // golos

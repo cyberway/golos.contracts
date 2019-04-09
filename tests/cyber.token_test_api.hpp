@@ -73,9 +73,9 @@ struct cyber_token_api: base_contract_api {
         return v;
     }
 
-    variant get_account(account_name acc) {
+    variant get_account(account_name acc, bool raw_asset = false) {
         auto v = get_struct(acc, N(accounts), _symbol.to_symbol_code().value, "account");
-        if (v.is_object()) {
+        if (v.is_object() && !raw_asset) {
             auto o = mvo(v);
             o["balance"] = o["balance"].as<asset>().to_string();
             v = o;
