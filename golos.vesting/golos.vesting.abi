@@ -67,10 +67,11 @@
       "fields": [
         {"name":"owner",              "type":"name"},
         {"name":"to",                 "type":"name"},
-        {"name":"number_of_payments", "type":"uint8"},
+        {"name":"interval_seconds",   "type":"uint32"},
+        {"name":"remaining_payments", "type":"uint8"},
         {"name":"next_payout",        "type":"time_point_sec"},
         {"name":"withdraw_rate",      "type":"asset"},
-        {"name":"target_amount",      "type":"asset"}
+        {"name":"to_withdraw",        "type":"asset"}
       ]
     },
 
