@@ -2,7 +2,6 @@
 #include "config.hpp"
 #include <eosiolib/transaction.hpp>
 #include <eosiolib/event.hpp>
-#include <cyber.token/cyber.token.hpp>
 #include <golos.charge/golos.charge.hpp>
 #include <common/dispatchers.hpp>
 
@@ -58,14 +57,14 @@ void vesting::on_transfer(name from, name to, asset quantity, std::string memo) 
     if(token::get_issuer(config::token_name, quantity.symbol.code()) == from && recipient == name())
         return;     // just increase token supply
 
-    vesting_table table_vesting(_self, _self.value);    // TODO: use symbol as scope
+    vesting_table table_vesting(_self, _self.value);    // TODO: use symbol as scope #550
     auto vesting = table_vesting.find(quantity.symbol.code().raw());
     eosio_assert(vesting != table_vesting.end(), "Token not found");
 
     asset converted = convert_to_vesting(quantity, *vesting);
     table_vesting.modify(vesting, name(), [&](auto& item) {
         item.supply += converted;
-        // TODO Add notify about supply changes
+        // TODO Add notify about supply changes #548
     });
 
     add_balance(recipient != name() ? recipient : from, converted, has_auth(to) ? to : from);
@@ -85,7 +84,7 @@ void vesting::retire(asset quantity, name user) {
     sub_balance(user, quantity, true);
     table_vesting.modify(vesting, name(), [&](auto& item) {
         item.supply -= quantity;
-        // TODO Add notify about supply changes
+        // TODO Add notify about supply changes #548
     });
 }
 
@@ -176,8 +175,8 @@ void vesting::delegate(name from, name to, asset quantity, uint16_t interest_rat
     withdraw_table convert_tbl(_self, sname);
     auto convert_obj = convert_tbl.find(from.value);
     if (convert_obj != convert_tbl.end()) {
-        // TODO: this calculation must not depend on parameters, object should contain all required info inside
-        // TODO: it's simpler to have "ramaining_amount" inside object, so all this calculations will became unneeded
+        // TODO: this calculation must not depend on parameters, object should contain all required info inside #547
+        // TODO: it's simpler to have ramaining amount inside object, so all this calculations will became unneeded #547
         auto remains_int = convert_obj->withdraw_rate * convert_obj->number_of_payments;
         auto remains_fract = convert_obj->target_amount - convert_obj->withdraw_rate * withdraw_params.intervals;
         user_balance -= (remains_int + remains_fract);
@@ -191,7 +190,7 @@ void vesting::delegate(name from, name to, asset quantity, uint16_t interest_rat
 
     account_sender.modify(balance_sender, from, [&](auto& item){
         item.delegated += quantity;
-        // TODO Add notify about vesting changed
+        // TODO Add notify about vesting changed #548
     });
 
     delegation_table table(_self, sname);
@@ -202,8 +201,6 @@ void vesting::delegate(name from, name to, asset quantity, uint16_t interest_rat
         eosio_assert(delegate_record->payout_strategy == payout_strategy, "payout_strategy does not match");
         index_table.modify(delegate_record, name(), [&](auto& item) {
             item.quantity += quantity;
-            // TODO: we need to update `min_delegation_time` here to make it work properly,
-            //       else it's restriction can be easily evaded
         });
     } else {
         table.emplace(from, [&](auto& item){
@@ -222,7 +219,7 @@ void vesting::delegate(name from, name to, asset quantity, uint16_t interest_rat
     eosio_assert(balance_recipient != account_recipient.end(), "Not found balance token vesting");
     account_recipient.modify(balance_recipient, from, [&](auto& item) {
         item.received += quantity;
-        // TODO Add notify about vesting changed
+        // TODO Add notify about vesting changed #548
     });
 
     eosio_assert(balance_recipient->received.amount >= delegation_params.min_remainder, "delegated vesting withdrawn");
@@ -265,7 +262,7 @@ void vesting::undelegate(name from, name to, asset quantity) {
     eosio_assert(balance != account_recipient.end(), "This token is not on the recipient balance sheet");
     account_recipient.modify(balance, from, [&](auto& item) {
         item.received -= quantity;
-        // TODO Add notify about vesting changed
+        // TODO Add notify about vesting changed #548
     });
 
     eosio_assert(balance->received.amount >= delegation_params.min_remainder, "delegated vesting withdrawn");
@@ -281,7 +278,7 @@ void vesting::create(symbol symbol, name notify_acc) {
     table_vesting.emplace(_self, [&](auto& item){
         item.supply = asset(0, symbol);
         item.notify_acc = notify_acc;
-        // TODO Add notify about supply changes
+        // TODO Add notify about supply changes #548
     });
 }
 
@@ -301,8 +298,8 @@ void vesting::timeoutconv() {
                 break;
 
             if (obj->number_of_payments > 0) {
-                // TODO: withdraw_record must not depend on parameters because they can change between calls
-                // TODO: this action should never fail, because fail will prevent all withdrawals
+                // TODO: withdraw_record must not depend on parameters because they can change between calls #547
+                // TODO: this action should never fail, because fail will prevent all withdrawals #549
                 index.modify(obj, name(), [&](auto& item) {
                     item.next_payout = time_point_sec(now() + withdraw_params.interval_seconds);
                     --item.number_of_payments;
@@ -325,9 +322,9 @@ void vesting::timeoutconv() {
                     eosio_assert(vest != table_vesting.end(), "Vesting not found"); // must not happen at this point
                     table_vesting.modify(vest, name(), [&](auto& item) {
                         item.supply -= quantity;
-                        // TODO Add notify about supply change
+                        // TODO Add notify about supply change #548
                     });
-                    INLINE_ACTION_SENDER(eosio::token, transfer)(config::token_name, {_self, config::active_name},
+                    INLINE_ACTION_SENDER(token, transfer)(config::token_name, {_self, config::active_name},
                         {_self, obj->to, convert_to_token(quantity, *vest), "Convert vesting"});
                 });
 
@@ -341,7 +338,7 @@ void vesting::timeoutconv() {
 }
 
 void vesting::timeoutrdel() {
-    // TODO: this action must never throw because it will break returning of delegations on all accounts
+    // TODO: this action must never throw because it will break returning of delegations on all accounts #549
     require_auth(_self);
     return_delegation_table table_delegate_vesting(_self, _self.value);
     auto index = table_delegate_vesting.get_index<"date"_n>();
@@ -352,7 +349,7 @@ void vesting::timeoutrdel() {
         eosio_assert(balance_recipient != account_recipient.end(), "This token is not on the sender balance sheet");
         account_recipient.modify(balance_recipient, name(), [&](auto &item){
             item.delegated -= obj->quantity;
-            // TODO Add event about vesting changed
+            // TODO Add event about vesting changed #548
         });
         obj = index.erase(obj);
     }
@@ -408,7 +405,7 @@ void vesting::sub_balance(name owner, asset value, bool retire_mode) {
         a.vesting -= value;
         if (retire_mode)
             a.unlocked_limit -= value;
-        // Add notify about vesting changed
+        // TODO Add notify about vesting changed #548
     });
     notify_balance_change(owner, -value);
 }
@@ -424,12 +421,12 @@ void vesting::add_balance(name owner, asset value, name ram_payer) {
             a.vesting = value;
             a.delegated.symbol = value.symbol;
             a.received.symbol = value.symbol;
-            // TODO Add notify about vesting changed
+            // TODO Add notify about vesting changed #548
         });
     } else {
         account.modify(to, name(), [&](auto& a) {
             a.vesting += value;
-            // TODO Add notify about vesting changed
+            // TODO Add notify about vesting changed #548
         });
     }
     notify_balance_change(owner, value);

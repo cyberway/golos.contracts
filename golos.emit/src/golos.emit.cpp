@@ -1,6 +1,5 @@
 #include "golos.emit/golos.emit.hpp"
 #include <common/parameter_ops.hpp>
-#include <cyber.token/cyber.token.hpp>
 #include <eosiolib/transaction.hpp>
 #include <eosiolib/time.hpp>
 
@@ -98,8 +97,8 @@ void emission::emit() {
     auto narrowed = microseconds(now - s.start_time).to_seconds() / infrate.narrowing;
     auto inf_rate = std::max(int64_t(infrate.start) - narrowed, int64_t(infrate.stop));
 
-    auto supply = eosio::token::get_supply(config::token_name, token.symbol.code());
-    auto issuer = eosio::token::get_issuer(config::token_name, token.symbol.code());
+    auto supply = token::get_supply(config::token_name, token.symbol.code());
+    auto issuer = token::get_issuer(config::token_name, token.symbol.code());
     auto new_tokens = static_cast<int64_t>(
         supply.amount * static_cast<uint128_t>(inf_rate) * time_to_blocks(elapsed)
         / (int64_t(config::blocks_per_year) * config::_100percent));
@@ -108,14 +107,14 @@ void emission::emit() {
         const auto issue_memo = "emission"; // TODO: make configurable?
         const auto trans_memo = "emission";
         auto from = _self;
-        INLINE_ACTION_SENDER(eosio::token, issue)(config::token_name,
+        INLINE_ACTION_SENDER(token, issue)(config::token_name,
             {{issuer, config::active_name}},
             {_self, asset(new_tokens, token.symbol), issue_memo});
 
         auto transfer = [&](auto from, auto to, auto amount) {
             if (amount > 0) {
                 auto memo = to == config::vesting_name ? "" : trans_memo;   // vesting contract requires empty memo to add to supply
-                INLINE_ACTION_SENDER(eosio::token, transfer)(config::token_name, {from, config::active_name},
+                INLINE_ACTION_SENDER(token, transfer)(config::token_name, {from, config::active_name},
                     {from, to, asset(amount, token.symbol), memo});
             }
         };

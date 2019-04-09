@@ -26,7 +26,8 @@
       "st_max_beneficiaries",
       "st_max_comment_depth",
       "st_social_acc",
-      "st_referral_acc"
+      "st_referral_acc",
+      "st_curators_prcnt"
     ]
   }],
   "structs": [
@@ -227,6 +228,10 @@
       {
         "name": "level",
         "type": "uint16"
+      },
+      {
+        "name": "curators_prcnt",
+        "type": "base_t"
       }
     ]
   },
@@ -277,6 +282,10 @@
       {
         "name": "jsonmetadata",
         "type": "string"
+      },
+      {
+        "name": "curators_prcnt",
+        "type": "uint16?"
       }
     ]
   },
@@ -425,10 +434,6 @@
             "type": "funcinfo"
         },
         {
-            "name": "curatorsprop",
-            "type": "base_t"
-        },
-        {
             "name": "maxtokenprop",
             "type": "base_t"
         }
@@ -565,10 +570,6 @@
             "type": "funcparams"
         },
         {
-            "name": "curatorsprop",
-            "type": "int64"
-        },
-        {
             "name": "maxtokenprop",
             "type": "int64"
         },
@@ -643,6 +644,20 @@
     ]
   },
   {
+    "name": "st_curators_prcnt",
+    "base": "",
+    "fields": [
+      {
+        "name": "min_curators_prcnt",
+        "type": "uint16"
+      },
+      {
+        "name": "max_curators_prcnt",
+        "type": "uint16"
+      }
+    ]
+  },
+  {
     "name": "posting_state",
     "base": "",
     "fields": [
@@ -673,6 +688,10 @@
       {
         "name": "referral_acc",
         "type": "st_referral_acc"
+      },
+      {
+        "name": "curators_prcnt",
+        "type": "st_curators_prcnt"
       }
     ]
   },
@@ -697,6 +716,20 @@
         {
             "name": "message_id",
             "type": "mssgid"
+        }
+    ]
+  },
+  {
+    "name": "setcurprcnt",
+    "base": "",
+    "fields": [
+        {
+            "name": "message_id",
+            "type": "mssgid"
+        },
+        {
+            "name": "curators_prcnt",
+            "type": "uint16"
         }
     ]
   },
@@ -806,6 +839,10 @@
   {
     "name": "reblog",
     "type": "reblog"
+  },
+  {
+    "name": "setcurprcnt",
+    "type": "setcurprcnt"
   }
   ],
   "tables": [

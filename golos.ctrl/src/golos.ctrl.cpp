@@ -4,7 +4,6 @@
 #include <common/parameter_ops.hpp>
 #include <common/dispatchers.hpp>
 #include <cyber.system/native.hpp>
-#include <cyber.token/cyber.token.hpp>
 #include <eosiolib/transaction.hpp>
 #include <eosiolib/event.hpp>
 
@@ -113,7 +112,7 @@ void control::on_transfer(name from, name to, asset quantity, string memo) {
         auto token = quantity.symbol;
         auto transfer = [&](auto from, auto to, auto amount) {
             if (amount > 0) {
-                INLINE_ACTION_SENDER(eosio::token, payment)(config::token_name, {from, config::active_name},
+                INLINE_ACTION_SENDER(token, payment)(config::token_name, {from, config::active_name},
                     {from, to, asset(amount, token), memo});
             }
         };

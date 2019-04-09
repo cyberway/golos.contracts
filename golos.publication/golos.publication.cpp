@@ -2,7 +2,6 @@
 #include <eosiolib/transaction.hpp>
 #include <eosiolib/event.hpp>
 #include <eosiolib/archive.hpp>
-#include <cyber.token/cyber.token.hpp>
 #include <golos.social/golos.social.hpp>
 #include <golos.vesting/golos.vesting.hpp>
 #include <golos.referral/golos.referral.hpp>
@@ -49,6 +48,8 @@ extern "C" {
             execute_action(&publication::set_params);
         if (NN(reblog) == action)
             execute_action(&publication::reblog);
+        if (NN(setcurprcnt) == action)
+            execute_action(&publication::set_curators_prcnt);
     }
 #undef NN
 }
@@ -79,6 +80,9 @@ struct posting_params_setter: set_params_visitor<posting_state> {
     bool operator()(const referral_acc_prm& param) {
         return set_param(param, &posting_state::referral_acc_param);
     }
+    bool operator()(const curators_prcnt_prm& param) {
+        return set_param(param, &posting_state::curators_prcnt_param);
+    }
 };
 
 void publication::create_message(structures::mssgid message_id,
@@ -91,7 +95,8 @@ void publication::create_message(structures::mssgid message_id,
                               std::string headermssg,
                               std::string bodymssg, std::string languagemssg,
                               std::vector<structures::tag> tags,
-                              std::string jsonmetadata) {
+                              std::string jsonmetadata,
+                              std::optional<uint16_t> curators_prcnt = std::nullopt) {
     require_auth(message_id.author);
 
     int ref_block_num = message_id.ref_block_num % 65536;
@@ -108,6 +113,7 @@ void publication::create_message(structures::mssgid message_id,
     const auto &max_comment_depth_param = cfg.get().max_comment_depth_param;
     const auto &social_acc_param = cfg.get().social_acc_param;
     const auto &referral_acc_param = cfg.get().referral_acc_param;
+    const auto &curators_prcnt_param = cfg.get().curators_prcnt_param;
 
     if (parent_id.author) {
         if (social_acc_param.account) {
@@ -121,7 +127,7 @@ void publication::create_message(structures::mssgid message_id,
     pool = --pools.end();
     check_account(message_id.author, pool->state.funds.symbol);
     auto token_code = pool->state.funds.symbol.code();
-    auto issuer = eosio::token::get_issuer(config::token_name, token_code);
+    auto issuer = token::get_issuer(config::token_name, token_code);
     tables::limit_table lims(_self, _self.value);
 
     use_charge(lims, parent_id.author ? structures::limitparams::COMM : structures::limitparams::POST, issuer, message_id.author,
@@ -222,6 +228,7 @@ void publication::create_message(structures::mssgid message_id,
         item.rewardweight = static_cast<base_t>(elaf_t(1).data()); //we will get actual value from charge on post closing
         item.childcount = 0;
         item.level = level;
+        item.curators_prcnt = get_checked_curators_prcnt(curators_prcnt);
     });
 
     structures::archive_info_v1 info{message_id,level};
@@ -311,9 +318,9 @@ void publication::payto(name user, eosio::asset quantity, enum_t mode) {
         return;
 
     if(static_cast<payment_t>(mode) == payment_t::TOKEN)
-        INLINE_ACTION_SENDER(eosio::token, payment) (config::token_name, {_self, config::active_name}, {_self, user, quantity, ""});
+        INLINE_ACTION_SENDER(token, payment) (config::token_name, {_self, config::active_name}, {_self, user, quantity, ""});
     else if(static_cast<payment_t>(mode) == payment_t::VESTING)
-        INLINE_ACTION_SENDER(eosio::token, transfer) (config::token_name, {_self, config::active_name},
+        INLINE_ACTION_SENDER(token, transfer) (config::token_name, {_self, config::active_name},
             {_self, config::vesting_name, quantity, config::send_prefix + name{user}.to_string()});
     else
         eosio_assert(false, "publication::payto: unknown kind of payment");
@@ -342,7 +349,7 @@ int64_t publication::pay_curators(name author, uint64_t msgid, int64_t max_rewar
 }
 
 void publication::remove_postbw_charge(name account, symbol_code token_code, int64_t mssg_id, elaf_t* reward_weight_ptr) {
-    auto issuer = eosio::token::get_issuer(config::token_name, token_code);
+    auto issuer = token::get_issuer(config::token_name, token_code);
     tables::limit_table lims(_self, _self.value);
     auto bw_lim_itr = lims.find(structures::limitparams::POSTBW);
     eosio_assert(bw_lim_itr != lims.end(), "publication::remove_postbw_charge: limit parameters not set");
@@ -442,7 +449,7 @@ void publication::close_message(structures::mssgid message_id) {
         state.rsharesfn = new_rsharesfn.data();
     }
 
-    auto curation_payout = int_cast(ELF(pool->rules.curatorsprop) * elai_t(payout));
+    auto curation_payout = int_cast(ELF(mssg_itr->curators_prcnt) * elai_t(payout));
 
     eosio_assert((curation_payout <= payout) && (curation_payout >= 0), "publication::payrewards: wrong curation_payout");
 
@@ -520,7 +527,7 @@ fixp_t publication::calc_available_rshares(name voter, int16_t weight, uint64_t 
     tables::limit_table lims(_self, _self.value);
     auto token_code = pool.state.funds.symbol.code();
     int64_t eff_vesting = golos::vesting::get_account_effective_vesting(config::vesting_name, voter, token_code).amount;
-    use_charge(lims, structures::limitparams::VOTE, eosio::token::get_issuer(config::token_name, token_code),
+    use_charge(lims, structures::limitparams::VOTE, token::get_issuer(config::token_name, token_code),
         voter, eff_vesting, token_code, false, abs_w);
     fixp_t abs_rshares = fp_cast<fixp_t>(eff_vesting, false) * abs_w;
     return (weight < 0) ? -abs_rshares : abs_rshares;
@@ -709,7 +716,7 @@ void publication::set_limit(std::string act_str, symbol_code token_code, uint8_t
 }
 
 void publication::set_rules(const funcparams& mainfunc, const funcparams& curationfunc, const funcparams& timepenalty,
-    int64_t curatorsprop, int64_t maxtokenprop, eosio::symbol tokensymbol) {
+    int64_t maxtokenprop, eosio::symbol tokensymbol) {
     //TODO: machine's constants
     using namespace tables;
     using namespace structures;
@@ -717,7 +724,7 @@ void publication::set_rules(const funcparams& mainfunc, const funcparams& curati
     reward_pools pools(_self, _self.value);
     uint64_t created = current_time();
 
-    eosio::asset unclaimed_funds = eosio::token::get_balance(config::token_name, _self, tokensymbol.code());
+    eosio::asset unclaimed_funds = token::get_balance(config::token_name, _self, tokensymbol.code());
 
     auto old_pool = pools.begin();
     while(old_pool != pools.end())
@@ -738,7 +745,6 @@ void publication::set_rules(const funcparams& mainfunc, const funcparams& curati
     newrules.curationfunc = load_func(curationfunc, "curation func", pa, machine, true);
     newrules.timepenalty  = load_func(timepenalty, "time penalty func", pa, machine, true);
 
-    newrules.curatorsprop = static_cast<base_t>(get_limit_prop(curatorsprop).data());
     newrules.maxtokenprop = static_cast<base_t>(get_limit_prop(maxtokenprop).data());
 
     pools.emplace(_self, [&](auto &item) {
@@ -839,6 +845,35 @@ bool publication::check_permlink_correctness(std::string permlink) {
         }
     }
     return true;
+}
+
+base_t publication::get_checked_curators_prcnt(std::optional<uint16_t> curators_prcnt) {
+    posting_params_singleton cfg(_self, _self.value);
+    const auto &curators_prcnt_param = cfg.get().curators_prcnt_param;
+
+    if (curators_prcnt.has_value()) {
+        eosio_assert(curators_prcnt.value() >= curators_prcnt_param.min_curators_prcnt,
+                     "Curators percent is less than min curators percent.");
+        eosio_assert(curators_prcnt.value() <= curators_prcnt_param.max_curators_prcnt,
+                     "Curators percent is greater than max curators percent.");
+            return static_cast<base_t>(get_limit_prop(static_cast<int64_t>(curators_prcnt.value())).data());
+    }
+    return static_cast<base_t>(get_limit_prop(static_cast<int64_t>(curators_prcnt_param.min_curators_prcnt)).data());
+}
+
+void publication::set_curators_prcnt(structures::mssgid message_id, uint16_t curators_prcnt) {
+    require_auth(message_id.author);
+    tables::message_table message_table(_self, message_id.author.value);
+    auto message_index = message_table.get_index<"bypermlink"_n>();
+    auto message_itr = message_index.find({message_id.permlink, message_id.ref_block_num});
+    eosio_assert(message_itr != message_index.end(), "Message doesn't exist.");
+
+    eosio_assert(message_itr->state.voteshares == 0,
+            "Curators percent can be changed only before voting.");
+
+    message_index.modify(message_itr, name(), [&]( auto &item ) {
+            item.curators_prcnt = get_checked_curators_prcnt(curators_prcnt);
+        });
 }
 
 } // golos
