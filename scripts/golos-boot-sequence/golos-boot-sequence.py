@@ -23,15 +23,15 @@ unlockTimeout = 999999999
 
 _golosAccounts = [
     # name           inGenesis    contract
-    ('gls.issuer',   False,       None),
-    ('gls.ctrl',     True,        'golos.ctrl'),
-    ('gls.emit',     False,       'golos.emit'),
-    ('gls.vesting',  True,        'golos.vesting'),
-    ('gls.publish',  True,        'golos.publication'),
-    ('gls.social',   False,       'golos.social'),
-    ('gls.charge',   False,       'golos.charge'),
-    ('gls.referral', False,       'golos.referral'),
-    ('gls.worker',   False,       None),
+    ('gls.issuer',   True,       None),
+    ('gls.ctrl',     True,       'golos.ctrl'),
+    ('gls.emit',     True,       'golos.emit'),
+    ('gls.vesting',  True,       'golos.vesting'),
+    ('gls.publish',  True,       'golos.publication'),
+    ('gls.social',   True,       'golos.social'),
+    ('gls.charge',   True,       'golos.charge'),
+    ('gls.referral', True,       'golos.referral'),
+    ('gls.worker',   True,       None),
 ]
 
 golosAccounts = []
@@ -243,7 +243,7 @@ def createGolosAccounts():
 
 def stepInstallContracts():
     for acc in golosAccounts:
-        if (acc.contract != None):
+        if not (args.golos_genesis and acc.inGenesis) and (acc.contract != None):
             retry(args.cleos + 'set contract %s %s' % (acc.name, args.contracts_dir + acc.contract))
 
 def stepCreateTokens():
