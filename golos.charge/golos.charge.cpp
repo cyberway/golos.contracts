@@ -131,12 +131,11 @@ void charge::send_charge_event(name user, const balance& state) {
     eosio::event(_self, "chargestate"_n, std::make_tuple(user, state)).send();
 }
 
-void charge::usentfmore(name user, symbol_code token_code, uint8_t charge_id, int64_t price_arg, int64_t id, name code, name action_name, int64_t cutoff) {
-    auto issuer = token::get_issuer(config::token_name, token_code);
-    require_auth(issuer);
+template<typename Lambda>
+void charge::consume_and_notify(name user, symbol_code token_code, uint8_t charge_id, int64_t price_arg, int64_t id, name code, name action_name, int64_t cutoff, name issuer, Lambda &&compare) {
     auto new_val = consume_charge(issuer, user, token_code, charge_id, price_arg);
 
-    if (new_val.data() > cutoff) {
+    if (compare(new_val.data(), cutoff)) {
         action(
             permission_level{_self, config::active_name},
             code, action_name,
@@ -145,21 +144,19 @@ void charge::usentfmore(name user, symbol_code token_code, uint8_t charge_id, in
     }
 }
 
-void charge::usentfless(name user, symbol_code token_code, uint8_t charge_id, int64_t price_arg, int64_t id, name code, name action_name, int64_t cutoff) {
+void charge::usenotifygt(name user, symbol_code token_code, uint8_t charge_id, int64_t price_arg, int64_t id, name code, name action_name, int64_t cutoff) {
     auto issuer = token::get_issuer(config::token_name, token_code);
     require_auth(issuer);
-    auto new_val = consume_charge(issuer, user, token_code, charge_id, price_arg);
-
-    if (new_val < cutoff) {
-        action(
-            permission_level{_self, config::active_name},
-            code, action_name,
-            std::make_tuple(user, id, new_val.data())
-        ).send();
-    }
+    consume_and_notify(user, token_code, charge_id, price_arg, id, code, action_name, cutoff, issuer, [](auto value, auto limit) {return value > limit;});
 }
 
-EOSIO_DISPATCH(charge, (use)(usentfmore)(usentfless)(useandstore)(removestored)(setrestorer) )
+void charge::usenotifyls(name user, symbol_code token_code, uint8_t charge_id, int64_t price_arg, int64_t id, name code, name action_name, int64_t cutoff) {
+    auto issuer = token::get_issuer(config::token_name, token_code);
+    require_auth(issuer);
+    consume_and_notify(user, token_code, charge_id, price_arg, id, code, action_name, cutoff, issuer, [](auto value, auto limit) {return value < limit;});
+}
+
+EOSIO_DISPATCH(charge, (use)(usenotifygt)(usenotifyls)(useandstore)(removestored)(setrestorer) )
 
 } /// namespace golos
 

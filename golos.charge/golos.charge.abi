@@ -326,11 +326,11 @@
     "type": "use"
   },
   {
-    "name": "usentfmore",
+    "name": "usenotifygt",
     "type": "useandnotify"
   },
   {
-    "name": "usentfless",
+    "name": "usenotifyls",
     "type": "useandnotify"
   },
   {
