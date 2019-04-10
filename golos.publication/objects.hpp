@@ -210,7 +210,7 @@ namespace tables {
 
 using namespace eosio;
 
-using id_index = indexed_by<N(id), const_mem_fun<structures::message, uint64_t, &structures::message::primary_key>>;
+using id_index = indexed_by<N(primary), const_mem_fun<structures::message, uint64_t, &structures::message::primary_key>>;
 using permlink_index = indexed_by<N(bypermlink), const_mem_fun<structures::message, std::tuple<std::string, uint64_t>, &structures::message::secondary_key>>;
 using message_table = multi_index<N(message), structures::message, id_index, permlink_index>;
 

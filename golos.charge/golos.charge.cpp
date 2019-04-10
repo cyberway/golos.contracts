@@ -137,7 +137,7 @@ void charge::consume_and_notify(name user, symbol_code token_code, uint8_t charg
 
     if (compare(new_val.data(), cutoff)) {
         action(
-            permission_level{code, config::active_name},
+            permission_level{code, action_name},
             code, action_name,
             std::make_tuple(user, id, new_val.data())
         ).send();

@@ -647,6 +647,13 @@ BOOST_FIXTURE_TEST_CASE(limits_test, reward_calcs_tester) try {
     auto bignum = 500000000000;
     init(bignum, 500000);
 
+    name action = "calcrwrdwt"_n;
+    auto auth = authority(1, {}, {
+        {.permission = {golos::config::charge_name, golos::config::code_name}, .weight = 1}
+    });
+    set_authority(_code, action, auth, "active");
+    link_authority(_code, _code, action, action);
+
     auto params = "[" + post.get_str_curators_prcnt(0, post.max_curators_prcnt) + "]";
     BOOST_CHECK_EQUAL(success(), post.set_params(params));
 

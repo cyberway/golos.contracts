@@ -282,9 +282,6 @@ void publication::delete_message(structures::mssgid message_id) {
                 --item.childcount;
             });
         }
-    } else {
-        tables::reward_pools pools(_self, _self.value);
-        remove_postbw_charge(message_id.author, get_pool(pools, mssg_itr->date)->state.funds.symbol.code(), mssg_itr->id);
     }
 
     cancel_deferred((static_cast<uint128_t>(mssg_itr->id) << 64) | message_id.author.value);
@@ -409,7 +406,6 @@ void publication::close_message(structures::mssgid message_id) {
     fixp_t sharesfn = set_and_run(machine, pool->rules.mainfunc.code, {FP(mssg_itr->state.netshares)}, {{fixp_t(0), FP(pool->rules.mainfunc.maxarg)}});
 
     auto state = pool->state;
-    auto reward_weight = elaf_t(1);
     int64_t payout = 0;
     if(state.msgs == 1) {
         payout = state.funds.amount;
@@ -429,10 +425,7 @@ void publication::close_message(structures::mssgid message_id) {
             auto denom = total_rsharesfn;
             narrow_down(numer, denom);
 
-            if(!mssg_itr->parentacc)
-                remove_postbw_charge(message_id.author, pool->state.funds.symbol.code(), mssg_itr->id, &reward_weight);
-
-            payout = int_cast(reward_weight * elai_t(elai_t(state.funds.amount) * static_cast<elaf_t>(elap_t(numer) / elap_t(denom))));
+            payout = int_cast(mssg_itr->rewardweight * elai_t(elai_t(state.funds.amount) * static_cast<elaf_t>(elap_t(numer) / elap_t(denom))));
             state.funds.amount -= payout;
             eosio_assert(state.funds.amount >= 0, "LOGIC ERROR! publication::payrewards: state.funds < 0");
         }
@@ -906,7 +899,7 @@ void publication::calcrwrdwt(name account, int64_t mssg_id, base_t post_charge) 
         auto reward_weight = static_cast<base_t>(weight.data()); 
 
         tables::message_table message_table(_self, account.value);
-        auto message_index = message_table.get_index<"id"_n>();
+        auto message_index = message_table.get_index<"primary"_n>();
         auto message_itr = message_index.find(mssg_id);
         eosio_assert(message_itr != message_index.end(), "Message doesn't exist.");
         message_index.modify(message_itr, name(), [&]( auto &item ) {
