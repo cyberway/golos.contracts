@@ -347,17 +347,6 @@ int64_t publication::pay_curators(name author, uint64_t msgid, int64_t max_rewar
     return unclaimed_rewards;
 }
 
-void publication::remove_postbw_charge(name account, symbol_code token_code, int64_t mssg_id, elaf_t* reward_weight_ptr) {
-    auto issuer = token::get_issuer(config::token_name, token_code);
-    tables::limit_table lims(_self, _self.value);
-    auto bw_lim_itr = lims.find(structures::limitparams::POSTBW);
-    eosio_assert(bw_lim_itr != lims.end(), "publication::remove_postbw_charge: limit parameters not set");
-    auto post_charge = golos::charge::get_stored(config::charge_name, account, token_code, bw_lim_itr->charge_id, mssg_id);
-
-    if(reward_weight_ptr)
-        *reward_weight_ptr = (post_charge > bw_lim_itr->cutoff) ?
-            static_cast<elaf_t>(elai_t(bw_lim_itr->cutoff) / elai_t(post_charge)) : elaf_t(1);
-}
 void publication::use_charge(tables::limit_table& lims, structures::limitparams::act_t act, name issuer,
                             name account, int64_t eff_vesting, symbol_code token_code, bool vestpayment, elaf_t weight) {
     auto lim_itr = lims.find(act);
