@@ -414,7 +414,7 @@ void publication::close_message(structures::mssgid message_id) {
             auto denom = total_rsharesfn;
             narrow_down(numer, denom);
 
-            payout = int_cast(mssg_itr->rewardweight * elai_t(elai_t(state.funds.amount) * static_cast<elaf_t>(elap_t(numer) / elap_t(denom))));
+            payout = int_cast(static_cast<elaf_t>(elai_t(mssg_itr->rewardweight)) * elai_t(elai_t(state.funds.amount) * static_cast<elaf_t>(elap_t(numer) / elap_t(denom))));
             state.funds.amount -= payout;
             eosio_assert(state.funds.amount >= 0, "LOGIC ERROR! publication::payrewards: state.funds < 0");
         }
