@@ -65,7 +65,7 @@ void vesting::on_transfer(name from, name to, asset quantity, std::string memo) 
     asset converted = token_to_vesting(quantity, *vesting, -quantity.amount);
     table_vesting.modify(vesting, name(), [&](auto& item) {
         item.supply += converted;
-        // TODO Add notify about supply changes #548
+        send_on_transfer_event(from, to, item.supply);
     });
     add_balance(recipient != name() ? recipient : from, converted, has_auth(to) ? to : from);
 }
@@ -84,7 +84,7 @@ void vesting::retire(asset quantity, name user) {
     sub_balance(user, quantity, true);
     table_vesting.modify(vesting, name(), [&](auto& item) {
         item.supply -= quantity;
-        // TODO Add notify about supply changes #548
+        send_retire_event(user, item.supply);
     });
 }
 
@@ -189,7 +189,7 @@ void vesting::delegate(name from, name to, asset quantity, uint16_t interest_rat
 
     account_sender.modify(balance_sender, from, [&](auto& item){
         item.delegated += quantity;
-        // TODO Add notify about vesting changed #548
+        send_delegated_event(from, to, item.delegated);
     });
 
     delegation_table table(_self, sname);
@@ -218,7 +218,7 @@ void vesting::delegate(name from, name to, asset quantity, uint16_t interest_rat
     eosio_assert(balance_recipient != account_recipient.end(), "Not found balance token vesting");
     account_recipient.modify(balance_recipient, from, [&](auto& item) {
         item.received += quantity;
-        // TODO Add notify about vesting changed #548
+        send_received_event(from, to, item.received);
     });
 
     eosio_assert(balance_recipient->received.amount >= delegation_params.min_remainder, "delegated vesting withdrawn");
@@ -261,7 +261,7 @@ void vesting::undelegate(name from, name to, asset quantity) {
     eosio_assert(balance != account_recipient.end(), "This token is not on the recipient balance sheet");
     account_recipient.modify(balance, from, [&](auto& item) {
         item.received -= quantity;
-        // TODO Add notify about vesting changed #548
+        send_undelegate_event(from, to, item.received);
     });
 
     eosio_assert(balance->received.amount >= delegation_params.min_remainder, "delegated vesting withdrawn");
@@ -277,7 +277,7 @@ void vesting::create(symbol symbol, name notify_acc) {
     table_vesting.emplace(_self, [&](auto& item){
         item.supply = asset(0, symbol);
         item.notify_acc = notify_acc;
-        // TODO Add notify about supply changes #548
+        send_create_event(item.supply);
     });
 }
 
@@ -328,7 +328,7 @@ void vesting::timeoutconv() {
                 auto converted = vesting_to_token(to_send, vesting, -correction);   // TODO: get_balance can throw #549
                 vestings.modify(vesting, name(), [&](auto& v) {
                     v.supply -= to_send;
-                    // TODO: Add notify about supply change #548
+                    send_timeoutconv_event(v.supply);                    
                 });
                 // TODO: payment action #549
                 INLINE_ACTION_SENDER(token, transfer)(config::token_name, {_self, config::active_name},
@@ -353,7 +353,7 @@ void vesting::timeoutrdel() {
         eosio_assert(balance_recipient != account_recipient.end(), "This token is not on the sender balance sheet");
         account_recipient.modify(balance_recipient, name(), [&](auto &item){
             item.delegated -= obj->quantity;
-            // TODO Add event about vesting changed #548
+            send_timeoutrdel_event(item.delegated);                    
         });
         obj = index.erase(obj);
     }
@@ -409,7 +409,7 @@ void vesting::sub_balance(name owner, asset value, bool retire_mode) {
         a.vesting -= value;
         if (retire_mode)
             a.unlocked_limit -= value;
-        // TODO Add notify about vesting changed #548
+        send_sub_balance_event(owner, a.vesting);
     });
     notify_balance_change(owner, -value);
 }
@@ -425,12 +425,12 @@ void vesting::add_balance(name owner, asset value, name ram_payer) {
             a.vesting = value;
             a.delegated.symbol = value.symbol;
             a.received.symbol = value.symbol;
-            // TODO Add notify about vesting changed #548
+            send_add_balance_event(owner, a.vesting);
         });
     } else {
         account.modify(to, name(), [&](auto& a) {
             a.vesting += value;
-            // TODO Add notify about vesting changed #548
+            send_add_balance_event(owner, a.vesting);
         });
     }
     notify_balance_change(owner, value);
@@ -440,8 +440,44 @@ void vesting::send_account_event(name account, const struct account& balance) {
     eosio::event(_self, "balance"_n, std::make_tuple(account, balance)).send();
 }
 
-void vesting::send_vesting_event(const vesting_stats& info) {
-    eosio::event(_self, "vesting"_n, info.supply).send();
+void vesting::send_on_transfer_event(name from, name to, asset supply) {
+    eosio::event(_self, "ontransfer"_n, std::make_tuple(from, to, supply)).send();
+}
+
+void vesting::send_retire_event(name user, asset supply) {
+    eosio::event(_self, "retire"_n, std::make_tuple(user, supply)).send();
+}
+
+void vesting::send_delegated_event(name from, name to, asset delegated) {
+    eosio::event(_self, "delegated"_n, std::make_tuple(from, to, delegated)).send();
+}
+
+void vesting::send_received_event(name from, name to, asset received) {
+    eosio::event(_self, "received"_n, std::make_tuple(from, to, received)).send();
+}
+
+void vesting::send_undelegate_event(name from, name to, asset quantity) {
+    eosio::event(_self, "undelegate"_n, std::make_tuple(from, to, quantity)).send();
+}
+
+void vesting::send_create_event(asset supply) {
+    eosio::event(_self, "create"_n, supply).send();
+}
+
+void vesting::send_timeoutconv_event(asset supply) {
+    eosio::event(_self, "timeoutconv"_n, supply).send();
+}
+
+void vesting::send_timeoutrdel_event(asset delegated) {
+    eosio::event(_self, "timeoutrdel"_n, delegated).send();
+}
+
+void vesting::send_sub_balance_event(name owner, asset quantity) {
+    eosio::event(_self, "subbalance"_n, std::make_tuple(owner, quantity)).send();
+}
+
+void vesting::send_add_balance_event(name owner, asset quantity) {
+    eosio::event(_self, "addbalance"_n, std::make_tuple(owner, quantity)).send();
 }
 
 int64_t fix_precision(const asset from, const symbol to) {

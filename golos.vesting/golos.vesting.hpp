@@ -171,7 +171,16 @@ private:
     void sub_balance(name owner, asset value, bool retire_mode = false);
     void add_balance(name owner, asset value, name ram_payer);
     void send_account_event(name account, const struct account& balance);
-    void send_vesting_event(const vesting_stats& info);
+    void send_on_transfer_event(name from, name to, asset supply);
+    void send_retire_event(name user, asset supply);
+    void send_delegated_event(name from, name to, asset delegated);
+    void send_received_event(name from, name to, asset received);
+    void send_undelegate_event(name from, name to, asset quantity);
+    void send_create_event(asset supply);
+    void send_timeoutconv_event(asset supply);
+    void send_timeoutrdel_event(asset delegated);
+    void send_sub_balance_event(name owner, asset quantity);
+    void send_add_balance_event(name owner, asset quantity);
 
     const asset vesting_to_token(const asset& vesting, const vesting_stats& vinfo, int64_t correction) const;
     const asset token_to_vesting(const asset& token, const vesting_stats& vinfo, int64_t correction) const;
