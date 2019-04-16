@@ -353,7 +353,7 @@ void vesting::timeoutrdel() {
         eosio_assert(balance_recipient != account_recipient.end(), "This token is not on the sender balance sheet");
         account_recipient.modify(balance_recipient, name(), [&](auto &item){
             item.delegated -= obj->quantity;
-            send_acc_and_quantity_event(obj->delegator, item.delegated);                    
+            send_acc_and_quantity_event(item);                    
         });
         obj = index.erase(obj);
     }
@@ -444,8 +444,8 @@ void vesting::send_quantity_event(asset quantity) {
     eosio::event(_self, "quantity"_n, quantity).send();
 }
 
-void vesting::send_acc_and_quantity_event(name account, asset quantity) {
-    eosio::event(_self, "accquantity"_n, std::make_tuple(account, quantity)).send();
+void vesting::send_acc_and_quantity_event(const return_delegation& rdlg) {
+    eosio::event(_self, "accquantity"_n, std::make_tuple(rdlg.delegator, rdlg.quantity)).send();
 }
 
 int64_t fix_precision(const asset from, const symbol to) {
