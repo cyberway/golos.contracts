@@ -39,16 +39,7 @@
       ]
     },
     {
-      "name": "from_to_event_type",
-      "base": "",
-      "fields": [
-        {"name":"from",    "type":"name"},
-        {"name":"to",    "type":"name"},
-        {"name":"quantity",   "type":"asset"}
-      ]
-    },
-    {
-      "name": "common_event_type",
+      "name": "acc_and_quantity_event",
       "base": "",
       "fields": [
         {"name":"account",    "type":"name"},
@@ -225,16 +216,8 @@
   ],
   "events": [
     {"name":"balance",  "type":"balance_event"},
-    {"name":"ontransfer",  "type":"from_to_event_type"},
-    {"name":"retire",  "type":"common_event_type"},
-    {"name":"delegated",  "type":"from_to_event_type"},
-    {"name":"received",  "type":"from_to_event_type"},
-    {"name":"undelegate",  "type":"from_to_event_type"},
-    {"name":"create",  "type":"asset"},
-    {"name":"timeoutconv",  "type":"asset"},
-    {"name":"timeoutrdel",  "type":"asset"},
-    {"name":"subbalance",  "type":"common_event_type"},
-    {"name":"addbalance",  "type":"common_event_type"}
+    {"name":"quantity",  "type":"asset"},
+    {"name":"accquantity",  "type":"acc_and_quantity_event"}
   ],
   "actions": [
     {"name":"setparams",    "type":"setparams"},
