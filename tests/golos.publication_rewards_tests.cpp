@@ -103,7 +103,7 @@ public:
         , _stranger(N(dan.larimer)) {
 
         produce_blocks(2);    // why 2?
-        create_accounts({_forum_name, _issuer, cfg::vesting_name, cfg::token_name, cfg::control_name, cfg::charge_name, _stranger});
+        create_accounts({_forum_name, _issuer, cfg::vesting_name, cfg::token_name, cfg::control_name, cfg::charge_name, _stranger, cfg::publish_name});
         create_accounts(_users);
         produce_blocks(2);
 
@@ -646,6 +646,13 @@ BOOST_FIXTURE_TEST_CASE(limits_test, reward_calcs_tester) try {
     BOOST_TEST_MESSAGE("Simple limits test");
     auto bignum = 500000000000;
     init(bignum, 500000);
+
+    name action = "calcrwrdwt"_n;
+    auto auth = authority(1, {}, {
+        {.permission = {golos::config::charge_name, golos::config::code_name}, .weight = 1}
+    });
+    set_authority(_code, action, auth, "active");
+    link_authority(_code, _code, action, action);
 
     auto params = "[" + post.get_str_curators_prcnt(0, post.max_curators_prcnt) + "]";
     BOOST_CHECK_EQUAL(success(), post.set_params(params));

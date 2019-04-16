@@ -50,6 +50,8 @@ extern "C" {
             execute_action(&publication::reblog);
         if (NN(setcurprcnt) == action)
             execute_action(&publication::set_curators_prcnt);
+        if (NN(calcrwrdwt) == action)
+            execute_action(&publication::calcrwrdwt);
     }
 #undef NN
 }
@@ -280,9 +282,6 @@ void publication::delete_message(structures::mssgid message_id) {
                 --item.childcount;
             });
         }
-    } else {
-        tables::reward_pools pools(_self, _self.value);
-        remove_postbw_charge(message_id.author, get_pool(pools, mssg_itr->date)->state.funds.symbol.code(), mssg_itr->id);
     }
 
     cancel_deferred((static_cast<uint128_t>(mssg_itr->id) << 64) | message_id.author.value);
@@ -349,24 +348,6 @@ int64_t publication::pay_curators(name author, uint64_t msgid, int64_t max_rewar
     return unclaimed_rewards;
 }
 
-void publication::remove_postbw_charge(name account, symbol_code token_code, int64_t mssg_id, elaf_t* reward_weight_ptr) {
-    auto issuer = token::get_issuer(config::token_name, token_code);
-    tables::limit_table lims(_self, _self.value);
-    auto bw_lim_itr = lims.find(structures::limitparams::POSTBW);
-    eosio_assert(bw_lim_itr != lims.end(), "publication::remove_postbw_charge: limit parameters not set");
-    auto post_charge = golos::charge::get_stored(config::charge_name, account, token_code, bw_lim_itr->charge_id, mssg_id);
-    if(post_charge >= 0)
-        INLINE_ACTION_SENDER(charge, removestored) (config::charge_name,
-            {issuer, config::invoice_name}, {
-                account,
-                token_code,
-                bw_lim_itr->charge_id,
-                mssg_id
-            });
-    if(reward_weight_ptr)
-        *reward_weight_ptr = (post_charge > bw_lim_itr->cutoff) ?
-            static_cast<elaf_t>(elai_t(bw_lim_itr->cutoff) / elai_t(post_charge)) : elaf_t(1);
-}
 void publication::use_charge(tables::limit_table& lims, structures::limitparams::act_t act, name issuer,
                             name account, int64_t eff_vesting, symbol_code token_code, bool vestpayment, elaf_t weight) {
     auto lim_itr = lims.find(act);
@@ -387,13 +368,16 @@ void publication::use_charge(tables::limit_table& lims, structures::limitparams:
 void publication::use_postbw_charge(tables::limit_table& lims, name issuer, name account, symbol_code token_code, int64_t mssg_id) {
     auto bw_lim_itr = lims.find(structures::limitparams::POSTBW);
     if(bw_lim_itr->price >= 0)
-        INLINE_ACTION_SENDER(charge, useandstore) (config::charge_name,
+        INLINE_ACTION_SENDER(charge, usenotifygt) (config::charge_name,
             {issuer, config::invoice_name}, {
                 account,
                 token_code,
                 bw_lim_itr->charge_id,
+                bw_lim_itr->price,
                 mssg_id,
-                bw_lim_itr->price
+                _self,
+                "calcrwrdwt"_n,
+                bw_lim_itr->cutoff
             });
 }
 
@@ -412,7 +396,6 @@ void publication::close_message(structures::mssgid message_id) {
     fixp_t sharesfn = set_and_run(machine, pool->rules.mainfunc.code, {FP(mssg_itr->state.netshares)}, {{fixp_t(0), FP(pool->rules.mainfunc.maxarg)}});
 
     auto state = pool->state;
-    auto reward_weight = elaf_t(1);
     int64_t payout = 0;
     if(state.msgs == 1) {
         payout = state.funds.amount;
@@ -432,10 +415,7 @@ void publication::close_message(structures::mssgid message_id) {
             auto denom = total_rsharesfn;
             narrow_down(numer, denom);
 
-            if(!mssg_itr->parentacc)
-                remove_postbw_charge(message_id.author, pool->state.funds.symbol.code(), mssg_itr->id, &reward_weight);
-
-            payout = int_cast(reward_weight * elai_t(elai_t(state.funds.amount) * static_cast<elaf_t>(elap_t(numer) / elap_t(denom))));
+            payout = int_cast(ELF(mssg_itr->rewardweight) * elai_t(elai_t(state.funds.amount) * static_cast<elaf_t>(elap_t(numer) / elap_t(denom))));
             state.funds.amount -= payout;
             eosio_assert(state.funds.amount >= 0, "LOGIC ERROR! publication::payrewards: state.funds < 0");
         }
@@ -537,6 +517,11 @@ fixp_t publication::calc_available_rshares(name voter, int16_t weight, uint64_t 
 void publication::set_vote(name voter, const structures::mssgid& message_id, int16_t weight) {
     require_auth(voter);
 
+    auto get_calc_sharesfn = [&](auto mainfunc_code, auto netshares, auto mainfunc_maxarg) {
+        atmsp::machine<fixp_t> machine;
+        return set_and_run(machine, mainfunc_code, {netshares}, {{fixp_t(0), mainfunc_maxarg}}).data();
+    };
+
     posting_params_singleton cfg(_self, _self.value);
     const auto &max_vote_changes_param = cfg.get().max_vote_changes_param;
     const auto &social_acc_param = cfg.get().social_acc_param;
@@ -572,11 +557,19 @@ void publication::set_vote(name voter, const structures::mssgid& message_id, int
             item.state.rsharesfn = (WP(item.state.rsharesfn) + wdfp_t(rsharesfn_delta)).data();
             send_poolstate_event(item);
         });
-
+        
         message_index.modify(mssg_itr, name(), [&]( auto &item ) {
             item.state.netshares = new_mssg_rshares.data();
             item.state.sumcuratorsw = (FP(item.state.sumcuratorsw) - FP(vote_itr->curatorsw)).data();
-            send_poststate_event(message_id.author, item);
+            send_poststate_event(
+                message_id.author, 
+                item, 
+                get_calc_sharesfn(
+                    pool->rules.mainfunc.code, 
+                    FP(new_mssg_rshares.data()), 
+                    FP(pool->rules.mainfunc.maxarg)
+                )
+            );
         });
 
         votetable_index.modify(vote_itr, voter, [&]( auto &item ) {
@@ -617,7 +610,15 @@ void publication::set_vote(name voter, const structures::mssgid& message_id, int
     msg_new_state.sumcuratorsw = (FP(mssg_itr->state.sumcuratorsw) + sumcuratorsw_delta).data();
     message_index.modify(mssg_itr, _self, [&](auto &item) {
         item.state = msg_new_state;
-        send_poststate_event(message_id.author, item);
+        send_poststate_event(
+            message_id.author,
+            item,
+            get_calc_sharesfn(
+                pool->rules.mainfunc.code, 
+                FP(msg_new_state.netshares),
+                FP(pool->rules.mainfunc.maxarg)
+            )
+        );
     });
 
     auto time_delta = static_cast<int64_t>((cur_time - mssg_itr->date) / seconds(1).count());
@@ -768,19 +769,20 @@ void publication::send_poolerase_event(const structures::rewardpool& pool) {
     eosio::event(_self, "poolerase"_n, pool.created).send();
 }
 
-void publication::send_poststate_event(name author, const structures::message& post) {
-    structures::post_event data{author, post.permlink, post.state.netshares, post.state.voteshares, post.state.sumcuratorsw};
+void publication::send_poststate_event(name author, const structures::message& post, base_t sharesfn) {
+    structures::post_event data{author, post.permlink, post.state.netshares, post.state.voteshares,
+        post.state.sumcuratorsw, sharesfn};
     eosio::event(_self, "poststate"_n, data).send();
-}
-
-void publication::send_postclose_event(name author, const structures::message& post) {
-    structures::post_close data{author, post.permlink, post.rewardweight};
-    eosio::event(_self, "postclose"_n, data).send();
 }
 
 void publication::send_votestate_event(name voter, const structures::voteinfo& vote, name author, const structures::message& post) {
     structures::vote_event data{voter, author, post.permlink, vote.weight, vote.curatorsw, vote.rshares};
     eosio::event(_self, "votestate"_n, data).send();
+}
+
+void publication::send_rewardweight_event(structures::mssgid message_id, base_t weight) {
+    structures::reward_weight_event data{message_id, weight};
+    eosio::event(_self, "rewardweight"_n, data).send();
 }
 
 structures::funcinfo publication::load_func(const funcparams& params, const std::string& name, const atmsp::parser<fixp_t>& pa, atmsp::machine<fixp_t>& machine, bool inc) {
@@ -875,6 +877,27 @@ void publication::set_curators_prcnt(structures::mssgid message_id, uint16_t cur
     message_index.modify(message_itr, name(), [&]( auto &item ) {
             item.curators_prcnt = get_checked_curators_prcnt(curators_prcnt);
         });
+}
+
+void publication::calcrwrdwt(name account, int64_t mssg_id, base_t post_charge) {
+    require_auth(_self);
+    tables::limit_table lims(_self, _self.value);
+    auto bw_lim_itr = lims.find(structures::limitparams::POSTBW);
+    eosio_assert(bw_lim_itr != lims.end(), "publication::calc_reward_weight: limit parameters not set");
+    if (post_charge > bw_lim_itr->cutoff) {
+        auto weight = static_cast<elaf_t>(elai_t(bw_lim_itr->cutoff) / elai_t(post_charge));
+        auto reward_weight = static_cast<base_t>(weight.data()); 
+
+        tables::message_table message_table(_self, account.value);
+        auto message_index = message_table.get_index<"primary"_n>();
+        auto message_itr = message_index.find(mssg_id);
+        eosio_assert(message_itr != message_index.end(), "Message doesn't exist.");
+        message_index.modify(message_itr, name(), [&]( auto &item ) {
+            item.rewardweight = reward_weight;
+        });
+
+        send_rewardweight_event(structures::mssgid{account, message_itr->permlink, message_itr->ref_block_num}, reward_weight);
+    }
 }
 
 } // golos

@@ -734,6 +734,24 @@
     ]
   },
   {
+    "name": "calcrwrdwt",
+    "base": "",
+    "fields": [
+        {
+            "name": "account",
+            "type": "name"
+        },
+        {
+            "name": "mssg_id",
+            "type": "int64"
+        },
+        {
+            "name": "post_charge",
+            "type": "base_t"
+        }
+    ]
+  },
+  {
     "name": "create_event",
     "base": "",
     "fields": [
@@ -748,16 +766,8 @@
         {"name": "permlink", "type": "string"},
         {"name": "netshares", "type": "base_t"},
         {"name": "voteshares", "type": "base_t"},
-        {"name": "sumcuratorsw", "type": "base_t"}
-    ]
-  },
-  {
-    "name": "post_close",
-    "base": "",
-    "fields": [
-        {"name": "author", "type": "name"},
-        {"name": "permlink", "type": "string"},
-        {"name": "rewardweight", "type": "base_t"}
+        {"name": "sumcuratorsw", "type": "base_t"},
+        {"name": "sharesfn", "type": "base_t"}
     ]
   },
   {
@@ -781,6 +791,14 @@
         {"name": "funds", "type": "asset"},
         {"name": "rshares", "type": "wide_t"}
     ]
+  },
+  {
+    "name": "reward_weight_event",
+    "base": "",
+    "fields": [
+        {"name": "message_id", "type": "mssgid"},
+        {"name": "rewardweight", "type": "base_t"}
+    ]
   }
   ],
   "events": [
@@ -788,8 +806,8 @@
     {"name": "poolerase", "type": "uint64"},
     {"name": "postcreate","type": "create_event"},
     {"name": "poststate", "type": "post_event"},
-    {"name": "postclose", "type": "post_close"},
-    {"name": "votestate", "type": "vote_event"}
+    {"name": "votestate", "type": "vote_event"},
+    {"name": "rewardweight", "type": "reward_weight_event"}
   ],
   "actions": [
   {
@@ -843,6 +861,10 @@
   {
     "name": "setcurprcnt",
     "type": "setcurprcnt"
+  },
+  {
+    "name": "calcrwrdwt",
+    "type": "calcrwrdwt"
   }
   ],
   "tables": [

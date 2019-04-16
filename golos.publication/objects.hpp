@@ -161,12 +161,8 @@ struct post_event {
     base_t netshares = 0;
     base_t voteshares = 0;
     base_t sumcuratorsw = 0;
-};
 
-struct post_close {
-    name author;
-    std::string permlink;
-    base_t rewardweight;
+    base_t sharesfn;
 };
 
 struct vote_event {
@@ -183,6 +179,11 @@ struct pool_event {
     counter_t msgs;
     eosio::asset funds;
     wide_t rshares;
+};
+
+struct reward_weight_event {
+    mssgid message_id;
+    base_t rewardweight;
 };
 
 struct limitparams {
@@ -209,7 +210,7 @@ namespace tables {
 
 using namespace eosio;
 
-using id_index = indexed_by<N(id), const_mem_fun<structures::message, uint64_t, &structures::message::primary_key>>;
+using id_index = indexed_by<N(primary), const_mem_fun<structures::message, uint64_t, &structures::message::primary_key>>;
 using permlink_index = indexed_by<N(bypermlink), const_mem_fun<structures::message, std::tuple<std::string, uint64_t>, &structures::message::secondary_key>>;
 using message_table = multi_index<N(message), structures::message, id_index, permlink_index>;
 
