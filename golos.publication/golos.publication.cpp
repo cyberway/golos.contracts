@@ -327,7 +327,27 @@ void publication::payto(name user, eosio::asset quantity, enum_t mode, std::stri
         eosio_assert(false, "publication::payto: unknown kind of payment");
 }
 
+int64_t publication::pay_curators(name author, uint64_t msgid, int64_t max_rewards, fixp_t weights_sum, symbol tokensymbol, std::string memo) {
+    tables::vote_table vs(_self, author.value);
+    int64_t unclaimed_rewards = max_rewards;
 
+    auto idx = vs.get_index<"messageid"_n>();
+    auto v = idx.lower_bound(msgid);
+    while ((v != idx.end()) && (v->message_id == msgid)) {
+        if((weights_sum > fixp_t(0)) && (max_rewards > 0)) {
+            auto claim = int_cast(elai_t(max_rewards) * elaf_t(FP(v->curatorsw) / weights_sum));
+            eosio_assert(claim <= unclaimed_rewards, "LOGIC ERROR! publication::pay_curators: claim > unclaimed_rewards");
+            if(claim > 0) {
+                unclaimed_rewards -= claim;
+                claim -= pay_delegators(claim, v->voter, tokensymbol, v->delegators);
+                payto(v->voter, eosio::asset(claim, tokensymbol), static_cast<enum_t>(payment_t::VESTING), memo);
+            }
+        }
+        //v = idx.erase(v);
+        ++v;
+    }
+    return unclaimed_rewards;
+}
 
 void publication::remove_postbw_charge(name account, symbol_code token_code, int64_t mssg_id, elaf_t* reward_weight_ptr) {
     auto issuer = token::get_issuer(config::token_name, token_code);
