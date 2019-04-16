@@ -1,6 +1,5 @@
 #include "golos.charge.hpp"
 #include <eosiolib/event.hpp>
-#include <golos.publication/golos.publication.hpp>
 
 namespace golos {
 using namespace eosio;
