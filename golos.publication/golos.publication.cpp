@@ -312,42 +312,22 @@ void publication::unvote(name voter, structures::mssgid message_id) {
     set_vote(voter, message_id, 0);
 }
 
-void publication::payto(name user, eosio::asset quantity, enum_t mode) {
+void publication::payto(name user, eosio::asset quantity, enum_t mode, std::string memo) {
     require_auth(_self);
     eosio_assert(quantity.amount >= 0, "LOGIC ERROR! publication::payto: quantity.amount < 0");
     if(quantity.amount == 0)
         return;
 
     if(static_cast<payment_t>(mode) == payment_t::TOKEN)
-        INLINE_ACTION_SENDER(token, payment) (config::token_name, {_self, config::active_name}, {_self, user, quantity, ""});
+        INLINE_ACTION_SENDER(token, payment) (config::token_name, {_self, config::active_name}, {_self, user, quantity, memo});
     else if(static_cast<payment_t>(mode) == payment_t::VESTING)
         INLINE_ACTION_SENDER(token, transfer) (config::token_name, {_self, config::active_name},
-            {_self, config::vesting_name, quantity, config::send_prefix + name{user}.to_string()});
+            {_self, config::vesting_name, quantity, config::send_prefix + name{user}.to_string() + "; " + memo});
     else
         eosio_assert(false, "publication::payto: unknown kind of payment");
 }
 
-int64_t publication::pay_curators(name author, uint64_t msgid, int64_t max_rewards, fixp_t weights_sum, eosio::symbol tokensymbol) {
-    tables::vote_table vs(_self, author.value);
-    int64_t unclaimed_rewards = max_rewards;
 
-    auto idx = vs.get_index<"messageid"_n>();
-    auto v = idx.lower_bound(msgid);
-    while ((v != idx.end()) && (v->message_id == msgid)) {
-        if((weights_sum > fixp_t(0)) && (max_rewards > 0)) {
-            auto claim = int_cast(elai_t(max_rewards) * elaf_t(FP(v->curatorsw) / weights_sum));
-            eosio_assert(claim <= unclaimed_rewards, "LOGIC ERROR! publication::pay_curators: claim > unclaimed_rewards");
-            if(claim > 0) {
-                unclaimed_rewards -= claim;
-                claim -= pay_delegators(claim, v->voter, tokensymbol, v->delegators);
-                payto(v->voter, eosio::asset(claim, tokensymbol), static_cast<enum_t>(payment_t::VESTING));
-            }
-        }
-        //v = idx.erase(v);
-        ++v;
-    }
-    return unclaimed_rewards;
-}
 
 void publication::remove_postbw_charge(name account, symbol_code token_code, int64_t mssg_id, elaf_t* reward_weight_ptr) {
     auto issuer = token::get_issuer(config::token_name, token_code);
@@ -454,7 +434,11 @@ void publication::close_message(structures::mssgid message_id) {
 
     eosio_assert((curation_payout <= payout) && (curation_payout >= 0), "publication::payrewards: wrong curation_payout");
 
-    auto unclaimed_rewards = pay_curators(message_id.author, mssg_itr->id, curation_payout, FP(mssg_itr->state.sumcuratorsw), state.funds.symbol);
+    const auto memo_message_id = "message_id: { author:"        + name{message_id.author}.to_string()
+                                           + ", permlink:"      + message_id.permlink
+                                           + ", ref_block_num:" + std::to_string(message_id.ref_block_num) + "}";
+
+    auto unclaimed_rewards = pay_curators(message_id.author, mssg_itr->id, curation_payout, FP(mssg_itr->state.sumcuratorsw), state.funds.symbol, memo_message_id + ", type of payment: curators");
 
     eosio_assert(unclaimed_rewards >= 0, "publication::payrewards: unclaimed_rewards < 0");
 
@@ -465,16 +449,15 @@ void publication::close_message(structures::mssgid message_id) {
     for(auto& ben : mssg_itr->beneficiaries) {
         auto ben_payout = int_cast(elai_t(payout) * ELF(ben.deductprcnt));
         eosio_assert((0 <= ben_payout) && (ben_payout <= payout - ben_payout_sum), "LOGIC ERROR! publication::payrewards: wrong ben_payout value");
-        payto(ben.account, eosio::asset(ben_payout, state.funds.symbol), static_cast<enum_t>(payment_t::VESTING));
+        payto(ben.account, eosio::asset(ben_payout, state.funds.symbol), static_cast<enum_t>(payment_t::VESTING), memo_message_id + ", type of payment: benefeciary");
         ben_payout_sum += ben_payout;
     }
     payout -= ben_payout_sum;
 
     auto token_payout = int_cast(elai_t(payout) * ELF(mssg_itr->tokenprop));
     eosio_assert(payout >= token_payout, "publication::payrewards: wrong token_payout value");
-
-    payto(message_id.author, eosio::asset(token_payout, state.funds.symbol), static_cast<enum_t>(payment_t::TOKEN));
-    payto(message_id.author, eosio::asset(payout - token_payout, state.funds.symbol), static_cast<enum_t>(payment_t::VESTING));
+    payto(message_id.author, eosio::asset(token_payout, state.funds.symbol), static_cast<enum_t>(payment_t::TOKEN), memo_message_id + ", type of payment: author");
+    payto(message_id.author, eosio::asset(payout - token_payout, state.funds.symbol), static_cast<enum_t>(payment_t::VESTING), memo_message_id + ", type of payment: author");
 
     tables::vote_table vote_table(_self, message_id.author.value);
     auto votetable_index = vote_table.get_index<"messageid"_n>();

@@ -13,7 +13,7 @@ public:
     void set_limit(std::string act, symbol_code token_code, uint8_t charge_id, int64_t price, int64_t cutoff, int64_t vesting_price, int64_t min_vesting);
     void set_rules(const funcparams& mainfunc, const funcparams& curationfunc, const funcparams& timepenalty,
         int64_t maxtokenprop, symbol tokensymbol);
-    void on_transfer(name from, name to, asset quantity, std::string memo);
+    void on_transfer(name from, name to, asset quantity, std::string memo = "");
     void create_message(structures::mssgid message_id, structures::mssgid parent_id, uint64_t parent_recid,
         std::vector<structures::beneficiary> beneficiaries, int64_t tokenprop, bool vestpayment,
         std::string headermssg, std::string bodymssg, std::string languagemssg, std::vector<structures::tag> tags,
@@ -35,8 +35,28 @@ private:
         tables::reward_pools::const_iterator excluded);
     auto get_pool(tables::reward_pools& pools, uint64_t time);
     int64_t pay_curators(name author, uint64_t msgid, int64_t max_rewards, fixp_t weights_sum,
-        symbol tokensymbol);
-    void payto(name user, asset quantity, enum_t mode);
+                         symbol tokensymbol, std::string memo = "") {
+        tables::vote_table vs(_self, author.value);
+        int64_t unclaimed_rewards = max_rewards;
+
+        auto idx = vs.get_index<"messageid"_n>();
+        auto v = idx.lower_bound(msgid);
+        while ((v != idx.end()) && (v->message_id == msgid)) {
+            if((weights_sum > fixp_t(0)) && (max_rewards > 0)) {
+                auto claim = int_cast(elai_t(max_rewards) * elaf_t(FP(v->curatorsw) / weights_sum));
+                eosio_assert(claim <= unclaimed_rewards, "LOGIC ERROR! publication::pay_curators: claim > unclaimed_rewards");
+                if(claim > 0) {
+                    unclaimed_rewards -= claim;
+                    claim -= pay_delegators(claim, v->voter, tokensymbol, v->delegators);
+                    payto(v->voter, eosio::asset(claim, tokensymbol), static_cast<enum_t>(payment_t::VESTING), memo);
+                }
+            }
+            //v = idx.erase(v);
+            ++v;
+        }
+        return unclaimed_rewards;
+    }
+    void payto(name user, asset quantity, enum_t mode, std::string memo = "");
     void check_account(name user, symbol tokensymbol);
     int64_t pay_delegators(int64_t claim, name voter, 
             eosio::symbol tokensymbol, std::vector<structures::delegate_voter> delegate_list);
