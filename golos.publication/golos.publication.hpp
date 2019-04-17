@@ -13,7 +13,7 @@ public:
     void set_limit(std::string act, symbol_code token_code, uint8_t charge_id, int64_t price, int64_t cutoff, int64_t vesting_price, int64_t min_vesting);
     void set_rules(const funcparams& mainfunc, const funcparams& curationfunc, const funcparams& timepenalty,
         int64_t maxtokenprop, symbol tokensymbol);
-    void on_transfer(name from, name to, asset quantity, std::string memo);
+    void on_transfer(name from, name to, asset quantity, std::string memo = "");
     void create_message(structures::mssgid message_id, structures::mssgid parent_id, uint64_t parent_recid,
         std::vector<structures::beneficiary> beneficiaries, int64_t tokenprop, bool vestpayment,
         std::string headermssg, std::string bodymssg, std::string languagemssg, std::vector<structures::tag> tags,
@@ -35,8 +35,8 @@ private:
         tables::reward_pools::const_iterator excluded);
     auto get_pool(tables::reward_pools& pools, uint64_t time);
     int64_t pay_curators(name author, uint64_t msgid, int64_t max_rewards, fixp_t weights_sum,
-        symbol tokensymbol);
-    void payto(name user, asset quantity, enum_t mode);
+                         symbol tokensymbol, std::string memo = "");
+    void payto(name user, asset quantity, enum_t mode, std::string memo = "");
     void check_account(name user, symbol tokensymbol);
     int64_t pay_delegators(int64_t claim, name voter, 
             eosio::symbol tokensymbol, std::vector<structures::delegate_voter> delegate_list);
@@ -61,6 +61,8 @@ private:
     fixp_t calc_available_rshares(name voter, int16_t weight, uint64_t cur_time, const structures::rewardpool& pool);
     void check_upvote_time(uint64_t cur_time, uint64_t mssg_date);
     bool check_permlink_correctness(std::string permlink);
+
+    std::string get_memo(const std::string &type, const structures::mssgid &message_id);
 };
 
 } // golos

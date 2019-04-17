@@ -41,12 +41,16 @@ void vesting::setparams(symbol symbol, std::vector<vesting_param> params) {
 }
 
 name get_recipient(const std::string& memo) {
+    size_t memo_size = memo.size();
+    const auto find_symbol = memo.find(';');
+    if (find_symbol != std::string::npos && memo.size())
+        memo_size = find_symbol;
+
     const size_t pref_size = config::send_prefix.size();
-    const size_t memo_size = memo.size();
     if (memo_size < pref_size || memo.substr(0, pref_size) != config::send_prefix)
         return name();
     eosio_assert(memo_size > pref_size, "must provide recipient's name");
-    return name(memo.substr(pref_size).c_str());
+    return name(memo.substr(pref_size, memo_size - pref_size).c_str());
 }
 
 void vesting::on_transfer(name from, name to, asset quantity, std::string memo) {
