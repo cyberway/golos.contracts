@@ -39,14 +39,6 @@
       ]
     },
     {
-      "name": "supply_event",
-      "base": "",
-      "fields": [
-        {"name":"account",    "type":"name"},
-        {"name":"supply",   "type":"asset"}
-      ]
-    },
-    {
       "name": "delegation",
       "base": "",
       "fields": [
@@ -216,7 +208,7 @@
   ],
   "events": [
     {"name":"balance",  "type":"balance_event"},
-    {"name":"supply",  "type":"supply_event"}
+    {"name":"supply",  "type":"asset"}
   ],
   "actions": [
     {"name":"setparams",    "type":"setparams"},
