@@ -39,11 +39,11 @@
       ]
     },
     {
-      "name": "quantity_event",
+      "name": "supply_event",
       "base": "",
       "fields": [
         {"name":"account",    "type":"name"},
-        {"name":"quantity",   "type":"asset"}
+        {"name":"supply",   "type":"asset"}
       ]
     },
     {
@@ -216,7 +216,7 @@
   ],
   "events": [
     {"name":"balance",  "type":"balance_event"},
-    {"name":"quantity",  "type":"quantity_event"}
+    {"name":"supply",  "type":"supply_event"}
   ],
   "actions": [
     {"name":"setparams",    "type":"setparams"},
