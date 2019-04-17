@@ -118,7 +118,7 @@ protected:
 
     struct errors: contract_error_messages {
         const string msg_exists            = amsg("This message already exists.");
-        const string unregistered_user_    = amsg("unregistered user: ");
+        const string no_vest_balance       = amsg("vesting balance doesn't exist for ");
         const string no_content            = amsg("Content doesn't exist.");
 
         const string delete_children       = amsg("You can't delete comment with child comments.");
@@ -275,7 +275,7 @@ BOOST_FIXTURE_TEST_CASE(create_message, golos_publication_tester) try {
 
     BOOST_CHECK_EQUAL(success(), post.create_msg({N(jackiechan), "permlink3"}, {N(brucelee), "permlink"}));
 
-    BOOST_CHECK_EQUAL(err.unregistered_user_ + "dan.larimer", post.create_msg({N(dan.larimer), "hi"}));
+    BOOST_CHECK_EQUAL(err.no_vest_balance + "dan.larimer", post.create_msg({N(dan.larimer), "hi"}));
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE(update_message, golos_publication_tester) try {

@@ -140,7 +140,7 @@ void publication::create_message(
     auto pool = pools.begin();   // TODO: Reverse iterators doesn't work correctly
     eosio_assert(pool != pools.end(), "publication::create_message: [pools] is empty");
     pool = --pools.end();
-    check_account(message_id.author, pool->state.funds.symbol);
+    check_acc_vest_balance(message_id.author, pool->state.funds.symbol);
     auto token_code = pool->state.funds.symbol.code();
     auto issuer = token::get_issuer(config::token_name, token_code);
     tables::limit_table lims(_self, _self.value);
@@ -161,7 +161,7 @@ void publication::create_message(
     for (auto& ben : beneficiaries) {
         validate_percent_not0(ben.weight, "beneficiary.weight");            // TODO: tests #617
         eosio::check(benefic_map.count(ben.account) == 0, "beneficiaries contain several entries for one account");
-        check_account(ben.account, pool->state.funds.symbol);
+        check_acc_vest_balance(ben.account, pool->state.funds.symbol);
         weights_sum += ben.weight;
         validate_percent_le(weights_sum, "weights_sum of beneficiaries");   // TODO: tests #617
         benefic_map[ben.account] = ben.weight;
@@ -346,6 +346,7 @@ int64_t publication::pay_curators(name author, uint64_t msgid, int64_t max_rewar
     auto idx = vs.get_index<"messageid"_n>();
     auto v = idx.lower_bound(msgid);
     while ((v != idx.end()) && (v->message_id == msgid)) {
+        check_acc_vest_balance(v->voter, tokensymbol);
         if((weights_sum > fixp_t(0)) && (max_rewards > 0)) {
             auto claim = int_cast(elai_t(max_rewards) * elaf_t(elap_t(FP(v->curatorsw)) / elap_t(weights_sum)));
             eosio_assert(claim <= unclaimed_rewards, "LOGIC ERROR! publication::pay_curators: claim > unclaimed_rewards");
@@ -412,6 +413,7 @@ void publication::close_message(structures::mssgid message_id) {
     auto pool = get_pool(pools, mssg_itr->date);
 
     eosio_assert(pool->state.msgs != 0, "LOGIC ERROR! publication::payrewards: pool.msgs is equal to zero");
+    check_acc_vest_balance(message_id.author, pool->state.funds.symbol);
     atmsp::machine<fixp_t> machine;
     fixp_t sharesfn = set_and_run(machine, pool->rules.mainfunc.code, {FP(mssg_itr->state.netshares)}, {{fixp_t(0), FP(pool->rules.mainfunc.maxarg)}});
 
@@ -592,7 +594,7 @@ void publication::set_vote(name voter, const structures::mssgid& message_id, int
 
     tables::reward_pools pools(_self, _self.value);
     auto pool = get_pool(pools, mssg_itr->date);
-    check_account(voter, pool->state.funds.symbol);
+    check_acc_vest_balance(voter, pool->state.funds.symbol);
     tables::vote_table vote_table(_self, message_id.author.value);
 
     auto cur_time = current_time();
@@ -857,9 +859,9 @@ fixp_t publication::get_delta(atmsp::machine<fixp_t>& machine, fixp_t old_val, f
     return fp_cast<fixp_t>(new_fn - old_fn, false);
 }
 
-void publication::check_account(name user, eosio::symbol tokensymbol) {
+void publication::check_acc_vest_balance(name user, eosio::symbol tokensymbol) {
     eosio_assert(golos::vesting::balance_exist(config::vesting_name, user, tokensymbol.code()),
-        ("unregistered user: " + name{user}.to_string()).c_str());
+        ("vesting balance doesn't exist for " + name{user}.to_string()).c_str());
 }
 
 void publication::set_params(std::vector<posting_params> params) {
