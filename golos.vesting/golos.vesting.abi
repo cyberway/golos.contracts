@@ -208,7 +208,7 @@
   ],
   "events": [
     {"name":"balance",  "type":"balance_event"},
-    {"name":"vesting",  "type":"asset"}
+    {"name":"stat",  "type":"asset"}
   ],
   "actions": [
     {"name":"setparams",    "type":"setparams"},
