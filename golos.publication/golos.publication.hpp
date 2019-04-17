@@ -61,6 +61,8 @@ private:
     fixp_t calc_available_rshares(name voter, int16_t weight, uint64_t cur_time, const structures::rewardpool& pool);
     void check_upvote_time(uint64_t cur_time, uint64_t mssg_date);
     bool check_permlink_correctness(std::string permlink);
+
+    std::string get_memo(const std::string &type, const structures::mssgid &message_id);
 };
 
 } // golos

@@ -322,7 +322,7 @@ void publication::payto(name user, eosio::asset quantity, enum_t mode, std::stri
         INLINE_ACTION_SENDER(token, payment) (config::token_name, {_self, config::active_name}, {_self, user, quantity, memo});
     else if(static_cast<payment_t>(mode) == payment_t::VESTING)
         INLINE_ACTION_SENDER(token, transfer) (config::token_name, {_self, config::active_name},
-            {_self, config::vesting_name, quantity, config::send_prefix + name{user}.to_string() + "; " + memo});
+            {_self, config::vesting_name, quantity, std::string(config::send_prefix + name{user}.to_string()  + "; " + memo)});
     else
         eosio_assert(false, "publication::payto: unknown kind of payment");
 }
@@ -453,12 +453,7 @@ void publication::close_message(structures::mssgid message_id) {
     auto curation_payout = int_cast(ELF(mssg_itr->curators_prcnt) * elai_t(payout));
 
     eosio_assert((curation_payout <= payout) && (curation_payout >= 0), "publication::payrewards: wrong curation_payout");
-
-    const auto memo_message_id = "message_id: { author:"        + name{message_id.author}.to_string()
-                                           + ", permlink:"      + message_id.permlink
-                                           + ", ref_block_num:" + std::to_string(message_id.ref_block_num) + "}";
-
-    auto unclaimed_rewards = pay_curators(message_id.author, mssg_itr->id, curation_payout, FP(mssg_itr->state.sumcuratorsw), state.funds.symbol, memo_message_id + ", type of payment: curators");
+    auto unclaimed_rewards = pay_curators(message_id.author, mssg_itr->id, curation_payout, FP(mssg_itr->state.sumcuratorsw), state.funds.symbol, get_memo("curators", message_id));
 
     eosio_assert(unclaimed_rewards >= 0, "publication::payrewards: unclaimed_rewards < 0");
 
@@ -469,15 +464,15 @@ void publication::close_message(structures::mssgid message_id) {
     for(auto& ben : mssg_itr->beneficiaries) {
         auto ben_payout = int_cast(elai_t(payout) * ELF(ben.deductprcnt));
         eosio_assert((0 <= ben_payout) && (ben_payout <= payout - ben_payout_sum), "LOGIC ERROR! publication::payrewards: wrong ben_payout value");
-        payto(ben.account, eosio::asset(ben_payout, state.funds.symbol), static_cast<enum_t>(payment_t::VESTING), memo_message_id + ", type of payment: benefeciary");
+        payto(ben.account, eosio::asset(ben_payout, state.funds.symbol), static_cast<enum_t>(payment_t::VESTING), get_memo("benefeciary", message_id));
         ben_payout_sum += ben_payout;
     }
     payout -= ben_payout_sum;
 
     auto token_payout = int_cast(elai_t(payout) * ELF(mssg_itr->tokenprop));
     eosio_assert(payout >= token_payout, "publication::payrewards: wrong token_payout value");
-    payto(message_id.author, eosio::asset(token_payout, state.funds.symbol), static_cast<enum_t>(payment_t::TOKEN), memo_message_id + ", type of payment: author");
-    payto(message_id.author, eosio::asset(payout - token_payout, state.funds.symbol), static_cast<enum_t>(payment_t::VESTING), memo_message_id + ", type of payment: author");
+    payto(message_id.author, eosio::asset(token_payout, state.funds.symbol), static_cast<enum_t>(payment_t::TOKEN), get_memo("author", message_id));
+    payto(message_id.author, eosio::asset(payout - token_payout, state.funds.symbol), static_cast<enum_t>(payment_t::VESTING), get_memo("author", message_id));
 
     tables::vote_table vote_table(_self, message_id.author.value);
     auto votetable_index = vote_table.get_index<"messageid"_n>();
@@ -849,6 +844,12 @@ bool publication::check_permlink_correctness(std::string permlink) {
         }
     }
     return true;
+}
+
+std::string publication::get_memo(const std::string &type, const structures::mssgid &message_id) {
+    return std::string(type + " reward for post " + name{message_id.author}.to_string() + ":"
+                                                  + message_id.permlink + ":"
+                                                  + std::to_string(message_id.ref_block_num));
 }
 
 base_t publication::get_checked_curators_prcnt(std::optional<uint16_t> curators_prcnt) {
