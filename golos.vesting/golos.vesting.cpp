@@ -65,7 +65,7 @@ void vesting::on_transfer(name from, name to, asset quantity, std::string memo) 
     asset converted = token_to_vesting(quantity, *vesting, -quantity.amount);
     table_vesting.modify(vesting, name(), [&](auto& item) {
         item.supply += converted;
-        send_supply_event(item.supply);
+        send_stat_event(item);
     });
     add_balance(recipient != name() ? recipient : from, converted, has_auth(to) ? to : from);
 }
@@ -84,7 +84,7 @@ void vesting::retire(asset quantity, name user) {
     sub_balance(user, quantity, true);
     table_vesting.modify(vesting, name(), [&](auto& item) {
         item.supply -= quantity;
-        send_supply_event(item.supply);
+        send_stat_event(item);
     });
 }
 
@@ -277,7 +277,7 @@ void vesting::create(symbol symbol, name notify_acc) {
     table_vesting.emplace(_self, [&](auto& item){
         item.supply = asset(0, symbol);
         item.notify_acc = notify_acc;
-        send_supply_event(item.supply);
+        send_stat_event(item);
     });
 }
 
@@ -328,7 +328,7 @@ void vesting::timeoutconv() {
                 auto converted = vesting_to_token(to_send, vesting, -correction);   // TODO: get_balance can throw #549
                 vestings.modify(vesting, name(), [&](auto& v) {
                     v.supply -= to_send;
-                    send_supply_event(v.supply);                    
+                    send_stat_event(v);                    
                 });
                 // TODO: payment action #549
                 INLINE_ACTION_SENDER(token, transfer)(config::token_name, {_self, config::active_name},
@@ -440,8 +440,8 @@ void vesting::send_account_event(name account, const struct account& balance) {
     eosio::event(_self, "balance"_n, std::make_tuple(account, balance)).send();
 }
 
-void vesting::send_supply_event(asset supply) {
-    eosio::event(_self, "supply"_n, supply).send();
+void vesting::send_stat_event(const vesting_stats& info) {
+    eosio::event(_self, "stat"_n, info.supply).send();
 }
 
 int64_t fix_precision(const asset from, const symbol to) {
