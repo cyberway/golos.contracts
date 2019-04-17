@@ -39,7 +39,7 @@
       ]
     },
     {
-      "name": "acc_and_quantity_event",
+      "name": "quantity_event",
       "base": "",
       "fields": [
         {"name":"account",    "type":"name"},
@@ -216,8 +216,7 @@
   ],
   "events": [
     {"name":"balance",  "type":"balance_event"},
-    {"name":"quantity",  "type":"asset"},
-    {"name":"accquantity",  "type":"acc_and_quantity_event"}
+    {"name":"quantity",  "type":"quantity_event"}
   ],
   "actions": [
     {"name":"setparams",    "type":"setparams"},
