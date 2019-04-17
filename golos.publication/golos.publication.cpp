@@ -900,7 +900,7 @@ void publication::calcrwrdwt(name account, int64_t mssg_id, base_t post_charge) 
             item.rewardweight = reward_weight;
         });
 
-        send_rewardweight_event(structures::mssgid{account, message_itr->permlink, message_itr->ref_block_num}, reward_weight);
+        send_rewardweight_event(structures::mssgid{account, message_itr->permlink, message_itr->ref_block_num}, int_cast(elai_t(config::_100percent) * ELF(reward_weight)));
     }
 }
 
