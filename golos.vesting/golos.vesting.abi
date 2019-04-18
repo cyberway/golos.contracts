@@ -183,7 +183,7 @@
        "name": "vesting_withdraw",
        "base": "",
        "fields": [
-          {"name":"intervals",        "type":"uint32"},
+          {"name":"intervals",        "type":"uint8"},
           {"name":"interval_seconds", "type":"uint32"}
        ]
     },

@@ -11,7 +11,7 @@ namespace golos {
 using namespace eosio;
 
 struct vesting_withdraw : parameter {
-    uint32_t intervals;         // TODO: this value is uint8 inside withdraw_object, we should either limit it here, or change type here or in object #553
+    uint8_t intervals;
     uint32_t interval_seconds;
 
     void validate() const override {
