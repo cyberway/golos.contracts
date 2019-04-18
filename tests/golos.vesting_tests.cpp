@@ -99,7 +99,7 @@ protected:
         const string cutoff = amsg("can't delegate, not enough power");
     } err;
 
-    const uint32_t withdraw_intervals = 13;
+    const uint8_t withdraw_intervals = 13;
     const uint32_t withdraw_interval_seconds = 120;
     const uint64_t vesting_min_amount = 10*1e3;
     const uint64_t delegation_min_amount = 5e6;

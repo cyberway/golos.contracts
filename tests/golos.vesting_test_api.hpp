@@ -152,7 +152,7 @@ struct golos_vesting_api: base_contract_api {
         return base_contract_api::get_struct(symbol.to_symbol_code().value, N(vestparams), N(vestparams), "vesting_state");
     }
 
-    string withdraw_param(uint32_t intervals, uint32_t interval_seconds) {
+    string withdraw_param(uint8_t intervals, uint32_t interval_seconds) {
         return string("['vesting_withdraw', {'intervals':'") + std::to_string(intervals) + "','interval_seconds':'" + std::to_string(interval_seconds) + "'}]";
     }
 
