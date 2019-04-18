@@ -16,14 +16,15 @@ public:
     golos_referral_tester()
         : golos_tester(cfg::referral_name)
         , _sym(3, "GLS")
+        , _sym_vest(6, "GLS")
         , post( {this, cfg::publish_name, _sym} )
-        , vest({this, cfg::vesting_name, _sym})
+        , vest({this, cfg::vesting_name, _sym_vest})
         , referral( {this, cfg::referral_name} )
         , token({this, cfg::token_name, _sym})
         , _users{N(sania), N(pasha), N(tania), N(vania), N(issuer)}
     {
         create_accounts({N(sania), N(pasha), N(tania), N(vania), N(issuer), _code,
-                        cfg::publish_name, cfg::token_name, cfg::emission_name, cfg::vesting_name, cfg::social_name });
+                        cfg::publish_name, cfg::token_name, cfg::emission_name, cfg::vesting_name, cfg::social_name, cfg::control_name });
         produce_blocks(2);
 
         install_contract(_code, contracts::referral_wasm(), contracts::referral_abi());
@@ -55,8 +56,9 @@ public:
         BOOST_CHECK_EQUAL(success(), post.set_limit("post bandwidth"));
         produce_blocks();
 
+        BOOST_CHECK_EQUAL(success(), vest.create_vesting(cfg::emission_name));
         for (auto& u : _users) {
-            BOOST_CHECK_EQUAL(success(), vest.open(u, _sym, u));
+            BOOST_CHECK_EQUAL(success(), vest.open(u));
         }
         produce_blocks();
 
@@ -76,6 +78,7 @@ public:
 
 protected:
     symbol _sym;
+    symbol _sym_vest;
     // TODO: make contract error messages more clear
     struct errors: contract_error_messages {
         const string referral_exist = amsg("A referral with the same name already exists");
