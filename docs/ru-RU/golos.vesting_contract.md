@@ -39,7 +39,7 @@ name: vesting_param,
 1) `vesting_withdraw` — содержит параметры, которые используется для вывода вестинга в токены (конвертирования, «понижения»). Имеет вид структуры:
 ```cpp
 struct vesting_withdraw : parameter {
-    uint32_t intervals;
+    uint8_t intervals;
     uint32_t interval_seconds;
 }
 ```
