@@ -618,7 +618,7 @@ void publication::set_vote(name voter, const structures::mssgid& message_id, int
     });
 
     auto time_delta = static_cast<int64_t>((cur_time - mssg_itr->date) / seconds(1).count());
-    auto curatorsw_factor =
+    elap_t curatorsw_factor =
         std::max(std::min(
         set_and_run(machine, pool->rules.timepenalty.code, {fp_cast<fixp_t>(time_delta, false)}, {{fixp_t(0), FP(pool->rules.timepenalty.maxarg)}}),
         fixp_t(1)), fixp_t(0));
@@ -646,7 +646,7 @@ void publication::set_vote(name voter, const structures::mssgid& message_id, int
         item.time = cur_time;
         item.count += 1;
         item.delegators = delegators;
-        item.curatorsw = (fixp_t(sumcuratorsw_delta * curatorsw_factor)).data();
+        item.curatorsw = (fp_cast<fixp_t>(elap_t(sumcuratorsw_delta) * curatorsw_factor)).data();
         item.rshares = rshares.data();
         send_votestate_event(voter, item, message_id.author, *mssg_itr);
     });
