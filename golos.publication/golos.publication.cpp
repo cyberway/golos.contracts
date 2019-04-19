@@ -287,11 +287,12 @@ void publication::delete_message(structures::mssgid message_id) {
 
     cancel_deferred((static_cast<uint128_t>(mssg_itr->id) << 64) | message_id.author.value);
 
+    auto remove_id = mssg_itr->id;
     message_index.erase(mssg_itr);
 
     auto votetable_index = vote_table.get_index<"messageid"_n>();
-    auto vote_itr = votetable_index.lower_bound(mssg_itr->id);
-    while ((vote_itr != votetable_index.end()) && (vote_itr->message_id == mssg_itr->id))
+    auto vote_itr = votetable_index.lower_bound(remove_id);
+    while ((vote_itr != votetable_index.end()) && (vote_itr->message_id == remove_id))
         vote_itr = votetable_index.erase(vote_itr);
 }
 
