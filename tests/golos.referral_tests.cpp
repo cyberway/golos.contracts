@@ -24,7 +24,8 @@ public:
         , _users{N(sania), N(pasha), N(tania), N(vania), N(issuer)}
     {
         create_accounts({N(sania), N(pasha), N(tania), N(vania), N(issuer), _code,
-                        cfg::publish_name, cfg::token_name, cfg::emission_name, cfg::vesting_name, cfg::social_name, cfg::control_name });
+                         cfg::publish_name, cfg::token_name, cfg::emission_name,
+                         cfg::vesting_name, cfg::social_name, cfg::control_name});
         produce_blocks(2);
 
         install_contract(_code, contracts::referral_wasm(), contracts::referral_abi());
@@ -44,7 +45,7 @@ public:
     }
 
     void init_params_posts() {
-        BOOST_CHECK_EQUAL(success(), token.create(cfg::emission_name, token.make_asset(1)));
+        BOOST_CHECK_EQUAL(success(), token.create(cfg::emission_name, token.make_asset(1), {cfg::vesting_name}));
         BOOST_CHECK_EQUAL(success(), token.open(cfg::publish_name, _sym, cfg::publish_name));
         produce_blocks();
 
