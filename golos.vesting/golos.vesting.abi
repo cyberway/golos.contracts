@@ -35,7 +35,8 @@
         {"name":"account",    "type":"name"},
         {"name":"vesting",    "type":"asset"},
         {"name":"delegated",  "type":"asset"},
-        {"name":"received",   "type":"asset"}
+        {"name":"received",   "type":"asset"},
+        {"name":"unlocked_limit", "type":"asset"}
       ]
     },
     {
@@ -207,7 +208,7 @@
   ],
   "events": [
     {"name":"balance",  "type":"balance_event"},
-    {"name":"vesting",  "type":"asset"}
+    {"name":"stat",  "type":"asset"}
   ],
   "actions": [
     {"name":"setparams",    "type":"setparams"},
