@@ -234,7 +234,7 @@ public:
             s.set_balance_token(user, 0.0);
         } else {
             auto cur = *accs.begin();
-            s.set_balance_token(user, static_cast<double>(cur["payments"].as<asset>().to_real()));
+            s.set_balance_token(user, static_cast<double>(cur["balance"].as<asset>().to_real()));
         }
     }
 
