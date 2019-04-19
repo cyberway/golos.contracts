@@ -19,3 +19,7 @@ if [[ "${IMAGETAG}" == "develop" ]]; then
     docker push cyberway/golos.contracts:latest
 fi
 
+if [[ "${IMAGETAG}" == "prod-io" ]]; then
+    docker tag cyberway/golos.contracts:${IMAGETAG} cyberway/golos.contracts:prod-io
+    docker push cyberway/golos.contracts:prod-io
+fi
