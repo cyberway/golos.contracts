@@ -15,7 +15,7 @@ static const auto _token_precision = 3;
 static const auto _vesting_precision = 6;
 static const auto _token_sym = symbol(_token_precision, _token_name);
 static const auto _vesting_sym = symbol(_vesting_precision, _token_name);
-static const auto _vesting_sym_e = symbol(8, _token_name);
+static const auto _vesting_sym_e = symbol(_vesting_precision + 1, _token_name);
 static const auto default_vesting_amount = 100;
 
 class golos_vesting_tester : public golos_tester {
@@ -103,7 +103,7 @@ protected:
         const string delegation_return_time    = amsg("delegation return_time <= 0");
 
         const string cutoff = amsg("can't delegate, not enough power");
-        const string not_found_token_vesting = amsg("not fount token vesting");
+        const string not_found_token_vesting = amsg("not found token vesting");
         const string mismatch_of_accuracy = amsg("mismatch of accuracy of vesting");
     } err;
 
