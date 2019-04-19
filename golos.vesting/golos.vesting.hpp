@@ -170,7 +170,7 @@ private:
     void sub_balance(name owner, asset value, bool retire_mode = false);
     void add_balance(name owner, asset value, name ram_payer);
     void send_account_event(name account, const struct account& balance);
-    void send_vesting_event(const vesting_stats& info);
+    void send_stat_event(const vesting_stats& info);
 
     const asset convert_to_token(const asset& vesting, const vesting_stats& vinfo) const;
     const asset convert_to_vesting(const asset& token, const vesting_stats& vinfo) const;
