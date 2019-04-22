@@ -508,7 +508,7 @@ fixp_t publication::calc_available_rshares(name voter, int16_t weight, uint64_t 
     int64_t eff_vesting = golos::vesting::get_account_effective_vesting(config::vesting_name, voter, token_code).amount;
     use_charge(lims, structures::limitparams::VOTE, token::get_issuer(config::token_name, token_code),
         voter, eff_vesting, token_code, false, abs_w);
-    fixp_t abs_rshares = fp_cast<fixp_t>(eff_vesting, false) * abs_w;
+    fixp_t abs_rshares = FP(eff_vesting) * abs_w;
     return (weight < 0) ? -abs_rshares : abs_rshares;
 }
 
@@ -602,7 +602,7 @@ void publication::set_vote(name voter, const structures::mssgid& message_id, int
          send_poolstate_event(item);
     });
     eosio_assert(WP(pool->state.rsharesfn) >= 0, "pool state rsharesfn overflow");
-
+    
     auto sumcuratorsw_delta = get_delta(machine, FP(mssg_itr->state.voteshares), FP(msg_new_state.voteshares), pool->rules.curationfunc);
     msg_new_state.sumcuratorsw = (FP(mssg_itr->state.sumcuratorsw) + sumcuratorsw_delta).data();
     message_index.modify(mssg_itr, _self, [&](auto &item) {

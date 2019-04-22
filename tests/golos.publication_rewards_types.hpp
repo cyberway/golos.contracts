@@ -68,15 +68,16 @@ struct aprox_val_t {
     double val;
     double delta;
     bool operator ==(const aprox_val_t& rhs) const {
+        static constexpr double eps = 1.e-5;
         BOOST_REQUIRE_MESSAGE((rhs.delta >= 0.0 && delta >= 0.0) || (rhs.delta <= 0.0 && delta <= 0.0),
             "aprox_val_t operator ==(): wrong comparison mode");
-        if ((rhs.val > 0.0 && val < 0.0) || (rhs.val < 0.0 && val > 0.0))
+        if ((rhs.val > eps && val < -eps) || (rhs.val < -eps && val > eps))
             return false;
         double d = std::min(double(std::abs(rhs.delta)), std::abs(double(delta)));
         if (delta < 0.0) {
             double a = std::min(std::abs(rhs.val), std::abs(val));
             double b = std::max(std::abs(rhs.val), std::abs(val));
-            return b < 1.e-5 || (a / b) > (1.0 - d);
+            return b < eps || (a / b) > (1.0 - d);
         } else {
             return (val - d) <= rhs.val && rhs.val <= (val + d);
         }

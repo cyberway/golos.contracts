@@ -503,12 +503,12 @@ public:
                             m.votes.emplace_back(vote{
                                 voter,
                                 std::min(get_prop(weight), 1.0),
-                                _state.balances[voter].vestamount,
+                                static_cast<double>(FP(_state.balances[voter].vestamount)),
                                 static_cast<double>(current_time)
                             });
                         else {
                             vote_itr->revote_diff = std::min(get_prop(weight), 1.0) - vote_itr->weight;
-                            vote_itr->revote_vesting = _state.balances[voter].vestamount;
+                            vote_itr->revote_vesting = static_cast<double>(FP(_state.balances[voter].vestamount));
                         }
                         return ret;
                     }
@@ -543,7 +543,7 @@ BOOST_FIXTURE_TEST_CASE(basic_tests, reward_calcs_tester) try {
     BOOST_CHECK_EQUAL(success(), setrules({"x^2", static_cast<base_t>(sqrt(bignum))}, {"sqrt(x)", bignum}, {"1", bignum},
         [](double x){ return x * x; }, [](double x){ return sqrt(x); }, [](double x){ return 1.0; }));
     check();
-
+    
     BOOST_TEST_MESSAGE("--- create_message: bob4");
     auto ref_block_num_bob4 = control->head_block_header().block_num();
     BOOST_CHECK_EQUAL(success(), create_message({N(bob4), "permlink", ref_block_num_bob4}));
