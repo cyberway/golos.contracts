@@ -47,15 +47,11 @@ public:
         BOOST_CHECK_EQUAL(success(), token.issue(cfg::emission_name, N(pasha), token.make_asset(issue2), "issue tokens pasha"));
         produce_block();
 
-        BOOST_CHECK_EQUAL(err.not_found_token_vesting, vest.open(N(sania)));
-
         BOOST_CHECK_EQUAL(success(), vest.create_vesting(cfg::emission_name));
         BOOST_CHECK_EQUAL(success(), vest.open(N(sania)));
         BOOST_CHECK_EQUAL(success(), vest.open(N(pasha)));
         BOOST_CHECK_EQUAL(success(), vest.open(N(tania)));
         BOOST_CHECK_EQUAL(success(), vest.open(N(vania)));
-
-        BOOST_CHECK_EQUAL(err.mismatch_of_accuracy, vest.open(N(sania), _vesting_sym_e, N(sania)));
         produce_block();
 
         BOOST_CHECK_EQUAL(success(), token.transfer(N(sania), cfg::vesting_name, token.make_asset(buy1), "buy vesting"));
@@ -73,7 +69,6 @@ public:
     }
 
 protected:
-
     // TODO: make contract error messages more clear
     struct errors: contract_error_messages {
         const string key_not_found    = amsg("unable to find key");
@@ -202,8 +197,12 @@ BOOST_FIXTURE_TEST_CASE(create_vesting, golos_vesting_tester) try {
     BOOST_CHECK_EQUAL(err.issuer_not_autority, vest.create_vesting(N(sania)));
     // TODO: test issuers list
 
+    BOOST_CHECK_EQUAL(err.not_found_token_vesting, vest.open(N(sania)));
+
     BOOST_TEST_MESSAGE("--- succeed in normal conditions");
     BOOST_CHECK_EQUAL(success(), vest.create_vesting(issuer));
+
+    BOOST_CHECK_EQUAL(err.mismatch_of_accuracy, vest.open(N(sania), _vesting_sym_e, N(sania)));
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE(buy_vesting, golos_vesting_tester) try {

@@ -166,8 +166,7 @@
           {"name":"delegator",        "type":"name"},
           {"name":"payout_strategy",  "type":"uint8"}
        ]
-    }
-
+    },
     {
        "name": "vesting_state",
        "base": "",

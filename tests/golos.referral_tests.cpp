@@ -32,6 +32,16 @@ public:
         install_contract(cfg::token_name, contracts::token_wasm(), contracts::token_abi());
         install_contract(cfg::vesting_name, contracts::vesting_wasm(), contracts::vesting_abi());
         install_contract(cfg::publish_name, contracts::posting_wasm(), contracts::posting_abi());
+
+        BOOST_CHECK_EQUAL(success(), token.create(cfg::emission_name, token.make_asset(10000), {cfg::vesting_name}));
+        BOOST_CHECK_EQUAL(success(), token.open(cfg::publish_name, _sym, cfg::publish_name));
+        produce_blocks();
+
+        BOOST_CHECK_EQUAL(success(), vest.create_vesting(cfg::emission_name));
+        for (auto& u : _users) {
+            BOOST_CHECK_EQUAL(success(), vest.open(u));
+        }
+        produce_blocks();
     }
 
     void init_params() {
@@ -45,22 +55,12 @@ public:
     }
 
     void init_params_posts() {
-        BOOST_CHECK_EQUAL(success(), token.create(cfg::emission_name, token.make_asset(1), {cfg::vesting_name}));
-        BOOST_CHECK_EQUAL(success(), token.open(cfg::publish_name, _sym, cfg::publish_name));
-        produce_blocks();
-
         funcparams fn{"0", 1};
         BOOST_CHECK_EQUAL(success(), post.set_rules(fn ,fn ,fn , 0));
         BOOST_CHECK_EQUAL(success(), post.set_limit("post"));
         BOOST_CHECK_EQUAL(success(), post.set_limit("comment"));
         BOOST_CHECK_EQUAL(success(), post.set_limit("vote"));
         BOOST_CHECK_EQUAL(success(), post.set_limit("post bandwidth"));
-        produce_blocks();
-
-        BOOST_CHECK_EQUAL(success(), vest.create_vesting(cfg::emission_name));
-        for (auto& u : _users) {
-            BOOST_CHECK_EQUAL(success(), vest.open(u));
-        }
         produce_blocks();
 
         auto vote_changes = post.get_str_vote_changes(post.max_vote_changes);
@@ -193,7 +193,6 @@ BOOST_FIXTURE_TEST_CASE(transfer_tests, golos_referral_tester) try {
     BOOST_CHECK_EQUAL(referral.get_referral(N(vania))["referral"].as<name>(), N(vania));
 
     BOOST_TEST_MESSAGE("--- issue tokens for users");
-    BOOST_CHECK_EQUAL(success(), token.create(cfg::emission_name, token.make_asset(10000)));
     BOOST_CHECK_EQUAL(success(), token.issue(cfg::emission_name, N(vania), token.make_asset(300), "issue 300 tokens for vania"));
     BOOST_CHECK_EQUAL(success(), token.issue(cfg::emission_name, N(tania), token.make_asset(300), "issue 300 tokens for tania"));
 
