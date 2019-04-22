@@ -334,7 +334,7 @@ int64_t publication::pay_curators(name author, uint64_t msgid, int64_t max_rewar
     auto v = idx.lower_bound(msgid);
     while ((v != idx.end()) && (v->message_id == msgid)) {
         if((weights_sum > fixp_t(0)) && (max_rewards > 0)) {
-            auto claim = int_cast(elai_t(max_rewards) * elaf_t(FP(v->curatorsw) / weights_sum));
+            auto claim = int_cast(elai_t(max_rewards) * elaf_t(elap_t(FP(v->curatorsw)) / elap_t(weights_sum)));
             eosio_assert(claim <= unclaimed_rewards, "LOGIC ERROR! publication::pay_curators: claim > unclaimed_rewards");
             if(claim > 0) {
                 unclaimed_rewards -= claim;
@@ -398,7 +398,7 @@ void publication::close_message(structures::mssgid message_id) {
     auto state = pool->state;
     int64_t payout = 0;
     if(state.msgs == 1) {
-        payout = state.funds.amount;
+        payout = state.funds.amount; //if we have the only message in the pool, the author receives a reward anyway
         eosio_assert(state.rshares == mssg_itr->state.netshares, "LOGIC ERROR! publication::payrewards: pool->rshares != mssg_itr->netshares for last message");
         eosio_assert(state.rsharesfn == sharesfn.data(), "LOGIC ERROR! publication::payrewards: pool->rsharesfn != sharesfn.data() for last message");
         state.funds.amount = 0;
@@ -547,7 +547,7 @@ void publication::set_vote(name voter, const structures::mssgid& message_id, int
         if(rshares > FP(vote_itr->rshares))
             check_upvote_time(cur_time, mssg_itr->date);
 
-        fixp_t new_mssg_rshares = (FP(mssg_itr->state.netshares) - FP(vote_itr->rshares)) + rshares;
+        fixp_t new_mssg_rshares = add_cut(FP(mssg_itr->state.netshares) - FP(vote_itr->rshares), rshares);
         auto rsharesfn_delta = get_delta(machine, FP(mssg_itr->state.netshares), new_mssg_rshares, pool->rules.mainfunc);
 
         pools.modify(*pool, _self, [&](auto &item) {
@@ -601,7 +601,6 @@ void publication::set_vote(name voter, const structures::mssgid& message_id, int
          item.state.rsharesfn = (WP(item.state.rsharesfn) + wdfp_t(rsharesfn_delta)).data();
          send_poolstate_event(item);
     });
-    eosio_assert(WP(pool->state.rshares) >= 0, "pool state rshares overflow");
     eosio_assert(WP(pool->state.rsharesfn) >= 0, "pool state rsharesfn overflow");
 
     auto sumcuratorsw_delta = get_delta(machine, FP(mssg_itr->state.voteshares), FP(msg_new_state.voteshares), pool->rules.curationfunc);
