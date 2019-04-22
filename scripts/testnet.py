@@ -8,7 +8,7 @@ params = {
 cleosCmd = "{cleos_path} --url {testnet_url} ".format(**params)
 
 class args:
-    symbol = "GLS"
+    symbol = "GOLOS"
     token_precision = 3
     vesting_precision = 6
     token = '%d,%s' % (token_precision, symbol)
