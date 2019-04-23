@@ -556,12 +556,13 @@ void publication::set_vote(name voter, const structures::mssgid& message_id, int
             send_poolstate_event(item);
         });
         
-        auto sharesfn = elap_t(get_calc_sharesfn(
+        fixp_t sharesfn = get_calc_sharesfn(
                     pool->rules.mainfunc.code,
                     FP(new_mssg_rshares.data()),
                     FP(pool->rules.mainfunc.maxarg)
-                ));
-        auto total_rsharesfn = elap_t(WP(pool->state.rsharesfn));
+                );
+        wdfp_t total_rsharesfn = WP(pool->state.rsharesfn);
+        narrow_down(sharesfn, total_rsharesfn);
 
         message_index.modify(mssg_itr, name(), [&]( auto &item ) {
             item.state.netshares = new_mssg_rshares.data();
@@ -569,8 +570,8 @@ void publication::set_vote(name voter, const structures::mssgid& message_id, int
             send_poststate_event(
                 message_id.author,
                 item,
-                static_cast<base_t>(sharesfn.data()),
-                static_cast<base_t>(total_rsharesfn.data())
+                static_cast<base_t>(elap_t(sharesfn).data()),
+                static_cast<base_t>(elap_t(total_rsharesfn).data())
             );
         });
 
@@ -611,20 +612,21 @@ void publication::set_vote(name voter, const structures::mssgid& message_id, int
     auto sumcuratorsw_delta = get_delta(machine, FP(mssg_itr->state.voteshares), FP(msg_new_state.voteshares), pool->rules.curationfunc);
     msg_new_state.sumcuratorsw = (FP(mssg_itr->state.sumcuratorsw) + sumcuratorsw_delta).data();
 
-    auto sharesfn = elap_t(get_calc_sharesfn(
+    fixp_t sharesfn = get_calc_sharesfn(
                 pool->rules.mainfunc.code,
                 FP(msg_new_state.netshares),
                 FP(pool->rules.mainfunc.maxarg)
-            ));
-    auto total_rsharesfn = elap_t(WP(pool->state.rsharesfn));
+                );
+    wdfp_t total_rsharesfn = WP(pool->state.rsharesfn);
+    narrow_down(sharesfn, total_rsharesfn);
 
     message_index.modify(mssg_itr, _self, [&](auto &item) {
         item.state = msg_new_state;
         send_poststate_event(
             message_id.author,
             item,
-            static_cast<base_t>(sharesfn.data()),
-            static_cast<base_t>(total_rsharesfn.data())
+            static_cast<base_t>(elap_t(sharesfn).data()),
+            static_cast<base_t>(elap_t(total_rsharesfn).data())
         );
     });
 
