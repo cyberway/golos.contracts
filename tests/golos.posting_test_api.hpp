@@ -48,7 +48,7 @@ struct golos_posting_api: base_contract_api {
         std::string title = "headermssg",
         std::string body = "bodymssg",
         std::string language = "languagemssg",
-        std::vector<tags> tags = {{"tag"}},
+        std::vector<std::string> tags = {"tag"},
         std::string json_metadata = "jsonmetadata",
         optional<uint16_t> curators_prcnt = optional<uint16_t>() 
     ) {
@@ -73,7 +73,7 @@ struct golos_posting_api: base_contract_api {
         std::string title,
         std::string body,
         std::string language,
-        std::vector<tags> tags,
+        std::vector<std::string> tags,
         std::string json_metadata
     ) {
         return push(N(updatemssg), message_id.author, args()
