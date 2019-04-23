@@ -247,7 +247,8 @@ def stepInstallContracts():
             retry(args.cleos + 'set contract %s %s' % (acc.name, args.contracts_dir + acc.contract))
 
 def stepCreateTokens():
-    retry(args.cleos + 'push action cyber.token create ' + jsonArg(["gls.issuer", intToToken(10000000000*10000)]) + ' -p cyber.token')
+    if not args.golos_genesis:
+        retry(args.cleos + 'push action cyber.token create ' + jsonArg(["gls.issuer", intToToken(10000000000*10000)]) + ' -p cyber.token')
     #totalAllocation = allocateFunds(0, len(accounts))
     #totalAllocation = 10000000*10000
     #retry(args.cleos + 'push action cyber.token issue ' + jsonArg(["gls.publish", intToToken(totalAllocation), "memo"]) + ' -p gls.publish')
