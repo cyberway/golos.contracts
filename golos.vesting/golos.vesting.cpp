@@ -365,6 +365,10 @@ void vesting::timeoutrdel() {
 
 void vesting::open(name owner, symbol symbol, name ram_payer) {
     require_auth(ram_payer);
+    vesting_table stat(_self, _self.value);
+    auto token_stat = stat.require_find(symbol.code().raw(), "not found token vesting");
+    eosio_assert(token_stat->supply.symbol.precision() == symbol.precision(), "mismatch of accuracy of vesting");
+
     account_table accounts(_self, owner.value);
     auto it = accounts.find(symbol.code().raw());
     eosio_assert(it == accounts.end(), "already exists");

@@ -15,6 +15,7 @@ static const auto _token_precision = 3;
 static const auto _vesting_precision = 6;
 static const auto _token_sym = symbol(_token_precision, _token_name);
 static const auto _vesting_sym = symbol(_vesting_precision, _token_name);
+static const auto _vesting_sym_e = symbol(_vesting_precision + 1, _token_name);
 static const auto default_vesting_amount = 100;
 
 class golos_vesting_tester : public golos_tester {
@@ -44,14 +45,15 @@ public:
         BOOST_CHECK_EQUAL(success(), token.create(cfg::emission_name, token.make_asset(supply), {cfg::charge_name, cfg::publish_name}));
         BOOST_CHECK_EQUAL(success(), token.issue(cfg::emission_name, N(sania), token.make_asset(issue1), "issue tokens sania"));
         BOOST_CHECK_EQUAL(success(), token.issue(cfg::emission_name, N(pasha), token.make_asset(issue2), "issue tokens pasha"));
+        produce_block();
 
+        BOOST_CHECK_EQUAL(success(), vest.create_vesting(cfg::emission_name));
         BOOST_CHECK_EQUAL(success(), vest.open(N(sania)));
         BOOST_CHECK_EQUAL(success(), vest.open(N(pasha)));
         BOOST_CHECK_EQUAL(success(), vest.open(N(tania)));
         BOOST_CHECK_EQUAL(success(), vest.open(N(vania)));
         produce_block();
 
-        BOOST_CHECK_EQUAL(success(), vest.create_vesting(cfg::emission_name));
         BOOST_CHECK_EQUAL(success(), token.transfer(N(sania), cfg::vesting_name, token.make_asset(buy1), "buy vesting"));
         BOOST_CHECK_EQUAL(success(), token.transfer(N(pasha), cfg::vesting_name, token.make_asset(buy2), "buy vesting"));
         produce_block();
@@ -67,7 +69,6 @@ public:
     }
 
 protected:
-
     // TODO: make contract error messages more clear
     struct errors: contract_error_messages {
         const string key_not_found    = amsg("unable to find key");
@@ -97,6 +98,8 @@ protected:
         const string delegation_return_time    = amsg("delegation return_time <= 0");
 
         const string cutoff = amsg("can't delegate, not enough power");
+        const string not_found_token_vesting = amsg("not found token vesting");
+        const string mismatch_of_accuracy = amsg("mismatch of accuracy of vesting");
     } err;
 
     const uint8_t withdraw_intervals = 13;
@@ -194,8 +197,12 @@ BOOST_FIXTURE_TEST_CASE(create_vesting, golos_vesting_tester) try {
     BOOST_CHECK_EQUAL(err.issuer_not_autority, vest.create_vesting(N(sania)));
     // TODO: test issuers list
 
+    BOOST_CHECK_EQUAL(err.not_found_token_vesting, vest.open(N(sania)));
+
     BOOST_TEST_MESSAGE("--- succeed in normal conditions");
     BOOST_CHECK_EQUAL(success(), vest.create_vesting(issuer));
+
+    BOOST_CHECK_EQUAL(err.mismatch_of_accuracy, vest.open(N(sania), _vesting_sym_e, N(sania)));
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE(buy_vesting, golos_vesting_tester) try {
