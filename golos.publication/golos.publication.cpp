@@ -182,7 +182,7 @@ void publication::create_message(structures::mssgid message_id,
     eosio_assert((benefic_map.size() <= max_beneficiaries_param.max_beneficiaries), "publication::create_message: benafic_map.size() > MAX_BENEFICIARIES");
 
     auto cur_time = current_time();
-//    atmsp::machine<fixp_t> machine;
+    atmsp::machine<fixp_t> machine;
 
     eosio_assert(cur_time >= pool->created, "publication::create_message: cur_time < pool.created");
     eosio_assert(pool->state.msgs < std::numeric_limits<structures::counter_t>::max(), "publication::create_message: pool->msgs == max_counter_val");
@@ -518,7 +518,7 @@ void publication::set_vote(name voter, const structures::mssgid& message_id, int
     auto get_calc_sharesfn = [&](auto mainfunc_code, auto netshares, auto mainfunc_maxarg) {
         atmsp::machine<fixp_t> machine;
         return set_and_run(machine, mainfunc_code, {netshares}, {{fixp_t(0), mainfunc_maxarg}}).data();
-    };    
+    };
 
     posting_params_singleton cfg(_self, _self.value);
     const auto &max_vote_changes_param = cfg.get().max_vote_changes_param;
