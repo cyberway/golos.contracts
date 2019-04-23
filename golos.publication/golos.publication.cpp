@@ -96,7 +96,7 @@ void publication::create_message(structures::mssgid message_id,
                               int64_t tokenprop, bool vestpayment,
                               std::string headermssg,
                               std::string bodymssg, std::string languagemssg,
-                              std::vector<structures::tag> tags,
+                              std::vector<std::string> tags,
                               std::string jsonmetadata,
                               std::optional<uint16_t> curators_prcnt = std::nullopt) {
     require_auth(message_id.author);
@@ -244,7 +244,7 @@ void publication::create_message(structures::mssgid message_id,
 
 void publication::update_message(structures::mssgid message_id,
                               std::string headermssg, std::string bodymssg,
-                              std::string languagemssg, std::vector<structures::tag> tags,
+                              std::string languagemssg, std::vector<std::string> tags,
                               std::string jsonmetadata) {
     require_auth(message_id.author);
     tables::message_table message_table(_self, message_id.author.value);

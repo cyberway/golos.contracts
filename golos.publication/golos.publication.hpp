@@ -16,10 +16,10 @@ public:
     void on_transfer(name from, name to, asset quantity, std::string memo = "");
     void create_message(structures::mssgid message_id, structures::mssgid parent_id, uint64_t parent_recid,
         std::vector<structures::beneficiary> beneficiaries, int64_t tokenprop, bool vestpayment,
-        std::string headermssg, std::string bodymssg, std::string languagemssg, std::vector<structures::tag> tags,
+        std::string headermssg, std::string bodymssg, std::string languagemssg, std::vector<std::string> tags,
         std::string jsonmetadata, std::optional<uint16_t> curators_prcnt);
     void update_message(structures::mssgid message_id, std::string headermssg, std::string bodymssg,
-                        std::string languagemssg, std::vector<structures::tag> tags, std::string jsonmetadata);
+                        std::string languagemssg, std::vector<std::string> tags, std::string jsonmetadata);
     void delete_message(structures::mssgid message_id);
     void upvote(name voter, structures::mssgid message_id, uint16_t weight);
     void downvote(name voter, structures::mssgid message_id, uint16_t weight);
