@@ -182,7 +182,7 @@ void publication::create_message(structures::mssgid message_id,
     eosio_assert((benefic_map.size() <= max_beneficiaries_param.max_beneficiaries), "publication::create_message: benafic_map.size() > MAX_BENEFICIARIES");
 
     auto cur_time = current_time();
-    atmsp::machine<fixp_t> machine;
+//    atmsp::machine<fixp_t> machine;
 
     eosio_assert(cur_time >= pool->created, "publication::create_message: cur_time < pool.created");
     eosio_assert(pool->state.msgs < std::numeric_limits<structures::counter_t>::max(), "publication::create_message: pool->msgs == max_counter_val");
@@ -518,7 +518,7 @@ void publication::set_vote(name voter, const structures::mssgid& message_id, int
     auto get_calc_sharesfn = [&](auto mainfunc_code, auto netshares, auto mainfunc_maxarg) {
         atmsp::machine<fixp_t> machine;
         return set_and_run(machine, mainfunc_code, {netshares}, {{fixp_t(0), mainfunc_maxarg}}).data();
-    };
+    };    
 
     posting_params_singleton cfg(_self, _self.value);
     const auto &max_vote_changes_param = cfg.get().max_vote_changes_param;
@@ -556,17 +556,21 @@ void publication::set_vote(name voter, const structures::mssgid& message_id, int
             send_poolstate_event(item);
         });
         
+        auto sharesfn = elap_t(get_calc_sharesfn(
+                    pool->rules.mainfunc.code,
+                    FP(new_mssg_rshares.data()),
+                    FP(pool->rules.mainfunc.maxarg)
+                ));
+        auto total_rsharesfn = elap_t(WP(pool->state.rsharesfn));
+
         message_index.modify(mssg_itr, name(), [&]( auto &item ) {
             item.state.netshares = new_mssg_rshares.data();
             item.state.sumcuratorsw = (FP(item.state.sumcuratorsw) - FP(vote_itr->curatorsw)).data();
             send_poststate_event(
-                message_id.author, 
-                item, 
-                get_calc_sharesfn(
-                    pool->rules.mainfunc.code, 
-                    FP(new_mssg_rshares.data()), 
-                    FP(pool->rules.mainfunc.maxarg)
-                )
+                message_id.author,
+                item,
+                static_cast<base_t>(sharesfn.data()),
+                static_cast<base_t>(total_rsharesfn.data())
             );
         });
 
@@ -606,16 +610,21 @@ void publication::set_vote(name voter, const structures::mssgid& message_id, int
 
     auto sumcuratorsw_delta = get_delta(machine, FP(mssg_itr->state.voteshares), FP(msg_new_state.voteshares), pool->rules.curationfunc);
     msg_new_state.sumcuratorsw = (FP(mssg_itr->state.sumcuratorsw) + sumcuratorsw_delta).data();
+
+    auto sharesfn = elap_t(get_calc_sharesfn(
+                pool->rules.mainfunc.code,
+                FP(msg_new_state.netshares),
+                FP(pool->rules.mainfunc.maxarg)
+            ));
+    auto total_rsharesfn = elap_t(WP(pool->state.rsharesfn));
+
     message_index.modify(mssg_itr, _self, [&](auto &item) {
         item.state = msg_new_state;
         send_poststate_event(
             message_id.author,
             item,
-            get_calc_sharesfn(
-                pool->rules.mainfunc.code, 
-                FP(msg_new_state.netshares),
-                FP(pool->rules.mainfunc.maxarg)
-            )
+            static_cast<base_t>(sharesfn.data()),
+            static_cast<base_t>(total_rsharesfn.data())
         );
     });
 
@@ -767,9 +776,9 @@ void publication::send_poolerase_event(const structures::rewardpool& pool) {
     eosio::event(_self, "poolerase"_n, pool.created).send();
 }
 
-void publication::send_poststate_event(name author, const structures::message& post, base_t sharesfn) {
+void publication::send_poststate_event(name author, const structures::message& post, base_t sharesfn, base_t total_rsahresfn) {
     structures::post_event data{author, post.permlink, post.state.netshares, post.state.voteshares,
-        post.state.sumcuratorsw, sharesfn};
+        post.state.sumcuratorsw, sharesfn, total_rsahresfn};
     eosio::event(_self, "poststate"_n, data).send();
 }
 
