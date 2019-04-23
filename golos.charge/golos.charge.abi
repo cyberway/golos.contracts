@@ -145,6 +145,44 @@
     ]
   },
   {
+    "name": "useandnotify",
+    "base": "",
+    "fields": [
+        {
+            "name": "user",
+            "type": "name"
+        },
+        {
+            "name": "token_code",
+            "type": "symbol_code"
+        },
+        {
+            "name": "charge_id",
+            "type": "uint8"
+        },
+        {
+            "name": "price_arg",
+            "type": "int64"
+        },
+        {
+            "name": "id",
+            "type": "uint64"
+        },
+        {
+            "name": "code",
+            "type": "name"
+        },
+        {
+            "name": "action_name",
+            "type": "name"
+        },
+        {
+            "name": "cutoff",
+            "type": "int64"
+        }
+    ]
+  },
+  {
     "name": "removestored",
     "base": "",
     "fields": [
@@ -286,6 +324,14 @@
   {
     "name": "use",
     "type": "use"
+  },
+  {
+    "name": "usenotifygt",
+    "type": "useandnotify"
+  },
+  {
+    "name": "usenotifylt",
+    "type": "useandnotify"
   },
   {
     "name": "useandstore",

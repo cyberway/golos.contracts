@@ -33,8 +33,10 @@ public:
         return restorers_table.find(symbol(token_code, charge_id).raw()) != restorers_table.end();
     }
     [[eosio::action]] void use(name user, symbol_code token_code, uint8_t charge_id, int64_t price, int64_t cutoff, int64_t vesting_price);
-    [[eosio::action]] void useandstore(name user, symbol_code token_code, uint8_t charge_id, int64_t stamp_id, int64_t price);
+    [[eosio::action]] void usenotifygt(name user, symbol_code token_code, uint8_t charge_id, int64_t price_arg, int64_t id, name code, name action_name, int64_t cutoff);
+    [[eosio::action]] void usenotifylt(name user, symbol_code token_code, uint8_t charge_id, int64_t price_arg, int64_t id, name code, name action_name, int64_t cutoff);
     [[eosio::action]] void removestored(name user, symbol_code token_code, uint8_t charge_id, int64_t stamp_id);
+    [[eosio::action]] void useandstore(name user, symbol_code token_code, uint8_t charge_id, int64_t stamp_id, int64_t price_arg);
     
     [[eosio::action]] void setrestorer(symbol_code token_code, uint8_t charge_id, std::string func_str, 
         int64_t max_prev, int64_t max_vesting, int64_t max_elapsed);
@@ -42,6 +44,9 @@ public:
     void on_transfer(name from, name to, asset quantity, std::string memo);
     //TODO:? user can restore a charge by transferring some amount to this contract (it will send these funds to the issuer)
     //a price is specified in a settings, charge_id is in a memo (default charge_id for empty memo)
+    
+    template<typename Lambda>
+    void consume_and_notify(name user, symbol_code token_code, uint8_t charge_id, int64_t price_arg, int64_t id, name code, name action_name, int64_t cutoff, name issuer, Lambda &&compare);
 
 private:
     struct balance {

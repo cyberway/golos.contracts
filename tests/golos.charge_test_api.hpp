@@ -10,6 +10,8 @@ struct golos_charge_api: base_contract_api {
     
     void link_invoice_permission(name issuer) {
         _tester->link_authority(issuer, _code, golos::config::invoice_name, N(use));
+        _tester->link_authority(issuer, _code, golos::config::invoice_name, N(usenotifygt));
+        _tester->link_authority(issuer, _code, golos::config::invoice_name, N(usenotifylt));
         _tester->link_authority(issuer, _code, golos::config::invoice_name, N(useandstore));
         _tester->link_authority(issuer, _code, golos::config::invoice_name, N(removestored));
     }

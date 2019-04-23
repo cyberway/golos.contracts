@@ -63,7 +63,7 @@ struct update_auth_period: parameter {
 
     void validate() const override {
         eosio_assert(period > 0, "update auth period can't be 0");
-    } 
+    }
 };
 
 } // param
@@ -75,7 +75,7 @@ using msig_perms_param = param_wrapper<param::msig_permissions,3>;
 using witness_votes_param = param_wrapper<param::witness_votes,1>;
 using update_auth_param = param_wrapper<param::update_auth_period,1>;
 
-using ctrl_param = std::variant<ctrl_token_param, multisig_acc_param, max_witnesses_param, 
+using ctrl_param = std::variant<ctrl_token_param, multisig_acc_param, max_witnesses_param,
                                 msig_perms_param, witness_votes_param, update_auth_param>;
 
 struct [[eosio::table]] ctrl_state {
