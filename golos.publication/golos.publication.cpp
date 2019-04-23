@@ -346,14 +346,16 @@ int64_t publication::pay_curators(name author, uint64_t msgid, int64_t max_rewar
     auto idx = vs.get_index<"messageid"_n>();
     auto v = idx.lower_bound(msgid);
     while ((v != idx.end()) && (v->message_id == msgid)) {
-        check_acc_vest_balance(v->voter, tokensymbol);
         if((weights_sum > fixp_t(0)) && (max_rewards > 0)) {
             auto claim = int_cast(elai_t(max_rewards) * elaf_t(elap_t(FP(v->curatorsw)) / elap_t(weights_sum)));
             eosio_assert(claim <= unclaimed_rewards, "LOGIC ERROR! publication::pay_curators: claim > unclaimed_rewards");
             if(claim > 0) {
                 unclaimed_rewards -= claim;
                 claim -= pay_delegators(claim, v->voter, tokensymbol, v->delegators);
-                payto(v->voter, eosio::asset(claim, tokensymbol), static_cast<enum_t>(payment_t::VESTING), memo);
+                if (golos::vesting::balance_exist(config::vesting_name, v->voter, tokensymbol.code()))
+                    payto(v->voter, eosio::asset(claim, tokensymbol), static_cast<enum_t>(payment_t::VESTING), memo);
+                else
+                    INLINE_ACTION_SENDER(token, payment) (config::token_name, {v->voter, config::active_name}, {v->voter, config::vesting_name, eosio::asset(claim, tokensymbol), ""});
             }
         }
         //v = idx.erase(v);
@@ -516,18 +518,24 @@ void publication::paymssgrwrd(structures::mssgid message_id) {
     
     int64_t ben_payout_sum = 0;
     for (auto& ben: mssg_itr->beneficiaries) {
-        auto ben_payout = cyber::safe_pct(payout.amount, ben.weight);
-        eosio_assert((0 <= ben_payout) && (ben_payout <= payout.amount - ben_payout_sum), "LOGIC ERROR! publication::payrewards: wrong ben_payout value");
-        payto(ben.account, eosio::asset(ben_payout, payout.symbol), static_cast<enum_t>(payment_t::VESTING), get_memo("benefeciary", message_id));
+        auto ben_payout = cyber::safe_pct(payout, ben.weight);
+        eosio_assert((0 <= ben_payout) && (ben_payout <= payout - ben_payout_sum), "LOGIC ERROR! publication::payrewards: wrong ben_payout value");
+        if (golos::vesting::balance_exist(config::vesting_name, ben.account, state.funds.symbol.code()))
+            payto(ben.account, eosio::asset(ben_payout, state.funds.symbol), static_cast<enum_t>(payment_t::VESTING), get_memo("benefeciary", message_id));
+        else
+            INLINE_ACTION_SENDER(token, payment) (config::token_name, {ben.account, config::active_name}, {ben.account, config::vesting_name, eosio::asset(ben_payout, state.funds.symbol), ""});
         ben_payout_sum += ben_payout;
     }
     payout.amount -= ben_payout_sum;
 
     elaf_t token_prop(elai_t(mssg_itr->tokenprop) / elai_t(config::_100percent));
-    auto token_payout = int_cast(elai_t(payout.amount) * token_prop);
-    eosio_assert(payout.amount >= token_payout, "publication::payrewards: wrong token_payout value");
-    payto(message_id.author, eosio::asset(token_payout, payout.symbol), static_cast<enum_t>(payment_t::TOKEN), get_memo("author", message_id));
-    payto(message_id.author, eosio::asset(payout.amount - token_payout, payout.symbol), static_cast<enum_t>(payment_t::VESTING), get_memo("author", message_id));
+    auto token_payout = int_cast(elai_t(payout) * token_prop);
+    eosio_assert(payout >= token_payout, "publication::payrewards: wrong token_payout value");
+    if (golos::vesting::balance_exist(config::vesting_name, message_id.author, state.funds.symbol.code())) {
+        payto(message_id.author, eosio::asset(token_payout, state.funds.symbol), static_cast<enum_t>(payment_t::TOKEN), get_memo("author", message_id));
+        payto(message_id.author, eosio::asset(payout - token_payout, state.funds.symbol), static_cast<enum_t>(payment_t::VESTING), get_memo("author", message_id));
+    } else
+        INLINE_ACTION_SENDER(token, payment) (config::token_name, {message_id.author, config::active_name}, {message_id.author, config::vesting_name, eosio::asset(payout, state.funds.symbol), ""});
 
     tables::vote_table vote_table(_self, message_id.author.value);
     auto votetable_index = vote_table.get_index<"messageid"_n>();
@@ -904,10 +912,14 @@ int64_t publication::pay_delegators(int64_t claim, name voter,
     int64_t dlg_payout_sum = 0;
     for (auto delegate_obj : delegate_list) {
         auto dlg_payout = claim * delegate_obj.interest_rate / config::_100percent;
-        INLINE_ACTION_SENDER(golos::vesting, paydelegator) (config::vesting_name,
-            {config::vesting_name, config::active_name},
-            {voter, eosio::asset(dlg_payout, tokensymbol), delegate_obj.delegator,
-            delegate_obj.payout_strategy});
+        if (golos::vesting::balance_exist(config::vesting_name, delegate_obj.delegator, tokensymbol.code()))
+            INLINE_ACTION_SENDER(golos::vesting, paydelegator) (config::vesting_name,
+                {config::vesting_name, config::active_name},
+                {voter, eosio::asset(dlg_payout, tokensymbol), delegate_obj.delegator,
+                delegate_obj.payout_strategy});
+        else
+            INLINE_ACTION_SENDER(token, payment) (config::token_name, {delegate_obj.delegator, config::active_name}, {delegate_obj.delegator, config::vesting_name, eosio::asset(dlg_payout, tokensymbol), ""});
+        
         dlg_payout_sum += dlg_payout;
     }
     return dlg_payout_sum;
