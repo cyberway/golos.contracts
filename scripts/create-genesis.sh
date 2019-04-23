@@ -6,7 +6,7 @@ set -e
 : ${DEST:="genesis-data-temp"}
 : ${GOLOS_STATE:="golos.dat"}
 
-INITIAL_TIMESTAMP=$(date +"%FT%T.%3N" -d12)
+INITIAL_TIMESTAMP=$(date +"%FT%T.%3N" -d0)
 GOLOS_IMAGE=cyberway/golos.contracts:$TAG
 GOLOS=golos.genesis
 
