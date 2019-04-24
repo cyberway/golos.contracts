@@ -45,7 +45,7 @@ private:
 
     void send_poolstate_event(const structures::rewardpool& pool);
     void send_poolerase_event(const structures::rewardpool& pool);
-    void send_poststate_event(name author, const structures::message& post, base_t sharesfn, base_t total_rsahresfn);
+    void send_poststate_event(name author, const structures::message& post, base_t sharesfn);
     void send_votestate_event(name voter, const structures::voteinfo& vote, name author, const structures::message& post);
     void send_rewardweight_event(structures::mssgid message_id, base_t weight);
 
