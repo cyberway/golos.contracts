@@ -18,14 +18,6 @@ struct beneficiary {
     int64_t deductprcnt; //elaf_t
 };
 
-struct tag {
-    tag() = default;
-
-    std::string tag_name;
-
-    EOSLIB_SERIALIZE(tag, (tag_name))
-};
-
 struct mssgid {
     mssgid() = default;
 

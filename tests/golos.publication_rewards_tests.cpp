@@ -433,7 +433,7 @@ public:
         std::string title = "headermssg",
         std::string body = "bodymssg",
         std::string language = "languagemssg",
-        std::vector<tags> tags = {{"tag"}},
+        std::vector<std::string> tags = {"tag"},
         std::string json_metadata = "jsonmetadata",
         double curators_prcnt = 7100 
     ) {

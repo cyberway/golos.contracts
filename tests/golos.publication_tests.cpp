@@ -20,12 +20,7 @@ namespace structures {
         account_name account;
         int64_t deductprcnt;
     };
-
-    struct tags {
-        std::string tag;
-    };
 }
-FC_REFLECT(structures::tags, (tag))
 FC_REFLECT(structures::beneficiaries, (account)(deductprcnt))
 
 class golos_publication_tester : public golos_tester {

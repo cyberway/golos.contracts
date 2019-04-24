@@ -179,10 +179,6 @@ struct beneficiary {
     int64_t deductprcnt;
 };
 
-struct tags {
-    std::string tag;
-};
-
 struct message {
     mssgid key;
     double tokenprop;
@@ -374,5 +370,4 @@ struct state {
 }} // eosio::testing
 
 FC_REFLECT(eosio::testing::beneficiary, (account)(deductprcnt))
-FC_REFLECT(eosio::testing::tags, (tag))
 FC_REFLECT(eosio::testing::mssgid, (author)(permlink)(ref_block_num))

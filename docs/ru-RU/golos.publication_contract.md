@@ -72,7 +72,7 @@ void createmssg(
     std::string 	headermssg,
     std::string 	bodymssg,
     std::string l	anguagemssg,
-    std::vector<structures::tag> tags,
+    std::vector<std::string> tags,
     std::string 	jsonmetadata
 );
 ```
@@ -108,7 +108,7 @@ void updatemssg(
     std::string 	headermssg,
     std::string 	bodymssg, 
     std::string 	languagemssg,
-    std::vector<structures::tag> tags,
+    std::vector<std::string> tags,
     std::string 	jsonmetadata
 );
 ```

@@ -128,16 +128,6 @@
     ]
   },
   {
-    "name": "tags",
-    "base": "",
-    "fields": [
-      {
-        "name": "tag",
-        "type": "string"
-      }
-    ]
-  },
-  {
     "name": "delegate_voter",
     "base": "",
     "fields": [
@@ -277,7 +267,7 @@
       },
       {
         "name": "tags",
-        "type": "tags[]"
+        "type": "string[]"
       },
       {
         "name": "jsonmetadata",
@@ -311,7 +301,7 @@
       },
       {
         "name": "tags",
-        "type": "tags[]"
+        "type": "string[]"
       },
       {
         "name": "jsonmetadata",
