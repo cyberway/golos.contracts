@@ -561,8 +561,6 @@ void publication::set_vote(name voter, const structures::mssgid& message_id, int
                     FP(new_mssg_rshares.data()),
                     FP(pool->rules.mainfunc.maxarg)
                 );
-        wdfp_t total_rsharesfn = WP(pool->state.rsharesfn);
-        narrow_down(sharesfn, total_rsharesfn);
 
         message_index.modify(mssg_itr, name(), [&]( auto &item ) {
             item.state.netshares = new_mssg_rshares.data();
@@ -570,8 +568,7 @@ void publication::set_vote(name voter, const structures::mssgid& message_id, int
             send_poststate_event(
                 message_id.author,
                 item,
-                static_cast<base_t>(elap_t(sharesfn).data()),
-                static_cast<base_t>(elap_t(total_rsharesfn).data())
+                static_cast<base_t>(elap_t(sharesfn).data())
             );
         });
 
@@ -617,16 +614,13 @@ void publication::set_vote(name voter, const structures::mssgid& message_id, int
                 FP(msg_new_state.netshares),
                 FP(pool->rules.mainfunc.maxarg)
                 );
-    wdfp_t total_rsharesfn = WP(pool->state.rsharesfn);
-    narrow_down(sharesfn, total_rsharesfn);
 
     message_index.modify(mssg_itr, _self, [&](auto &item) {
         item.state = msg_new_state;
         send_poststate_event(
             message_id.author,
             item,
-            static_cast<base_t>(elap_t(sharesfn).data()),
-            static_cast<base_t>(elap_t(total_rsharesfn).data())
+            static_cast<base_t>(elap_t(sharesfn).data())
         );
     });
 
