@@ -127,6 +127,9 @@ struct poolstate {
     ratio_t get_ratio() const {
         eosio_assert(funds.amount >= 0, "poolstate::get_ratio: funds < 0");
         auto r = WP(rshares);
+        if (r < 0) {
+            return std::numeric_limits<ratio_t>::max();
+        }
         auto f = fixp_t(funds.amount);
         narrow_down(f, r);
         return r > 0 ? elap_t(f) / elap_t(r) : std::numeric_limits<ratio_t>::max();

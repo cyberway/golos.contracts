@@ -503,12 +503,12 @@ public:
                             m.votes.emplace_back(vote{
                                 voter,
                                 std::min(get_prop(weight), 1.0),
-                                _state.balances[voter].vestamount,
+                                static_cast<double>(FP(_state.balances[voter].vestamount)),
                                 static_cast<double>(current_time)
                             });
                         else {
                             vote_itr->revote_diff = std::min(get_prop(weight), 1.0) - vote_itr->weight;
-                            vote_itr->revote_vesting = _state.balances[voter].vestamount;
+                            vote_itr->revote_vesting = static_cast<double>(FP(_state.balances[voter].vestamount));
                         }
                         return ret;
                     }
@@ -543,7 +543,24 @@ BOOST_FIXTURE_TEST_CASE(basic_tests, reward_calcs_tester) try {
     BOOST_CHECK_EQUAL(success(), setrules({"x^2", static_cast<base_t>(sqrt(bignum))}, {"sqrt(x)", bignum}, {"1", bignum},
         [](double x){ return x * x; }, [](double x){ return sqrt(x); }, [](double x){ return 1.0; }));
     check();
-
+    
+    BOOST_TEST_MESSAGE("--- create_message: bob4");
+    auto ref_block_num_bob4 = control->head_block_header().block_num();
+    BOOST_CHECK_EQUAL(success(), create_message({N(bob4), "permlink", ref_block_num_bob4}));
+    check();
+    BOOST_TEST_MESSAGE("--- bob5 voted (-50%) against bob4");
+    BOOST_CHECK_EQUAL(success(), addvote(N(bob5), {N(bob4), "permlink", ref_block_num_bob4}, -5000));
+    check();
+    BOOST_TEST_MESSAGE("--- bob4 voted (100%) for bob4");
+    BOOST_CHECK_EQUAL(success(), addvote(N(bob4), {N(bob4), "permlink", ref_block_num_bob4}, 10000));
+    check();
+    BOOST_TEST_MESSAGE("--- bob3 voted (100%) for bob4");
+    BOOST_CHECK_EQUAL(success(), addvote(N(bob3), {N(bob4), "permlink", ref_block_num_bob4}, 10000));
+    check();
+    BOOST_TEST_MESSAGE("--- bob3 revoted (-100%) against bob4");
+    BOOST_CHECK_EQUAL(success(), addvote(N(bob3), {N(bob4), "permlink", ref_block_num_bob4}, -10000));
+    check();
+    
     BOOST_TEST_MESSAGE("--- create_message: alice");
     auto ref_block_num_alice = control->head_block_header().block_num();
     BOOST_CHECK_EQUAL(success(), create_message({N(alice), "permlink", ref_block_num_alice}));
@@ -777,6 +794,59 @@ BOOST_FIXTURE_TEST_CASE(rshares_sum_overflow_test, reward_calcs_tester) try {
         BOOST_CHECK_EQUAL(success(), addvote(_users[i], {_users[i], "permlink", ref_block_num}, 10000));
         check();
     }
+} FC_LOG_AND_RETHROW()
+
+BOOST_FIXTURE_TEST_CASE(message_netshares_overflow_test, reward_calcs_tester) try {
+    BOOST_TEST_MESSAGE("rshares_sum_overflow_test");
+    auto bignum = 500000000000;
+    auto fixp_max = std::numeric_limits<fixp_t>::max();
+    init(bignum, fixp_max / 5);
+    produce_blocks();
+
+    BOOST_TEST_MESSAGE("--- setrules");
+    BOOST_CHECK_EQUAL(success(), setrules({"x", fixp_max}, {"sqrt(x)", fixp_max}, {"1", fixp_max},
+        [](double x){ return x; }, [](double x){ return sqrt(x); }, [](double x){ return 1.0; }));
+    check();
+
+    BOOST_TEST_MESSAGE("--- add_funds_to_forum");
+    BOOST_CHECK_EQUAL(success(), add_funds_to_forum(50000));
+    check();
+    
+    BOOST_TEST_MESSAGE("--- create_message: alice");
+    auto ref_block_num = control->head_block_header().block_num();
+    mssgid message_id{N(alice), "permlink", ref_block_num};
+    BOOST_CHECK_EQUAL(success(), create_message(message_id));
+    check();
+    auto pool_id = post.get_reward_pools().rbegin()->operator[]("created").as<uint64_t>();
+
+    for (size_t i = 0; i < 10; i++) {
+        BOOST_TEST_MESSAGE("--- " << name{_users[i]}.to_string() << " voted for alice");
+        BOOST_CHECK_EQUAL(success(), addvote(_users[i], message_id, 2000));
+        produce_block();
+        fill_from_tables(_res);
+        BOOST_CHECK_EQUAL(_res[statemap::get_message_str(message_id) + "netshares"].val, _res.get_pool(pool_id).rshares);
+        BOOST_CHECK_GT(_res[statemap::get_message_str(message_id) + "netshares"].val, 0);
+        BOOST_CHECK_GT( _res.get_pool(pool_id).rsharesfn, 0);   
+    }
+    for (size_t i = 0; i < 10; i++) {
+        BOOST_TEST_MESSAGE("--- " << name{_users[i]}.to_string() << " revoted for alice");
+        BOOST_CHECK_EQUAL(success(), addvote(_users[i], message_id, 4000));
+        produce_block();
+        fill_from_tables(_res);
+        BOOST_CHECK_EQUAL(_res[statemap::get_message_str(message_id) + "netshares"].val, _res.get_pool(pool_id).rshares);
+        BOOST_CHECK_GT(_res[statemap::get_message_str(message_id) + "netshares"].val, 0);
+        BOOST_CHECK_GT( _res.get_pool(pool_id).rsharesfn, 0); 
+         
+    }
+    for (size_t i = 10; i < 15; i++) {
+        BOOST_TEST_MESSAGE("--- " << name{_users[i]}.to_string() << " voted against alice");
+        BOOST_CHECK_EQUAL(success(), addvote(_users[i], message_id, -10000));
+        produce_block();
+        fill_from_tables(_res);
+        BOOST_CHECK_EQUAL(_res[statemap::get_message_str(message_id) + "netshares"].val, _res.get_pool(pool_id).rshares);
+        BOOST_CHECK_GE( _res.get_pool(pool_id).rsharesfn, 0);  
+    }
+    
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE(golos_curation_test, reward_calcs_tester) try {
