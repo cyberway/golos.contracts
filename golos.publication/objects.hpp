@@ -163,7 +163,6 @@ struct post_event {
     base_t sumcuratorsw = 0;
 
     base_t sharesfn;
-    base_t total_rsahresfn;
 };
 
 struct vote_event {
