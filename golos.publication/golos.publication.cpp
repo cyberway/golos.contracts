@@ -556,20 +556,18 @@ void publication::set_vote(name voter, const structures::mssgid& message_id, int
             send_poolstate_event(item);
         });
         
-        fixp_t sharesfn = get_calc_sharesfn(
-                    pool->rules.mainfunc.code,
-                    FP(new_mssg_rshares.data()),
-                    FP(pool->rules.mainfunc.maxarg)
-                );
-
         message_index.modify(mssg_itr, name(), [&]( auto &item ) {
             item.state.netshares = new_mssg_rshares.data();
             item.state.sumcuratorsw = (FP(item.state.sumcuratorsw) - FP(vote_itr->curatorsw)).data();
             send_poststate_event(
-                message_id.author,
-                item,
-                static_cast<base_t>(elap_t(sharesfn).data())
-            );
+                        message_id.author,
+                        item,
+                        get_calc_sharesfn(
+                            pool->rules.mainfunc.code,
+                            FP(new_mssg_rshares.data()),
+                            FP(pool->rules.mainfunc.maxarg)
+                            )
+                        );
         });
 
         votetable_index.modify(vote_itr, voter, [&]( auto &item ) {
@@ -609,19 +607,17 @@ void publication::set_vote(name voter, const structures::mssgid& message_id, int
     auto sumcuratorsw_delta = get_delta(machine, FP(mssg_itr->state.voteshares), FP(msg_new_state.voteshares), pool->rules.curationfunc);
     msg_new_state.sumcuratorsw = (FP(mssg_itr->state.sumcuratorsw) + sumcuratorsw_delta).data();
 
-    fixp_t sharesfn = get_calc_sharesfn(
-                pool->rules.mainfunc.code,
-                FP(msg_new_state.netshares),
-                FP(pool->rules.mainfunc.maxarg)
-                );
-
     message_index.modify(mssg_itr, _self, [&](auto &item) {
         item.state = msg_new_state;
         send_poststate_event(
-            message_id.author,
-            item,
-            static_cast<base_t>(elap_t(sharesfn).data())
-        );
+                    message_id.author,
+                    item,
+                    get_calc_sharesfn(
+                        pool->rules.mainfunc.code,
+                        FP(msg_new_state.netshares),
+                        FP(pool->rules.mainfunc.maxarg)
+                        )
+                    );
     });
 
     auto time_delta = static_cast<int64_t>((cur_time - mssg_itr->date) / seconds(1).count());
@@ -772,9 +768,9 @@ void publication::send_poolerase_event(const structures::rewardpool& pool) {
     eosio::event(_self, "poolerase"_n, pool.created).send();
 }
 
-void publication::send_poststate_event(name author, const structures::message& post, base_t sharesfn, base_t total_rsahresfn) {
-    structures::post_event data{author, post.permlink, post.state.netshares, post.state.voteshares,
-        post.state.sumcuratorsw, sharesfn, total_rsahresfn};
+void publication::send_poststate_event(name author, const structures::message& post, fixp_t sharesfn) {
+    structures::post_event data{ author, post.permlink, post.state.netshares, post.state.voteshares,
+        post.state.sumcuratorsw, static_cast<wide_t>(sharesfn) };
     eosio::event(_self, "poststate"_n, data).send();
 }
 
