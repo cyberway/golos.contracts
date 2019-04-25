@@ -769,7 +769,7 @@ void publication::set_rules(const funcparams& mainfunc, const funcparams& curati
 }
 
 void publication::send_poolstate_event(const structures::rewardpool& pool) {
-    structures::pool_event data{pool.created, pool.state.msgs, pool.state.funds, pool.state.rshares};
+    structures::pool_event data{pool.created, pool.state.msgs, pool.state.funds, pool.state.rshares, pool.state.rsharesfn};
     eosio::event(_self, "poolstate"_n, data).send();
 }
 
@@ -777,9 +777,9 @@ void publication::send_poolerase_event(const structures::rewardpool& pool) {
     eosio::event(_self, "poolerase"_n, pool.created).send();
 }
 
-void publication::send_poststate_event(name author, const structures::message& post, base_t sharesfn) {
-    structures::post_event data{author, post.permlink, post.state.netshares, post.state.voteshares,
-        post.state.sumcuratorsw, sharesfn};
+void publication::send_poststate_event(name author, const structures::message& post, fixp_t sharesfn) {
+    structures::post_event data{ author, post.permlink, post.state.netshares, post.state.voteshares,
+        post.state.sumcuratorsw, static_cast<base_t>(sharesfn) };
     eosio::event(_self, "poststate"_n, data).send();
 }
 
