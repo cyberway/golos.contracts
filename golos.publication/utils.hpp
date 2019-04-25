@@ -25,15 +25,20 @@ fixp_t add_cut(fixp_t lhs, fixp_t rhs) {
     return fp_cast<fixp_t>(elap_t(lhs) + elap_t(rhs), false);
 }
 
-elaf_t get_limit_prop(int64_t arg) {
-    eosio_assert(arg >= 0, "get_limit_prop: arg < 0");
-    const int64_t p100 = config::_100percent;
-    return elaf_t(elai_t(std::min(arg, p100)) / elai_t(p100));
-}
-
 fixp_t get_prop(int64_t arg) {
     return fp_cast<fixp_t>(elai_t(arg) / elai_t(config::_100percent));
 }
+
+void validate_percent(uint32_t percent, std::string arg_name = "percent") {
+    eosio::check(0 <= percent && percent <= config::_100percent, arg_name + " must be between 0% and 100% (0-10000)");
+}
+void validate_percent_not0(uint32_t percent, std::string arg_name = "percent") {
+    eosio::check(0 < percent && percent <= config::_100percent, arg_name + " must be between 0.01% and 100% (1-10000)");
+}
+void validate_percent_le(uint32_t percent, std::string arg_name = "percent") {
+    eosio::check(percent <= config::_100percent, arg_name + " must not be greater than 100% (10000)");
+}
+
 
 void check_positive_monotonic(atmsp::machine<fixp_t>& machine, fixp_t max_arg, const std::string& name, bool inc) {
     fixp_t prev_res = machine.run({max_arg});

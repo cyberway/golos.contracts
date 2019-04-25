@@ -16,6 +16,12 @@
     },{
       "new_type_name": "counter_t",
       "type": "uint64"
+    },{
+      "new_type_name": "percent_t",
+      "type": "uint16"
+    },{
+      "new_type_name": "signed_percent_t",
+      "type": "int16"
     }
   ],
   "variants": [{
@@ -122,8 +128,8 @@
         "type": "name"
       },
       {
-        "name": "deductprcnt",
-        "type": "base_t"
+        "name": "weight",
+        "type": "percent_t"
       }
     ]
   },
@@ -141,7 +147,7 @@
       },
       {
         "name": "interest_rate",
-        "type": "uint16"
+        "type": "percent_t"
       },
       {
         "name": "payout_strategy",
@@ -197,7 +203,7 @@
       },
       {
         "name": "tokenprop",
-        "type": "base_t"
+        "type": "percent_t"
       },
       {
         "name": "beneficiaries",
@@ -205,7 +211,7 @@
       },
       {
         "name": "rewardweight",
-        "type": "base_t"
+        "type": "percent_t"
       },
       {
         "name": "state",
@@ -213,7 +219,7 @@
       },
       {
         "name": "childcount",
-        "type": "uint64"
+        "type": "uint32"
       },
       {
         "name": "level",
@@ -221,7 +227,7 @@
       },
       {
         "name": "curators_prcnt",
-        "type": "base_t"
+        "type": "percent_t"
       }
     ]
   },
@@ -247,7 +253,7 @@
       },
       {
         "name": "tokenprop",
-        "type": "int64"
+        "type": "percent_t"
       },
       {
         "name": "vestpayment",
@@ -333,7 +339,7 @@
       },
       {
         "name": "weight",
-        "type": "uint16"
+        "type": "percent_t"
       }
     ]
   },
@@ -369,7 +375,7 @@
       },
       {
         "name": "weight",
-        "type": "int16"
+        "type": "signed_percent_t"
       },
       {
         "name": "time",
@@ -377,7 +383,7 @@
       },
       {
         "name": "count",
-        "type": "int64"
+        "type": "uint8"
       },
       {
         "name": "delegators",
@@ -425,7 +431,7 @@
         },
         {
             "name": "maxtokenprop",
-            "type": "base_t"
+            "type": "percent_t"
         }
     ]
   },
@@ -561,7 +567,7 @@
         },
         {
             "name": "maxtokenprop",
-            "type": "int64"
+            "type": "percent_t"
         },
         {
             "name": "tokensymbol",
@@ -639,11 +645,11 @@
     "fields": [
       {
         "name": "min_curators_prcnt",
-        "type": "uint16"
+        "type": "percent_t"
       },
       {
         "name": "max_curators_prcnt",
-        "type": "uint16"
+        "type": "percent_t"
       }
     ]
   },
@@ -719,7 +725,7 @@
         },
         {
             "name": "curators_prcnt",
-            "type": "uint16"
+            "type": "percent_t"
         }
     ]
   },
@@ -767,7 +773,7 @@
         {"name": "voter", "type": "name"},
         {"name": "author", "type": "name"},
         {"name": "permlink", "type": "string"},
-        {"name": "weight", "type": "int16"},
+        {"name": "weight", "type": "signed_percent_t"},
         {"name": "curatorsw", "type": "base_t"},
         {"name": "rshares", "type": "base_t"}
     ]
@@ -787,7 +793,7 @@
     "base": "",
     "fields": [
         {"name": "message_id", "type": "mssgid"},
-        {"name": "rewardweight", "type": "base_t"}
+        {"name": "rewardweight", "type": "percent_t"}
     ]
   }
   ],

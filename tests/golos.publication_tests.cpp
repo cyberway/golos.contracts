@@ -15,13 +15,6 @@ using namespace fc;
 using mvo = fc::mutable_variant_object;
 namespace cfg = golos::config;
 
-namespace structures {
-    struct beneficiaries {
-        account_name account;
-        int64_t deductprcnt;
-    };
-}
-FC_REFLECT(structures::beneficiaries, (account)(deductprcnt))
 
 class golos_publication_tester : public golos_tester {
 protected:
@@ -58,7 +51,7 @@ public:
         prepare_balances();
         BOOST_CHECK_EQUAL(success(), token.open(_code, _sym, _code));
         funcparams fn{"0", 1};
-        BOOST_CHECK_EQUAL(success(), post.set_rules(fn ,fn ,fn , 0));
+        BOOST_CHECK_EQUAL(success(), post.set_rules(fn ,fn ,fn , 5000));
         BOOST_CHECK_EQUAL(success(), post.set_limit("post"));
         BOOST_CHECK_EQUAL(success(), post.set_limit("comment"));
         BOOST_CHECK_EQUAL(success(), post.set_limit("vote"));
@@ -85,18 +78,18 @@ public:
         BOOST_CHECK_EQUAL(a["id"].as<uint64_t>(), b["id"].as<uint64_t>());
         BOOST_CHECK_EQUAL(a["parentacc"].as<account_name>(), b["parentacc"].as<account_name>());
         BOOST_CHECK_EQUAL(a["parent_id"].as<uint64_t>(), b["parent_id"].as<uint64_t>());
-        BOOST_CHECK_EQUAL(a["tokenprop"].as<uint64_t>(), b["tokenprop"].as<uint64_t>());
+        BOOST_CHECK_EQUAL(a["tokenprop"].as<uint16_t>(), b["tokenprop"].as<uint16_t>());
         auto a_ben = a["beneficiaries"];
         auto b_ben = b["beneficiaries"];
         BOOST_CHECK_EQUAL(a_ben.size(), b_ben.size());
         for (size_t i = 0, l = a_ben.size(); i < l; i++) {
             CHECK_EQUAL_OBJECTS(a_ben[i], b_ben[i]);
         }
-        BOOST_CHECK_EQUAL(a["rewardweight"].as<uint64_t>(), b["rewardweight"].as<uint64_t>());
+        BOOST_CHECK_EQUAL(a["rewardweight"].as<uint16_t>(), b["rewardweight"].as<uint16_t>());
         CHECK_EQUAL_OBJECTS(a["state"], b["state"]);
         BOOST_CHECK_EQUAL(a["childcount"].as<uint64_t>(), b["childcount"].as<uint64_t>());
         BOOST_CHECK_EQUAL(a["level"].as<uint16_t>(), b["level"].as<uint16_t>());
-        BOOST_CHECK_EQUAL(a["curators_prcnt"].as<base_t>(), b["curators_prcnt"].as<base_t>());
+        BOOST_CHECK_EQUAL(a["curators_prcnt"].as<uint16_t>(), b["curators_prcnt"].as<uint16_t>());
     }
 
     void check_equal_content(const variant& a, const variant& b) {
@@ -119,17 +112,17 @@ protected:
         ("id", 1)
         ("parentacc", "")
         ("parent_id", 0)
-        ("tokenprop", 0)
+        ("tokenprop", 5000)
         ("beneficiaries", variants({}
             // mvo()
             // ("account", "golos.pub")
-            // ("deductprcnt", static_cast<base_t>(elaf_t(elai_t(777) / elai_t(10000)).data()))}
+            // ("weight", 777)
         ))
-        ("rewardweight", 4611686018427387904ull)    // TODO: fix
+        ("rewardweight", cfg::_100percent)  // TODO: test that Golos rules (charge restorer) works as expected #617
         ("state", mvo()("netshares",0)("voteshares",0)("sumcuratorsw",0))
         ("childcount", 0)
         ("level", 0)
-        ("curators_prcnt", static_cast<base_t>(elaf_t(elai_t(1000)/elai_t(cfg::_100percent)).data()));
+        ("curators_prcnt", 1000);
 
     struct errors: contract_error_messages {
         const string msg_exists            = amsg("This message already exists.");
@@ -157,14 +150,19 @@ protected:
 
         const string parent_no_message     = amsg("Parent message doesn't exist");
 
-        const string wrong_min_cur_prcnt = 
+        const string wrong_min_cur_prcnt =
             amsg("Min curators percent must be between 0% and 100% (0-10000).");
-        const string max_less_min_cur_prcnt = 
+        const string max_less_min_cur_prcnt =
             amsg("Min curators percent must be less than max curators percent or equal.");
         const string wrong_max_cur_prcnt = amsg("Max curators percent must be less than 100 or equal.");
         const string no_cur_percent = amsg("Curators percent can be changed only before voting.");
         const string cur_prcnt_less_min = amsg("Curators percent is less than min curators percent.");
         const string cur_prcnt_greater_max = amsg("Curators percent is greater than max curators percent.");
+
+        string invalid_percent(string arg = "percent") const {
+            return amsg(arg + " must be between 0% and 100% (0-10000)");
+        }
+        const string gt_maxtokenprop = amsg("tokenprop must not be greater than pool.rules.maxtokenprop");
     } err;
 };
 
@@ -173,9 +171,9 @@ BOOST_AUTO_TEST_SUITE(golos_publication_tests)
 
 BOOST_FIXTURE_TEST_CASE(set_params, golos_publication_tester) try {
     BOOST_TEST_MESSAGE("Test posting parameters");
-    
+
     produce_block();
-    
+
     BOOST_TEST_MESSAGE("--- check that global params not exist");
     BOOST_TEST_CHECK(post.get_params().is_null());
 
@@ -202,21 +200,56 @@ BOOST_FIXTURE_TEST_CASE(set_params, golos_publication_tester) try {
 
     params = "[" + post.get_str_comment_depth(0) + "]";
     BOOST_CHECK_EQUAL(err.max_cmmnt_dpth_less_0, post.set_params(params));
-    
+
     params = "[" + post.get_str_social_acc(N(gls.social)) + "]";
     BOOST_CHECK_EQUAL(err.no_social_acc, post.set_params(params));
-    
+
     params = "[" + post.get_str_referral_acc(N(gls.referral)) + "]";
     BOOST_CHECK_EQUAL(err.no_referral_acc, post.set_params(params));
-    
+
     params = "[" + post.get_str_curators_prcnt(cfg::_100percent+1, 3300) + "]";
     BOOST_CHECK_EQUAL(err.wrong_min_cur_prcnt, post.set_params(params));
-    
+
     params = "[" + post.get_str_curators_prcnt(5100, 3300) + "]";
     BOOST_CHECK_EQUAL(err.max_less_min_cur_prcnt, post.set_params(params));
-    
+
     params = "[" + post.get_str_curators_prcnt(5100, cfg::_100percent+1) + "]";
     BOOST_CHECK_EQUAL(err.wrong_max_cur_prcnt, post.set_params(params));
+} FC_LOG_AND_RETHROW()
+
+BOOST_FIXTURE_TEST_CASE(set_rules, golos_publication_tester) try {
+    BOOST_TEST_MESSAGE("Test setrules validation.");
+    prepare_balances();
+    BOOST_CHECK_EQUAL(success(), token.open(_code, _sym, _code));
+    funcparams fn{"0", 1};
+
+    BOOST_TEST_MESSAGE("-- check that wrong max_token_prop fails");
+    BOOST_CHECK_EQUAL(err.invalid_percent("maxtokenprop"), post.set_rules(fn ,fn ,fn , -1));
+    BOOST_CHECK_EQUAL(err.invalid_percent("maxtokenprop"), post.set_rules(fn ,fn ,fn , cfg::_100percent + 1));
+    BOOST_TEST_MESSAGE("-- check that correct max_token_prop succeeds");
+    BOOST_CHECK_EQUAL(success(), post.set_rules(fn ,fn ,fn , 0));
+    BOOST_CHECK_EQUAL(success(), post.set_rules(fn ,fn ,fn , cfg::_100percent));
+
+    BOOST_TEST_MESSAGE("-- check that new message token_prop is limited by max_token_prop");
+    post.init_default_params();
+    BOOST_CHECK_EQUAL(success(), post.set_limit("post"));
+    BOOST_CHECK_EQUAL(success(), post.set_limit("comment"));
+    BOOST_CHECK_EQUAL(success(), post.set_limit("vote"));
+    BOOST_CHECK_EQUAL(success(), post.set_limit("post bandwidth"));
+    auto u = N(brucelee);
+    vest.open(u, _sym, u);
+    produce_block();
+    auto ref = control->head_block_header().block_num();
+
+    BOOST_CHECK_EQUAL(success(), post.create_msg({u, "100", ref},{N(),"",0}, 0, {}, cfg::_100percent));
+    BOOST_CHECK_EQUAL(err.invalid_percent("tokenprop"),
+        post.create_msg({u, "100p", ref},{N(),"",0}, 0, {}, cfg::_100percent+1));
+    auto p = 5000;
+    BOOST_CHECK_EQUAL(success(), post.set_rules(fn ,fn ,fn , p));
+    BOOST_CHECK_EQUAL(success(), post.create_msg({u, "0", ref},{N(),"",0}, 0, {}, 0));
+    BOOST_CHECK_EQUAL(success(), post.create_msg({u, "50-", ref},{N(),"",0}, 0, {}, p-1));
+    BOOST_CHECK_EQUAL(success(), post.create_msg({u, "50", ref},{N(),"",0}, 0, {}, p));
+    BOOST_CHECK_EQUAL(err.gt_maxtokenprop, post.create_msg({u, "50p", ref},{N(),"",0}, 0, {}, p+1));
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE(create_message, golos_publication_tester) try {
@@ -465,15 +498,15 @@ BOOST_FIXTURE_TEST_CASE(comments_cashout_time_test, golos_publication_tester) tr
     auto ref_block_num_chucknorris = control->head_block_header().block_num();
     BOOST_CHECK_EQUAL(success(), post.create_msg({N(chucknorris), "comment-permlink", ref_block_num_chucknorris},
                                                  {N(brucelee), "permlink", ref_block_num_brucelee}));
-        
+
     BOOST_TEST_MESSAGE("--- creating " << need_blocks << " blocks");
     produce_blocks(need_blocks);
-    
+
     BOOST_TEST_MESSAGE("--- checking that messages wasn't closed.");
     BOOST_CHECK_EQUAL(post.get_message({N(brucelee), "permlink", ref_block_num_brucelee}).is_null(), false);
-    
+
     produce_block();
-    
+
     BOOST_TEST_MESSAGE("--- checking that messages was closed.");
     BOOST_CHECK_EQUAL(post.get_message({N(brucelee), "permlink", ref_block_num_brucelee}).is_null(), true);
 
@@ -484,12 +517,12 @@ BOOST_FIXTURE_TEST_CASE(comments_cashout_time_test, golos_publication_tester) tr
     produce_block();
     BOOST_TEST_MESSAGE("--- checking that comment was closed.");
     BOOST_CHECK_EQUAL(post.get_message({N(chucknorris), "comment-permlink", ref_block_num_chucknorris}).is_null(), true);
-    
+
     auto ref_block_num_jackiechan = control->head_block_header().block_num();
     BOOST_CHECK_EQUAL(err.parent_no_message, post.create_msg({N(jackiechan), "sorry-guys-i-am-late", ref_block_num_jackiechan},
                                                  {N(brucelee), "permlink", ref_block_num_brucelee}));
     produce_block();
-    
+
     BOOST_TEST_MESSAGE("--- checking that closed message comment was closed.");
     BOOST_CHECK_EQUAL(post.get_message({N(jackiechan), "sorry-guys-i-am-late", ref_block_num_jackiechan}).is_null(), true);
 
@@ -578,15 +611,15 @@ BOOST_FIXTURE_TEST_CASE(upvote_near_close, golos_publication_tester) try {
 
 BOOST_FIXTURE_TEST_CASE(set_curators_prcnt, golos_publication_tester) try {
     BOOST_TEST_MESSAGE("Test curators percent");
-    
+
     init();
 
     auto ref_block_num = control->head_block_header().block_num();
-    auto create_msg = [&](optional<uint16_t> curators_prcnt = optional<uint16_t>(), mssgid message_id = {}){ 
+    auto create_msg = [&](optional<uint16_t> curators_prcnt = optional<uint16_t>(), mssgid message_id = {}){
         if (message_id == mssgid())
             message_id = {N(brucelee), "permlink", ref_block_num};
         return post.create_msg(
-            message_id, 
+            message_id,
             {N(), "parentprmlnk", 0},
             0,
             {},
@@ -597,32 +630,32 @@ BOOST_FIXTURE_TEST_CASE(set_curators_prcnt, golos_publication_tester) try {
             "languagemssg",
             {{"tag"}},
             "jsonmetadata",
-            curators_prcnt    
+            curators_prcnt
             );
     };
 
     BOOST_TEST_MESSAGE("--- checking that curators percent doesn't fit");
     BOOST_CHECK_EQUAL(err.cur_prcnt_less_min, create_msg(post.min_curators_prcnt-1));
     BOOST_CHECK_EQUAL(err.cur_prcnt_greater_max, create_msg(post.max_curators_prcnt+1));
-    
+
     BOOST_TEST_MESSAGE("--- checking that curators percent was setted as default");
     BOOST_CHECK_EQUAL(success(), create_msg());
-    BOOST_CHECK_EQUAL(post.get_message({N(brucelee), "permlink", ref_block_num})["curators_prcnt"].as<base_t>(), static_cast<base_t>(elaf_t(elai_t(post.min_curators_prcnt)/elai_t(cfg::_100percent)).data()));
+    BOOST_CHECK_EQUAL(post.get_message({N(brucelee), "permlink", ref_block_num})["curators_prcnt"], post.min_curators_prcnt);
 
     BOOST_TEST_MESSAGE("--- checking that curators percent was setted correctly");
     BOOST_CHECK_EQUAL(success(), create_msg(7100, {N(jackiechan), "permlink", ref_block_num}));
-    BOOST_CHECK_EQUAL(post.get_message({N(jackiechan), "permlink", ref_block_num})["curators_prcnt"].as<base_t>(), static_cast<base_t>(elaf_t(elai_t(7100)/elai_t(cfg::_100percent)).data()));
+    BOOST_CHECK_EQUAL(post.get_message({N(jackiechan), "permlink", ref_block_num})["curators_prcnt"], 7100);
 
     BOOST_TEST_MESSAGE("--- checking that curators percent was changed");
     BOOST_CHECK_EQUAL(success(), post.set_curators_prcnt({N(brucelee), "permlink", ref_block_num}, 7300));
-    BOOST_CHECK_EQUAL(post.get_message({N(brucelee), "permlink", ref_block_num})["curators_prcnt"].as<base_t>(), static_cast<base_t>(elaf_t(elai_t(7300)/elai_t(cfg::_100percent)).data()));
-    
+    BOOST_CHECK_EQUAL(post.get_message({N(brucelee), "permlink", ref_block_num})["curators_prcnt"], 7300);
+
     BOOST_TEST_MESSAGE("--- checking that curators percent can't be changed");
     BOOST_CHECK_EQUAL(success(), token.issue(cfg::emission_name, N(jackiechan), token.make_asset(500), "issue tokens jackiechan"));
     BOOST_CHECK_EQUAL(success(), token.transfer(N(jackiechan), cfg::vesting_name, token.make_asset(100), "buy vesting"));
     BOOST_CHECK_EQUAL(success(), post.upvote(N(jackiechan), {N(brucelee), "permlink", ref_block_num}, 123));
     BOOST_CHECK_EQUAL(err.no_cur_percent, post.set_curators_prcnt({N(brucelee), "permlink", ref_block_num}, 7500));
-    BOOST_CHECK_EQUAL(post.get_message({N(brucelee), "permlink", ref_block_num})["curators_prcnt"].as<base_t>(), static_cast<base_t>(elaf_t(elai_t(7300)/elai_t(cfg::_100percent)).data()));
+    BOOST_CHECK_EQUAL(post.get_message({N(brucelee), "permlink", ref_block_num})["curators_prcnt"], 7300);
 } FC_LOG_AND_RETHROW()
 
 BOOST_AUTO_TEST_SUITE_END()
