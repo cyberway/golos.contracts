@@ -58,7 +58,7 @@ public:
         BOOST_CHECK_EQUAL(success(), vest.create_vesting("issuer"_n));
 
         funcparams fn{"0", 1};
-        BOOST_CHECK_EQUAL(success(), post.set_rules(fn, fn, fn, 0));
+        BOOST_CHECK_EQUAL(success(), post.set_rules(fn, fn, fn, 5000));
         BOOST_CHECK_EQUAL(success(), post.set_limit("post"));
         BOOST_CHECK_EQUAL(success(), post.set_limit("comment"));
         BOOST_CHECK_EQUAL(success(), post.set_limit("vote"));

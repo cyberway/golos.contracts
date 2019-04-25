@@ -41,8 +41,7 @@ void setrules(
     const funcparams&	mainfunc,
     const funcparams& 	curationfunc,
     const funcparams&	timepenalty,
-    int64_t 		    curatorsprop,
-    int64_t 		    maxtokenprop,
+    uint16_t 		    maxtokenprop,
     symbol 		        tokensymbol
 );
 ```
@@ -51,8 +50,7 @@ void setrules(
 `mainfunc` —  функция, вычисляющая суммарное значение вознаграждения для автора и кураторов поста в соответствии с установленным алгоритмом (например, линейным алгоритмом или алгоритмом квадратного корня). Используемый в функции алгоритм выбирается делегатами голосованием. Функция содержит два параметра: математическое выражение (непосредственно алгоритм), по которому вычисляется сумма вознаграждения, и максимально допустимое значение аргумента для функции. При установке значений параметров для setrules выполняется их проверка на корректность (в том числе на монотонность и неотрицательность);  
 `curationfunc` —  функция, вычисляющая значение вознаграждения для каждого из кураторов в соответствии с установленным алгоритмом (аналогично вычислению для `mainfunc`);  
 `timepenalty` —  функция, вычисляющая вес голоса с учетом времени голосования и длительности штрафного окна;  
-`curatorsprop` — выделяемая доля всем кураторам от суммарного значения вознаграждения;  
-`maxtokenprop` —  максимально возможное значение вознаграждения (сумма токенов и вестингов), которое может получить автор. Этот параметр устанавливается делегатами голосованием;  
+`maxtokenprop` —  максимально возможное значение вознаграждения (сумма токенов и вестингов), которое может получить автор. Этот параметр устанавливается делегатами голосованием. Целое число в сотых долях процента (от 0 до 10000 = 0%—100%);  
 `tokensymbol` —  тип токена (в рамках приложения Голос предусматривается хождение только токенов Голоса).  
 
 Правом на запуск операции-действия `setrules` обладает делегат приложения. Для запуска операции-действия `setrules` требуется наличие в транзакции подписи смарт-контракта `golos.publication` (multisig-аккаунта).  
@@ -67,13 +65,14 @@ void createmssg(
     name 		    parentacc,
     std::string 	parentprmlnk,
     std::vector<structures::beneficiary> beneficiaries,
-    int64_t 	    tokenprop,
+    uint16_t 	    tokenprop,
     bool 		    vestpayment,
     std::string 	headermssg,
     std::string 	bodymssg,
     std::string l	anguagemssg,
     std::vector<std::string> tags,
-    std::string 	jsonmetadata
+    std::string 	jsonmetadata,
+    optional<uint16_t> curators_prcnt
 );
 ```
 
@@ -89,7 +88,8 @@ void createmssg(
 `bodymssg` — тело сообщения;  
 `languagemssg` — язык сообщения;  
 `tags` — тэг, который присваивается сообщению;  
-`jsonmetadata` — метаданные в формате JSON.  
+`jsonmetadata` — метаданные в формате JSON;  
+`curators_prcnt` — доля кураторского вознаграждения. Ограничивается диапазоном заданным в параметре `curators_prcnt_param`. Необязательный параметр, значение по умолчанию = `curators_prcnt_param.min_curators_prcnt`.
 
 Параметры `parentacc`и `parentprmlnk` идентифицируют родительское сообщение, на которое создается ответ с использованием `createmssg` в виде сообщения.  
 
@@ -106,7 +106,7 @@ void updatemssg(
     name 		account,
     std::string 	permlink,
     std::string 	headermssg,
-    std::string 	bodymssg, 
+    std::string 	bodymssg,
     std::string 	languagemssg,
     std::vector<std::string> tags,
     std::string 	jsonmetadata

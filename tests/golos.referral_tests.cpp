@@ -56,7 +56,7 @@ public:
 
     void init_params_posts() {
         funcparams fn{"0", 1};
-        BOOST_CHECK_EQUAL(success(), post.set_rules(fn ,fn ,fn , 0));
+        BOOST_CHECK_EQUAL(success(), post.set_rules(fn ,fn ,fn , 5000));
         BOOST_CHECK_EQUAL(success(), post.set_limit("post"));
         BOOST_CHECK_EQUAL(success(), post.set_limit("comment"));
         BOOST_CHECK_EQUAL(success(), post.set_limit("vote"));
@@ -96,9 +96,9 @@ protected:
         const string limit_persent     = amsg("max_percent > 100.00%");
 
         const string referral_not_exist      = amsg("A referral with this name doesn't exist.");
-        const string funds_not_equal         = amsg("Amount of funds doesn't equal.");
-        const string limit_percents          = amsg("publication::create_message: prop_sum > 100%");
-        const string referrer_benif          = amsg("Comment already has referrer as a referrer-beneficiary.");
+        const string funds_not_equal   = amsg("Amount of funds doesn't equal.");
+        const string limit_percents    = amsg("weights_sum + referral percent must not be greater than 100% (10000)");
+        const string referrer_benif    = amsg("Comment already has referrer as a referrer-beneficiary.");
     } err;
 
     golos_posting_api post;
