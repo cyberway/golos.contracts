@@ -789,7 +789,8 @@
         {"name": "created", "type": "uint64"},
         {"name": "msgs", "type": "counter_t"},
         {"name": "funds", "type": "asset"},
-        {"name": "rshares", "type": "wide_t"}
+        {"name": "rshares", "type": "wide_t"},
+        {"name": "rsharesfn", "type": "wide_t"}
     ]
   },
   {

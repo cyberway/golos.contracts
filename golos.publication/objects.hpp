@@ -179,6 +179,7 @@ struct pool_event {
     counter_t msgs;
     eosio::asset funds;
     wide_t rshares;
+    wide_t rsharesfn;
 };
 
 struct reward_weight_event {

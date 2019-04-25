@@ -760,7 +760,7 @@ void publication::set_rules(const funcparams& mainfunc, const funcparams& curati
 }
 
 void publication::send_poolstate_event(const structures::rewardpool& pool) {
-    structures::pool_event data{pool.created, pool.state.msgs, pool.state.funds, pool.state.rshares};
+    structures::pool_event data{pool.created, pool.state.msgs, pool.state.funds, pool.state.rshares, pool.state.rsharesfn};
     eosio::event(_self, "poolstate"_n, data).send();
 }
 
