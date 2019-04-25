@@ -606,7 +606,6 @@ void publication::set_vote(name voter, const structures::mssgid& message_id, int
 
     auto sumcuratorsw_delta = get_delta(machine, FP(mssg_itr->state.voteshares), FP(msg_new_state.voteshares), pool->rules.curationfunc);
     msg_new_state.sumcuratorsw = (FP(mssg_itr->state.sumcuratorsw) + sumcuratorsw_delta).data();
-
     message_index.modify(mssg_itr, _self, [&](auto &item) {
         item.state = msg_new_state;
         send_poststate_event(
