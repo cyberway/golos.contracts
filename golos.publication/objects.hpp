@@ -162,7 +162,7 @@ struct post_event {
     base_t voteshares = 0;
     base_t sumcuratorsw = 0;
 
-    wide_t sharesfn;
+    base_t sharesfn;
 };
 
 struct vote_event {

@@ -767,7 +767,7 @@
         {"name": "netshares", "type": "base_t"},
         {"name": "voteshares", "type": "base_t"},
         {"name": "sumcuratorsw", "type": "base_t"},
-        {"name": "sharesfn", "type": "wide_t"}
+        {"name": "sharesfn", "type": "base_t"}
     ]
   },
   {
