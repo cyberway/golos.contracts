@@ -177,9 +177,12 @@ void control::unregwitness(name witness) {
     assert_started();
     require_auth(witness);
 
-    witness_tbl witness_table(_self, witness.value);
+    witness_tbl witness_table(_self, _self.value);
     auto it = witness_table.find(witness.value);
     witness_table.erase(*it);
+
+    //TODO remove votes for witness
+    update_auths();
 }
 
 void control::stopwitness(name witness) {
@@ -220,7 +223,9 @@ void control::votewitness(name voter, name witness) {
     require_auth(voter);
 
     witness_tbl witness_table(_self, _self.value);
-    eosio_assert(witness_table.find(witness.value) != witness_table.end(), "witness not found");
+    auto witness_it = witness_table.find(witness.value);
+    eosio_assert(witness_it != witness_table.end(), "witness not found");
+    eosio_assert(witness_it->active, "witness not active");
 
     witness_vote_tbl tbl(_self, _self.value);
     auto itr = tbl.find(voter.value);
@@ -248,7 +253,9 @@ void control::unvotewitn(name voter, name witness) {
     require_auth(voter);
 
     witness_tbl witness_table(_self, _self.value);
-    eosio_assert(witness_table.find(witness.value) != witness_table.end(), "witness not found");
+    auto witness_it = witness_table.find(witness.value);
+    eosio_assert(witness_it != witness_table.end(), "witness not found");
+    eosio_assert(witness_it->active, "witness not active");
 
     witness_vote_tbl tbl(_self, _self.value);
     auto itr = tbl.find(voter.value);
