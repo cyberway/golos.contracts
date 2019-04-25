@@ -555,14 +555,6 @@ void publication::set_vote(name voter, const structures::mssgid& message_id, int
             item.state.rsharesfn = (WP(item.state.rsharesfn) + wdfp_t(rsharesfn_delta)).data();
             send_poolstate_event(item);
         });
-        
-        auto sharesfn = get_calc_sharesfn(
-                    pool->rules.mainfunc.code,
-                    FP(new_mssg_rshares.data()),
-                    FP(pool->rules.mainfunc.maxarg)
-                    );
-        print("\ntest^ ", static_cast<base_t>(sharesfn));
-        print("\ntest^ ", pool->state.rsharesfn);
 
         message_index.modify(mssg_itr, name(), [&]( auto &item ) {
             item.state.netshares = new_mssg_rshares.data();
