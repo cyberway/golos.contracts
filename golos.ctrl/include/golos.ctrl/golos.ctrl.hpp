@@ -115,6 +115,7 @@ private:
     void update_witnesses_weights(std::vector<name> witnesses, share_type diff);
     void update_auths();
     void send_witness_event(const witness_info& wi);
+    void active_witness(golos::name witness, bool flag);
 };
 
 

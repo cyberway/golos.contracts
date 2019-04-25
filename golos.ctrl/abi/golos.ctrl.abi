@@ -46,6 +46,12 @@
                 {"type": "name",   "name": "witness"}
             ]
         }, {
+            "name": "witness_name",
+            "base": "",
+            "fields": [
+                {"type": "name",   "name": "witness"}
+            ]
+        }, {
             "name": "votewitness",
             "base": "",
             "fields": [
@@ -166,6 +172,12 @@
         }, {
             "name": "unregwitness",
             "type": "unregwitness"
+        }, {
+            "name": "startwitness",
+            "type": "witness_name"
+        }, {
+            "name": "stopwitness",
+            "type": "witness_name"
         }, {
             "name": "votewitness",
             "type": "votewitness"

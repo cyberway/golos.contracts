@@ -188,33 +188,13 @@ void control::unregwitness(name witness) {
 void control::stopwitness(name witness) {
     assert_started();
     require_auth(witness);
-
-    // TODO: simplify upsert to allow passing just inner lambda
-    bool exists = upsert_tbl<witness_tbl>(witness, [&](bool) {
-        return [&](witness_info& w) {
-            eosio_assert(w.active, "witness already unregistered");
-            w.active = false;
-        };
-    }, false);
-    eosio_assert(exists, "witness not found");
-
-    update_auths();
+    active_witness(witness, false);
 }
 
 void control::startwitness(name witness) {
     assert_started();
     require_auth(witness);
-
-    // TODO: simplify upsert to allow passing just inner lambda
-    bool exists = upsert_tbl<witness_tbl>(witness, [&](bool) {
-        return [&](witness_info& w) {
-            eosio_assert(w.active, "witness already unregistered");
-            w.active = true;
-        };
-    }, false);
-    eosio_assert(exists, "witness not found");
-
-    update_auths();
+    active_witness(witness, true);
 }
 
 // Note: if not weighted, it's possible to pass all witnesses in vector like in BP actions
@@ -383,6 +363,19 @@ void control::send_witness_event(const witness_info& wi) {
     eosio::event(_self, "witnessstate"_n, std::make_tuple(wi.name, wi.total_weight)).send();
 }
 
+void control::active_witness(name witness, bool flag) {
+    // TODO: simplify upsert to allow passing just inner lambda
+    bool exists = upsert_tbl<witness_tbl>(witness, [&](bool) {
+        return [&](witness_info& w) {
+            eosio_assert(w.active, "witness already stopped");
+            w.active = flag;
+        };
+    }, false);
+    eosio_assert(exists, "witness not found");
+
+    update_auths();
+}
+
 vector<witness_info> control::top_witness_info() {
     vector<witness_info> top;
     const auto l = props().witnesses.max;
@@ -411,4 +404,5 @@ DISPATCH_WITH_TRANSFER(golos::control, on_transfer,
     (validateprms)(setparams)
     (attachacc)(detachacc)
     (regwitness)(unregwitness)
+    (startwitness)(stopwitness)
     (votewitness)(unvotewitn)(changevest))

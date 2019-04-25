@@ -70,6 +70,18 @@ struct golos_ctrl_api: base_contract_api {
         );
     }
 
+    action_result start_witness(name witness) {
+        return push(N(startwitness), witness, args()
+            ("witness", witness)
+        );
+    }
+
+    action_result stop_witness(name witness) {
+        return push(N(stopwitness), witness, args()
+            ("witness", witness)
+        );
+    }
+
     action_result vote_witness(name voter, name witness) {
         return push(N(votewitness), voter, args()
             ("voter", voter)

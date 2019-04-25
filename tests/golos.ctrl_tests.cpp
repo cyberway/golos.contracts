@@ -95,7 +95,7 @@ public:
 
         const string bad_url            = amsg("url too long");
         const string same_reg_props     = amsg("already updated in the same way");
-        const string already_unreg      = amsg("witness already unregistered");
+        const string already_stop_w     = amsg("witness already stopped");
         const string no_witness         = amsg("witness not found");
 
         const string no_more_votes      = amsg("all allowed votes already casted");
@@ -232,12 +232,16 @@ BOOST_FIXTURE_TEST_CASE(register_witness, golos_ctrl_tester) try {
     BOOST_CHECK_EQUAL(success(), ctrl.reg_witness(_w[0], maxurl));
     BOOST_CHECK_EQUAL(err.bad_url, ctrl.reg_witness(_w[0], maxurl+"!"));
 
-    BOOST_TEST_MESSAGE("--- check unreg");
-    BOOST_CHECK_EQUAL(success(), ctrl.unreg_witness(_w[0]));
+    BOOST_TEST_MESSAGE("--- check stop witness");
+    BOOST_CHECK_EQUAL(success(), ctrl.stop_witness(_w[0]));
     produce_block();
 
-    BOOST_CHECK_EQUAL(err.already_unreg, ctrl.unreg_witness(_w[0]));
-    BOOST_CHECK_EQUAL(err.no_witness, ctrl.unreg_witness(_w[1]));
+    BOOST_CHECK_EQUAL(err.already_stop_w, ctrl.stop_witness(_w[0]));
+    BOOST_CHECK_EQUAL(err.no_witness, ctrl.stop_witness(_w[1]));
+
+    BOOST_TEST_MESSAGE("--- check unreg");
+    BOOST_CHECK_EQUAL(success(), ctrl.unreg_witness(_w[0]));
+    BOOST_CHECK_EQUAL(err.no_witness, ctrl.stop_witness(_w[0]));
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE(register_update_witness, golos_ctrl_tester) try {
