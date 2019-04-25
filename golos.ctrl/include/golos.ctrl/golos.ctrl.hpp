@@ -83,6 +83,8 @@ public:
 
     [[eosio::action]] void regwitness(name witness, std::string url);
     [[eosio::action]] void unregwitness(name witness);
+    [[eosio::action]] void stopwitness(name witness);
+    [[eosio::action]] void startwitness(name witness);
     [[eosio::action]] void votewitness(name voter, name witness);
     [[eosio::action]] void unvotewitn(name voter, name witness);
 

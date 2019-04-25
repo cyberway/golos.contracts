@@ -177,11 +177,36 @@ void control::unregwitness(name witness) {
     assert_started();
     require_auth(witness);
 
+    witness_tbl witness_table(_self, witness.value);
+    auto it = witness_table.find(witness.value);
+    witness_table.erase(*it);
+}
+
+void control::stopwitness(name witness) {
+    assert_started();
+    require_auth(witness);
+
     // TODO: simplify upsert to allow passing just inner lambda
     bool exists = upsert_tbl<witness_tbl>(witness, [&](bool) {
         return [&](witness_info& w) {
             eosio_assert(w.active, "witness already unregistered");
             w.active = false;
+        };
+    }, false);
+    eosio_assert(exists, "witness not found");
+
+    update_auths();
+}
+
+void control::startwitness(name witness) {
+    assert_started();
+    require_auth(witness);
+
+    // TODO: simplify upsert to allow passing just inner lambda
+    bool exists = upsert_tbl<witness_tbl>(witness, [&](bool) {
+        return [&](witness_info& w) {
+            eosio_assert(w.active, "witness already unregistered");
+            w.active = true;
         };
     }, false);
     eosio_assert(exists, "witness not found");
