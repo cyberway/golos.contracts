@@ -238,7 +238,6 @@ BOOST_FIXTURE_TEST_CASE(set_rules, golos_publication_tester) try {
     auto u = N(brucelee);
     vest.open(u, _sym, u);
     produce_block();
-    // auto ref = control->head_block_header().block_num();
 
     BOOST_CHECK_EQUAL(success(), post.create_msg({u, "100"},{N(),""}, {}, cfg::_100percent));
     BOOST_CHECK_EQUAL(err.invalid_percent("tokenprop"),
@@ -618,22 +617,22 @@ BOOST_FIXTURE_TEST_CASE(set_curators_prcnt, golos_publication_tester) try {
 
     BOOST_TEST_MESSAGE("--- checking that curators percent was setted as default");
     BOOST_CHECK_EQUAL(success(), create_msg());
-    BOOST_CHECK_EQUAL(post.get_message({N(brucelee), "permlink"})["curators_prcnt"].as<base_t>(), static_cast<base_t>(elaf_t(elai_t(post.min_curators_prcnt)/elai_t(cfg::_100percent)).data()));
+    BOOST_CHECK_EQUAL(post.get_message({N(brucelee), "permlink"})["curators_prcnt"], post.min_curators_prcnt);
 
     BOOST_TEST_MESSAGE("--- checking that curators percent was setted correctly");
     BOOST_CHECK_EQUAL(success(), create_msg(7100, {N(jackiechan), "permlink"}));
-    BOOST_CHECK_EQUAL(post.get_message({N(jackiechan), "permlink"})["curators_prcnt"].as<base_t>(), static_cast<base_t>(elaf_t(elai_t(7100)/elai_t(cfg::_100percent)).data()));
+    BOOST_CHECK_EQUAL(post.get_message({N(jackiechan), "permlink"})["curators_prcnt"], 7100);
 
     BOOST_TEST_MESSAGE("--- checking that curators percent was changed");
     BOOST_CHECK_EQUAL(success(), post.set_curators_prcnt({N(brucelee), "permlink"}, 7300));
-    BOOST_CHECK_EQUAL(post.get_message({N(brucelee), "permlink"})["curators_prcnt"].as<base_t>(), static_cast<base_t>(elaf_t(elai_t(7300)/elai_t(cfg::_100percent)).data()));
+    BOOST_CHECK_EQUAL(post.get_message({N(brucelee), "permlink"})["curators_prcnt"], 7300);
 
     BOOST_TEST_MESSAGE("--- checking that curators percent can't be changed");
     BOOST_CHECK_EQUAL(success(), token.issue(cfg::emission_name, N(jackiechan), token.make_asset(500), "issue tokens jackiechan"));
     BOOST_CHECK_EQUAL(success(), token.transfer(N(jackiechan), cfg::vesting_name, token.make_asset(100), "buy vesting"));
     BOOST_CHECK_EQUAL(success(), post.upvote(N(jackiechan), {N(brucelee), "permlink"}, 123));
     BOOST_CHECK_EQUAL(err.no_cur_percent, post.set_curators_prcnt({N(brucelee), "permlink"}, 7500));
-    BOOST_CHECK_EQUAL(post.get_message({N(brucelee), "permlink"})["curators_prcnt"].as<base_t>(), static_cast<base_t>(elaf_t(elai_t(7300)/elai_t(cfg::_100percent)).data()));
+    BOOST_CHECK_EQUAL(post.get_message({N(brucelee), "permlink"})["curators_prcnt"], 7300);
 } FC_LOG_AND_RETHROW()
 
 BOOST_AUTO_TEST_SUITE_END()
