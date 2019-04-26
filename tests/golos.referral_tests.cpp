@@ -239,21 +239,20 @@ BOOST_FIXTURE_TEST_CASE(create_referral_message_tests, golos_referral_tester) tr
     init_params_posts();
 
     const auto expire = 8; // sec
-    const auto ref_block_num = control->head_block_header().block_num();
     const auto current_time = control->head_block_time().sec_since_epoch();
     BOOST_CHECK_EQUAL(success(), referral.create_referral(N(issuer), N(sania), 500, current_time + expire, token.make_asset(50)));
-    BOOST_CHECK_EQUAL(success(), post.create_msg({N(sania), "permlink", ref_block_num}));
+    BOOST_CHECK_EQUAL(success(), post.create_msg({N(sania), "permlink"}));
 
-    auto post_sania = post.get_message({N(sania), "permlink", ref_block_num});
+    auto post_sania = post.get_message({N(sania), "permlink"});
     BOOST_CHECK_EQUAL (post_sania["beneficiaries"].size(), 1);
     BOOST_CHECK_EQUAL( post_sania["beneficiaries"][uint8_t(0)].as<beneficiary>().account, N(issuer) );
 
     BOOST_CHECK_EQUAL(success(), referral.create_referral(N(issuer), N(pasha), 5000, current_time + expire, token.make_asset(50)));
-    BOOST_CHECK_EQUAL(err.limit_percents, post.create_msg({N(pasha), "permlink", ref_block_num}, {N(), "parentprmlnk", 0}, 0, { beneficiary{N(tania), 7000} }));
-    BOOST_CHECK_EQUAL(err.referrer_benif, post.create_msg({N(pasha), "permlink", ref_block_num}, {N(), "parentprmlnk", 0}, 0, { beneficiary{N(issuer), 2000} }));
-    BOOST_CHECK_EQUAL(success(), post.create_msg({N(pasha), "permlink", ref_block_num}, {N(), "parentprmlnk", 0}, 0, { beneficiary{N(tania), 2000} }));
+    BOOST_CHECK_EQUAL(err.limit_percents, post.create_msg({N(pasha), "permlink"}, {N(), "parentprmlnk"}, { beneficiary{N(tania), 7000} }));
+    BOOST_CHECK_EQUAL(err.referrer_benif, post.create_msg({N(pasha), "permlink"}, {N(), "parentprmlnk"}, { beneficiary{N(issuer), 2000} }));
+    BOOST_CHECK_EQUAL(success(), post.create_msg({N(pasha), "permlink"}, {N(), "parentprmlnk"}, { beneficiary{N(tania), 2000} }));
 
-    auto post_pasha = post.get_message({N(pasha), "permlink", ref_block_num});
+    auto post_pasha = post.get_message({N(pasha), "permlink"});
     BOOST_CHECK_EQUAL (post_pasha["beneficiaries"].size(), 2);
 } FC_LOG_AND_RETHROW()
 

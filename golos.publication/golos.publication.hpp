@@ -14,7 +14,7 @@ public:
     void set_rules(const funcparams& mainfunc, const funcparams& curationfunc, const funcparams& timepenalty,
         int64_t maxtokenprop, symbol tokensymbol);
     void on_transfer(name from, name to, asset quantity, std::string memo = "");
-    void create_message(structures::mssgid message_id, structures::mssgid parent_id, uint64_t parent_recid,
+    void create_message(structures::mssgid message_id, structures::mssgid parent_id,
         std::vector<structures::beneficiary> beneficiaries, int64_t tokenprop, bool vestpayment,
         std::string headermssg, std::string bodymssg, std::string languagemssg, std::vector<std::string> tags,
         std::string jsonmetadata, std::optional<uint16_t> curators_prcnt);

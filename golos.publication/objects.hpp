@@ -23,23 +23,14 @@ struct mssgid {
 
     name author;
     std::string permlink;
-    uint64_t ref_block_num;
 
     bool operator==(const mssgid& value) const {
         return author == value.author &&
-               permlink == value.permlink &&
-               ref_block_num == value.ref_block_num;
+               permlink == value.permlink;
     }
 
-    EOSLIB_SERIALIZE(mssgid, (author)(permlink)(ref_block_num))
+    EOSLIB_SERIALIZE(mssgid, (author)(permlink))
 };
-
-struct archive_info_v1 {
-    mssgid id;
-    uint16_t level;
-};
-
-using archive_record = std::variant<archive_info_v1>;
 
 struct messagestate {
     base_t netshares = 0;
@@ -52,7 +43,6 @@ struct message {
 
     uint64_t id;
     std::string permlink;
-    uint64_t ref_block_num;
     uint64_t date;
     name parentacc;
     uint64_t parent_id;
@@ -68,8 +58,24 @@ struct message {
         return id;
     }
     
-    std::tuple<std::string, uint64_t> secondary_key() const {
-        return {permlink, ref_block_num};
+    std::string secondary_key() const {
+        return permlink;
+    }
+};
+
+struct permlink {
+    permlink() = default;
+
+    uint64_t id;
+    std::string value;
+    uint16_t level;
+
+    uint64_t primary_key() const {
+        return id;
+    }
+
+    std::string secondary_key() const {
+        return value;
     }
 };
 
@@ -145,10 +151,6 @@ struct rewardpool {
     EOSLIB_SERIALIZE(rewardpool, (created)(rules)(state))
 };
 
-struct create_event {
-    uint64_t record_id;
-};
-
 struct post_event {
     name author;
     std::string permlink;
@@ -207,8 +209,12 @@ namespace tables {
 using namespace eosio;
 
 using id_index = indexed_by<N(primary), const_mem_fun<structures::message, uint64_t, &structures::message::primary_key>>;
-using permlink_index = indexed_by<N(bypermlink), const_mem_fun<structures::message, std::tuple<std::string, uint64_t>, &structures::message::secondary_key>>;
+using permlink_index = indexed_by<N(bypermlink), const_mem_fun<structures::message, std::string, &structures::message::secondary_key>>;
 using message_table = multi_index<N(message), structures::message, id_index, permlink_index>;
+
+using permlink_id_index = indexed_by<N(primary), const_mem_fun<structures::permlink, uint64_t, &structures::permlink::primary_key>>;
+using permlink_value_index = indexed_by<N(byvalue), const_mem_fun<structures::permlink, std::string, &structures::permlink::secondary_key>>;
+using permlink_table = multi_index<N(permlink), structures::permlink, permlink_id_index, permlink_value_index>;
 
 using vote_id_index = indexed_by<N(id), const_mem_fun<structures::voteinfo, uint64_t, &structures::voteinfo::primary_key>>;
 using vote_messageid_index = indexed_by<N(messageid), const_mem_fun<structures::voteinfo, uint64_t, &structures::voteinfo::by_message>>;
