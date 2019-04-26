@@ -130,7 +130,7 @@ protected:
         const string no_content            = amsg("Content doesn't exist.");
 
         const string delete_children       = amsg("You can't delete comment with child comments.");
-        const string no_message            = amsg("Message doesn't exist.");
+        const string no_message            = amsg("Message doesn't exist in cashout window.");
         const string vote_same_weight      = amsg("Vote with the same weight has already existed.");
         const string vote_weight_0         = amsg("weight can't be 0.");
         const string vote_weight_gt100     = amsg("weight can't be more than 100%.");
@@ -142,7 +142,6 @@ protected:
         const string max_cmmnt_dpth_less_0 = amsg("Max comment depth must be greater than 0.");
         const string no_social_acc         = amsg("Social account doesn't exist.");
         const string no_referral_acc       = amsg("Referral account doesn't exist.");
-        const string not_valid_ref_block_num = amsg("ref_block_num mismatch");
         const string wrong_prmlnk_length   = amsg("Permlink length is empty or more than 256.");
         const string wrong_prmlnk          = amsg("Permlink contains wrong symbol.");
         const string wrong_title_length    = amsg("Title length is more than 256.");
@@ -239,71 +238,62 @@ BOOST_FIXTURE_TEST_CASE(set_rules, golos_publication_tester) try {
     auto u = N(brucelee);
     vest.open(u, _sym, u);
     produce_block();
-    auto ref = control->head_block_header().block_num();
+    // auto ref = control->head_block_header().block_num();
 
-    BOOST_CHECK_EQUAL(success(), post.create_msg({u, "100", ref},{N(),"",0}, 0, {}, cfg::_100percent));
+    BOOST_CHECK_EQUAL(success(), post.create_msg({u, "100"},{N(),""}, {}, cfg::_100percent));
     BOOST_CHECK_EQUAL(err.invalid_percent("tokenprop"),
-        post.create_msg({u, "100p", ref},{N(),"",0}, 0, {}, cfg::_100percent+1));
+        post.create_msg({u, "100p"},{N(),""}, {}, cfg::_100percent+1));
     auto p = 5000;
     BOOST_CHECK_EQUAL(success(), post.set_rules(fn ,fn ,fn , p));
-    BOOST_CHECK_EQUAL(success(), post.create_msg({u, "0", ref},{N(),"",0}, 0, {}, 0));
-    BOOST_CHECK_EQUAL(success(), post.create_msg({u, "50-", ref},{N(),"",0}, 0, {}, p-1));
-    BOOST_CHECK_EQUAL(success(), post.create_msg({u, "50", ref},{N(),"",0}, 0, {}, p));
-    BOOST_CHECK_EQUAL(err.gt_maxtokenprop, post.create_msg({u, "50p", ref},{N(),"",0}, 0, {}, p+1));
+    BOOST_CHECK_EQUAL(success(), post.create_msg({u, "0"},{N(),""}, {}, 0));
+    BOOST_CHECK_EQUAL(success(), post.create_msg({u, "50-"},{N(),""}, {}, p-1));
+    BOOST_CHECK_EQUAL(success(), post.create_msg({u, "50"},{N(),""}, {}, p));
+    BOOST_CHECK_EQUAL(err.gt_maxtokenprop, post.create_msg({u, "50p"},{N(),""}, {}, p+1));
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE(create_message, golos_publication_tester) try {
     BOOST_TEST_MESSAGE("Create message testing.");
     init();
-    auto ref_block_num_brucelee_and_chucknorris = control->head_block_header().block_num();
-    BOOST_CHECK_EQUAL(err.not_valid_ref_block_num, post.create_msg({N(brucelee), "permlink", ref_block_num_brucelee_and_chucknorris+1}));
-    BOOST_CHECK_EQUAL(success(), post.create_msg({N(brucelee), "permlink", ref_block_num_brucelee_and_chucknorris}));
+    BOOST_CHECK_EQUAL(success(), post.create_msg({N(brucelee), "permlink"}));
 
     BOOST_TEST_MESSAGE("--- checking that another user can create a message with the same permlink.");
-    BOOST_CHECK_EQUAL(success(), post.create_msg({N(chucknorris), "permlink", ref_block_num_brucelee_and_chucknorris}));
+    BOOST_CHECK_EQUAL(success(), post.create_msg({N(chucknorris), "permlink"}));
 
-    check_equal_post(post.get_message({N(brucelee), "permlink", ref_block_num_brucelee_and_chucknorris}), _test_msg);
+    check_equal_post(post.get_message({N(brucelee), "permlink"}), _test_msg);
 
     BOOST_TEST_MESSAGE("--- checking that message wasn't closed.");
     produce_blocks(seconds_to_blocks(post.window));
-    auto msg = post.get_message({N(brucelee), "permlink", ref_block_num_brucelee_and_chucknorris});
+    auto msg = post.get_message({N(brucelee), "permlink"});
     BOOST_CHECK_EQUAL(msg.is_null(), false);
 
-    auto ref_block_num_jackiechan = control->head_block_header().block_num();
-    BOOST_CHECK_EQUAL(success(), post.create_msg({N(jackiechan), "permlink1", ref_block_num_jackiechan},
-    {N(brucelee), "permlink", ref_block_num_brucelee_and_chucknorris}));
+    BOOST_CHECK_EQUAL(success(), post.create_msg({N(jackiechan), "permlink1"}, {N(brucelee), "permlink"}));
 
-    msg = post.get_message({N(brucelee), "permlink", ref_block_num_brucelee_and_chucknorris});
+    msg = post.get_message({N(brucelee), "permlink"});
     BOOST_CHECK_EQUAL(msg["childcount"].as<uint64_t>(), 1);
 
     BOOST_TEST_MESSAGE("--- checking that message was closed.");
     produce_block();
-    msg = post.get_message({N(brucelee), "permlink", ref_block_num_brucelee_and_chucknorris});
+    msg = post.get_message({N(brucelee), "permlink"});
     BOOST_CHECK_EQUAL(msg.is_null(), true);
 
-    auto ref_block_num_jackiechan_and_larimer = control->head_block_header().block_num();
+    BOOST_CHECK_EQUAL(success(), post.create_msg({N(jackiechan), "permlink2"}, {N(brucelee), "permlink"}));
 
-    BOOST_CHECK_EQUAL(err.parent_no_message, post.create_msg({N(jackiechan), "permlink2", ref_block_num_jackiechan_and_larimer},
-    {N(brucelee), "permlink", ref_block_num_brucelee_and_chucknorris}));
+    BOOST_CHECK_EQUAL(success(), post.create_msg({N(jackiechan), "permlink3"}, {N(brucelee), "permlink"}));
 
-    BOOST_CHECK_EQUAL(success(), post.create_msg({N(jackiechan), "permlink2", ref_block_num_jackiechan_and_larimer},
-    {N(brucelee), "permlink", ref_block_num_brucelee_and_chucknorris}, static_cast<uint64_t>(ref_block_num_brucelee_and_chucknorris+1)<<32 | 1));
-
-    BOOST_CHECK_EQUAL(err.unregistered_user_ + "dan.larimer", post.create_msg({N(dan.larimer), "hi", ref_block_num_jackiechan_and_larimer}));
+    BOOST_CHECK_EQUAL(err.unregistered_user_ + "dan.larimer", post.create_msg({N(dan.larimer), "hi"}));
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE(update_message, golos_publication_tester) try {
     BOOST_TEST_MESSAGE("Update message testing.");
     init();
 
-    auto ref_block_num = control->head_block_header().block_num();
-    BOOST_CHECK_EQUAL(success(), post.create_msg({N(brucelee), "permlink", ref_block_num}));
-    BOOST_CHECK_EQUAL(success(), post.update_msg({N(brucelee), "permlink", ref_block_num},
+    BOOST_CHECK_EQUAL(success(), post.create_msg({N(brucelee), "permlink"}));
+    BOOST_CHECK_EQUAL(success(), post.update_msg({N(brucelee), "permlink"},
         "headermssgnew", "bodymssgnew", "languagemssgnew", {{"tagnew"}}, "jsonmetadatanew"));
 
     produce_blocks(seconds_to_blocks(post.window) + 1);
 
-    BOOST_CHECK_EQUAL(err.no_message, post.update_msg({N(brucelee), "permlink", ref_block_num},
+    BOOST_CHECK_EQUAL(success(), post.update_msg({N(brucelee), "permlink"},
         "headermssgnew", "bodymssgnew", "languagemssgnew", {{"tagnew"}}, "jsonmetadatanew"));
 
 } FC_LOG_AND_RETHROW()
@@ -312,18 +302,17 @@ BOOST_FIXTURE_TEST_CASE(delete_message, golos_publication_tester) try {
     BOOST_TEST_MESSAGE("Delete message testing.");
     init();
 
-    auto ref_block_num = control->head_block_header().block_num();
-    BOOST_CHECK_EQUAL(success(), post.create_msg({N(brucelee), "permlink", ref_block_num}));
-    BOOST_CHECK_EQUAL(success(), post.create_msg({N(jackiechan), "child", ref_block_num}, {N(brucelee), "permlink", ref_block_num}));
+    BOOST_CHECK_EQUAL(success(), post.create_msg({N(brucelee), "permlink"}));
+    BOOST_CHECK_EQUAL(success(), post.create_msg({N(jackiechan), "child"}, {N(brucelee), "permlink"}));
 
     BOOST_TEST_MESSAGE("--- fail then delete non-existing post and post with child");
-    BOOST_CHECK_EQUAL(err.no_message, post.delete_msg({N(jackiechan), "permlink1", ref_block_num}));
-    BOOST_CHECK_EQUAL(err.delete_children, post.delete_msg({N(brucelee), "permlink", ref_block_num}));
+    BOOST_CHECK_EQUAL(err.no_message, post.delete_msg({N(jackiechan), "permlink1"}));
+    BOOST_CHECK_EQUAL(err.delete_children, post.delete_msg({N(brucelee), "permlink"}));
 
     BOOST_TEST_MESSAGE("--- success when delete child");
-    BOOST_CHECK_EQUAL(success(), post.delete_msg({N(jackiechan), "child", ref_block_num}));
+    BOOST_CHECK_EQUAL(success(), post.delete_msg({N(jackiechan), "child"}));
     BOOST_TEST_MESSAGE("--- success delete when no more children");
-    BOOST_CHECK_EQUAL(success(), post.delete_msg({N(brucelee), "permlink", ref_block_num}));
+    BOOST_CHECK_EQUAL(success(), post.delete_msg({N(brucelee), "permlink"}));
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE(upvote, golos_publication_tester) try {
@@ -331,16 +320,15 @@ BOOST_FIXTURE_TEST_CASE(upvote, golos_publication_tester) try {
     init();
 
     auto permlink = "permlink";
-    auto ref_block_num = control->head_block_header().block_num();
-    auto vote_brucelee = [&](auto weight){ return post.upvote(N(brucelee), {N(brucelee), permlink, ref_block_num}, weight); };
-    auto vote_jackie = [&](auto weight){ return post.upvote(N(jackiechan), {N(brucelee), permlink, ref_block_num}, weight); };
+    auto vote_brucelee = [&](auto weight){ return post.upvote(N(brucelee), {N(brucelee), permlink}, weight); };
+    auto vote_jackie = [&](auto weight){ return post.upvote(N(jackiechan), {N(brucelee), permlink}, weight); };
 
     BOOST_TEST_MESSAGE("--- fail on non-existing message");
     BOOST_CHECK_EQUAL(err.no_message, vote_brucelee(123));
     BOOST_TEST_CHECK(post.get_vote(N(brucelee), 1).is_null());
 
     BOOST_TEST_MESSAGE("--- succeed on initial upvote");
-    BOOST_CHECK_EQUAL(success(), post.create_msg({N(brucelee), permlink, ref_block_num}));
+    BOOST_CHECK_EQUAL(success(), post.create_msg({N(brucelee), permlink}));
     BOOST_CHECK_EQUAL(success(), vote_brucelee(123));
     auto _vote = mvo()("id",0)("message_id",1)("voter","brucelee")("count",1);   // TODO: time
     CHECK_MATCHING_OBJECT(post.get_vote(N(brucelee), 0), _vote);
@@ -380,16 +368,15 @@ BOOST_FIXTURE_TEST_CASE(downvote, golos_publication_tester) try {
     BOOST_TEST_MESSAGE("Downvote testing.");
     init();
     auto permlink = "permlink";
-    auto ref_block_num = control->head_block_header().block_num();
-    auto vote_brucelee = [&](auto weight){ return post.upvote(N(brucelee), {N(brucelee), permlink, ref_block_num}, weight); };
-    auto vote_jackie = [&](auto weight){ return post.upvote(N(jackiechan), {N(brucelee), permlink, ref_block_num}, weight); };
+    auto vote_brucelee = [&](auto weight){ return post.upvote(N(brucelee), {N(brucelee), permlink}, weight); };
+    auto vote_jackie = [&](auto weight){ return post.upvote(N(jackiechan), {N(brucelee), permlink}, weight); };
 
     BOOST_TEST_MESSAGE("--- fail on non-existing message");
     BOOST_CHECK_EQUAL(err.no_message, vote_brucelee(123));
     BOOST_TEST_CHECK(post.get_vote(N(brucelee), 1).is_null());
 
     BOOST_TEST_MESSAGE("--- succeed on initial downvote");
-    BOOST_CHECK_EQUAL(success(), post.create_msg({N(brucelee), permlink, ref_block_num}));
+    BOOST_CHECK_EQUAL(success(), post.create_msg({N(brucelee), permlink}));
     BOOST_CHECK_EQUAL(success(), vote_brucelee(123));
     auto _vote = mvo()("id",0)("message_id",1)("voter","brucelee")("count",1);   // TODO: time
     CHECK_MATCHING_OBJECT(post.get_vote(N(brucelee), 0), _vote);
@@ -422,34 +409,32 @@ BOOST_FIXTURE_TEST_CASE(downvote, golos_publication_tester) try {
 BOOST_FIXTURE_TEST_CASE(unvote, golos_publication_tester) try {
     BOOST_TEST_MESSAGE("Unvote testing.");
     init();
-    auto ref_block_num = control->head_block_header().block_num();
-    BOOST_CHECK_EQUAL(err.no_message, post.unvote(N(brucelee), {N(brucelee), "permlink", ref_block_num}));
+    BOOST_CHECK_EQUAL(err.no_message, post.unvote(N(brucelee), {N(brucelee), "permlink"}));
 
     // TODO: test fail on initial unvote
-    BOOST_CHECK_EQUAL(success(), post.create_msg({N(brucelee), "permlink", ref_block_num}));
-    BOOST_CHECK_EQUAL(success(), post.upvote(N(brucelee), {N(brucelee), "permlink", ref_block_num}, 123));
+    BOOST_CHECK_EQUAL(success(), post.create_msg({N(brucelee), "permlink"}));
+    BOOST_CHECK_EQUAL(success(), post.upvote(N(brucelee), {N(brucelee), "permlink"}, 123));
     produce_block();
-    BOOST_CHECK_EQUAL(success(), post.unvote(N(brucelee), {N(brucelee), "permlink", ref_block_num}));
+    BOOST_CHECK_EQUAL(success(), post.unvote(N(brucelee), {N(brucelee), "permlink"}));
     produce_block();
-    BOOST_CHECK_EQUAL(success(), post.downvote(N(brucelee), {N(brucelee), "permlink", ref_block_num}, 333));
+    BOOST_CHECK_EQUAL(success(), post.downvote(N(brucelee), {N(brucelee), "permlink"}, 333));
     produce_block();
-    BOOST_CHECK_EQUAL(success(), post.unvote(N(brucelee), {N(brucelee), "permlink", ref_block_num}));
+    BOOST_CHECK_EQUAL(success(), post.unvote(N(brucelee), {N(brucelee), "permlink"}));
     produce_block();
 
-    BOOST_CHECK_EQUAL(err.vote_same_weight, post.unvote(N(brucelee), {N(brucelee), "permlink", ref_block_num}));
+    BOOST_CHECK_EQUAL(err.vote_same_weight, post.unvote(N(brucelee), {N(brucelee), "permlink"}));
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE(mixed_vote_test, golos_publication_tester) try {
     BOOST_TEST_MESSAGE("Mixed vote testing.");
     init();
-    auto ref_block_num = control->head_block_header().block_num();
     BOOST_TEST_MESSAGE("--- test that each vote type increases votes count");
-    BOOST_CHECK_EQUAL(success(), post.create_msg({N(brucelee), "permlink", ref_block_num}));
-    BOOST_CHECK_EQUAL(success(), post.downvote(N(brucelee), {N(brucelee), "permlink", ref_block_num}, 123));
+    BOOST_CHECK_EQUAL(success(), post.create_msg({N(brucelee), "permlink"}));
+    BOOST_CHECK_EQUAL(success(), post.downvote(N(brucelee), {N(brucelee), "permlink"}, 123));
     produce_block();
-    BOOST_CHECK_EQUAL(success(), post.unvote(N(brucelee), {N(brucelee), "permlink", ref_block_num}));
+    BOOST_CHECK_EQUAL(success(), post.unvote(N(brucelee), {N(brucelee), "permlink"}));
     produce_block();
-    BOOST_CHECK_EQUAL(success(), post.upvote(N(brucelee), {N(brucelee), "permlink", ref_block_num}, 321));
+    BOOST_CHECK_EQUAL(success(), post.upvote(N(brucelee), {N(brucelee), "permlink"}, 321));
     produce_block();
 
     auto vote = post.get_vote(N(brucelee), 0);
@@ -459,104 +444,100 @@ BOOST_FIXTURE_TEST_CASE(mixed_vote_test, golos_publication_tester) try {
 BOOST_FIXTURE_TEST_CASE(delete_post_with_vote_test, golos_publication_tester) try {
     BOOST_TEST_MESSAGE("Delete post with vote testing.");   // TODO: move to "delete" test ?
     init();
-    auto ref_block_num = control->head_block_header().block_num();
-    BOOST_CHECK_EQUAL(success(), post.create_msg({N(brucelee), "upvote-me", ref_block_num}));
-    BOOST_CHECK_EQUAL(success(), post.create_msg({N(chucknorris), "downvote-me", ref_block_num}));
-    BOOST_CHECK_EQUAL(success(), post.upvote(N(chucknorris), {N(brucelee), "upvote-me", ref_block_num}, 321));
-    BOOST_CHECK_EQUAL(success(), post.downvote(N(brucelee), {N(chucknorris), "downvote-me", ref_block_num}, 123));
+    BOOST_CHECK_EQUAL(success(), post.create_msg({N(brucelee), "upvote-me"}));
+    BOOST_CHECK_EQUAL(success(), post.create_msg({N(chucknorris), "downvote-me"}));
+    BOOST_CHECK_EQUAL(success(), post.upvote(N(chucknorris), {N(brucelee), "upvote-me"}, 321));
+    BOOST_CHECK_EQUAL(success(), post.downvote(N(brucelee), {N(chucknorris), "downvote-me"}, 123));
     produce_block();
-    BOOST_CHECK_EQUAL(success(), post.delete_msg({N(chucknorris), "downvote-me", ref_block_num}));
-//    BOOST_CHECK_EQUAL(err.delete_rshares, post.delete_msg({N(brucelee), "upvote-me", ref_block_num}));    // TODO:
+    BOOST_CHECK_EQUAL(success(), post.delete_msg({N(chucknorris), "downvote-me"}));
+//    BOOST_CHECK_EQUAL(err.delete_rshares, post.delete_msg({N(brucelee), "upvote-me"}));    // TODO:
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE(nesting_level_test, golos_publication_tester) try {
     BOOST_TEST_MESSAGE("nesting level test.");
     init();
-    auto ref_block_num = control->head_block_header().block_num();
-    BOOST_CHECK_EQUAL(success(), post.create_msg({N(brucelee), "permlink0", ref_block_num}));
+    BOOST_CHECK_EQUAL(success(), post.create_msg({N(brucelee), "permlink0"}));
     size_t i = 0;
     for (; i < post.max_comment_depth; i++) {
         BOOST_CHECK_EQUAL(success(), post.create_msg(
-            {N(brucelee), "permlink" + std::to_string(i+1), ref_block_num},
-            {N(brucelee), "permlink" + std::to_string(i), ref_block_num}));
+            {N(brucelee), "permlink" + std::to_string(i+1)},
+            {N(brucelee), "permlink" + std::to_string(i)}));
     }
     BOOST_CHECK_EQUAL(err.max_comment_depth, post.create_msg(
-        {N(brucelee), "permlink" + std::to_string(i+1), ref_block_num},
-        {N(brucelee), "permlink" + std::to_string(i), ref_block_num}));
+        {N(brucelee), "permlink" + std::to_string(i+1)},
+        {N(brucelee), "permlink" + std::to_string(i)}));
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE(comments_cashout_time_test, golos_publication_tester) try {
     BOOST_TEST_MESSAGE("comments_cashout_time_test.");
     init();
-    auto ref_block_num_brucelee = control->head_block_header().block_num();
-    BOOST_CHECK_EQUAL(success(), post.create_msg({N(brucelee), "permlink", ref_block_num_brucelee}));
+    BOOST_CHECK_EQUAL(success(), post.create_msg({N(brucelee), "permlink"}));
     auto need_blocks = seconds_to_blocks(post.window);
     auto wait_blocks = 5;
     produce_blocks(wait_blocks);
     need_blocks -= wait_blocks;
 
-    auto ref_block_num_chucknorris = control->head_block_header().block_num();
-    BOOST_CHECK_EQUAL(success(), post.create_msg({N(chucknorris), "comment-permlink", ref_block_num_chucknorris},
-                                                 {N(brucelee), "permlink", ref_block_num_brucelee}));
+    BOOST_CHECK_EQUAL(success(), post.create_msg({N(chucknorris), "comment-permlink"}, {N(brucelee), "permlink"}));
 
     BOOST_TEST_MESSAGE("--- creating " << need_blocks << " blocks");
     produce_blocks(need_blocks);
 
     BOOST_TEST_MESSAGE("--- checking that messages wasn't closed.");
-    BOOST_CHECK_EQUAL(post.get_message({N(brucelee), "permlink", ref_block_num_brucelee}).is_null(), false);
+    BOOST_CHECK_EQUAL(post.get_message({N(brucelee), "permlink"}).is_null(), false);
 
     produce_block();
 
     BOOST_TEST_MESSAGE("--- checking that messages was closed.");
-    BOOST_CHECK_EQUAL(post.get_message({N(brucelee), "permlink", ref_block_num_brucelee}).is_null(), true);
+    BOOST_CHECK_EQUAL(post.get_message({N(brucelee), "permlink"}).is_null(), true);
 
     produce_blocks(wait_blocks-1);
     BOOST_TEST_MESSAGE("--- checking that comment wasn't closed.");
-    BOOST_CHECK_EQUAL(post.get_message({N(chucknorris), "comment-permlink", ref_block_num_chucknorris}).is_null(), false);
+    BOOST_CHECK_EQUAL(post.get_message({N(chucknorris), "comment-permlink"}).is_null(), false);
 
     produce_block();
     BOOST_TEST_MESSAGE("--- checking that comment was closed.");
-    BOOST_CHECK_EQUAL(post.get_message({N(chucknorris), "comment-permlink", ref_block_num_chucknorris}).is_null(), true);
+    BOOST_CHECK_EQUAL(post.get_message({N(chucknorris), "comment-permlink"}).is_null(), true);
 
-    auto ref_block_num_jackiechan = control->head_block_header().block_num();
-    BOOST_CHECK_EQUAL(err.parent_no_message, post.create_msg({N(jackiechan), "sorry-guys-i-am-late", ref_block_num_jackiechan},
-                                                 {N(brucelee), "permlink", ref_block_num_brucelee}));
+    BOOST_CHECK_EQUAL(success(), post.create_msg({N(jackiechan), "sorry-guys-i-am-late"}, {N(brucelee), "permlink"}));
+    produce_blocks(need_blocks);
+    BOOST_CHECK_EQUAL(post.get_message({N(jackiechan), "sorry-guys-i-am-late"}).is_null(), false);
     produce_block();
 
+    produce_blocks(wait_blocks - 1);
+    BOOST_CHECK_EQUAL(post.get_message({N(jackiechan), "sorry-guys-i-am-late"}).is_null(), false);
+
     BOOST_TEST_MESSAGE("--- checking that closed message comment was closed.");
-    BOOST_CHECK_EQUAL(post.get_message({N(jackiechan), "sorry-guys-i-am-late", ref_block_num_jackiechan}).is_null(), true);
+    produce_block();
+    BOOST_CHECK_EQUAL(post.get_message({N(jackiechan), "sorry-guys-i-am-late"}).is_null(), true);
 
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE(data_validation, golos_publication_tester) try {
     BOOST_TEST_MESSAGE("data_validation_test.");
     init();
-    auto ref_block_num_brucelee = control->head_block_header().block_num();
     std::string str256(256, 'a');
 
     BOOST_TEST_MESSAGE("--- checking permlink length.");
-    BOOST_CHECK_EQUAL(err.wrong_prmlnk_length, post.create_msg({N(brucelee), "", ref_block_num_brucelee}));
-    BOOST_CHECK_EQUAL(err.wrong_prmlnk_length, post.create_msg({N(brucelee), str256, ref_block_num_brucelee}));
+    BOOST_CHECK_EQUAL(err.wrong_prmlnk_length, post.create_msg({N(brucelee), ""}));
+    BOOST_CHECK_EQUAL(err.wrong_prmlnk_length, post.create_msg({N(brucelee), str256}));
 
     BOOST_TEST_MESSAGE("--- checking permlink naming convension.");
-    BOOST_CHECK_EQUAL(err.wrong_prmlnk, post.create_msg({N(brucelee), "ABC", ref_block_num_brucelee}));
-    BOOST_CHECK_EQUAL(err.wrong_prmlnk, post.create_msg({N(brucelee), "АБЦ", ref_block_num_brucelee}));
-    BOOST_CHECK_EQUAL(success(), post.create_msg({N(brucelee), "abcdefghijklmnopqrstuvwxyz0123456789-", ref_block_num_brucelee}));
+    BOOST_CHECK_EQUAL(err.wrong_prmlnk, post.create_msg({N(brucelee), "ABC"}));
+    BOOST_CHECK_EQUAL(err.wrong_prmlnk, post.create_msg({N(brucelee), "АБЦ"}));
+    BOOST_CHECK_EQUAL(success(), post.create_msg({N(brucelee), "abcdefghijklmnopqrstuvwxyz0123456789-"}));
 
     BOOST_TEST_MESSAGE("--- checking title length.");
-    BOOST_CHECK_EQUAL(success(), post.create_msg({N(brucelee), "permlink", ref_block_num_brucelee}));
-    BOOST_CHECK_EQUAL(err.wrong_title_length, post.create_msg({N(brucelee), "test-title", ref_block_num_brucelee},
-                                                              {N(brucelee), "permlink", ref_block_num_brucelee},
-                                                              0,
+    BOOST_CHECK_EQUAL(success(), post.create_msg({N(brucelee), "permlink"}));
+    BOOST_CHECK_EQUAL(err.wrong_title_length, post.create_msg({N(brucelee), "test-title"},
+                                                              {N(brucelee), "permlink"},
                                                               {},
                                                               5000,
                                                               false,
                                                               str256));
 
     BOOST_TEST_MESSAGE("--- checking body length.");
-    BOOST_CHECK_EQUAL(err.wrong_body_length, post.create_msg({N(brucelee), "test-body", ref_block_num_brucelee},
-                                                             {N(brucelee), "permlink", ref_block_num_brucelee},
-                                                             0,
+    BOOST_CHECK_EQUAL(err.wrong_body_length, post.create_msg({N(brucelee), "test-body"},
+                                                             {N(brucelee), "permlink"},
                                                              {},
                                                              5000,
                                                              false,
@@ -569,7 +550,6 @@ BOOST_FIXTURE_TEST_CASE(upvote_near_close, golos_publication_tester) try {
     init();
 
     auto permlink = "permlink";
-    auto ref_block_num = control->head_block_header().block_num();
 
     BOOST_CHECK_EQUAL(success(), token.issue(cfg::emission_name, N(brucelee), token.make_asset(500), "issue tokens brucelee"));
     BOOST_CHECK_EQUAL(success(), token.issue(cfg::emission_name, N(jackiechan), token.make_asset(500), "issue tokens jackiechan"));
@@ -581,12 +561,12 @@ BOOST_FIXTURE_TEST_CASE(upvote_near_close, golos_publication_tester) try {
     BOOST_CHECK_EQUAL(success(), token.transfer(N(chucknorris), cfg::vesting_name, token.make_asset(100), "buy vesting"));
     produce_block();
 
-    auto vote_brucelee = [&](auto weight){ return post.upvote(N(brucelee), {N(brucelee), permlink, ref_block_num}, weight); };
-    auto vote_jackie = [&](auto weight){ return post.upvote(N(jackiechan), {N(brucelee), permlink, ref_block_num}, weight); };
-    auto vote_chucknorris = [&](auto weight){ return post.upvote(N(chucknorris), {N(brucelee), permlink, ref_block_num}, weight); };
+    auto vote_brucelee = [&](auto weight){ return post.upvote(N(brucelee), {N(brucelee), permlink}, weight); };
+    auto vote_jackie = [&](auto weight){ return post.upvote(N(jackiechan), {N(brucelee), permlink}, weight); };
+    auto vote_chucknorris = [&](auto weight){ return post.upvote(N(chucknorris), {N(brucelee), permlink}, weight); };
 
     BOOST_TEST_MESSAGE("--- succeed on initial upvote");
-    BOOST_CHECK_EQUAL(success(), post.create_msg({N(brucelee), permlink, ref_block_num}));
+    BOOST_CHECK_EQUAL(success(), post.create_msg({N(brucelee), permlink}));
     BOOST_CHECK_EQUAL(success(), vote_brucelee(123));
     auto _vote = mvo()("id",0)("message_id",1)("voter","brucelee")("count",1);   // TODO: time
     CHECK_MATCHING_OBJECT(post.get_vote(N(brucelee), 0), _vote);
@@ -614,14 +594,12 @@ BOOST_FIXTURE_TEST_CASE(set_curators_prcnt, golos_publication_tester) try {
 
     init();
 
-    auto ref_block_num = control->head_block_header().block_num();
     auto create_msg = [&](optional<uint16_t> curators_prcnt = optional<uint16_t>(), mssgid message_id = {}){
         if (message_id == mssgid())
-            message_id = {N(brucelee), "permlink", ref_block_num};
+            message_id = {N(brucelee), "permlink"};
         return post.create_msg(
             message_id,
-            {N(), "parentprmlnk", 0},
-            0,
+            {N(), "parentprmlnk"},
             {},
             5000,
             false,
@@ -640,22 +618,22 @@ BOOST_FIXTURE_TEST_CASE(set_curators_prcnt, golos_publication_tester) try {
 
     BOOST_TEST_MESSAGE("--- checking that curators percent was setted as default");
     BOOST_CHECK_EQUAL(success(), create_msg());
-    BOOST_CHECK_EQUAL(post.get_message({N(brucelee), "permlink", ref_block_num})["curators_prcnt"], post.min_curators_prcnt);
+    BOOST_CHECK_EQUAL(post.get_message({N(brucelee), "permlink"})["curators_prcnt"].as<base_t>(), static_cast<base_t>(elaf_t(elai_t(post.min_curators_prcnt)/elai_t(cfg::_100percent)).data()));
 
     BOOST_TEST_MESSAGE("--- checking that curators percent was setted correctly");
-    BOOST_CHECK_EQUAL(success(), create_msg(7100, {N(jackiechan), "permlink", ref_block_num}));
-    BOOST_CHECK_EQUAL(post.get_message({N(jackiechan), "permlink", ref_block_num})["curators_prcnt"], 7100);
+    BOOST_CHECK_EQUAL(success(), create_msg(7100, {N(jackiechan), "permlink"}));
+    BOOST_CHECK_EQUAL(post.get_message({N(jackiechan), "permlink"})["curators_prcnt"].as<base_t>(), static_cast<base_t>(elaf_t(elai_t(7100)/elai_t(cfg::_100percent)).data()));
 
     BOOST_TEST_MESSAGE("--- checking that curators percent was changed");
-    BOOST_CHECK_EQUAL(success(), post.set_curators_prcnt({N(brucelee), "permlink", ref_block_num}, 7300));
-    BOOST_CHECK_EQUAL(post.get_message({N(brucelee), "permlink", ref_block_num})["curators_prcnt"], 7300);
+    BOOST_CHECK_EQUAL(success(), post.set_curators_prcnt({N(brucelee), "permlink"}, 7300));
+    BOOST_CHECK_EQUAL(post.get_message({N(brucelee), "permlink"})["curators_prcnt"].as<base_t>(), static_cast<base_t>(elaf_t(elai_t(7300)/elai_t(cfg::_100percent)).data()));
 
     BOOST_TEST_MESSAGE("--- checking that curators percent can't be changed");
     BOOST_CHECK_EQUAL(success(), token.issue(cfg::emission_name, N(jackiechan), token.make_asset(500), "issue tokens jackiechan"));
     BOOST_CHECK_EQUAL(success(), token.transfer(N(jackiechan), cfg::vesting_name, token.make_asset(100), "buy vesting"));
-    BOOST_CHECK_EQUAL(success(), post.upvote(N(jackiechan), {N(brucelee), "permlink", ref_block_num}, 123));
-    BOOST_CHECK_EQUAL(err.no_cur_percent, post.set_curators_prcnt({N(brucelee), "permlink", ref_block_num}, 7500));
-    BOOST_CHECK_EQUAL(post.get_message({N(brucelee), "permlink", ref_block_num})["curators_prcnt"], 7300);
+    BOOST_CHECK_EQUAL(success(), post.upvote(N(jackiechan), {N(brucelee), "permlink"}, 123));
+    BOOST_CHECK_EQUAL(err.no_cur_percent, post.set_curators_prcnt({N(brucelee), "permlink"}, 7500));
+    BOOST_CHECK_EQUAL(post.get_message({N(brucelee), "permlink"})["curators_prcnt"].as<base_t>(), static_cast<base_t>(elaf_t(elai_t(7300)/elai_t(cfg::_100percent)).data()));
 } FC_LOG_AND_RETHROW()
 
 BOOST_AUTO_TEST_SUITE_END()

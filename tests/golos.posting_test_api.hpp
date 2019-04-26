@@ -40,8 +40,7 @@ struct golos_posting_api: base_contract_api {
 
     action_result create_msg(
         mssgid message_id,
-        mssgid parent_id = {N(), "parentprmlnk", 0},
-        uint64_t parent_recid = 0,
+        mssgid parent_id = {N(), "parentprmlnk"},
         std::vector<beneficiary> beneficiaries = {},
         uint16_t token_prop = 5000,
         bool vest_payment = false,
@@ -55,7 +54,6 @@ struct golos_posting_api: base_contract_api {
         return push(N(createmssg), message_id.author, args()
             ("message_id", message_id)
             ("parent_id", parent_id)
-            ("parent_recid", parent_recid)
             ("beneficiaries", beneficiaries)
             ("tokenprop", token_prop)
             ("vestpayment", vest_payment)
@@ -179,7 +177,7 @@ struct golos_posting_api: base_contract_api {
         variant obj = _tester->get_chaindb_lower_bound_struct(_code, message_id.author, N(message), N(bypermlink),
                                                                 message_id.get_unique_key(), "message");
         if (!obj.is_null() && obj.get_object().size()) {
-            if(obj["permlink"].as<std::string>() == message_id.permlink && obj["ref_block_num"].as<uint64_t>() == message_id.ref_block_num) {
+            if(obj["permlink"].as<std::string>() == message_id.permlink) {
                 return obj;
             }
         }

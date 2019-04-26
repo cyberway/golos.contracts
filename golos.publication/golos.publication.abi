@@ -48,10 +48,6 @@
         {
             "name": "permlink",
             "type": "string"
-        },
-        {
-            "name": "ref_block_num",
-            "type": "uint64"
         }
     ]
   },
@@ -142,10 +138,6 @@
         "type": "name"
       },
       {
-        "name": "quantity",
-        "type": "asset"
-      },
-      {
         "name": "interest_rate",
         "type": "percent_t"
       },
@@ -184,10 +176,6 @@
       {
         "name": "permlink",
         "type": "string"
-      },
-      {
-        "name": "ref_block_num",
-        "type": "uint64"
       },
       {
         "name": "date",
@@ -232,6 +220,24 @@
     ]
   },
   {
+      "name": "permlink",
+      "base": "",
+      "fields": [
+        {
+          "name": "id",
+          "type": "uint64"
+        },
+        {
+          "name": "value",
+          "type": "string"
+        },
+        {
+          "name": "level",
+          "type": "uint16"
+        }
+      ]
+  },
+  {
     "name": "createmssg",
     "base": "",
     "fields": [
@@ -242,10 +248,6 @@
       {
         "name": "parent_id",
         "type": "mssgid"
-      },
-      {
-        "name": "parent_recid",
-        "type": "uint64"
       },
       {
         "name": "beneficiaries",
@@ -748,13 +750,6 @@
     ]
   },
   {
-    "name": "create_event",
-    "base": "",
-    "fields": [
-        {"name": "record_id", "type": "uint64"}
-    ]
-  },
-  {
     "name": "post_event",
     "base": "",
     "fields": [
@@ -801,7 +796,6 @@
   "events": [
     {"name": "poolstate", "type": "pool_event"},
     {"name": "poolerase", "type": "uint64"},
-    {"name": "postcreate","type": "create_event"},
     {"name": "poststate", "type": "post_event"},
     {"name": "votestate", "type": "vote_event"},
     {"name": "rewardweight", "type": "reward_weight_event"}
@@ -880,11 +874,30 @@
           "name": "bypermlink",
           "unique": "true",
           "orders": [
-              {"field": "permlink", "order": "asc"},
-              {"field": "ref_block_num", "order": "asc"}
+              {"field": "permlink", "order": "asc"}
           ]
        }
     ]
+  },
+  {
+      "name": "permlink",
+      "type": "permlink",
+      "indexes": [
+         {
+            "name": "primary",
+            "unique": "true",
+            "orders": [
+                {"field": "id", "order": "asc"}
+            ]
+         },
+         {
+            "name": "byvalue",
+            "unique": "true",
+            "orders": [
+                {"field": "value", "order": "asc"}
+            ]
+         }
+      ]
   },
   {
     "name": "vote",

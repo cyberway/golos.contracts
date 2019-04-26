@@ -69,7 +69,7 @@ void createmssg(
     bool 		    vestpayment,
     std::string 	headermssg,
     std::string 	bodymssg,
-    std::string l	anguagemssg,
+    std::string     languagemssg,
     std::vector<std::string> tags,
     std::string 	jsonmetadata,
     optional<uint16_t> curators_prcnt

@@ -174,14 +174,12 @@ BOOST_FIXTURE_TEST_CASE(golos_blocked_commenting_test, golos_social_tester) try 
     init(bignum, 10);
 
     BOOST_TEST_MESSAGE("--- create post: dave");
-    auto ref_block_num_dave = control->head_block_header().block_num();
-    BOOST_CHECK_EQUAL(success(), post.create_msg({"dave"_n, "permlink", ref_block_num_dave}));
+    BOOST_CHECK_EQUAL(success(), post.create_msg({"dave"_n, "permlink"}));
     produce_block();
 
     BOOST_TEST_MESSAGE("--- create comment: erin to dave");
-    auto ref_block_num_erin = control->head_block_header().block_num();
-    BOOST_CHECK_EQUAL(success(), post.create_msg({"erin"_n, "permlink2", ref_block_num_erin},
-                                                 {"dave"_n, "permlink", ref_block_num_dave}));
+    BOOST_CHECK_EQUAL(success(), post.create_msg({"erin"_n, "permlink2"},
+                                                 {"dave"_n, "permlink"}));
     produce_block();
 
     BOOST_TEST_MESSAGE("--- block: dave erin");
@@ -189,9 +187,8 @@ BOOST_FIXTURE_TEST_CASE(golos_blocked_commenting_test, golos_social_tester) try 
     produce_block();
 
     BOOST_TEST_MESSAGE("--- create comment: erin to dave again (fail)");
-    auto ref_block_num_erin1 = control->head_block_header().block_num();
-    BOOST_CHECK_EQUAL(err.you_are_blocked, post.create_msg({"erin"_n, "permlink3", ref_block_num_erin1},
-                                                           {"dave"_n, "permlink", ref_block_num_dave}));
+    BOOST_CHECK_EQUAL(err.you_are_blocked, post.create_msg({"erin"_n, "permlink3"},
+                                                           {"dave"_n, "permlink"}));
     produce_block();
 } FC_LOG_AND_RETHROW()
 
@@ -217,11 +214,10 @@ BOOST_FIXTURE_TEST_CASE(golos_reputation_test, golos_social_tester) try {
 
     BOOST_TEST_MESSAGE("--- upvote: dave erin 1000");
     new_permlink();
-    auto ref_block_num_erin = control->head_block_header().block_num();
-    BOOST_CHECK_EQUAL(success(), post.create_msg({"erin"_n, permlink, ref_block_num_erin}));
+    BOOST_CHECK_EQUAL(success(), post.create_msg({"erin"_n, permlink}));
     BOOST_CHECK_EQUAL(success(), social.create_reput({"erin"_n}));
     BOOST_CHECK_EQUAL(success(), social.create_reput({"dave"_n}));
-    BOOST_CHECK_EQUAL(success(), post.upvote("dave"_n, {"erin"_n, permlink, ref_block_num_erin}, 1000));
+    BOOST_CHECK_EQUAL(success(), post.upvote("dave"_n, {"erin"_n, permlink}, 1000));
     produce_block();
 
     auto erin_rep = social.get_reputation("erin"_n);
@@ -230,16 +226,14 @@ BOOST_FIXTURE_TEST_CASE(golos_reputation_test, golos_social_tester) try {
 
     BOOST_TEST_MESSAGE("--- downvote: erin dave 200");
     new_permlink();
-    auto ref_block_num_dave = control->head_block_header().block_num();
-    BOOST_CHECK_EQUAL(success(), post.create_msg({"dave"_n, permlink, ref_block_num_dave}));
-    BOOST_CHECK_EQUAL(success(), post.downvote("erin"_n, {"dave"_n, permlink, ref_block_num_dave}, 200));
+    BOOST_CHECK_EQUAL(success(), post.create_msg({"dave"_n, permlink}));
+    BOOST_CHECK_EQUAL(success(), post.downvote("erin"_n, {"dave"_n, permlink}, 200));
     produce_block();
 
     BOOST_TEST_MESSAGE("--- downvote: dave erin 200 (check rule #1)");
     new_permlink();
-    auto ref_block_num_erin1 = control->head_block_header().block_num();
-    BOOST_CHECK_EQUAL(success(), post.create_msg({"erin"_n, permlink, ref_block_num_erin1}));
-    BOOST_CHECK_EQUAL(success(), post.downvote("dave"_n, {"erin"_n, permlink, ref_block_num_erin1}, 10));
+    BOOST_CHECK_EQUAL(success(), post.create_msg({"erin"_n, permlink}));
+    BOOST_CHECK_EQUAL(success(), post.downvote("dave"_n, {"erin"_n, permlink}, 10));
     produce_block();
 
     auto new_erin_rep = social.get_reputation("erin"_n);
@@ -247,16 +241,14 @@ BOOST_FIXTURE_TEST_CASE(golos_reputation_test, golos_social_tester) try {
 
     BOOST_TEST_MESSAGE("--- upvote: erin dave 100");
     new_permlink();
-    auto ref_block_num_dave1 = control->head_block_header().block_num();
-    BOOST_CHECK_EQUAL(success(), post.create_msg({"dave"_n, permlink, ref_block_num_dave1}));
-    BOOST_CHECK_EQUAL(success(), post.upvote("erin"_n, {"dave"_n, permlink, ref_block_num_dave1}, 100));
+    BOOST_CHECK_EQUAL(success(), post.create_msg({"dave"_n, permlink}));
+    BOOST_CHECK_EQUAL(success(), post.upvote("erin"_n, {"dave"_n, permlink}, 100));
     produce_block();
 
     BOOST_TEST_MESSAGE("--- downvote: dave erin 200 (check rule #2)");
     new_permlink();
-    auto ref_block_num_erin2 = control->head_block_header().block_num();
-    BOOST_CHECK_EQUAL(success(), post.create_msg({"erin"_n, permlink, ref_block_num_erin2}));
-    BOOST_CHECK_EQUAL(success(), post.downvote("dave"_n, {"erin"_n, permlink, ref_block_num_erin2}, 10));
+    BOOST_CHECK_EQUAL(success(), post.create_msg({"erin"_n, permlink}));
+    BOOST_CHECK_EQUAL(success(), post.downvote("dave"_n, {"erin"_n, permlink}, 10));
     produce_block();
 
     auto new_erin_rep2 = social.get_reputation("erin"_n);
@@ -264,16 +256,14 @@ BOOST_FIXTURE_TEST_CASE(golos_reputation_test, golos_social_tester) try {
 
     BOOST_TEST_MESSAGE("--- upvote: erin dave 100");
     new_permlink();
-    auto ref_block_num_dave2 = control->head_block_header().block_num();
-    BOOST_CHECK_EQUAL(success(), post.create_msg({"dave"_n, permlink, ref_block_num_dave2}));
-    BOOST_CHECK_EQUAL(success(), post.upvote("erin"_n, {"dave"_n, permlink, ref_block_num_dave2}, 10000));
+    BOOST_CHECK_EQUAL(success(), post.create_msg({"dave"_n, permlink}));
+    BOOST_CHECK_EQUAL(success(), post.upvote("erin"_n, {"dave"_n, permlink}, 10000));
     produce_block();
 
     BOOST_TEST_MESSAGE("--- downvote: dave erin 200 (conforming rules)");
     new_permlink();
-    auto ref_block_num_erin3 = control->head_block_header().block_num();
-    BOOST_CHECK_EQUAL(success(), post.create_msg({"erin"_n, permlink, ref_block_num_erin3}));
-    BOOST_CHECK_EQUAL(success(), post.downvote("dave"_n, {"erin"_n, permlink, ref_block_num_erin3}, 10));
+    BOOST_CHECK_EQUAL(success(), post.create_msg({"erin"_n, permlink}));
+    BOOST_CHECK_EQUAL(success(), post.downvote("dave"_n, {"erin"_n, permlink}, 10));
     produce_block();
 
     auto new_erin_rep3 = social.get_reputation("erin"_n);
@@ -316,10 +306,9 @@ BOOST_FIXTURE_TEST_CASE(delete_reputation, golos_social_tester) try {
     init(1000000, 10);
 
     BOOST_TEST_MESSAGE("--- checking that reputation was added");
-    auto ref_block_num_erin = control->head_block_header().block_num();
-    BOOST_CHECK_EQUAL(success(), post.create_msg({"erin"_n, "permlink", ref_block_num_erin}));
+    BOOST_CHECK_EQUAL(success(), post.create_msg({"erin"_n, "permlink"}));
     BOOST_CHECK_EQUAL(success(), social.create_reput({"erin"_n}));
-    BOOST_CHECK_EQUAL(success(), post.upvote("dave"_n, {"erin"_n, "permlink", ref_block_num_erin}, 1000));
+    BOOST_CHECK_EQUAL(success(), post.upvote("dave"_n, {"erin"_n, "permlink"}, 1000));
     produce_block();
     auto erin_rep = social.get_reputation("erin"_n);
     BOOST_CHECK(!erin_rep.is_null());
