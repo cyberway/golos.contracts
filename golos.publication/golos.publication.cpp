@@ -8,6 +8,7 @@
 #include <common/upsert.hpp>
 #include "utils.hpp"
 #include "objects.hpp"
+#include <cyberway.contracts/common/util.hpp>
 
 namespace golos {
 
@@ -462,10 +463,9 @@ void publication::close_message(structures::mssgid message_id) {
     state.funds.amount += unclaimed_rewards;
     payout -= curation_payout;
 
-    const elap_t el_payout(elai_t(payout) / elai_t(config::_100percent));   // pre-divide
     int64_t ben_payout_sum = 0;
     for (auto& ben: mssg_itr->beneficiaries) {
-        auto ben_payout = int_cast(el_payout * elai_t(ben.weight));
+        auto ben_payout = cyber::safe_pct(payout, ben.weight);
         eosio_assert((0 <= ben_payout) && (ben_payout <= payout - ben_payout_sum), "LOGIC ERROR! publication::payrewards: wrong ben_payout value");
         payto(ben.account, eosio::asset(ben_payout, state.funds.symbol), static_cast<enum_t>(payment_t::VESTING), get_memo("benefeciary", message_id));
         ben_payout_sum += ben_payout;
