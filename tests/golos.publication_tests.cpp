@@ -76,8 +76,6 @@ public:
     void check_equal_post(const variant& a, const variant& b) {
         BOOST_CHECK_EQUAL(true, a.is_object() && b.is_object());
         BOOST_CHECK_EQUAL(a["id"].as<uint64_t>(), b["id"].as<uint64_t>());
-        BOOST_CHECK_EQUAL(a["parentacc"].as<account_name>(), b["parentacc"].as<account_name>());
-        BOOST_CHECK_EQUAL(a["parent_id"].as<uint64_t>(), b["parent_id"].as<uint64_t>());
         BOOST_CHECK_EQUAL(a["tokenprop"].as<uint16_t>(), b["tokenprop"].as<uint16_t>());
         auto a_ben = a["beneficiaries"];
         auto b_ben = b["beneficiaries"];
@@ -87,8 +85,6 @@ public:
         }
         BOOST_CHECK_EQUAL(a["rewardweight"].as<uint16_t>(), b["rewardweight"].as<uint16_t>());
         CHECK_EQUAL_OBJECTS(a["state"], b["state"]);
-        BOOST_CHECK_EQUAL(a["childcount"].as<uint64_t>(), b["childcount"].as<uint64_t>());
-        BOOST_CHECK_EQUAL(a["level"].as<uint16_t>(), b["level"].as<uint16_t>());
         BOOST_CHECK_EQUAL(a["curators_prcnt"].as<uint16_t>(), b["curators_prcnt"].as<uint16_t>());
     }
 
@@ -110,8 +106,6 @@ public:
 protected:
     const mvo _test_msg = mvo()
         ("id", 1)
-        ("parentacc", "")
-        ("parent_id", 0)
         ("tokenprop", 5000)
         ("beneficiaries", variants({}
             // mvo()
@@ -120,8 +114,6 @@ protected:
         ))
         ("rewardweight", cfg::_100percent)  // TODO: test that Golos rules (charge restorer) works as expected #617
         ("state", mvo()("netshares",0)("voteshares",0)("sumcuratorsw",0))
-        ("childcount", 0)
-        ("level", 0)
         ("curators_prcnt", 1000);
 
     struct errors: contract_error_messages {
@@ -130,6 +122,7 @@ protected:
         const string no_content            = amsg("Content doesn't exist.");
 
         const string delete_children       = amsg("You can't delete comment with child comments.");
+        const string no_permlink           = amsg("Permlink doesn't exist.");
         const string no_message            = amsg("Message doesn't exist in cashout window.");
         const string vote_same_weight      = amsg("Vote with the same weight has already existed.");
         const string vote_weight_0         = amsg("weight can't be 0.");
@@ -267,8 +260,8 @@ BOOST_FIXTURE_TEST_CASE(create_message, golos_publication_tester) try {
 
     BOOST_CHECK_EQUAL(success(), post.create_msg({N(jackiechan), "permlink1"}, {N(brucelee), "permlink"}));
 
-    msg = post.get_message({N(brucelee), "permlink"});
-    BOOST_CHECK_EQUAL(msg["childcount"].as<uint64_t>(), 1);
+    auto perm = post.get_permlink({N(brucelee), "permlink"});
+    BOOST_CHECK_EQUAL(perm["childcount"].as<uint32_t>(), 1);
 
     BOOST_TEST_MESSAGE("--- checking that message was closed.");
     produce_block();
@@ -305,13 +298,42 @@ BOOST_FIXTURE_TEST_CASE(delete_message, golos_publication_tester) try {
     BOOST_CHECK_EQUAL(success(), post.create_msg({N(jackiechan), "child"}, {N(brucelee), "permlink"}));
 
     BOOST_TEST_MESSAGE("--- fail then delete non-existing post and post with child");
-    BOOST_CHECK_EQUAL(err.no_message, post.delete_msg({N(jackiechan), "permlink1"}));
+    BOOST_CHECK_EQUAL(err.no_permlink, post.delete_msg({N(jackiechan), "permlink1"}));
     BOOST_CHECK_EQUAL(err.delete_children, post.delete_msg({N(brucelee), "permlink"}));
 
     BOOST_TEST_MESSAGE("--- success when delete child");
     BOOST_CHECK_EQUAL(success(), post.delete_msg({N(jackiechan), "child"}));
     BOOST_TEST_MESSAGE("--- success delete when no more children");
     BOOST_CHECK_EQUAL(success(), post.delete_msg({N(brucelee), "permlink"}));
+
+    BOOST_TEST_MESSAGE("--- fail delete post with child when cashout window has closed");
+    auto need_blocks = seconds_to_blocks(post.window);
+    auto wait_blocks = 5;
+    produce_blocks(wait_blocks);
+    need_blocks -= wait_blocks;
+    BOOST_CHECK_EQUAL(success(), post.create_msg({N(brucelee), "permlink-done"}));
+    BOOST_CHECK_EQUAL(success(), post.create_msg({N(jackiechan), "child-done"}, {N(brucelee), "permlink-done"}));
+
+    produce_blocks(need_blocks);
+    BOOST_CHECK_EQUAL(post.get_message({N(brucelee), "permlink-done"}).is_null(), false);
+    BOOST_CHECK_EQUAL(post.get_message({N(jackiechan), "child-done"}).is_null(), false);
+    produce_block();
+
+    produce_blocks(wait_blocks - 1);
+    BOOST_CHECK_EQUAL(post.get_message({N(brucelee), "permlink-done"}).is_null(), false);
+    BOOST_CHECK_EQUAL(post.get_message({N(jackiechan), "child-done"}).is_null(), false);
+
+    produce_block();
+    BOOST_CHECK_EQUAL(post.get_message({N(brucelee), "permlink-done"}).is_null(), true);
+    BOOST_CHECK_EQUAL(post.get_message({N(jackiechan), "child-done"}).is_null(), true);
+
+    BOOST_CHECK_EQUAL(err.delete_children, post.delete_msg({N(brucelee), "permlink-done"}));
+
+    BOOST_TEST_MESSAGE("--- success when delete child when cashout window has closed");
+    BOOST_CHECK_EQUAL(success(), post.delete_msg({N(jackiechan), "child-done"}));
+
+    BOOST_TEST_MESSAGE("--- success delete post when cashout window has closed");
+    BOOST_CHECK_EQUAL(success(), post.delete_msg({N(brucelee), "permlink-done"}));
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE(upvote, golos_publication_tester) try {
@@ -323,7 +345,7 @@ BOOST_FIXTURE_TEST_CASE(upvote, golos_publication_tester) try {
     auto vote_jackie = [&](auto weight){ return post.upvote(N(jackiechan), {N(brucelee), permlink}, weight); };
 
     BOOST_TEST_MESSAGE("--- fail on non-existing message");
-    BOOST_CHECK_EQUAL(err.no_message, vote_brucelee(123));
+    BOOST_CHECK_EQUAL(err.no_permlink, vote_brucelee(123));
     BOOST_TEST_CHECK(post.get_vote(N(brucelee), 1).is_null());
 
     BOOST_TEST_MESSAGE("--- succeed on initial upvote");
@@ -371,7 +393,7 @@ BOOST_FIXTURE_TEST_CASE(downvote, golos_publication_tester) try {
     auto vote_jackie = [&](auto weight){ return post.upvote(N(jackiechan), {N(brucelee), permlink}, weight); };
 
     BOOST_TEST_MESSAGE("--- fail on non-existing message");
-    BOOST_CHECK_EQUAL(err.no_message, vote_brucelee(123));
+    BOOST_CHECK_EQUAL(err.no_permlink, vote_brucelee(123));
     BOOST_TEST_CHECK(post.get_vote(N(brucelee), 1).is_null());
 
     BOOST_TEST_MESSAGE("--- succeed on initial downvote");
@@ -408,7 +430,7 @@ BOOST_FIXTURE_TEST_CASE(downvote, golos_publication_tester) try {
 BOOST_FIXTURE_TEST_CASE(unvote, golos_publication_tester) try {
     BOOST_TEST_MESSAGE("Unvote testing.");
     init();
-    BOOST_CHECK_EQUAL(err.no_message, post.unvote(N(brucelee), {N(brucelee), "permlink"}));
+    BOOST_CHECK_EQUAL(err.no_permlink, post.unvote(N(brucelee), {N(brucelee), "permlink"}));
 
     // TODO: test fail on initial unvote
     BOOST_CHECK_EQUAL(success(), post.create_msg({N(brucelee), "permlink"}));

@@ -174,19 +174,7 @@
         "type": "uint64"
       },
       {
-        "name": "permlink",
-        "type": "string"
-      },
-      {
         "name": "date",
-        "type": "uint64"
-      },
-      {
-        "name": "parentacc",
-        "type": "name"
-      },
-      {
-        "name": "parent_id",
         "type": "uint64"
       },
       {
@@ -206,14 +194,6 @@
         "type": "messagestate"
       },
       {
-        "name": "childcount",
-        "type": "uint32"
-      },
-      {
-        "name": "level",
-        "type": "uint16"
-      },
-      {
         "name": "curators_prcnt",
         "type": "percent_t"
       }
@@ -228,12 +208,24 @@
           "type": "uint64"
         },
         {
+          "name": "parentacc",
+          "type": "name"
+        },
+        {
+          "name": "parent_id",
+          "type": "uint64"
+        },
+        {
           "name": "value",
           "type": "string"
         },
         {
           "name": "level",
           "type": "uint16"
+        },
+        {
+          "name": "childcount",
+          "type": "uint32"
         }
       ]
   },
@@ -868,13 +860,6 @@
           "unique": "true",
           "orders": [
               {"field": "id", "order": "asc"}
-          ]
-       },
-       {
-          "name": "bypermlink",
-          "unique": "true",
-          "orders": [
-              {"field": "permlink", "order": "asc"}
           ]
        }
     ]

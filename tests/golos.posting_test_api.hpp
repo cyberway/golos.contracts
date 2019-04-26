@@ -169,17 +169,29 @@ struct golos_posting_api: base_contract_api {
     }
 
     //// posting tables
+    variant get_permlink(account_name acc, uint64_t id) {
+        return _tester->get_chaindb_struct(_code, acc, N(permlink), id, "permlink");
+    }
+
     variant get_message(account_name acc, uint64_t id) {
         return _tester->get_chaindb_struct(_code, acc, N(message), id, "message");
     }
 
-    variant get_message(mssgid message_id) {
-        variant obj = _tester->get_chaindb_lower_bound_struct(_code, message_id.author, N(message), N(bypermlink),
-                                                                message_id.get_unique_key(), "message");
+    variant get_permlink(mssgid message_id) {
+        variant obj = _tester->get_chaindb_lower_bound_struct(_code, message_id.author, N(permlink), N(byvalue),
+                                                              message_id.get_unique_key(), "message");
         if (!obj.is_null() && obj.get_object().size()) {
-            if(obj["permlink"].as<std::string>() == message_id.permlink) {
+            if(obj["value"].as<std::string>() == message_id.permlink) {
                 return obj;
             }
+        }
+        return variant();
+    }
+
+    variant get_message(mssgid message_id) {
+        auto permlink = get_permlink(message_id);
+        if (!permlink.is_null() && permlink.get_object().size()) {
+            return get_message(message_id.author, permlink["id"].as_uint64());
         }
         return variant();
     }
@@ -193,7 +205,28 @@ struct golos_posting_api: base_contract_api {
     }
 
     std::vector<variant> get_messages(account_name user) {
-        return _tester->get_all_chaindb_rows(_code, user, N(message), false);
+        auto raw_messages = _tester->get_all_chaindb_rows(_code, user, N(message), false);
+        auto raw_permlinks = _tester->get_all_chaindb_rows(_code, user, N(permlink), false);
+
+        std::map<uint64_t, variant> src_permlinks_map;
+        for (auto& perm: raw_permlinks) {
+            src_permlinks_map[perm["id"].as_uint64()] = perm;
+        }
+
+        std::vector<variant> messages;
+        messages.reserve(raw_messages.size());
+        for (auto& src_mssg:  raw_messages) {
+            mvo dst_mssg(src_mssg.get_object());
+            auto& src_perm = src_permlinks_map[src_mssg["id"].as_uint64()];
+
+            for (auto entry: src_perm.get_object()) {
+                dst_mssg(entry.key(), entry.value());
+            }
+            dst_mssg("permlink", src_perm["value"]);
+            messages.emplace_back(variant(dst_mssg));
+        }
+
+        return messages;
     }
 
     //// posting helpers

@@ -192,56 +192,45 @@ void publication::create_message(
     eosio_assert(pool->state.msgs < std::numeric_limits<structures::counter_t>::max(), "publication::create_message: pool->msgs == max_counter_val");
     pools.modify(*pool, _self, [&](auto &item){ item.state.msgs++; });
 
-    auto message_index = message_table.get_index<"bypermlink"_n>();
-    auto message_itr = message_index.find(message_id.permlink);
-    eosio_assert(message_itr == message_index.end(), "This message already exists.");
+    auto permlink_index = permlink_table.get_index<"byvalue"_n>();
+    auto permlink_itr = permlink_index.find(message_id.permlink);
+    eosio::check(permlink_itr == permlink_index.end(), "This message already exists.");
 
     uint64_t parent_pk = 0;
     uint16_t level = 0;
     if(parent_id.author) {
-        tables::message_table parent_table(_self, parent_id.author.value);
-        auto parent_index = parent_table.get_index<"bypermlink"_n>();
+        tables::permlink_table parent_table(_self, parent_id.author.value);
+        auto parent_index = parent_table.get_index<"byvalue"_n>();
         auto parent_itr = parent_index.find(parent_id.permlink);
+        eosio::check((parent_itr != parent_index.end()), "Parent message doesn't exist");
 
-        if(parent_itr != parent_index.end()) {
-            parent_index.modify(parent_itr, name(), [&]( auto &item ) {
-                    ++item.childcount;
-                });
-            parent_pk = parent_itr->id;
-            level = 1 + parent_itr->level;
-        } else {
-            tables::permlink_table permlink_parent_table(_self, parent_id.author.value);
-            auto permlink_parent_index = permlink_parent_table.get_index<"byvalue"_n>();
-            auto permlink_parent_itr = permlink_parent_index.find(parent_id.permlink);
-	        eosio::check((permlink_parent_itr != permlink_parent_index.end()), "Parent message doesn't exist");
-            level = 1 + permlink_parent_itr->level;
-            parent_pk = permlink_parent_itr->id;
-        }
+        parent_table.modify(*parent_itr, name(), [&](auto& item) {
+            ++item.childcount;
+        });
+
+        parent_pk = parent_itr->id;
+        level = 1 + parent_itr->level;
     }
     eosio::check(level <= max_comment_depth_param.max_comment_depth, "publication::create_message: level > MAX_COMMENT_DEPTH");
     eosio::check(tokenprop <= pool->rules.maxtokenprop, "tokenprop must not be greater than pool.rules.maxtokenprop");
 
     message_table.emplace(message_id.author, [&]( auto &item ) {
         item.id = message_pk;
-        item.permlink = message_id.permlink;
         item.date = cur_time;
-        item.parentacc = parent_id.author;
-        item.parent_id = parent_pk;
         item.tokenprop = tokenprop,
         item.beneficiaries = beneficiaries;
         item.rewardweight = config::_100percent;    // can be corrected later in calcrwrdwt
-        item.childcount = 0;
-        item.level = level;
         item.curators_prcnt = *curators_prcnt;
     });
 
-    auto permlink_itr = permlink_table.emplace(_self, [&]( auto &item) {
+    permlink_table.emplace(message_id.author, [&]( auto &item) {
         item.id = message_pk;
+        item.parentacc = parent_id.author;
+        item.parent_id = parent_pk;
         item.value = message_id.permlink;
         item.level = level;
+        item.childcount = 0;
     });
-
-    permlink_table.move_to_archive(*permlink_itr);
 
     close_message_timer(message_id, message_pk, cashout_window_param.window);
 }
@@ -251,13 +240,6 @@ void publication::update_message(structures::mssgid message_id,
                               std::string languagemssg, std::vector<std::string> tags,
                               std::string jsonmetadata) {
     require_auth(message_id.author);
-    tables::message_table message_table(_self, message_id.author.value);
-    auto message_index = message_table.get_index<"bypermlink"_n>();
-    auto message_itr = message_index.find(message_id.permlink);
-    if (message_index.end() != message_itr) {
-        return;
-    }
-
     tables::permlink_table permlink_table(_self, message_id.author.value);
     auto permlink_index = permlink_table.get_index<"byvalue"_n>();
     auto permlink_itr = permlink_index.find(message_id.permlink);
@@ -278,41 +260,46 @@ void publication::delete_message(structures::mssgid message_id) {
     require_auth(message_id.author);
 
     tables::permlink_table permlink_table(_self, message_id.author.value);
-    tables::message_table message_table(_self, message_id.author.value);
-    tables::vote_table vote_table(_self, message_id.author.value);
-
-    auto message_index = message_table.get_index<"bypermlink"_n>();
-    auto mssg_itr = message_index.find(message_id.permlink);
-    eosio::check(mssg_itr != message_index.end(), "Message doesn't exist in cashout window.");
-    eosio::check((mssg_itr->childcount) == 0, "You can't delete comment with child comments.");
-    eosio::check(FP(mssg_itr->state.netshares) <= 0, "Cannot delete a comment with net positive votes.");
-
-    // permlink table doesn't have childcount, because it in archive,
-    //   that is why we can't remove permlink w/o message in cashout window
     auto permlink_index = permlink_table.get_index<"byvalue"_n>();
     auto permlink_itr = permlink_index.find(message_id.permlink);
     eosio::check(permlink_itr != permlink_index.end(), "Permlink doesn't exist.");
+    eosio::check(permlink_itr->childcount == 0, "You can't delete comment with child comments.");
+
+    tables::message_table message_table(_self, message_id.author.value);
+    auto mssg_itr = message_table.find(permlink_itr->id);
+    if (mssg_itr != message_table.end()) {
+        eosio::check(FP(mssg_itr->state.netshares) <= 0, "Cannot delete a comment with net positive votes.");
+    }
+
+    if (permlink_itr->parentacc) {
+        tables::permlink_table parent_table(_self, permlink_itr->parentacc.value);
+        auto parent_itr = parent_table.find(permlink_itr->parent_id);
+        eosio::check(parent_itr != parent_table.end(), "Parent permlink doesn't exist.");
+
+        parent_table.modify(*parent_itr, name(), [&](auto& item) {
+            --item.childcount;
+        });
+    }
     permlink_index.erase(permlink_itr);
 
-    if (mssg_itr->parentacc) {
-        tables::message_table parent_table(_self, mssg_itr->parentacc.value);
-        auto parent_itr = parent_table.find(mssg_itr->parent_id);
-        if (parent_itr != parent_table.end()) {
-            parent_table.modify(parent_itr, name(), [&](auto& item) {
-                --item.childcount;
-            });
-        }
+    if (mssg_itr == message_table.end()) {
+        return;
     }
 
     cancel_deferred((static_cast<uint128_t>(mssg_itr->id) << 64) | message_id.author.value);
 
     auto remove_id = mssg_itr->id;
-    message_index.erase(mssg_itr);
+    message_table.erase(mssg_itr);
 
+    tables::vote_table vote_table(_self, message_id.author.value);
     auto votetable_index = vote_table.get_index<"messageid"_n>();
     auto vote_itr = votetable_index.lower_bound(remove_id);
-    while ((vote_itr != votetable_index.end()) && (vote_itr->message_id == remove_id))
-        vote_itr = votetable_index.erase(vote_itr);
+
+    while ((vote_itr != votetable_index.end()) && (vote_itr->message_id == remove_id)) {
+        auto& vote = *vote_itr;
+        ++vote_itr;
+        vote_table.erase(vote);
+    }
 }
 
 void publication::upvote(name voter, structures::mssgid message_id, uint16_t weight) {
@@ -403,10 +390,16 @@ void publication::use_postbw_charge(tables::limit_table& lims, name issuer, name
 
 void publication::close_message(structures::mssgid message_id) {
     require_auth(_self);
+
+    tables::permlink_table permlink_table(_self, message_id.author.value);
+    auto permlink_index = permlink_table.get_index<"byvalue"_n>();
+    auto permlink_itr = permlink_index.find(message_id.permlink);
+    // rare case - not critical for performance
+    eosio::check(permlink_itr != permlink_index.end(), "Permlink doesn't exist.");
+
     tables::message_table message_table(_self, message_id.author.value);
-    auto message_index = message_table.get_index<"bypermlink"_n>();
-    auto mssg_itr = message_index.find(message_id.permlink);
-    eosio::check(mssg_itr != message_index.end(), "Message doesn't exist in cashout window.");
+    auto mssg_itr = message_table.find(permlink_itr->id);
+    eosio::check(mssg_itr != message_table.end(), "Message doesn't exist in cashout window.");
 
     tables::reward_pools pools(_self, _self.value);
     auto pool = get_pool(pools, mssg_itr->date);
@@ -488,7 +481,9 @@ void publication::close_message(structures::mssgid message_id) {
        vote_table.erase(vote);
     }
 
-    message_index.erase(mssg_itr);
+    message_table.erase(mssg_itr);
+    permlink_table.modify(*permlink_itr, _self, [&](auto&){}); // change payer to contract
+    permlink_table.move_to_archive(*permlink_itr);
 
     bool pool_erased = false;
     state.msgs--;
@@ -545,10 +540,14 @@ void publication::set_vote(name voter, const structures::mssgid& message_id, int
     const auto& max_vote_changes_param = params().max_vote_changes_param;
     const auto& social_acc_param = params().social_acc_param;
 
+    tables::permlink_table permlink_table(_self, message_id.author.value);
+    auto permlink_index = permlink_table.get_index<"byvalue"_n>();
+    auto permlink_itr = permlink_index.find(message_id.permlink);
+    eosio::check(permlink_itr != permlink_index.end(), "Permlink doesn't exist.");
+
     tables::message_table message_table(_self, message_id.author.value);
-    auto message_index = message_table.get_index<"bypermlink"_n>();
-    auto mssg_itr = message_index.find(message_id.permlink);
-    eosio::check(mssg_itr != message_index.end(), "Message doesn't exist in cashout window.");
+    auto mssg_itr = message_table.find(permlink_itr->id);
+    eosio::check(mssg_itr != message_table.end(), "Message doesn't exist in cashout window.");
 
     tables::reward_pools pools(_self, _self.value);
     auto pool = get_pool(pools, mssg_itr->date);
@@ -577,11 +576,12 @@ void publication::set_vote(name voter, const structures::mssgid& message_id, int
             send_poolstate_event(item);
         });
 
-        message_index.modify(mssg_itr, name(), [&]( auto &item ) {
+        message_table.modify(mssg_itr, name(), [&]( auto &item ) {
             item.state.netshares = new_mssg_rshares.data();
             item.state.sumcuratorsw = (FP(item.state.sumcuratorsw) - FP(vote_itr->curatorsw)).data();
             send_poststate_event(
                 message_id.author,
+                *permlink_itr,
                 item,
                 get_calc_sharesfn(
                     pool->rules.mainfunc.code,
@@ -597,7 +597,7 @@ void publication::set_vote(name voter, const structures::mssgid& message_id, int
             item.curatorsw = fixp_t(0).data();
             item.rshares = rshares.data();
             ++item.count;
-            send_votestate_event(voter, item, message_id.author, *mssg_itr);
+            send_votestate_event(voter, item, message_id.author, *permlink_itr);
         });
 
         return;
@@ -626,10 +626,11 @@ void publication::set_vote(name voter, const structures::mssgid& message_id, int
 
     auto sumcuratorsw_delta = get_delta(machine, FP(mssg_itr->state.voteshares), FP(msg_new_state.voteshares), pool->rules.curationfunc);
     msg_new_state.sumcuratorsw = (FP(mssg_itr->state.sumcuratorsw) + sumcuratorsw_delta).data();
-    message_index.modify(mssg_itr, _self, [&](auto &item) {
+    message_table.modify(mssg_itr, _self, [&](auto &item) {
         item.state = msg_new_state;
         send_poststate_event(
             message_id.author,
+            *permlink_itr,
             item,
             get_calc_sharesfn(
                 pool->rules.mainfunc.code,
@@ -670,7 +671,7 @@ void publication::set_vote(name voter, const structures::mssgid& message_id, int
         item.delegators = delegators;
         item.curatorsw = (fp_cast<fixp_t>(elap_t(sumcuratorsw_delta) * curatorsw_factor)).data();
         item.rshares = rshares.data();
-        send_votestate_event(voter, item, message_id.author, *mssg_itr);
+        send_votestate_event(voter, item, message_id.author, *permlink_itr);
     });
 
     if (social_acc_param.account) {
@@ -788,14 +789,14 @@ void publication::send_poolerase_event(const structures::rewardpool& pool) {
     eosio::event(_self, "poolerase"_n, pool.created).send();
 }
 
-void publication::send_poststate_event(name author, const structures::message& post, fixp_t sharesfn) {
-    structures::post_event data{ author, post.permlink, post.state.netshares, post.state.voteshares,
+void publication::send_poststate_event(name author, const structures::permlink& permlink, const structures::message& post, fixp_t sharesfn) {
+    structures::post_event data{ author, permlink.value, post.state.netshares, post.state.voteshares,
         post.state.sumcuratorsw, static_cast<base_t>(sharesfn) };
     eosio::event(_self, "poststate"_n, data).send();
 }
 
-void publication::send_votestate_event(name voter, const structures::voteinfo& vote, name author, const structures::message& post) {
-    structures::vote_event data{voter, author, post.permlink, vote.weight, vote.curatorsw, vote.rshares};
+void publication::send_votestate_event(name voter, const structures::voteinfo& vote, name author, const structures::permlink& permlink) {
+    structures::vote_event data{voter, author, permlink.value, vote.weight, vote.curatorsw, vote.rshares};
     eosio::event(_self, "votestate"_n, data).send();
 }
 
@@ -835,12 +836,6 @@ void publication::set_params(std::vector<posting_params> params) {
 
 void publication::reblog(name rebloger, structures::mssgid message_id) {
     require_auth(rebloger);
-    tables::message_table message_table(_self, message_id.author.value);
-    auto message_index = message_table.get_index<"bypermlink"_n>();
-    auto mssg_itr = message_index.find(message_id.permlink);
-    if (message_index.end() != mssg_itr) {
-        return;
-    }
 
     tables::permlink_table permlink_table(_self, message_id.author.value);
     auto permlink_index = permlink_table.get_index<"byvalue"_n>();
@@ -883,17 +878,24 @@ std::string publication::get_memo(const std::string &type, const structures::mss
 
 void publication::set_curators_prcnt(structures::mssgid message_id, uint16_t curators_prcnt) {
     require_auth(message_id.author);
+
     const auto& param = params().curators_prcnt_param;
     param.validate_value(curators_prcnt);
 
+    tables::permlink_table permlink_table(_self, message_id.author.value);
+    auto permlink_index = permlink_table.get_index<"byvalue"_n>();
+    auto permlink_itr = permlink_index.find(message_id.permlink);
+    // rare case - not critical for performance
+    eosio::check(permlink_itr != permlink_index.end(), "Permlink doesn't exist.");
+
     tables::message_table message_table(_self, message_id.author.value);
-    auto message_index = message_table.get_index<"bypermlink"_n>();
-    auto message_itr = message_index.find(message_id.permlink);
-    eosio::check(message_itr != message_index.end(), "Message doesn't exist in cashout window.");
-    eosio_assert(message_itr->state.voteshares == 0, "Curators percent can be changed only before voting.");
+    auto message_itr = message_table.find(permlink_itr->id);
+    eosio::check(message_itr != message_table.end(), "Message doesn't exist in cashout window.");
+
+    eosio::check(message_itr->state.voteshares == 0, "Curators percent can be changed only before voting.");
     eosio::check(message_itr->curators_prcnt != curators_prcnt, "Same curators percent value is already set."); // TODO: tests #617
 
-    message_index.modify(message_itr, name(), [&](auto& item) {
+    message_table.modify(message_itr, name(), [&](auto& item) {
         item.curators_prcnt = curators_prcnt;
     });
 }
@@ -909,14 +911,17 @@ void publication::calcrwrdwt(name account, int64_t mssg_id, int64_t post_charge)
         validate_percent(reward_weight, "calculated reward weight");        // should never fail in normal conditions
 
         tables::message_table message_table(_self, account.value);
-        auto message_index = message_table.get_index<"primary"_n>();
-        auto message_itr = message_index.find(mssg_id);
-        eosio::check(message_itr != message_index.end(), "Message doesn't exist in cashout window.");
-        message_index.modify(message_itr, name(), [&]( auto &item ) {
+        auto message_itr = message_table.find(mssg_id);
+        eosio::check(message_itr != message_table.end(), "Message doesn't exist in cashout window.");
+        message_table.modify(message_itr, name(), [&]( auto &item ) {
             item.rewardweight = reward_weight;
         });
 
-        send_rewardweight_event(structures::mssgid{account, message_itr->permlink}, reward_weight);
+        tables::permlink_table permlink_table(_self, account.value);
+        auto permlink_itr = permlink_table.find(mssg_id);
+        eosio::check(permlink_itr != permlink_table.end(), "Permlink doesn't exist.");
+
+        send_rewardweight_event(structures::mssgid{account, permlink_itr->value}, reward_weight);
     }
 }
 
