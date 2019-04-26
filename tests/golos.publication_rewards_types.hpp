@@ -176,7 +176,7 @@ struct vote {
 
 struct beneficiary {
     account_name account;
-    int64_t deductprcnt;
+    uint16_t weight;
 };
 
 struct message {
@@ -369,5 +369,5 @@ struct state {
 
 }} // eosio::testing
 
-FC_REFLECT(eosio::testing::beneficiary, (account)(deductprcnt))
+FC_REFLECT(eosio::testing::beneficiary, (account)(weight))
 FC_REFLECT(eosio::testing::mssgid, (author)(permlink))

@@ -31,7 +31,7 @@ namespace golos {
 
     struct st_max_comment_depth : parameter {
         uint16_t max_comment_depth;
-        
+
         void validate() const override {
             eosio_assert(max_comment_depth > 0, "Max comment depth must be greater than 0.");
         }
@@ -48,7 +48,7 @@ namespace golos {
         }
     };
     using social_acc_prm = param_wrapper<st_social_acc, 1>;
-    
+
     struct st_referral_acc : parameter {
         name account;
 
@@ -59,7 +59,7 @@ namespace golos {
         }
     };
     using referral_acc_prm = param_wrapper<st_referral_acc, 1>;
-    
+
     struct st_curators_prcnt : parameter {
         uint16_t min_curators_prcnt;
         uint16_t max_curators_prcnt;
@@ -71,11 +71,15 @@ namespace golos {
                     "Min curators percent must be less than max curators percent or equal.");
             eosio_assert(max_curators_prcnt <= config::_100percent, "Max curators percent must be less than 100 or equal.");
         }
+        void validate_value(uint16_t x) const {
+            eosio::check(x >= min_curators_prcnt, "Curators percent is less than min curators percent.");
+            eosio::check(x <= max_curators_prcnt, "Curators percent is greater than max curators percent.");
+        }
     };
     using curators_prcnt_prm = param_wrapper<st_curators_prcnt, 2>;
 
 
-    using posting_params = std::variant<max_vote_changes_prm, cashout_window_prm, max_beneficiaries_prm, 
+    using posting_params = std::variant<max_vote_changes_prm, cashout_window_prm, max_beneficiaries_prm,
           max_comment_depth_prm, social_acc_prm, referral_acc_prm, curators_prcnt_prm>;
 
     struct [[eosio::table]] posting_state {

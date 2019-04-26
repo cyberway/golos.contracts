@@ -15,7 +15,7 @@ using namespace eosio;
 using counter_t = uint64_t;
 struct beneficiary {
     name account;
-    int64_t deductprcnt; //elaf_t
+    uint16_t weight;    // percent
 };
 
 struct mssgid {
@@ -46,18 +46,18 @@ struct message {
     uint64_t date;
     name parentacc;
     uint64_t parent_id;
-    base_t tokenprop; //elaf_t
+    uint16_t tokenprop;     // percent
     std::vector<structures::beneficiary> beneficiaries;
-    base_t rewardweight;//elaf_t
+    uint16_t rewardweight;  // percent
     messagestate state;
-    uint64_t childcount;
+    uint32_t childcount;
     uint16_t level;
-    base_t curators_prcnt;
+    uint16_t curators_prcnt;
 
     uint64_t primary_key() const {
         return id;
     }
-    
+
     std::string secondary_key() const {
         return permlink;
     }
@@ -83,7 +83,6 @@ struct delegate_voter {
     delegate_voter() = default;
 
     name delegator;
-    asset quantity;
     uint16_t interest_rate;
     uint8_t payout_strategy;
 };
@@ -96,7 +95,7 @@ struct voteinfo {
     name voter;
     int16_t weight;
     uint64_t time;
-    int64_t count;
+    uint8_t count;
     std::vector<delegate_voter> delegators;
     base_t curatorsw;
     base_t rshares;
@@ -119,7 +118,7 @@ struct rewardrules {
     funcinfo mainfunc;
     funcinfo curationfunc;
     funcinfo timepenalty;
-    base_t maxtokenprop; //elaf_t
+    uint16_t maxtokenprop;  // percent
     //uint64_t cashout_time; //TODO:
 };
 
@@ -181,7 +180,7 @@ struct pool_event {
 
 struct reward_weight_event {
     mssgid message_id;
-    base_t rewardweight;
+    uint16_t rewardweight;
 };
 
 struct limitparams {
@@ -218,7 +217,7 @@ using permlink_table = multi_index<N(permlink), structures::permlink, permlink_i
 
 using vote_id_index = indexed_by<N(id), const_mem_fun<structures::voteinfo, uint64_t, &structures::voteinfo::primary_key>>;
 using vote_messageid_index = indexed_by<N(messageid), const_mem_fun<structures::voteinfo, uint64_t, &structures::voteinfo::by_message>>;
-using vote_group_index = indexed_by<N(byvoter), eosio::composite_key<structures::voteinfo, 
+using vote_group_index = indexed_by<N(byvoter), eosio::composite_key<structures::voteinfo,
       eosio::member<structures::voteinfo, uint64_t, &structures::voteinfo::message_id>,
       eosio::member<structures::voteinfo, name, &structures::voteinfo::voter>>>;
 using vote_table = multi_index<N(vote), structures::voteinfo, vote_id_index, vote_messageid_index, vote_group_index>;

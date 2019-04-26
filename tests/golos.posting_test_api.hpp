@@ -16,7 +16,7 @@ struct golos_posting_api: base_contract_api {
         const funcparams& main_fn,
         const funcparams& curation_fn,
         const funcparams& time_penalty,
-        int64_t max_token_prop) {
+        uint16_t max_token_prop) {
         return push(N(setrules), _code, args()
             ("mainfunc", fn_to_mvo(main_fn))
             ("curationfunc", fn_to_mvo(curation_fn))
@@ -25,7 +25,7 @@ struct golos_posting_api: base_contract_api {
             ("tokensymbol", _symbol)
         );
     }
-    
+
     action_result set_limit(std::string act, uint8_t charge_id = 0, int64_t price = -1, int64_t cutoff = 0, int64_t vesting_price = 0, int64_t min_vesting = 0) {
         return push(N(setlimit), _code, args()
             ("act", act)
@@ -42,14 +42,14 @@ struct golos_posting_api: base_contract_api {
         mssgid message_id,
         mssgid parent_id = {N(), "parentprmlnk"},
         std::vector<beneficiary> beneficiaries = {},
-        int64_t token_prop = 5000,
+        uint16_t token_prop = 5000,
         bool vest_payment = false,
         std::string title = "headermssg",
         std::string body = "bodymssg",
         std::string language = "languagemssg",
         std::vector<std::string> tags = {"tag"},
         std::string json_metadata = "jsonmetadata",
-        optional<uint16_t> curators_prcnt = optional<uint16_t>() 
+        optional<uint16_t> curators_prcnt = optional<uint16_t>()
     ) {
         return push(N(createmssg), message_id.author, args()
             ("message_id", message_id)
@@ -120,7 +120,7 @@ struct golos_posting_api: base_contract_api {
         return push(N(setparams), _code, args()
             ("params", json_str_to_obj(json_params)));
     }
-    
+
 
     action_result init_default_params() {
         auto vote_changes = get_str_vote_changes(max_vote_changes);
@@ -131,10 +131,10 @@ struct golos_posting_api: base_contract_api {
         auto referral = get_str_referral_acc(name());
         auto curators_prcnt = get_str_curators_prcnt(min_curators_prcnt, max_curators_prcnt);
 
-        auto params = "[" + vote_changes + "," + cashout_window + "," + beneficiaries + "," + comment_depth + 
+        auto params = "[" + vote_changes + "," + cashout_window + "," + beneficiaries + "," + comment_depth +
             "," + social + "," + referral + "," + curators_prcnt + "]";
-        return set_params(params); 
-    } 
+        return set_params(params);
+    }
 
     variant get_params() const {
         return base_contract_api::get_struct(_code, N(pstngparams), N(pstngparams), "posting_state");
@@ -155,15 +155,15 @@ struct golos_posting_api: base_contract_api {
     string get_str_comment_depth(uint16_t max_comment_depth) {
         return string("['st_max_comment_depth', {'value':'") + std::to_string(max_comment_depth) + "'}]";
     }
-    
+
     string get_str_social_acc(name social_acc) {
         return string("['st_social_acc', {'value':'") + name{social_acc}.to_string() + "'}]";
     }
-    
+
     string get_str_referral_acc(name referral_acc) {
         return string("['st_referral_acc', {'value':'") + name{referral_acc}.to_string() + "'}]";
-    }   
-    
+    }
+
     string get_str_curators_prcnt(uint16_t min_curators_prcnt, uint16_t max_curators_prcnt) {
         return string("['st_curators_prcnt', {'min_curators_prcnt':'") + std::to_string(min_curators_prcnt) + "','max_curators_prcnt':'" + std::to_string(max_curators_prcnt) + "'}]";
     }
@@ -175,7 +175,7 @@ struct golos_posting_api: base_contract_api {
 
     variant get_message(mssgid message_id) {
         variant obj = _tester->get_chaindb_lower_bound_struct(_code, message_id.author, N(message), N(bypermlink),
-                                                                message_id.get_unique_key(), "message");        
+                                                                message_id.get_unique_key(), "message");
         if (!obj.is_null() && obj.get_object().size()) {
             if(obj["permlink"].as<std::string>() == message_id.permlink) {
                 return obj;

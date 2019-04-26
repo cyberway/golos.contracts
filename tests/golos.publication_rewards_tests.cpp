@@ -16,7 +16,7 @@ using namespace eosio::testing;
 
 #define PRECESION 0
 #define TOKEN_NAME "GOLOS"
-constexpr int64_t MAXTOKENPROB = 5000;
+constexpr uint16_t MAXTOKENPROP = 5000;
 constexpr auto MAX_ARG = static_cast<double>(std::numeric_limits<fixp_t>::max());
 
 double log2(double arg) {
@@ -51,7 +51,7 @@ protected:
         const string not_monotonic      = amsg("check monotonic failed for time penalty func");
         const string fp_cast_overflow   = amsg("fp_cast: overflow");
         const string limit_no_power     = amsg("not enough power");
-        const string limit_no_vesting     = amsg("insufficient effective vesting amount");
+        const string limit_no_vesting   = amsg("insufficient effective vesting amount");
         const string delete_upvoted     = amsg("Cannot delete a comment with net positive votes.");
     } err;
 
@@ -196,7 +196,7 @@ public:
             produce_blocks();
         }
 
-        auto ret =  post.set_rules(mainfunc, curationfunc, timepenalty, MAXTOKENPROB);
+        auto ret =  post.set_rules(mainfunc, curationfunc, timepenalty, MAXTOKENPROP);
         if (ret == success()) {
             double unclaimed_funds = 0.0;
             for (auto& p : _state.pools) {
@@ -375,7 +375,7 @@ public:
                     auto author_payout =  payout - curation_payout;
                     double ben_payout_sum = 0.0;
                     for (auto& ben : m.beneficiaries) {
-                        double ben_payout = author_payout * get_prop(ben.deductprcnt);
+                        double ben_payout = author_payout * get_prop(ben.weight);
                         _state.balances[ben.account].vestamount += get_converted_to_vesting(ben_payout);
                         ben_payout_sum += ben_payout;
                     }
@@ -428,14 +428,14 @@ public:
         mssgid message_id,
         mssgid parent_message_id = {N(), "parentprmlnk"},
         vector<beneficiary> beneficiaries = {},
-        int64_t tokenprop = 5000,
+        uint16_t tokenprop = MAXTOKENPROP,
         bool vestpayment = false,
         std::string title = "headermssg",
         std::string body = "bodymssg",
         std::string language = "languagemssg",
         std::vector<std::string> tags = {"tag"},
         std::string json_metadata = "jsonmetadata",
-        double curators_prcnt = 7100 
+        uint16_t curators_prcnt = 7100
     ) {
         const auto current_time = control->head_block_time().sec_since_epoch();
         auto ret = post.create_msg(message_id, parent_message_id, beneficiaries, tokenprop, vestpayment, title, body, language, tags, json_metadata, curators_prcnt);
@@ -458,7 +458,7 @@ public:
         if (ret == success()) {
             _state.pools.back().messages.emplace_back(message(
                 message_id,
-                static_cast<double>(std::min(tokenprop, MAXTOKENPROB)) / static_cast<double>(cfg::_100percent),
+                static_cast<double>(tokenprop) / static_cast<double>(cfg::_100percent),
                 static_cast<double>(current_time),
                 beneficiaries, reward_weight,
                 static_cast<double>(curators_prcnt) / static_cast<double>(cfg::_100percent)));
@@ -541,7 +541,7 @@ BOOST_FIXTURE_TEST_CASE(basic_tests, reward_calcs_tester) try {
     BOOST_CHECK_EQUAL(success(), setrules({"x^2", static_cast<base_t>(sqrt(bignum))}, {"sqrt(x)", bignum}, {"1", bignum},
         [](double x){ return x * x; }, [](double x){ return sqrt(x); }, [](double x){ return 1.0; }));
     check();
-    
+
     BOOST_TEST_MESSAGE("--- create_message: bob4");
     BOOST_CHECK_EQUAL(success(), create_message({N(bob4), "permlink"}));
     check();
@@ -557,7 +557,7 @@ BOOST_FIXTURE_TEST_CASE(basic_tests, reward_calcs_tester) try {
     BOOST_TEST_MESSAGE("--- bob3 revoted (-100%) against bob4");
     BOOST_CHECK_EQUAL(success(), addvote(N(bob3), {N(bob4), "permlink"}, -10000));
     check();
-    
+
     BOOST_TEST_MESSAGE("--- create_message: alice");
     BOOST_CHECK_EQUAL(success(), create_message({N(alice), "permlink"}));
     check();
@@ -682,14 +682,14 @@ BOOST_FIXTURE_TEST_CASE(limits_test, reward_calcs_tester) try {
             [](double p, double v, double t){ return sqrt(v / 500000.0) * (t / 150.0); }
         })
     );
-    
+
     auto create_msg = [&](
-            mssgid message_id, 
+            mssgid message_id,
             mssgid parent_id = {N(), "parentprmlnk"},
             bool vest_payment = false,
-            uint16_t curators_prcnt = 0) { 
+            uint16_t curators_prcnt = 0) {
         return create_message(
-            message_id, 
+            message_id,
             parent_id,
             {},
             5000,
@@ -699,7 +699,7 @@ BOOST_FIXTURE_TEST_CASE(limits_test, reward_calcs_tester) try {
             "languagemssg",
             {{"tag"}},
             "jsonmetadata",
-            curators_prcnt    
+            curators_prcnt
             );
     };
 
@@ -798,7 +798,7 @@ BOOST_FIXTURE_TEST_CASE(message_netshares_overflow_test, reward_calcs_tester) tr
     BOOST_TEST_MESSAGE("--- add_funds_to_forum");
     BOOST_CHECK_EQUAL(success(), add_funds_to_forum(50000));
     check();
-    
+
     BOOST_TEST_MESSAGE("--- create_message: alice");
     mssgid message_id{N(alice), "permlink"};
     BOOST_CHECK_EQUAL(success(), create_message(message_id));
@@ -812,7 +812,7 @@ BOOST_FIXTURE_TEST_CASE(message_netshares_overflow_test, reward_calcs_tester) tr
         fill_from_tables(_res);
         BOOST_CHECK_EQUAL(_res[statemap::get_message_str(message_id) + "netshares"].val, _res.get_pool(pool_id).rshares);
         BOOST_CHECK_GT(_res[statemap::get_message_str(message_id) + "netshares"].val, 0);
-        BOOST_CHECK_GT( _res.get_pool(pool_id).rsharesfn, 0);   
+        BOOST_CHECK_GT( _res.get_pool(pool_id).rsharesfn, 0);
     }
     for (size_t i = 0; i < 10; i++) {
         BOOST_TEST_MESSAGE("--- " << name{_users[i]}.to_string() << " revoted for alice");
@@ -821,8 +821,8 @@ BOOST_FIXTURE_TEST_CASE(message_netshares_overflow_test, reward_calcs_tester) tr
         fill_from_tables(_res);
         BOOST_CHECK_EQUAL(_res[statemap::get_message_str(message_id) + "netshares"].val, _res.get_pool(pool_id).rshares);
         BOOST_CHECK_GT(_res[statemap::get_message_str(message_id) + "netshares"].val, 0);
-        BOOST_CHECK_GT( _res.get_pool(pool_id).rsharesfn, 0); 
-         
+        BOOST_CHECK_GT( _res.get_pool(pool_id).rsharesfn, 0);
+
     }
     for (size_t i = 10; i < 15; i++) {
         BOOST_TEST_MESSAGE("--- " << name{_users[i]}.to_string() << " voted against alice");
@@ -830,9 +830,9 @@ BOOST_FIXTURE_TEST_CASE(message_netshares_overflow_test, reward_calcs_tester) tr
         produce_block();
         fill_from_tables(_res);
         BOOST_CHECK_EQUAL(_res[statemap::get_message_str(message_id) + "netshares"].val, _res.get_pool(pool_id).rshares);
-        BOOST_CHECK_GE( _res.get_pool(pool_id).rsharesfn, 0);  
+        BOOST_CHECK_GE( _res.get_pool(pool_id).rsharesfn, 0);
     }
-    
+
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE(golos_curation_test, reward_calcs_tester) try {

@@ -37,7 +37,7 @@ struct permission {
 
 struct contract_error_messages {
 protected:
-    const string amsg(const string& x) { return base_tester::wasm_assert_msg(x); }
+    const string amsg(const string& x) const { return base_tester::wasm_assert_msg(x); }
 };
 
 
