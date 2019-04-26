@@ -52,14 +52,13 @@ inline double get_prop(int64_t arg) {
 struct mssgid {
     eosio::chain::name author;
     std::string permlink;
-    uint64_t ref_block_num;
 
     auto get_unique_key() const {
-        return std::pair<std::string, uint64_t>(permlink, ref_block_num);
+        return permlink;
     }
 
     bool operator ==(const mssgid& rhs) const {
-        return author == rhs.author && permlink == rhs.permlink && ref_block_num == rhs.ref_block_num;
+        return author == rhs.author && permlink == rhs.permlink;
     }
 };
 
@@ -101,10 +100,10 @@ struct statemap : public std::map<std::string, aprox_val_t> {
         return "balance of " +  acc.to_string() + ": ";
     }
     static std::string get_message_str(const mssgid& msg) {
-        return "message of " + msg.author.to_string() + " #" + msg.permlink + ", " + std::to_string(msg.ref_block_num) + ": ";
+        return "message of " + msg.author.to_string() + " #" + msg.permlink + ": ";
     }
     static std::string get_vote_str(account_name voter, const mssgid& msg) {
-        return "vote of " + voter.to_string() + " for message of " + msg.author.to_string() + " #" + msg.permlink + ", " + std::to_string(msg.ref_block_num) + ": ";
+        return "vote of " + voter.to_string() + " for message of " + msg.author.to_string() + " #" + msg.permlink + ": ";
     }
     void set_pool(uint64_t id, const pool_data& data = {}) {
         auto prefix = get_pool_str(id);
@@ -371,4 +370,4 @@ struct state {
 }} // eosio::testing
 
 FC_REFLECT(eosio::testing::beneficiary, (account)(deductprcnt))
-FC_REFLECT(eosio::testing::mssgid, (author)(permlink)(ref_block_num))
+FC_REFLECT(eosio::testing::mssgid, (author)(permlink))
