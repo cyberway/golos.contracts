@@ -509,7 +509,6 @@ void publication::paymssgrwrd(int64_t payout, structures::mssgid message_id, str
 
     eosio_assert(unclaimed_rewards >= 0, "publication::payrewards: unclaimed_rewards < 0");
     
-    state.funds.amount += unclaimed_rewards;
     payout -= curation_payout;
     
     int64_t ben_payout_sum = 0;
