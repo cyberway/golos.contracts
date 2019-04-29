@@ -330,16 +330,19 @@ void publication::payto(name user, eosio::asset quantity, enum_t mode, std::stri
     if(quantity.amount == 0)
         return;
 
-    if (!golos::vesting::balance_exist(config::vesting_name, user, quantity.symbol.code())) {
-        INLINE_ACTION_SENDER(token, payment) (config::token_name, {user, config::active_name}, {user, config::vesting_name, quantity, ""});
-        return;
+    if(static_cast<payment_t>(mode) == payment_t::TOKEN) {
+        if (token::balance_exist(config::token_name, user, quantity.symbol.code())) 
+            INLINE_ACTION_SENDER(token, payment) (config::token_name, {_self, config::active_name}, {_self, user, quantity, memo});
+        else
+            INLINE_ACTION_SENDER(token, payment) (config::token_name, {user, config::active_name}, {_self, config::vesting_name, quantity, "user token balance is closed"});
     }
-
-    if(static_cast<payment_t>(mode) == payment_t::TOKEN)
-        INLINE_ACTION_SENDER(token, payment) (config::token_name, {_self, config::active_name}, {_self, user, quantity, memo});
-    else if(static_cast<payment_t>(mode) == payment_t::VESTING)
-        INLINE_ACTION_SENDER(token, transfer) (config::token_name, {_self, config::active_name},
+    else if(static_cast<payment_t>(mode) == payment_t::VESTING) {
+        if (golos::vesting::balance_exist(config::vesting_name, user, quantity.symbol.code())) 
+            INLINE_ACTION_SENDER(token, transfer) (config::token_name, {_self, config::active_name},
             {_self, config::vesting_name, quantity, std::string(config::send_prefix + name{user}.to_string()  + "; " + memo)});
+        else
+            INLINE_ACTION_SENDER(token, transfer) (config::token_name, {user, config::active_name}, {_self, config::vesting_name, quantity, std::string(config::send_prefix + name{config::vesting_name}.to_string()  + "; " + "user vesting balance is closed")});
+    }
     else
         eosio_assert(false, "publication::payto: unknown kind of payment");
 }
@@ -908,14 +911,10 @@ int64_t publication::pay_delegators(int64_t claim, name voter,
     int64_t dlg_payout_sum = 0;
     for (auto delegate_obj : delegate_list) {
         auto dlg_payout = claim * delegate_obj.interest_rate / config::_100percent;
-        if (golos::vesting::balance_exist(config::vesting_name, delegate_obj.delegator, tokensymbol.code()))
-            INLINE_ACTION_SENDER(golos::vesting, paydelegator) (config::vesting_name,
-                {config::vesting_name, config::active_name},
-                {voter, eosio::asset(dlg_payout, tokensymbol), delegate_obj.delegator,
-                delegate_obj.payout_strategy});
-        else
-            INLINE_ACTION_SENDER(token, payment) (config::token_name, {delegate_obj.delegator, config::active_name}, {delegate_obj.delegator, config::vesting_name, eosio::asset(dlg_payout, tokensymbol), ""});
-        
+        INLINE_ACTION_SENDER(golos::vesting, paydelegator) (config::vesting_name,
+            {config::vesting_name, config::active_name},
+            {voter, eosio::asset(dlg_payout, tokensymbol), delegate_obj.delegator,
+            delegate_obj.payout_strategy});
         dlg_payout_sum += dlg_payout;
     }
     return dlg_payout_sum;
