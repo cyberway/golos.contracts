@@ -217,24 +217,65 @@ void unvote(
   * `social_acc` — имя аккаунта social;  
   * `referral_acc` — имя аккаунта referral.  
  
-##Расчёт стоимости постов
-Для расчёта `payout` стоимости поста небоходимо получить  из Event Engine `reward_weight`, который приходит в виде целого числа в сотых долях процента. Так же при голосовании за пост в Event Engine будет приходить параметр `sharesfn`, который необходим что бы определить долю выплаты из пулла. Необходимо получить из стейта по запросу из таблицы `rewardpools` (pool выбирается по времени создания поста). После получения всех данных необходимо подставить в **формулу 1**.
+## Расчёт стоимости постов
+Для расчёта стоимости поста `payout` небоходимо получить  из Event Engine `rewardweight`, который приходит в виде целого числа в сотых долях процента. Так же при голосовании за пост в Event Engine будет приходить сообщение `poststate`, которое содержит текущие параметры стейта поста. Необходимо получить из Event Engine получить сообщение `poolstate` (pool выбирается по времени создания поста). После получения всех данных необходимо подставить в **формулу 1**.
 ##### Формула 1
-###### payout = reward_weight(uint16) \* pool->state.funds.amount(asset) * (sharesfn(int128) / pool->state.rsharesfn(int128))
-Для получения суммы кураторских вознвграждений по **формуле 2**. Процент кураторских может задоваться пользователем, если процент не указан, то берется нижняя граница из указанного интервала в параметрах в таблице `pstngparams`.
+###### payout = rewardweight::reward_weight * poolstate::state.funds * (poststate::sharesfn / poolstate::state::rsharesfn)
+Процент кураторских может задоваться пользователем при создании поста в Event Engine будет отправлено сообщение `poststate`, если процент не указан, то берется нижняя граница из указанного интервала в параметрах в таблице `pstngparams`. Для получения суммы кураторских вознвграждений по **формуле 2**. 
 ##### Формула 2
-###### payout -= curatorsprop * payout
-Полсе расчёта процента необходимо получить список кураторов из таблицы `vote`, у каждого куратара своя доля выплаты `curatorsw`, так же необходимо получить информацию о посте, из поста нам необходим общий вес `weights_sum`. После получения, необходимо пройти циклом по списку и для каждого куратора расчитать выплаты по **формуле 3**.
+###### payout -= poststate::sumcuratorsw * payout
+Для расчёта кураторских выплат необходимо получить все сообщения сообщения Event Engine `votestate` в которых содержатся информация о куратарах. Из сообщения Event Engine `poststate` необходимо взять общий вес поста. После получения необходимой информации, необходимо пройти по списку кураторов и для каждого расчитать выплаты по **формуле 3**.
 ##### Формула 3
 ###### unclaimed_rewards = curation_payout
-###### unclaimed_rewards -= curation_payout *  (curatorsw  / weights_sum)
+###### unclaimed_rewards -= curation_payout *  (votestate::curatorsw  / poststate::weights_sum)
 После выплат кураторам оставшеяся сумма в unclaimed_rewards распределяется по пуллам.
-Затем идёт расчёт выплат для бенефециарам указанным при создании поста. Необходимо пройти циклом по списку и выплатить бенефициарам и получить общую сумму выплат `ben_payout_sum` по **формуле 4**. После расчёта `ben_payout_sum` необходимо получить сумму выплат автору поста по **формуле 5**.
+Затем идёт расчёт выплат бенефециарам указанным при создании поста. Необходимо пройти по списку и совершить выплаты бенефициарам и получить общую сумму выплат `ben_payout_sum` по **формуле 4**. После расчёта `ben_payout_sum` необходимо получить сумму выплат автору поста по **формуле 5**.
 ##### Формула 4
-###### ben_payout_sum += payout * ben.deductprcnt
+###### ben_payout_sum += payout * post::beneficiary::deductprcnt
 ##### Формула 5
 ###### payout = payout - ben_payout_sum
 После расчёта стоимости поста, необходимо получить пропорцию вознаграждения указанную при создании поста `tokenprop` по **формуле 6**.
 ##### Формула 6
-###### token_payout = payout * tokenprop (выплата в токенах)
+###### token_payout = payout * post::tokenprop (выплата в токенах)
 ###### payout = payout - token_payout  (выплата в вестинге)
+
+### Структуры Event Engine сообщений
+#### Сообщение `poststate`:
+```cpp
+struct post_event {
+    name author;
+    std::string permlink;
+    base_t netshares = 0;
+    base_t voteshares = 0;
+    base_t sumcuratorsw = 0;
+    base_t sharesfn;
+};
+```
+#### Сообщение `votestate`:
+```cpp
+struct vote_event {
+    name voter;
+    name author;
+    std::string permlink;
+    int16_t weight;
+    base_t curatorsw;
+    base_t rshares;
+};
+```
+#### Сообщение `poolstate`:
+```cpp
+struct pool_event {
+    uint64_t created;
+    counter_t msgs;
+    eosio::asset funds;
+    wide_t rshares;
+    wide_t rsharesfn;
+};
+```
+#### Сообщение `rewardweight`:
+```cpp
+struct reward_weight_event {
+    mssgid message_id;
+    uint16_t rewardweight;
+};
+```
