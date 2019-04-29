@@ -107,6 +107,7 @@ public:
         const string already_detached   = amsg("user already detached");
         const string no_account         = amsg("user not found");
         const string auth_period0       = amsg("update auth period can't be 0");
+        const string assert_erase_wtnss = amsg("not possible to remove witness as there are votes");
     } err;
 
     // prepare
@@ -240,8 +241,7 @@ BOOST_FIXTURE_TEST_CASE(register_witness, golos_ctrl_tester) try {
     BOOST_CHECK_EQUAL(err.no_witness, ctrl.stop_witness(_w[1]));
 
     BOOST_TEST_MESSAGE("--- check unreg");
-    BOOST_CHECK_EQUAL(success(), ctrl.unreg_witness(_w[0]));
-    BOOST_CHECK_EQUAL(err.no_witness, ctrl.stop_witness(_w[0]));
+    BOOST_CHECK_EQUAL(err.assert_erase_wtnss, ctrl.unreg_witness(_w[0]));
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE(register_update_witness, golos_ctrl_tester) try {
