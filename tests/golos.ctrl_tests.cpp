@@ -95,7 +95,7 @@ public:
 
         const string bad_url            = amsg("url too long");
         const string same_reg_props     = amsg("already updated in the same way");
-        const string already_stop_w     = amsg("witness already stopped");
+        const string not_udpated_flag   = amsg("active flag not updated");
         const string no_witness         = amsg("witness not found");
 
         const string no_more_votes      = amsg("all allowed votes already casted");
@@ -237,7 +237,7 @@ BOOST_FIXTURE_TEST_CASE(register_witness, golos_ctrl_tester) try {
     BOOST_CHECK_EQUAL(success(), ctrl.stop_witness(_w[0]));
     produce_block();
 
-    BOOST_CHECK_EQUAL(err.already_stop_w, ctrl.stop_witness(_w[0]));
+    BOOST_CHECK_EQUAL(err.not_udpated_flag, ctrl.stop_witness(_w[0]));
     BOOST_CHECK_EQUAL(err.no_witness, ctrl.stop_witness(_w[1]));
 
     BOOST_TEST_MESSAGE("--- check unreg");
