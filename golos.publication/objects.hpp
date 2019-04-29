@@ -42,24 +42,15 @@ struct message {
     message() = default;
 
     uint64_t id;
-    std::string permlink;
     uint64_t date;
-    name parentacc;
-    uint64_t parent_id;
     uint16_t tokenprop;     // percent
     std::vector<structures::beneficiary> beneficiaries;
     uint16_t rewardweight;  // percent
     messagestate state;
-    uint32_t childcount;
-    uint16_t level;
     uint16_t curators_prcnt;
 
     uint64_t primary_key() const {
         return id;
-    }
-
-    std::string secondary_key() const {
-        return permlink;
     }
 };
 
@@ -67,8 +58,11 @@ struct permlink {
     permlink() = default;
 
     uint64_t id;
+    name parentacc;
+    uint64_t parent_id;
     std::string value;
     uint16_t level;
+    uint32_t childcount;
 
     uint64_t primary_key() const {
         return id;
@@ -208,8 +202,7 @@ namespace tables {
 using namespace eosio;
 
 using id_index = indexed_by<N(primary), const_mem_fun<structures::message, uint64_t, &structures::message::primary_key>>;
-using permlink_index = indexed_by<N(bypermlink), const_mem_fun<structures::message, std::string, &structures::message::secondary_key>>;
-using message_table = multi_index<N(message), structures::message, id_index, permlink_index>;
+using message_table = multi_index<N(message), structures::message, id_index>;
 
 using permlink_id_index = indexed_by<N(primary), const_mem_fun<structures::permlink, uint64_t, &structures::permlink::primary_key>>;
 using permlink_value_index = indexed_by<N(byvalue), const_mem_fun<structures::permlink, std::string, &structures::permlink::secondary_key>>;
