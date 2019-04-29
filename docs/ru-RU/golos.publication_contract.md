@@ -251,6 +251,13 @@ struct post_event {
     base_t sharesfn;
 };
 ```
+Параметры:
+`author` - автор поста;
+`permlink` - пермлин поста;
+`netshares` - 
+`voteshares` - 
+`sumcuratorsw` - процент кураторских вознагрождений.
+`sharesfn` - доля награды поста.
 #### Сообщение `votestate`:
 ```cpp
 struct vote_event {
@@ -262,6 +269,13 @@ struct vote_event {
     base_t rshares;
 };
 ```
+Параметры:
+`voter` - пользователь который голосует за пост;
+`author` - автор поста;
+`permlink` - пермлинк поста;
+`weight` - вес голоса за пост;
+`curatorsw` - процент кураторского вознагрождения;
+`rshares` - доля награды поста.
 #### Сообщение `poolstate`:
 ```cpp
 struct pool_event {
@@ -272,6 +286,12 @@ struct pool_event {
     wide_t rsharesfn;
 };
 ```
+Параметры:
+`created` - создатель пулла;
+`msgs` - колличество постов в пулле вознагрождений;
+`funds` - колличество токенов в пулле вознагрождений;
+`rshares` - доля награды поста;
+`rsharesfn` - награды пулла.
 #### Сообщение `rewardweight`:
 ```cpp
 struct reward_weight_event {
@@ -279,3 +299,6 @@ struct reward_weight_event {
     uint16_t rewardweight;
 };
 ```
+Параметры:
+`message_id` - ключ-структура поста
+`rewardweight` - вес награды за пост
