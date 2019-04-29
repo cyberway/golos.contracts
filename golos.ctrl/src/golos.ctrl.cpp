@@ -290,7 +290,7 @@ void control::update_witnesses_weights(vector<name> witnesses, share_type diff) 
     for (const auto& witness : witnesses) {
         auto w = wtbl.find(witness.value);
         if (w != wtbl.end()) {
-            wtbl.modify(w, witness, [&](auto& wi) {
+            wtbl.modify(w, name(), [&](auto& wi) {
                 wi.total_weight += diff;            // TODO: additional checks of overflow? (not possible normally)
                 send_witness_event(wi);
             });
