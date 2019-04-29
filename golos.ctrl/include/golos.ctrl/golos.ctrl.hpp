@@ -22,6 +22,7 @@ struct [[eosio::table]] witness_info {
     bool active;            // can check key instead or even remove record
 
     uint64_t total_weight;
+    uint64_t counter_votes;
 
     uint64_t primary_key() const {
         return name.value;
