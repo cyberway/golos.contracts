@@ -254,8 +254,8 @@ struct post_event {
 Параметры:
 `author` - автор поста;
 `permlink` - пермлин поста;
-`netshares` - 
-`voteshares` - 
+`netshares` - доля нограды поста с учётом знака
+`voteshares` - доля награды голоса с учётом знака;
 `sumcuratorsw` - процент кураторских вознагрождений.
 `sharesfn` - доля награды поста.
 #### Сообщение `votestate`:
