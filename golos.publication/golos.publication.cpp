@@ -334,14 +334,14 @@ void publication::payto(name user, eosio::asset quantity, enum_t mode, std::stri
         if (token::balance_exist(config::token_name, user, quantity.symbol.code())) 
             INLINE_ACTION_SENDER(token, payment) (config::token_name, {_self, config::active_name}, {_self, user, quantity, memo});
         else
-            INLINE_ACTION_SENDER(token, payment) (config::token_name, {user, config::active_name}, {_self, _self, quantity, memo});
+            INLINE_ACTION_SENDER(token, payment) (config::token_name, {_self, config::active_name}, {_self, _self, quantity, memo});
     }
     else if(static_cast<payment_t>(mode) == payment_t::VESTING) {
         if (golos::vesting::balance_exist(config::vesting_name, user, quantity.symbol.code())) 
             INLINE_ACTION_SENDER(token, transfer) (config::token_name, {_self, config::active_name},
             {_self, config::vesting_name, quantity, std::string(config::send_prefix + name{user}.to_string()  + "; " + memo)});
         else
-            INLINE_ACTION_SENDER(token, transfer) (config::token_name, {user, config::active_name}, {_self, _self, quantity, memo});
+            INLINE_ACTION_SENDER(token, payment) (config::token_name, {_self, config::active_name}, {_self, _self, quantity, memo});
     }
     else
         eosio_assert(false, "publication::payto: unknown kind of payment");
