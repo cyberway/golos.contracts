@@ -334,14 +334,14 @@ void publication::payto(name user, eosio::asset quantity, enum_t mode, std::stri
         if (token::balance_exist(config::token_name, user, quantity.symbol.code())) 
             INLINE_ACTION_SENDER(token, payment) (config::token_name, {_self, config::active_name}, {_self, user, quantity, memo});
         else
-            INLINE_ACTION_SENDER(token, payment) (config::token_name, {user, config::active_name}, {_self, config::vesting_name, quantity, "user token balance is closed"});
+            INLINE_ACTION_SENDER(token, payment) (config::token_name, {user, config::active_name}, {_self, _self, quantity, "user token balance is closed"});
     }
     else if(static_cast<payment_t>(mode) == payment_t::VESTING) {
         if (golos::vesting::balance_exist(config::vesting_name, user, quantity.symbol.code())) 
             INLINE_ACTION_SENDER(token, transfer) (config::token_name, {_self, config::active_name},
             {_self, config::vesting_name, quantity, std::string(config::send_prefix + name{user}.to_string()  + "; " + memo)});
         else
-            INLINE_ACTION_SENDER(token, transfer) (config::token_name, {user, config::active_name}, {_self, config::vesting_name, quantity, std::string(config::send_prefix + name{config::vesting_name}.to_string()  + "; " + "user vesting balance is closed")});
+            INLINE_ACTION_SENDER(token, transfer) (config::token_name, {user, config::active_name}, {_self, _self, quantity, "user vesting balance is closed"});
     }
     else
         eosio_assert(false, "publication::payto: unknown kind of payment");
