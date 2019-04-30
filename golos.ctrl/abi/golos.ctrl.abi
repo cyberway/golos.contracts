@@ -46,6 +46,12 @@
                 {"type": "name",   "name": "witness"}
             ]
         }, {
+            "name": "witness_name",
+            "base": "",
+            "fields": [
+                {"type": "name",   "name": "witness"}
+            ]
+        }, {
             "name": "votewitness",
             "base": "",
             "fields": [
@@ -73,7 +79,8 @@
                 {"type": "name", "name": "name"},
                 {"type": "string", "name": "url"},
                 {"type": "bool", "name": "active"},
-                {"type": "uint64", "name": "total_weight"}
+                {"type": "uint64", "name": "total_weight"},
+                {"type": "uint64", "name": "counter_votes"}
             ]
         }, {
             "name": "witness_voter",
@@ -133,7 +140,8 @@
             "name": "witnessstate",
             "fields": [
                 {"type": "name", "name": "witness"},
-                {"type": "uint64", "name": "weight"}
+                {"type": "uint64", "name": "weight"},
+                {"type": "bool", "name": "active"}
             ]
         }, {
             "name": "msig_auths",
@@ -166,6 +174,12 @@
         }, {
             "name": "unregwitness",
             "type": "unregwitness"
+        }, {
+            "name": "startwitness",
+            "type": "witness_name"
+        }, {
+            "name": "stopwitness",
+            "type": "witness_name"
         }, {
             "name": "votewitness",
             "type": "votewitness"

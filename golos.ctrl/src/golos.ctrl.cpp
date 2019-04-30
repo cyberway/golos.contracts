@@ -177,16 +177,25 @@ void control::unregwitness(name witness) {
     assert_started();
     require_auth(witness);
 
-    // TODO: simplify upsert to allow passing just inner lambda
-    bool exists = upsert_tbl<witness_tbl>(witness, [&](bool) {
-        return [&](witness_info& w) {
-            eosio_assert(w.active, "witness already unregistered");
-            w.active = false;
-        };
-    }, false);
-    eosio_assert(exists, "witness not found");
+    witness_tbl witness_table(_self, _self.value);
+    auto it = witness_table.find(witness.value);
+    eosio_assert(it->counter_votes, "not possible to remove witness as there are votes");
+    witness_table.erase(*it);
 
+    //TODO remove votes for witness
     update_auths();
+}
+
+void control::stopwitness(name witness) {
+    assert_started();
+    require_auth(witness);
+    active_witness(witness, false);
+}
+
+void control::startwitness(name witness) {
+    assert_started();
+    require_auth(witness);
+    active_witness(witness, true);
 }
 
 // Note: if not weighted, it's possible to pass all witnesses in vector like in BP actions
@@ -195,7 +204,12 @@ void control::votewitness(name voter, name witness) {
     require_auth(voter);
 
     witness_tbl witness_table(_self, _self.value);
-    eosio_assert(witness_table.find(witness.value) != witness_table.end(), "witness not found");
+    auto witness_it = witness_table.find(witness.value);
+    eosio_assert(witness_it != witness_table.end(), "witness not found");
+    eosio_assert(witness_it->active, "witness not active");
+    witness_table.modify(witness_it, voter, [&](auto& w) {
+        ++w.counter_votes;
+    });
 
     witness_vote_tbl tbl(_self, _self.value);
     auto itr = tbl.find(voter.value);
@@ -217,13 +231,16 @@ void control::votewitness(name voter, name witness) {
     apply_vote_weight(voter, witness, true);
 }
 
-
 void control::unvotewitn(name voter, name witness) {
     assert_started();
     require_auth(voter);
 
     witness_tbl witness_table(_self, _self.value);
-    eosio_assert(witness_table.find(witness.value) != witness_table.end(), "witness not found");
+    auto witness_it = witness_table.find(witness.value);
+    eosio_assert(witness_it != witness_table.end(), "witness not found");
+    witness_table.modify(witness_it, voter, [&](auto& w) {
+        --w.counter_votes;
+    });
 
     witness_vote_tbl tbl(_self, _self.value);
     auto itr = tbl.find(voter.value);
@@ -273,7 +290,7 @@ void control::update_witnesses_weights(vector<name> witnesses, share_type diff) 
     for (const auto& witness : witnesses) {
         auto w = wtbl.find(witness.value);
         if (w != wtbl.end()) {
-            wtbl.modify(w, witness, [&](auto& wi) {
+            wtbl.modify(w, name(), [&](auto& wi) {
                 wi.total_weight += diff;            // TODO: additional checks of overflow? (not possible normally)
                 send_witness_event(wi);
             });
@@ -348,7 +365,22 @@ void control::update_auths() {
 }
 
 void control::send_witness_event(const witness_info& wi) {
-    eosio::event(_self, "witnessstate"_n, std::make_tuple(wi.name, wi.total_weight)).send();
+    eosio::event(_self, "witnessstate"_n, std::make_tuple(wi.name, wi.total_weight, wi.active)).send();
+}
+
+void control::active_witness(name witness, bool flag) {
+    // TODO: simplify upsert to allow passing just inner lambda
+    bool exists = upsert_tbl<witness_tbl>(witness, [&](bool) {
+        return [&](witness_info& w) {            
+            eosio_assert(flag != w.active, "active flag not updated");
+            w.active = flag;
+
+            send_witness_event(w);
+        };
+    }, false);
+    eosio_assert(exists, "witness not found");
+
+    update_auths();
 }
 
 vector<witness_info> control::top_witness_info() {
@@ -379,4 +411,5 @@ DISPATCH_WITH_TRANSFER(golos::control, on_transfer,
     (validateprms)(setparams)
     (attachacc)(detachacc)
     (regwitness)(unregwitness)
+    (startwitness)(stopwitness)
     (votewitness)(unvotewitn)(changevest))
