@@ -66,6 +66,20 @@ struct golos_posting_api: base_contract_api {
         );
     }
 
+    action_result reblog_msg(
+        account_name rebloger,
+        mssgid message_id,
+        std::string title = "headermssg",
+        std::string body = "bodymssg"
+    ) {
+        return push(N(reblog), rebloger, args()
+            ("rebloger", rebloger)
+            ("message_id", message_id)
+            ("headermssg", title)
+            ("bodymssg", body)
+        );
+    }
+
     action_result update_msg(
         mssgid message_id,
         std::string title,

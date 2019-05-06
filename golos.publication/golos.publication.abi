@@ -706,6 +706,14 @@
         {
             "name": "message_id",
             "type": "mssgid"
+        },
+        {
+            "name": "headermssg",
+            "type": "string"
+        },
+        {
+            "name": "bodymssg",
+            "type": "string"
         }
     ]
   },

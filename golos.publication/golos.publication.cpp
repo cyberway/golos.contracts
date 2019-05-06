@@ -834,8 +834,11 @@ void publication::set_params(std::vector<posting_params> params) {
     param_helper::set_parameters<posting_params_setter>(params, cfg, _self);
 }
 
-void publication::reblog(name rebloger, structures::mssgid message_id) {
+void publication::reblog(name rebloger, structures::mssgid message_id, std::string headermssg, std::string bodymssg) {
     require_auth(rebloger);
+
+    eosio_assert(headermssg.length() < config::max_length, "Title length is more than 256.");
+    eosio_assert(bodymssg.length(), "Body is empty.");
 
     tables::permlink_table permlink_table(_self, message_id.author.value);
     auto permlink_index = permlink_table.get_index<"byvalue"_n>();
