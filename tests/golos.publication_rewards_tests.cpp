@@ -1,4 +1,4 @@
-//#define SHOW_ENABLE
+#define SHOW_ENABLE
 #include "golos.publication_rewards_types.hpp"
 #include "golos_tester.hpp"
 #include "golos.posting_test_api.hpp"
@@ -321,11 +321,11 @@ public:
 #ifdef SHOW_ENABLE
         if (req) {
             fill_from_state(_req);
-            BOOST_TEST_MESSAGE("_req:\n" << _req);
+            BOOST_TEST_MESSAGE("model:\n" << _req);
         }
         if (res) {
              fill_from_tables(_res);
-             BOOST_TEST_MESSAGE("_res :\n" << _res);
+             BOOST_TEST_MESSAGE("contract:\n" << _res);
         }
 #endif
     }
@@ -334,7 +334,7 @@ public:
             auto& p = *itr_p;
             for (auto itr_m = p.messages.begin(); itr_m != p.messages.end();) {
                 const auto current_time = control->head_block_time().sec_since_epoch();
-                if ((current_time - itr_m->created) > post.window) {
+                if ((current_time - itr_m->created) >= post.window) {
                     auto m = *itr_m;
                     double pool_rsharesfn_sum = p.get_rsharesfn_sum();
 
@@ -415,10 +415,11 @@ public:
         fill_from_state(_req);
 
         _res.remove_same(_req);
-        if (!_res.empty()){
-            BOOST_TEST_MESSAGE("_res != _req\n diff: ");
+        if (!_res.empty()) {
+            BOOST_TEST_MESSAGE("contract state != model state\n diff:");
+            BOOST_TEST_MESSAGE("contract:");
             BOOST_TEST_MESSAGE(_res);
-            BOOST_TEST_MESSAGE("_req:");
+            BOOST_TEST_MESSAGE("model:");
             BOOST_TEST_MESSAGE(_req);
             BOOST_REQUIRE(false);
         }
@@ -638,15 +639,19 @@ BOOST_FIXTURE_TEST_CASE(timepenalty_test, reward_calcs_tester) try {
     check();
     BOOST_TEST_MESSAGE("--- create_message: bob");
     BOOST_CHECK_EQUAL(success(), create_message({N(bob), "permlink"}));
-    check();
+    check();    // NOTE: `check()` calls `produce_blocks()` internally, it's not always expected, TODO: fix?
     BOOST_TEST_MESSAGE("--- voting");
-    for (size_t i = 0; i < 6; i++) {    // TODO: remove magic number, 6 must be derived from some constant used in rules
+    const auto n_voters = 6;
+    const auto votes_step = 1;  // Note: `check()` adds 1 block
+    for (size_t i = 0; i < n_voters; i++) {
         BOOST_CHECK_EQUAL(success(), addvote(_users[i], {N(bob), "permlink"}, 10000));
         check();
-        produce_blocks();    // TODO: remove magic number
+        produce_blocks(votes_step);
     }
-    produce_blocks(golos::seconds_to_blocks(120));       // TODO: remove magic number
-    BOOST_TEST_MESSAGE("--- rewards");
+    produce_blocks(golos::seconds_to_blocks(post.window) - 1 - n_voters * (1 + votes_step));
+    BOOST_TEST_MESSAGE("--- state before post close");
+    show();
+    BOOST_TEST_MESSAGE("--- close post and check rewards");
     check();
     show();
 } FC_LOG_AND_RETHROW()

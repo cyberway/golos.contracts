@@ -49,7 +49,10 @@ protected:
     std::map<account_name, abi_serializer> _abis;
 
 public:
-    golos_tester(name code): tester(), _code(code), _chaindb(control->chaindb()) {
+    golos_tester(name code)
+    : tester(base_tester::default_config("_GOLOSTEST_"))
+    , _code(code)
+    , _chaindb(control->chaindb()) {
     }
     ~golos_tester() {
     }
