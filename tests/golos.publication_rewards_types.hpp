@@ -34,8 +34,8 @@ struct message_data {
 };
 
 constexpr struct {
-    balance_data balance {10.0, 20.0};
-    pool_data pool {0.001, 15, -0.01, -0.01};
+    balance_data balance {0.01, 0.02};            // this values are divided to PRECISION_DIV, scale if change
+    pool_data pool {0.001, 0.015, -0.01, -0.01};  // 0.015 value is divided to PRECISION_DIV (=15 if PRECISION_DIV=1.0)
     message_data message {-0.01, -0.01, -0.01};
 } delta;
 
@@ -232,8 +232,8 @@ struct limits {
     enum kind_t: enum_t {POST, COMM, VOTE, POSTBW, UNDEF};
     std::vector<func_t> restorers; //(funcs of: prev_charge (p), vesting (v), elapsed_seconds (t))
     std::vector<limitedact> limitedacts;
-    std::vector<int64_t> vestingprices;//disabled if < 0
-    std::vector<int64_t> minvestings;
+    std::vector<double> vestingprices;//disabled if < 0
+    std::vector<double> minvestings;
 
     const limitedact& get_limited_act(kind_t kind) const {
         return limitedacts.at(static_cast<size_t>(kind));

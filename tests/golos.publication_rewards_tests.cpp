@@ -14,7 +14,8 @@ namespace cfg = golos::config;
 using namespace fixed_point_utils;
 using namespace eosio::testing;
 
-#define PRECESION 0
+#define PRECISION 3
+#define PRECISION_DIV 1000.0
 #define TOKEN_NAME "GOLOS"
 constexpr uint16_t MAXTOKENPROP = 5000;
 constexpr auto MAX_ARG = static_cast<double>(std::numeric_limits<fixp_t>::max());
@@ -88,7 +89,7 @@ protected:
 public:
     reward_calcs_tester()
         : golos_tester(N(reward.calcs))
-        , _token_symbol(PRECESION, TOKEN_NAME)
+        , _token_symbol(PRECISION, TOKEN_NAME)
         , post({this, _code, _token_symbol})
         , vest({this, cfg::vesting_name, _token_symbol})
         , charge({this, cfg::charge_name, _token_symbol})
@@ -116,7 +117,7 @@ public:
     action_result add_funds_to(account_name user, int64_t amount) {
         auto ret = token.transfer(_issuer, user, asset(amount, _token_symbol));
         if (ret == success()) {
-            _state.balances[user].tokenamount  += amount;
+            _state.balances[user].tokenamount += amount / PRECISION_DIV;
         }
         return ret;
     }
@@ -131,8 +132,9 @@ public:
     action_result buy_vesting_for(account_name user, int64_t amount) {
         auto ret = token.transfer(user, cfg::vesting_name, asset(amount, _token_symbol));
         if (ret == success()) {
-            _state.balances[user].tokenamount -= amount;
-            _state.balances[user].vestamount += get_converted_to_vesting(amount);
+            auto am = amount / PRECISION_DIV;
+            _state.balances[user].tokenamount -= am;
+            _state.balances[user].vestamount += get_converted_to_vesting(am);
 
             BOOST_CHECK_EQUAL(success(), vest.unlock_limit(user, asset(amount*10, _token_symbol)));
         }
@@ -151,7 +153,7 @@ public:
                 }
             }
         }
-        _state.pools[choice].funds += amount;
+        _state.pools[choice].funds += amount / PRECISION_DIV;
     }
 
     action_result add_funds_to_forum(int64_t amount) {
@@ -210,6 +212,14 @@ public:
 
             auto pools = post.get_reward_pools();
             auto created = (*pools.rbegin())["created"].as<uint64_t>();
+            std::vector<double> v_prices;
+            for (const auto l: lims.vestingprices) {
+                v_prices.emplace_back(l >= 0 ? l / PRECISION_DIV : -1);
+            }
+            std::vector<double> min_vests;
+            for (const auto m: lims.minvestings) {
+                min_vests.emplace_back(m / PRECISION_DIV);
+            }
             _state.pools.emplace_back(rewardpool(created,
                 rewardrules(
                     {std::move(mainfunc_), static_cast<double>(mainfunc.maxarg)},
@@ -219,8 +229,8 @@ public:
                 limits{
                     .restorers = std::move(func_restorers),
                     .limitedacts = lims.limitedacts,
-                    .vestingprices = lims.vestingprices,
-                    .minvestings = lims.minvestings
+                    .vestingprices = v_prices,
+                    .minvestings = min_vests
                 }));
             _state.pools.back().funds += unclaimed_funds;
         }
@@ -330,15 +340,15 @@ public:
 #endif
     }
     void pay_rewards_in_state() {
+        const auto now = control->head_block_time().sec_since_epoch();
         for (auto itr_p = _state.pools.begin(); itr_p != _state.pools.end(); itr_p++) {
             auto& p = *itr_p;
             for (auto itr_m = p.messages.begin(); itr_m != p.messages.end();) {
-                const auto current_time = control->head_block_time().sec_since_epoch();
-                if ((current_time - itr_m->created) >= post.window) {
+                if (now - itr_m->created >= post.window) {
                     auto m = *itr_m;
                     double pool_rsharesfn_sum = p.get_rsharesfn_sum();
 
-                    int64_t payout = 0;
+                    double payout = 0;
                     if (p.messages.size() == 1) {
                         payout = p.funds;
                     } else if (pool_rsharesfn_sum > 1.e-20) {
@@ -502,12 +512,13 @@ public:
                             m.votes.emplace_back(vote{
                                 voter,
                                 std::min(get_prop(weight), 1.0),
-                                static_cast<double>(FP(_state.balances[voter].vestamount)),
+                                PRECISION_DIV * static_cast<double>(FP(_state.balances[voter].vestamount)), //raw amount
                                 static_cast<double>(current_time)
                             });
                         else {
                             vote_itr->revote_diff = std::min(get_prop(weight), 1.0) - vote_itr->weight;
-                            vote_itr->revote_vesting = static_cast<double>(FP(_state.balances[voter].vestamount));
+                            vote_itr->revote_vesting =
+                                PRECISION_DIV * static_cast<double>(FP(_state.balances[voter].vestamount));
                         }
                         return ret;
                     }
@@ -684,7 +695,7 @@ BOOST_FIXTURE_TEST_CASE(limits_test, reward_calcs_tester) try {
             .minvestings = {300000, 100000, 100000}
         }, {
             [](double p, double v, double t){ return t / 250.0; },
-            [](double p, double v, double t){ return sqrt(v / 500000.0) * (t / 150.0); }
+            [](double p, double v, double t){ return sqrt(v / (500000.0 / PRECISION_DIV)) * (t / 150.0); }  // !Vesting
         })
     );
 
