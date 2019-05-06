@@ -38,6 +38,13 @@ struct golos_vesting_api: base_contract_api {
         );
     }
 
+    action_result close(name owner, symbol sym) {
+        return push(N(close), owner, args()
+            ("owner", owner)
+            ("symbol", sym)
+        );
+    }
+
     action_result unlock_limit(name owner, asset quantity) {
         return push(N(unlocklimit), owner, args()
             ("owner", owner)

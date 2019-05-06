@@ -17,6 +17,9 @@ using namespace eosio::chain;
 struct balance_data {
     double tokenamount = 0.0;
     double vestamount = 0.0;
+    double paymentsamount = 0.0;
+    bool tokenclosed = false;
+    bool vestclosed = false;
     //vesting delegation isn't covered by these tests
 };
 
@@ -116,11 +119,17 @@ struct statemap : public std::map<std::string, aprox_val_t> {
         auto prefix = get_balance_str(acc);
         operator[](prefix + "tokenamount") = { data.tokenamount, delta.balance.tokenamount };
         operator[](prefix + "vestamount") = { data.vestamount, delta.balance.vestamount };
+        operator[](prefix + "paymentsamount") = { data.paymentsamount };
     }
 
     void set_balance_token(account_name acc, double val) {
         auto prefix = get_balance_str(acc);
         operator[](prefix + "tokenamount") = { val, delta.balance.tokenamount };
+    }
+
+    void set_balance_payments(account_name acc, double val) {
+        auto prefix = get_balance_str(acc);
+        operator[](prefix + "paymentsamount") = { val };
     }
 
     void set_balance_vesting(account_name acc, double val) {

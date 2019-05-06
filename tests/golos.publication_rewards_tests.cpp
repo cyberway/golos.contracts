@@ -43,6 +43,7 @@ protected:
     account_name _issuer;
     vector<account_name> _users;
     account_name _stranger;
+    vector<account_name> _close_acc;
     statemap _req;
     statemap _res;
     state _state;
@@ -81,6 +82,14 @@ protected:
             BOOST_CHECK_EQUAL(success(), buy_vesting_for(u, user_vesting_funds));
             produce_blocks();
         }
+
+        for (auto& u : _close_acc) {
+            BOOST_CHECK_EQUAL(success(), token.open(u, _token_symbol, u));
+            produce_blocks();
+            BOOST_CHECK_EQUAL(success(), vest.open(u, _token_symbol, u));
+            produce_blocks();
+        }
+
         check();
         _req.clear();
         _res.clear();
@@ -101,11 +110,13 @@ public:
             N(alice),  N(alice1),  N(alice2), N(alice3), N(alice4), N(alice5),
             N(bob), N(bob1), N(bob2), N(bob3), N(bob4), N(bob5),
             N(why), N(has), N(my), N(imagination), N(become), N(poor)}
-        , _stranger(N(dan.larimer)) {
+        , _stranger(N(dan.larimer)) 
+        , _close_acc({N(close.mssg), N(close.vote)}) {
 
         produce_blocks(2);    // why 2?
         create_accounts({_forum_name, _issuer, cfg::vesting_name, cfg::token_name, cfg::control_name, cfg::charge_name, _stranger, cfg::publish_name});
         create_accounts(_users);
+        create_accounts(_close_acc);
         produce_blocks(2);
 
         install_contract(_forum_name, contracts::posting_wasm(), contracts::posting_abi());
@@ -248,6 +259,17 @@ public:
         }
     }
 
+    void set_payments_balance_from_table(account_name user, statemap& s) {
+        auto accs = token.get_accounts(user);
+        BOOST_CHECK_EQUAL(accs.size() <= 1, true);
+        if (accs.empty()) {
+            s.set_balance_payments(user, 0.0);
+        } else {
+            auto cur = *accs.begin();
+            s.set_balance_payments(user, static_cast<double>(cur["payments"].as<asset>().to_real()));
+        }
+    }
+
     void set_vesting_balance_from_table(account_name user, statemap& s) {
         auto balances = vest.get_balances(user);
         BOOST_CHECK_EQUAL(balances.size() <= 1, true); //--/---/---/---/---/---/ just one vesting
@@ -263,6 +285,10 @@ public:
         s.clear();
         for (auto& b : _state.balances) {
             s.set_balance(b.first, {b.second.tokenamount, b.second.vestamount});
+            if (b.first == _forum_name)
+                s.set_balance(b.first, {b.second.tokenamount, b.second.vestamount, b.second.paymentsamount});
+            else
+                s.set_balance(_forum_name, {0.0, 0.0, 0.0});
         }
         for (auto& p : _state.pools) {
             double pool_rshares_sum = 0.0;
@@ -297,6 +323,9 @@ public:
             set_token_balance_from_table(user, s);
             set_vesting_balance_from_table(user, s);
         }
+        set_token_balance_from_table(_forum_name, s);
+        set_vesting_balance_from_table(_forum_name, s);
+        set_payments_balance_from_table(_forum_name, s);
         //pools
         {
             auto pools = post.get_reward_pools();
@@ -378,7 +407,11 @@ public:
                         }
                     }
                     for (auto& r : cur_rewards) {
-                        _state.balances[r.first].vestamount += get_converted_to_vesting(r.second);
+                        auto cur_rwrd = get_converted_to_vesting(r.second);
+                        if (_state.balances[r.first].vestclosed)
+                            _state.balances[_forum_name].paymentsamount += cur_rwrd;
+                        else
+                            _state.balances[r.first].vestamount += cur_rwrd;
                         unclaimed_funds -= r.second;
                     }
 
@@ -386,13 +419,25 @@ public:
                     double ben_payout_sum = 0.0;
                     for (auto& ben : m.beneficiaries) {
                         double ben_payout = author_payout * get_prop(ben.weight);
-                        _state.balances[ben.account].vestamount += get_converted_to_vesting(ben_payout);
+                        auto ben_rwrd = get_converted_to_vesting(ben_payout);
+                        if (_state.balances[ben.account].vestclosed)
+                            _state.balances[_forum_name].paymentsamount += ben_rwrd;
+                        else
+                            _state.balances[ben.account].vestamount += ben_rwrd;
                         ben_payout_sum += ben_payout;
                     }
                     author_payout -= ben_payout_sum;
 
-                    _state.balances[m.key.author].tokenamount += author_payout * m.tokenprop;
-                    _state.balances[m.key.author].vestamount += get_converted_to_vesting(author_payout * (1.0 - m.tokenprop));
+                    auto author_token_rwrd = author_payout * m.tokenprop;
+                    if (_state.balances[m.key.author].tokenclosed)
+                        _state.balances[_forum_name].paymentsamount += author_token_rwrd;
+                    else
+                        _state.balances[m.key.author].tokenamount += author_token_rwrd;
+                    auto author_vest_rwrd = get_converted_to_vesting(author_payout * (1.0 - m.tokenprop));
+                    if (_state.balances[m.key.author].vestclosed)
+                        _state.balances[_forum_name].paymentsamount += author_vest_rwrd;
+                    else
+                        _state.balances[m.key.author].vestamount += author_vest_rwrd;
 
                     p.messages.erase(itr_m++);
                     p.funds -= (payout - unclaimed_funds);
@@ -526,6 +571,20 @@ public:
             }
             BOOST_REQUIRE_MESSAGE(false, "addvote: ret == success(), but message not found in state");
         }
+        return ret;
+    }
+
+    action_result close_token_acc(name owner, symbol symbol) {
+        auto ret = token.close(owner, symbol);
+        if (ret == success())
+            _state.balances[owner].tokenclosed = true;
+        return ret;
+    }
+    
+    action_result close_vest_acc(name owner, symbol symbol) {
+        auto ret = vest.close(owner, symbol);
+        if (ret == success())
+            _state.balances[owner].vestclosed = true;
         return ret;
     }
 };
@@ -876,6 +935,27 @@ BOOST_FIXTURE_TEST_CASE(golos_curation_test, reward_calcs_tester) try {
         BOOST_CHECK_EQUAL(success(), addvote(_users[i], {_users[0], "permlink"}, 10000));
         check();
     }
+    produce_blocks(golos::seconds_to_blocks(150));
+    check();
+
+    BOOST_TEST_MESSAGE("--- checking payout if account is closed");
+    BOOST_TEST_MESSAGE("--- create_message: " << name{_close_acc[0]}.to_string());
+    BOOST_CHECK_EQUAL(success(), create_message({_close_acc[0], "permlink"}));
+    check();
+
+    for (size_t i = 0; i < 10; i++) {
+        BOOST_TEST_MESSAGE("--- " << name{_users[i]}.to_string() << " voted");
+        BOOST_CHECK_EQUAL(success(), addvote(_users[i], {_close_acc[0], "permlink"}, 10000));
+        check();
+    }
+
+    BOOST_TEST_MESSAGE("--- " << name{_close_acc[1]}.to_string() << " voted");
+    BOOST_CHECK_EQUAL(success(), addvote(_close_acc[1], {_close_acc[0], "permlink"}, 10000));
+    check();
+
+    BOOST_CHECK_EQUAL(success(), close_token_acc(_close_acc[0], _token_symbol));
+    BOOST_CHECK_EQUAL(success(), close_vest_acc(_close_acc[1], _token_symbol));
+
     produce_blocks(golos::seconds_to_blocks(150));
     check();
 } FC_LOG_AND_RETHROW()
