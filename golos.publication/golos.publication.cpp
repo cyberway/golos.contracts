@@ -421,6 +421,7 @@ void publication::close_message(structures::mssgid message_id) {
         state.rshares = 0;
         state.rsharesfn = 0;
         
+        mssg_reward.funds.amount = 0;
         mssg_reward.rshares = 0;
         mssg_reward.rsharesfn = 0;
     }
@@ -455,9 +456,8 @@ void publication::close_message(structures::mssgid message_id) {
         
         mssg_reward.rshares = rshares.data();
         mssg_reward.rsharesfn = rsharesfn.data();
+        mssg_reward.funds.amount = payout; 
     }
-
-    mssg_reward.funds = asset(payout, state.funds.symbol); 
 
     message_table.modify(mssg_itr, name(), [&]( auto &item ) {
             item.closed = true;
