@@ -157,7 +157,7 @@ protected:
         const string gt_maxtokenprop = amsg("tokenprop must not be greater than pool.rules.maxtokenprop");
         const string no_reblog_mssg = amsg("You can't reblog, because this message doesn't exist.");
         const string own_reblog = amsg("You cannot reblog your own content.");
-        const string wrong_reblog_body_length = amsg("Body must be empty if title is empty or set if title is set.");
+        const string wrong_reblog_body_length = amsg("Body must be set if title is set.");
     } err;
 };
 
@@ -686,11 +686,6 @@ BOOST_FIXTURE_TEST_CASE(reblog_message, golos_publication_tester) try {
                                                              "headermssg",
                                                              ""));
 
-    BOOST_CHECK_EQUAL(err.wrong_reblog_body_length, post.reblog_msg(N(chucknorris),
-                                                             {N(brucelee), "permlink"},
-                                                             "",
-                                                             "bodymssg"));
-
     BOOST_TEST_MESSAGE("--- checking message for reblog.");
     BOOST_CHECK_EQUAL(err.no_reblog_mssg, post.reblog_msg(N(chucknorris),
                                                           {N(brucelee), "test"},
@@ -707,6 +702,11 @@ BOOST_FIXTURE_TEST_CASE(reblog_message, golos_publication_tester) try {
                                                  {N(brucelee), "permlink"},
                                                  "",
                                                  ""));
+
+    BOOST_CHECK_EQUAL(success(), post.reblog_msg(_code,
+                                                 {N(brucelee), "permlink"},
+                                                 "",
+                                                 "bodymssg"));
 } FC_LOG_AND_RETHROW()
 
 BOOST_AUTO_TEST_SUITE_END()

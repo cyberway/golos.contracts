@@ -841,8 +841,9 @@ void publication::reblog(name rebloger, structures::mssgid message_id, std::stri
     eosio_assert(headermssg.length() < config::max_length, "Title length is more than 256.");
     eosio_assert(
         (bodymssg.length() && headermssg.length()) ||
-        (!bodymssg.length() && !headermssg.length()),
-        "Body must be empty if title is empty or set if title is set."
+        (!bodymssg.length() && !headermssg.length()) ||
+        (bodymssg.length() && !headermssg.length()),
+        "Body must be set if title is set."
     );
 
     tables::permlink_table permlink_table(_self, message_id.author.value);
