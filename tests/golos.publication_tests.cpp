@@ -672,12 +672,6 @@ BOOST_FIXTURE_TEST_CASE(reblog_message, golos_publication_tester) try {
                                                               str256,
                                                               "bodymssg"));
 
-    BOOST_TEST_MESSAGE("--- checking body length.");
-    BOOST_CHECK_EQUAL(err.wrong_body_length, post.reblog_msg(N(chucknorris),
-                                                             {N(brucelee), "permlink"},
-                                                             "headermssg",
-                                                             ""));
-    
     BOOST_TEST_MESSAGE("--- checking message for reblog.");
     BOOST_CHECK_EQUAL(err.no_reblog_mssg, post.reblog_msg(N(chucknorris),
                                                           {N(brucelee), "test"},

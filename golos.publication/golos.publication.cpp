@@ -838,7 +838,6 @@ void publication::reblog(name rebloger, structures::mssgid message_id, std::stri
     require_auth(rebloger);
 
     eosio_assert(headermssg.length() < config::max_length, "Title length is more than 256.");
-    eosio_assert(bodymssg.length(), "Body is empty.");
 
     tables::permlink_table permlink_table(_self, message_id.author.value);
     auto permlink_index = permlink_table.get_index<"byvalue"_n>();
