@@ -156,6 +156,7 @@ protected:
         }
         const string gt_maxtokenprop = amsg("tokenprop must not be greater than pool.rules.maxtokenprop");
         const string no_reblog_mssg = amsg("You can't reblog, because this message doesn't exist.");
+        const string own_reblog = amsg("You cannot reblog your own content.");
     } err;
 };
 
@@ -666,12 +667,24 @@ BOOST_FIXTURE_TEST_CASE(reblog_message, golos_publication_tester) try {
 
     BOOST_CHECK_EQUAL(success(), post.create_msg({N(brucelee), "permlink"}));
 
+    BOOST_TEST_MESSAGE("--- checking for own reblog.");
+    BOOST_CHECK_EQUAL(err.own_reblog, post.reblog_msg(N(brucelee),
+                                                      {N(brucelee), "permlink"},
+                                                      "headermssg",
+                                                      "bodymssg"));
+
     BOOST_TEST_MESSAGE("--- checking title length.");
     BOOST_CHECK_EQUAL(err.wrong_title_length, post.reblog_msg(N(chucknorris),
                                                               {N(brucelee), "permlink"},
                                                               str256,
                                                               "bodymssg"));
 
+    BOOST_TEST_MESSAGE("--- checking body length.");
+    BOOST_CHECK_EQUAL(err.wrong_body_length, post.reblog_msg(N(chucknorris),
+                                                             {N(brucelee), "permlink"},
+                                                             "headermssg",
+                                                             ""));
+    
     BOOST_TEST_MESSAGE("--- checking message for reblog.");
     BOOST_CHECK_EQUAL(err.no_reblog_mssg, post.reblog_msg(N(chucknorris),
                                                           {N(brucelee), "test"},
