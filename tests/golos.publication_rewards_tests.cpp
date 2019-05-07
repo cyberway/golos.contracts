@@ -43,7 +43,7 @@ protected:
     account_name _issuer;
     vector<account_name> _users;
     account_name _stranger;
-    vector<account_name> _close_acc;
+    account_name _close_acc;
     statemap _req;
     statemap _res;
     state _state;
@@ -83,12 +83,10 @@ protected:
             produce_blocks();
         }
 
-        for (auto& u : _close_acc) {
-            BOOST_CHECK_EQUAL(success(), token.open(u, _token_symbol, u));
-            produce_blocks();
-            BOOST_CHECK_EQUAL(success(), vest.open(u, _token_symbol, u));
-            produce_blocks();
-        }
+        BOOST_CHECK_EQUAL(success(), token.open(_close_acc, _token_symbol, _close_acc));
+        produce_blocks();
+        BOOST_CHECK_EQUAL(success(), vest.open(_close_acc, _token_symbol, _close_acc));
+        produce_blocks();
 
         check();
         _req.clear();
@@ -111,12 +109,11 @@ public:
             N(bob), N(bob1), N(bob2), N(bob3), N(bob4), N(bob5),
             N(why), N(has), N(my), N(imagination), N(become), N(poor)}
         , _stranger(N(dan.larimer)) 
-        , _close_acc({N(close.mssg), N(close.vote)}) {
+        , _close_acc(N(close.acc)) {
 
         produce_blocks(2);    // why 2?
-        create_accounts({_forum_name, _issuer, cfg::vesting_name, cfg::token_name, cfg::control_name, cfg::charge_name, _stranger, cfg::publish_name});
+        create_accounts({_forum_name, _issuer, cfg::vesting_name, cfg::token_name, cfg::control_name, cfg::charge_name, _stranger, cfg::publish_name, _close_acc});
         create_accounts(_users);
-        create_accounts(_close_acc);
         produce_blocks(2);
 
         install_contract(_forum_name, contracts::posting_wasm(), contracts::posting_abi());
@@ -937,26 +934,37 @@ BOOST_FIXTURE_TEST_CASE(golos_curation_test, reward_calcs_tester) try {
     }
     produce_blocks(golos::seconds_to_blocks(150));
     check();
+} FC_LOG_AND_RETHROW()
+
+BOOST_FIXTURE_TEST_CASE(golos_close_acc_test, reward_calcs_tester) try {
+    BOOST_TEST_MESSAGE("golos_close_acc_test");
+    int64_t maxfp = std::numeric_limits<fixp_t>::max();
+    auto bignum = 500000000000;
+    init(bignum, 500000);
+    produce_blocks();
+    BOOST_TEST_MESSAGE("--- setrules");
+    using namespace golos_curation;
+    BOOST_CHECK_EQUAL(success(), setrules({"x", maxfp}, {golos_curation::func_str, maxfp}, {"1", bignum},
+        [](double x){ return x; }, golos_curation::func, [](double x){ return 1.0; }));
+    check();
+
+    BOOST_TEST_MESSAGE("--- add_funds_to_forum");
+    BOOST_CHECK_EQUAL(success(), add_funds_to_forum(50000));
+    check();
 
     BOOST_TEST_MESSAGE("--- checking payout if account is closed");
-    BOOST_TEST_MESSAGE("--- create_message: " << name{_close_acc[0]}.to_string());
-    BOOST_CHECK_EQUAL(success(), create_message({_close_acc[0], "permlink"}));
+    BOOST_TEST_MESSAGE("--- create_message: " << name{_close_acc}.to_string());
+    BOOST_CHECK_EQUAL(success(), create_message({_close_acc, "permlink"}));
     check();
 
-    for (size_t i = 0; i < 10; i++) {
-        BOOST_TEST_MESSAGE("--- " << name{_users[i]}.to_string() << " voted");
-        BOOST_CHECK_EQUAL(success(), addvote(_users[i], {_close_acc[0], "permlink"}, 10000));
-        check();
-    }
-
-    BOOST_TEST_MESSAGE("--- " << name{_close_acc[1]}.to_string() << " voted");
-    BOOST_CHECK_EQUAL(success(), addvote(_close_acc[1], {_close_acc[0], "permlink"}, 10000));
+    BOOST_TEST_MESSAGE("--- " << name{_users[0]}.to_string() << " voted");
+    BOOST_CHECK_EQUAL(success(), addvote(_users[0], {_close_acc, "permlink"}, 10000));
     check();
 
-    BOOST_CHECK_EQUAL(success(), close_token_acc(_close_acc[0], _token_symbol));
-    BOOST_CHECK_EQUAL(success(), close_vest_acc(_close_acc[1], _token_symbol));
+    BOOST_CHECK_EQUAL(success(), close_token_acc(_close_acc, _token_symbol));
+    BOOST_CHECK_EQUAL(success(), close_vest_acc(_close_acc, _token_symbol));
 
-    produce_blocks(golos::seconds_to_blocks(150));
+    produce_blocks(golos::seconds_to_blocks(post.window));
     check();
 } FC_LOG_AND_RETHROW()
 
