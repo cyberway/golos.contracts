@@ -4,6 +4,7 @@
 #include <eosiolib/asset.hpp>
 #include <eosiolib/eosio.hpp>
 #include "config.hpp"
+#include <cyber.token/cyber.token.hpp>
 
 namespace golos {
 
