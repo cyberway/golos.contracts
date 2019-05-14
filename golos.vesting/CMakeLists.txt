@@ -5,5 +5,4 @@ target_include_directories(golos.vesting.wasm
   #  ${CMAKE_CURRENT_SOURCE_DIR}/include
    ${TOKEN_INCLUDE_PATH}
    ${CMAKE_CURRENT_SOURCE_DIR}/..
-   ${CMAKE_CURRENT_SOURCE_DIR}/../cyberway.contracts/cyber.token/include
    )

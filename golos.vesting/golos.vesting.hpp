@@ -4,7 +4,6 @@
 #include <eosiolib/asset.hpp>
 #include <eosiolib/eosio.hpp>
 #include "config.hpp"
-#include <cyber.token/cyber.token.hpp>
 
 namespace golos {
 
@@ -12,7 +11,11 @@ namespace golos {
 using namespace eosio;
 
 class vesting : public contract {
-
+    struct recipient {
+        name    to;
+        asset   quantity;
+        string  memo;
+    };
 public:
     using contract::contract;
 
@@ -39,7 +42,7 @@ public:
     [[eosio::action]] void paydelegator(name account, asset reward, name delegator, uint8_t payout_strategy);
 
     void on_transfer(name from, name to, asset quantity, std::string memo);
-    void on_bulk_transfer(name from, std::vector<eosio::token::recipient> recipients);
+    void on_bulk_transfer(name from, std::vector<recipient> recipients);
 
     // tables
     struct [[eosio::table]] vesting_stats {
