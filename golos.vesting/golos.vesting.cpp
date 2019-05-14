@@ -74,6 +74,11 @@ void vesting::on_transfer(name from, name to, asset quantity, std::string memo) 
     add_balance(recipient != name() ? recipient : from, converted, has_auth(to) ? to : from);
 }
 
+void vesting::on_bulk_transfer(name from, vector<token::recipient> recipients) {
+    for (auto recipient_obj : recipients)
+        on_transfer(from, recipient_obj.to, recipient_obj.quantity, recipient_obj.memo);
+}
+
 void vesting::retire(asset quantity, name user) {
     require_auth(name(token::get_issuer(config::token_name, quantity.symbol.code())));
     eosio_assert(quantity.is_valid(), "invalid quantity");
@@ -527,6 +532,6 @@ void vesting::paydelegator(name account, asset reward, name delegator, uint8_t p
 
 } // golos
 
-DISPATCH_WITH_TRANSFER(golos::vesting, on_transfer, (validateprms)(setparams)
+DISPATCH_WITH_BULK_TRANSFER(golos::vesting, on_transfer, on_bulk_transfer, (validateprms)(setparams)
         (retire)(unlocklimit)(withdraw)(stopwithdraw)(delegate)(undelegate)(create)
         (open)(close)(timeout)(timeoutconv)(timeoutrdel)(paydelegator))

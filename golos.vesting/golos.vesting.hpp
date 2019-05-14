@@ -38,6 +38,7 @@ public:
     [[eosio::action]] void paydelegator(name account, asset reward, name delegator, uint8_t payout_strategy);
 
     void on_transfer(name from, name to, asset quantity, std::string memo);
+    void on_bulk_transfer(name from, vector<token::recipient> recipients);
 
     // tables
     struct [[eosio::table]] vesting_stats {
