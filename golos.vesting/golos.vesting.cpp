@@ -74,7 +74,7 @@ void vesting::on_transfer(name from, name to, asset quantity, std::string memo) 
     add_balance(recipient != name() ? recipient : from, converted, has_auth(to) ? to : from);
 }
 
-void vesting::on_bulk_transfer(name from, vector<token::recipient> recipients) {
+void vesting::on_bulk_transfer(name from, std::vector<eosio::token::recipient> recipients) {
     for (auto recipient_obj : recipients)
         on_transfer(from, recipient_obj.to, recipient_obj.quantity, recipient_obj.memo);
 }
