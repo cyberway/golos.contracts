@@ -82,35 +82,102 @@
 #        },
         {"name": "cyber.worker",  "owner_key": "INITIAL",   "active_key": "INITIAL"},
 
-        {"name": "gls.issuer",    "owner_key": "INITIAL",   "active_key": "INITIAL"},
-        {"name": "gls.ctrl",      "owner_key": "INITIAL",   "active_key": "INITIAL",
+        {"name": "gls.issuer",
+            "permissions": [
+                {"name": "owner", "key": "INITIAL"},
+                {"name": "active", "key": "INITIAL", "accounts": ["gls.ctrl@cyber.code", "gls.emit@cyber.code"]},
+                {"name": "issue", "key": "GLS5a2eDuRETEg7uy8eHbiCqGZM3wnh2pLjiXrFduLWBKVZKCkB62"},
+                {"name": "witn.smajor", "key": "INITIAL"},
+                {"name": "witn.major", "key": "INITIAL"},
+                {"name": "witn.minor", "key": "INITIAL"}
+            ]
+        },
+        {"name": "gls.ctrl",
+            "permissions": [
+                {"name": "owner", "key": "INITIAL"},
+                {"name": "active", "key": "INITIAL", "accounts": ["@cyber.code"]}
+            ],
             "abi": {"path": "$GOLOS_CONTRACTS/golos.ctrl/golos.ctrl.abi", "hash":""},
             "code": {"path": "$GOLOS_CONTRACTS/golos.ctrl/golos.ctrl.wasm", "hash":""}
         },
-        {"name": "gls.emit",      "owner_key": "INITIAL",   "active_key": "INITIAL",
+        {"name": "gls.emit",
+            "permissions": [
+                {"name": "owner", "key": "INITIAL"},
+                {"name": "active", "key": "INITIAL", "accounts": ["@cyber.code"]}
+            ],
             "abi": {"path": "$GOLOS_CONTRACTS/golos.emit/golos.emit.abi", "hash":""},
             "code": {"path": "$GOLOS_CONTRACTS/golos.emit/golos.emit.wasm", "hash":""}
         },
-        {"name": "gls.vesting",      "owner_key": "INITIAL",   "active_key": "INITIAL",
+        {"name": "gls.vesting",
+            "permissions": [
+                {"name": "owner", "key": "INITIAL"},
+                {"name": "active", "key": "INITIAL", "accounts": ["@cyber.code"]}
+            ],
             "abi": {"path": "$GOLOS_CONTRACTS/golos.vesting/golos.vesting.abi", "hash":""},
             "code": {"path": "$GOLOS_CONTRACTS/golos.vesting/golos.vesting.wasm", "hash":""}
         },
-        {"name": "gls.publish",      "owner_key": "INITIAL",   "active_key": "INITIAL",
+        {"name": "gls.publish",
+            "permissions": [
+                {"name": "owner", "key": "INITIAL"},
+                {"name": "active", "key": "INITIAL", "accounts": ["@cyber.code"]}
+            ],
             "abi": {"path": "$GOLOS_CONTRACTS/golos.publication/golos.publication.abi", "hash":""},
             "code": {"path": "$GOLOS_CONTRACTS/golos.publication/golos.publication.wasm", "hash":""}
         },
-        {"name": "gls.social",      "owner_key": "INITIAL",   "active_key": "INITIAL",
+        {"name": "gls.social",
+            "permissions": [
+                {"name": "owner", "key": "INITIAL"},
+                {"name": "active", "key": "INITIAL", "accounts": ["gls.publish@cyber.code"]}
+            ],
             "abi": {"path": "$GOLOS_CONTRACTS/golos.social/golos.social.abi", "hash":""},
             "code": {"path": "$GOLOS_CONTRACTS/golos.social/golos.social.wasm", "hash":""}
         },
-        {"name": "gls.charge",      "owner_key": "INITIAL",   "active_key": "INITIAL",
+        {"name": "gls.charge",
+            "permissions": [
+                {"name": "owner", "key": "INITIAL"},
+                {"name": "active", "key": "INITIAL"}
+            ],
             "abi": {"path": "$GOLOS_CONTRACTS/golos.charge/golos.charge.abi", "hash":""},
             "code": {"path": "$GOLOS_CONTRACTS/golos.charge/golos.charge.wasm", "hash":""}
         },
-        {"name": "gls.referral",      "owner_key": "INITIAL",   "active_key": "INITIAL",
+        {"name": "gls.referral",
+            "permissions": [
+                {"name": "owner", "key": "INITIAL"},
+                {"name": "active", "key": "INITIAL"}
+            ],
             "abi": {"path": "$GOLOS_CONTRACTS/golos.referral/golos.referral.abi", "hash":""},
             "code": {"path": "$GOLOS_CONTRACTS/golos.referral/golos.referral.wasm", "hash":""}
         },
-        {"name": "gls.worker",        "owner_key": "INITIAL",   "active_key": "INITIAL"}
-    ]
+        {"name": "gls.worker",
+            "permissions": [
+                {"name": "owner", "key": "INITIAL"},
+                {"name": "active", "key": "INITIAL"}
+            ]
+        }
+    ],
+    "auth_links": [
+        {
+            "permission": "cyber@createuser",
+            "links": ["cyber:newaccount", "cyber.token:open", "gls.vesting:open"]
+        },{
+            "permission": "gls.issuer@issue",
+            "links": ["cyber.token:issue", "cyber.token:transfer"]
+        }
+    ],
+    "golos": {
+        "domain": "golos",
+        "names": {
+            "issuer": "gls.issuer",
+            "control": "gls.ctrl",
+            "vesting": "gls.vesting",
+            "posting": "gls.publish",
+            "social": "gls.social",
+            "charge": "gls.charge"
+        },
+        "recovery": {
+            "wait_days": 30
+        },
+        "max_supply": 1000000000,
+        "sys_max_supply": 1000000000
+    }
 }
