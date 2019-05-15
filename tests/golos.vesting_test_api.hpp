@@ -23,6 +23,7 @@ struct golos_vesting_api: base_contract_api {
         );
         if (base_tester::success() == result) {
             _tester->link_authority(creator, _code, golos::config::invoice_name, N(retire));
+            BOOST_TEST_MESSAGE("LINK AUTH!");
         }
         return result;
     }
@@ -95,6 +96,13 @@ struct golos_vesting_api: base_contract_api {
 
     action_result timeout(name signer) {
         return push(N(timeout), signer, args());
+    }
+
+    action_result retire(asset quantity, name user, name issuer) {
+        return push_msig(N(retire), {{issuer, golos::config::invoice_name}}, {issuer}, args()
+            ("quantity", quantity)
+            ("user", user)
+        );
     }
 
     //// vesting tables
