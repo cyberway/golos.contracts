@@ -222,7 +222,27 @@ def createGolosAccounts():
     for acc in golosAccounts:
         if not (args.golos_genesis and acc.inGenesis):
             createAccount('cyber', acc.name, args.public_key)
+
+    if not args.golos_genesis:
+        updateAuth('gls.issuer',  'witn.major', 'active', [args.public_key], [])
+        updateAuth('gls.issuer',  'witn.minor', 'active', [args.public_key], [])
+        updateAuth('gls.issuer',  'witn.smajor', 'active', [args.public_key], [])
+        updateAuth('gls.issuer',  'active', 'owner', [args.public_key], ['gls.ctrl@cyber.code', 'gls.emit@cyber.code'])
+        updateAuth('gls.ctrl',    'active', 'owner', [args.public_key], ['gls.ctrl@cyber.code'])
+        updateAuth('gls.publish', 'active', 'owner', [args.public_key], ['gls.publish@cyber.code'])
+        updateAuth('gls.vesting', 'active', 'owner', [args.public_key], ['gls.vesting@cyber.code'])
+        updateAuth('gls.social',  'active', 'owner', [args.public_key], ['gls.publish@cyber.code'])
+        updateAuth('gls.emit',    'active', 'owner', [args.public_key], ['gls.emit@cyber.code'])
+
     updateAuth('cyber',       'createuser', 'active', ['GLS5a2eDuRETEg7uy8eHbiCqGZM3wnh2pLjiXrFduLWBKVZKCkB62'], [])
+    if not args.golos_genesis:
+        linkAuth('cyber', 'cyber', 'newaccount', 'createuser')
+        linkAuth('cyber', 'gls.vesting', 'open', 'createuser')
+        linkAuth('cyber', 'cyber.token', 'open', 'createuser')
+
+        updateAuth('gls.issuer',  'issue', 'active', ['GLS5a2eDuRETEg7uy8eHbiCqGZM3wnh2pLjiXrFduLWBKVZKCkB62'], [])
+        linkAuth('gls.issuer', 'cyber.token', 'issue', 'issue')
+        linkAuth('gls.issuer', 'cyber.token', 'transfer', 'issue')
 
 def stepInstallContracts():
     for acc in golosAccounts:
