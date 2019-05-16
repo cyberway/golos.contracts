@@ -155,6 +155,9 @@ protected:
             return amsg(arg + " must be between 0% and 100% (0-10000)");
         }
         const string gt_maxtokenprop = amsg("tokenprop must not be greater than pool.rules.maxtokenprop");
+        const string no_reblog_mssg = amsg("You can't reblog, because this message doesn't exist.");
+        const string own_reblog = amsg("You cannot reblog your own content.");
+        const string wrong_reblog_body_length = amsg("Body must be set if title is set.");
     } err;
 };
 
@@ -655,6 +658,55 @@ BOOST_FIXTURE_TEST_CASE(set_curators_prcnt, golos_publication_tester) try {
     BOOST_CHECK_EQUAL(success(), post.upvote(N(jackiechan), {N(brucelee), "permlink"}, 123));
     BOOST_CHECK_EQUAL(err.no_cur_percent, post.set_curators_prcnt({N(brucelee), "permlink"}, 7500));
     BOOST_CHECK_EQUAL(post.get_message({N(brucelee), "permlink"})["curators_prcnt"], 7300);
+} FC_LOG_AND_RETHROW()
+
+BOOST_FIXTURE_TEST_CASE(reblog_message, golos_publication_tester) try {
+    BOOST_TEST_MESSAGE("Reblog message testing.");
+
+    init();
+    std::string str256(256, 'a');
+
+    BOOST_CHECK_EQUAL(success(), post.create_msg({N(brucelee), "permlink"}));
+
+    BOOST_TEST_MESSAGE("--- checking for own reblog.");
+    BOOST_CHECK_EQUAL(err.own_reblog, post.reblog_msg(N(brucelee),
+                                                      {N(brucelee), "permlink"},
+                                                      "headermssg",
+                                                      "bodymssg"));
+
+    BOOST_TEST_MESSAGE("--- checking title length.");
+    BOOST_CHECK_EQUAL(err.wrong_title_length, post.reblog_msg(N(chucknorris),
+                                                              {N(brucelee), "permlink"},
+                                                              str256,
+                                                              "bodymssg"));
+
+    BOOST_TEST_MESSAGE("--- checking body length.");
+    BOOST_CHECK_EQUAL(err.wrong_reblog_body_length, post.reblog_msg(N(chucknorris),
+                                                             {N(brucelee), "permlink"},
+                                                             "headermssg",
+                                                             ""));
+
+    BOOST_TEST_MESSAGE("--- checking message for reblog.");
+    BOOST_CHECK_EQUAL(err.no_reblog_mssg, post.reblog_msg(N(chucknorris),
+                                                          {N(brucelee), "test"},
+                                                          "headermssg",
+                                                          "bodymssg"));
+
+    BOOST_TEST_MESSAGE("--- checking that message was rebloged successful.");
+    BOOST_CHECK_EQUAL(success(), post.reblog_msg(N(chucknorris),
+                                                 {N(brucelee), "permlink"},
+                                                 "headermssg",
+                                                 "bodymssg"));
+
+    BOOST_CHECK_EQUAL(success(), post.reblog_msg(N(jackiechan),
+                                                 {N(brucelee), "permlink"},
+                                                 "",
+                                                 ""));
+
+    BOOST_CHECK_EQUAL(success(), post.reblog_msg(_code,
+                                                 {N(brucelee), "permlink"},
+                                                 "",
+                                                 "bodymssg"));
 } FC_LOG_AND_RETHROW()
 
 BOOST_AUTO_TEST_SUITE_END()
