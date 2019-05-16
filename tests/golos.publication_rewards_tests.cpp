@@ -1,4 +1,4 @@
-#define SHOW_ENABLE
+//#define SHOW_ENABLE
 #include "golos.publication_rewards_types.hpp"
 #include "golos_tester.hpp"
 #include "golos.posting_test_api.hpp"

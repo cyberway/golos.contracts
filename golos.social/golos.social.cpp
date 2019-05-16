@@ -123,7 +123,7 @@ void social::changereput(name voter, name author, int64_t rshares) {
         return;
     }
 
-    // Rule #2: If you are downvoяting another user, you must have more reputation than him
+    // Rule #2: If you are downvoting another user, you must have more reputation than him
     if (rshares < 0 && voter_rep.reputation <= author_rep.reputation) {
         return;
     }
