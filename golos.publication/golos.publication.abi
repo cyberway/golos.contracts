@@ -203,7 +203,7 @@
       },
       {
         "name": "mssg_reward",
-        "type": "mssgrwrd"
+        "type": "asset"
       }
     ]
   },
@@ -445,24 +445,6 @@
             "name": "msgs",
             "type": "counter_t"
         },
-        {
-            "name": "funds",
-            "type": "asset"
-        },
-        {
-            "name": "rshares",
-            "type": "wide_t"
-        },
-        {
-            "name": "rsharesfn",
-            "type": "wide_t"
-        }
-    ]
-  },
-  {
-    "name": "mssgrwrd",
-    "base": "",
-    "fields": [
         {
             "name": "funds",
             "type": "asset"
@@ -781,15 +763,11 @@
     "fields": [
         {
             "name": "payout",
-            "type": "int64"
+            "type": "asset"
         },
         {
             "name": "message_id",
             "type": "mssgid"
-        },
-        {
-            "name": "state",
-            "type": "poolstate"
         }
     ]
   },

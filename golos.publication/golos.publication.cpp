@@ -410,7 +410,7 @@ void publication::close_message(structures::mssgid message_id) {
     atmsp::machine<fixp_t> machine;
     fixp_t sharesfn = set_and_run(machine, pool->rules.mainfunc.code, {FP(mssg_itr->state.netshares)}, {{fixp_t(0), FP(pool->rules.mainfunc.maxarg)}});
 
-    structures::mssgrwrd mssg_reward;
+    asset mssg_reward;
     auto state = pool->state;
     int64_t payout = 0;
     if(state.msgs == 1) {
@@ -421,9 +421,7 @@ void publication::close_message(structures::mssgid message_id) {
         state.rshares = 0;
         state.rsharesfn = 0;
         
-        mssg_reward.funds.amount = 0;
-        mssg_reward.rshares = 0;
-        mssg_reward.rsharesfn = 0;
+        mssg_reward = asset(0, state.funds.symbol);
     }
     else {
         auto total_rsharesfn = WP(state.rsharesfn);
@@ -454,9 +452,7 @@ void publication::close_message(structures::mssgid message_id) {
         state.rshares = new_rshares.data();
         state.rsharesfn = new_rsharesfn.data();
         
-        mssg_reward.rshares = rshares.data();
-        mssg_reward.rsharesfn = rsharesfn.data();
-        mssg_reward.funds.amount = payout; 
+        mssg_reward = asset(payout, state.funds.symbol); 
     }
 
     message_table.modify(mssg_itr, name(), [&]( auto &item ) {
@@ -481,12 +477,12 @@ void publication::close_message(structures::mssgid message_id) {
         });
 
     transaction trx;
-    trx.actions.emplace_back(action{permission_level(_self, config::active_name), _self, "paymssgrwrd"_n, std::make_tuple(payout, message_id, state)});
+    trx.actions.emplace_back(action{permission_level(_self, config::active_name), _self, "paymssgrwrd"_n, std::make_tuple(mssg_reward, message_id)});
     trx.delay_sec = 0;
     trx.send((static_cast<uint128_t>(mssg_itr->id) << 64) | message_id.author.value, _self);
 }
 
-void publication::paymssgrwrd(int64_t payout, structures::mssgid message_id, structures::poolstate state) {
+void publication::paymssgrwrd(asset payout, structures::mssgid message_id) {
     require_auth(_self);
 
     tables::permlink_table permlink_table(_self, message_id.author.value);
@@ -498,33 +494,34 @@ void publication::paymssgrwrd(int64_t payout, structures::mssgid message_id, str
     tables::message_table message_table(_self, message_id.author.value);
     auto mssg_itr = message_table.find(permlink_itr->id);
     eosio::check(mssg_itr != message_table.end(), "Message doesn't exist in cashout window.");
+    eosio::check(mssg_itr->closed, "Message doesn't closed.");
 
     tables::reward_pools pools(_self, _self.value);
 
     elaf_t percent(elai_t(mssg_itr->curators_prcnt) / elai_t(config::_100percent));
-    auto curation_payout = int_cast(percent * elai_t(payout));
+    auto curation_payout = int_cast(percent * elai_t(payout.amount));
 
-    eosio_assert((curation_payout <= payout) && (curation_payout >= 0), "publication::payrewards: wrong curation_payout");
-    auto unclaimed_rewards = pay_curators(message_id.author, mssg_itr->id, curation_payout, FP(mssg_itr->state.sumcuratorsw), state.funds.symbol, get_memo("curators", message_id));
+    eosio_assert((curation_payout <= payout.amount) && (curation_payout >= 0), "publication::payrewards: wrong curation_payout");
+    auto unclaimed_rewards = pay_curators(message_id.author, mssg_itr->id, curation_payout, FP(mssg_itr->state.sumcuratorsw), payout.symbol, get_memo("curators", message_id));
 
     eosio_assert(unclaimed_rewards >= 0, "publication::payrewards: unclaimed_rewards < 0");
     
-    payout -= curation_payout;
+    payout.amount -= curation_payout;
     
     int64_t ben_payout_sum = 0;
     for (auto& ben: mssg_itr->beneficiaries) {
-        auto ben_payout = cyber::safe_pct(payout, ben.weight);
-        eosio_assert((0 <= ben_payout) && (ben_payout <= payout - ben_payout_sum), "LOGIC ERROR! publication::payrewards: wrong ben_payout value");
-        payto(ben.account, eosio::asset(ben_payout, state.funds.symbol), static_cast<enum_t>(payment_t::VESTING), get_memo("benefeciary", message_id));
+        auto ben_payout = cyber::safe_pct(payout.amount, ben.weight);
+        eosio_assert((0 <= ben_payout) && (ben_payout <= payout.amount - ben_payout_sum), "LOGIC ERROR! publication::payrewards: wrong ben_payout value");
+        payto(ben.account, eosio::asset(ben_payout, payout.symbol), static_cast<enum_t>(payment_t::VESTING), get_memo("benefeciary", message_id));
         ben_payout_sum += ben_payout;
     }
-    payout -= ben_payout_sum;
+    payout.amount -= ben_payout_sum;
 
     elaf_t token_prop(elai_t(mssg_itr->tokenprop) / elai_t(config::_100percent));
-    auto token_payout = int_cast(elai_t(payout) * token_prop);
-    eosio_assert(payout >= token_payout, "publication::payrewards: wrong token_payout value");
-    payto(message_id.author, eosio::asset(token_payout, state.funds.symbol), static_cast<enum_t>(payment_t::TOKEN), get_memo("author", message_id));
-    payto(message_id.author, eosio::asset(payout - token_payout, state.funds.symbol), static_cast<enum_t>(payment_t::VESTING), get_memo("author", message_id));
+    auto token_payout = int_cast(elai_t(payout.amount) * token_prop);
+    eosio_assert(payout.amount >= token_payout, "publication::payrewards: wrong token_payout value");
+    payto(message_id.author, eosio::asset(token_payout, payout.symbol), static_cast<enum_t>(payment_t::TOKEN), get_memo("author", message_id));
+    payto(message_id.author, eosio::asset(payout.amount - token_payout, payout.symbol), static_cast<enum_t>(payment_t::VESTING), get_memo("author", message_id));
 
     tables::vote_table vote_table(_self, message_id.author.value);
     auto votetable_index = vote_table.get_index<"messageid"_n>();
@@ -540,7 +537,7 @@ void publication::paymssgrwrd(int64_t payout, structures::mssgid message_id, str
     permlink_table.modify(*permlink_itr, _self, [&](auto&){}); // change payer to contract
     permlink_table.move_to_archive(*permlink_itr);
 
-    fill_depleted_pool(pools, asset(unclaimed_rewards, state.funds.symbol), pools.end());
+    fill_depleted_pool(pools, asset(unclaimed_rewards, payout.symbol), pools.end());
 }
 
 void publication::close_message_timer(structures::mssgid message_id, uint64_t id, uint64_t delay_sec) {
