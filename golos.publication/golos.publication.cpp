@@ -840,9 +840,7 @@ void publication::reblog(name rebloger, structures::mssgid message_id, std::stri
     eosio_assert(rebloger != message_id.author, "You cannot reblog your own content.");
     eosio_assert(headermssg.length() < config::max_length, "Title length is more than 256.");
     eosio_assert(
-        (bodymssg.length() && headermssg.length()) ||
-        (!bodymssg.length() && !headermssg.length()) ||
-        (bodymssg.length() && !headermssg.length()),
+        !headermssg.length() || (headermssg.length() && bodymssg.length()),
         "Body must be set if title is set."
     );
 
