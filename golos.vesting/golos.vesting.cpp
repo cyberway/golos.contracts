@@ -332,7 +332,7 @@ void vesting::timeoutconv() {
                 auto converted = vesting_to_token(to_send, vesting, -correction);   // TODO: get_balance can throw #549
                 vestings.modify(vesting, name(), [&](auto& v) {
                     v.supply -= to_send;
-                    send_stat_event(v);                    
+                    send_stat_event(v);
                 });
                 // TODO: payment action #549
                 INLINE_ACTION_SENDER(token, transfer)(config::token_name, {_self, config::active_name},
@@ -357,7 +357,7 @@ void vesting::timeoutrdel() {
         eosio_assert(balance_recipient != account_recipient.end(), "This token is not on the sender balance sheet");
         account_recipient.modify(balance_recipient, name(), [&](auto &item){
             item.delegated -= obj->quantity;
-            send_account_event(obj->delegator, item);                    
+            send_account_event(obj->delegator, item);
         });
         obj = index.erase(obj);
     }

@@ -23,7 +23,7 @@ unlockTimeout = 999999999
 
 _golosAccounts = [
     # name           inGenesis    contract
-    ('gls.issuer',   True,       None),
+    ('gls',          True,       None),
     ('gls.ctrl',     True,       'golos.ctrl'),
     ('gls.emit',     True,       'golos.emit'),
     ('gls.vesting',  True,       'golos.vesting'),
@@ -149,7 +149,7 @@ def openTokenBalance(account):
         jsonArg([account, args.token, account]) + '-p %s'%account)
 
 def issueToken(account, amount):
-    retry(args.cleos + 'push action cyber.token issue ' + jsonArg([account, amount, "memo"]) + ' -p gls.issuer')
+    retry(args.cleos + 'push action cyber.token issue ' + jsonArg([account, amount, "memo"]) + ' -p gls')
 
 def buyVesting(account, amount):
     issueToken(account, amount)
@@ -224,25 +224,25 @@ def createGolosAccounts():
             createAccount('cyber', acc.name, args.public_key)
 
     if not args.golos_genesis:
-        updateAuth('gls.issuer',  'witn.major', 'active', [args.public_key], [])
-        updateAuth('gls.issuer',  'witn.minor', 'active', [args.public_key], [])
-        updateAuth('gls.issuer',  'witn.smajor', 'active', [args.public_key], [])
-        updateAuth('gls.issuer',  'active', 'owner', [args.public_key], ['gls.ctrl@cyber.code', 'gls.emit@cyber.code'])
+        updateAuth('gls',  'witn.major', 'active', [args.public_key], [])
+        updateAuth('gls',  'witn.minor', 'active', [args.public_key], [])
+        updateAuth('gls',  'witn.smajor', 'active', [args.public_key], [])
+        updateAuth('gls',  'active', 'owner', [args.public_key], ['gls.ctrl@cyber.code', 'gls.emit@cyber.code'])
         updateAuth('gls.ctrl',    'active', 'owner', [args.public_key], ['gls.ctrl@cyber.code'])
         updateAuth('gls.publish', 'active', 'owner', [args.public_key], ['gls.publish@cyber.code'])
         updateAuth('gls.vesting', 'active', 'owner', [args.public_key], ['gls.vesting@cyber.code'])
         updateAuth('gls.social',  'active', 'owner', [args.public_key], ['gls.publish@cyber.code'])
         updateAuth('gls.emit',    'active', 'owner', [args.public_key], ['gls.emit@cyber.code'])
 
-    updateAuth('cyber',       'createuser', 'active', ['GLS5a2eDuRETEg7uy8eHbiCqGZM3wnh2pLjiXrFduLWBKVZKCkB62'], [])
-    if not args.golos_genesis:
-        linkAuth('cyber', 'cyber', 'newaccount', 'createuser')
-        linkAuth('cyber', 'gls.vesting', 'open', 'createuser')
-        linkAuth('cyber', 'cyber.token', 'open', 'createuser')
+        updateAuth('gls', 'createuser', 'active', ['GLS5a2eDuRETEg7uy8eHbiCqGZM3wnh2pLjiXrFduLWBKVZKCkB62'], [])
+        linkAuth('gls', 'cyber', 'newaccount', 'createuser')
+        linkAuth('gls', 'cyber.domain', 'newusername', 'createuser')
+        linkAuth('gls', 'gls.vesting', 'open', 'createuser')
+        linkAuth('gls', 'cyber.token', 'open', 'createuser')
 
-        updateAuth('gls.issuer',  'issue', 'active', ['GLS5a2eDuRETEg7uy8eHbiCqGZM3wnh2pLjiXrFduLWBKVZKCkB62'], [])
-        linkAuth('gls.issuer', 'cyber.token', 'issue', 'issue')
-        linkAuth('gls.issuer', 'cyber.token', 'transfer', 'issue')
+        updateAuth('gls',  'issue', 'active', ['GLS5a2eDuRETEg7uy8eHbiCqGZM3wnh2pLjiXrFduLWBKVZKCkB62'], [])
+        linkAuth('gls', 'cyber.token', 'issue', 'issue')
+        linkAuth('gls', 'cyber.token', 'transfer', 'issue')
 
 def stepInstallContracts():
     for acc in golosAccounts:
@@ -251,12 +251,12 @@ def stepInstallContracts():
 
 def stepCreateTokens():
     if not args.golos_genesis:
-        retry(args.cleos + 'push action cyber.token create ' + jsonArg(["gls.issuer", intToToken(10000000000*10000)]) + ' -p cyber.token')
+        retry(args.cleos + 'push action cyber.token create ' + jsonArg(["gls", intToToken(10000000000*10000)]) + ' -p cyber.token')
     #totalAllocation = allocateFunds(0, len(accounts))
     #totalAllocation = 10000000*10000
     #retry(args.cleos + 'push action cyber.token issue ' + jsonArg(["gls.publish", intToToken(totalAllocation), "memo"]) + ' -p gls.publish')
     if not args.golos_genesis:
-        retry(args.cleos + 'push action gls.vesting create ' + jsonArg([args.vesting, 'gls.ctrl']) + '-p gls.issuer')
+        retry(args.cleos + 'push action gls.vesting create ' + jsonArg([args.vesting, 'gls.ctrl']) + '-p gls')
     for acc in golosAccounts:
         openTokenBalance(acc.name)
     sleep(1)
@@ -300,14 +300,14 @@ def createCommunity():
                 'max_interest':0,
                 'return_time':120
             }]
-        ]]) + '-p gls.issuer')
+        ]]) + '-p gls')
     retry(args.cleos + 'push action gls.ctrl setparams ' + jsonArg([
         [
             ['ctrl_token',{
                 'code':args.symbol
             }],
             ['multisig_acc',{
-                'name':'gls.issuer'
+                'name':'gls'
             }],
             ['max_witnesses',{
                 'max':5

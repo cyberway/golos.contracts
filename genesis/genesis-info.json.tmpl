@@ -56,37 +56,52 @@
         }
     },
     "accounts": [
-#        {"name": "cyber",         "owner_key": "INITIAL",   "active_key": "INITIAL",
-#            "abi":  {"path": "$CYBERWAY_CONTRACTS/cyber.bios/cyber.bios.abi", "hash":""},
-#            "code": {"path": "$CYBERWAY_CONTRACTS/cyber.bios/cyber.bios.wasm", "hash":""}
-#        },
-#        {"name": "cyber.domain",  "owner_key": "INITIAL",   "active_key": "INITIAL",
-#            "abi":  {"path": "$CYBERWAY_CONTRACTS/cyber.domain/cyber.domain.abi", "hash":""},
-#            "code": {"path": "$CYBERWAY_CONTRACTS/cyber.domain/cyber.domain.wasm", "hash":""}
-#        },
-        {"name": "cyber.token",   "owner_key": "INITIAL",   "active_key": "INITIAL",
+        {"name": "cyber",
+            "update": true,
+            "abi":  {"path": "$CYBERWAY_CONTRACTS/cyber.bios/cyber.bios.abi", "hash":""},
+            "code": {"path": "$CYBERWAY_CONTRACTS/cyber.bios/cyber.bios.wasm", "hash":""}
+        },
+        {"name": "cyber.domain",
+            "update": true,
+            "abi":  {"path": "$CYBERWAY_CONTRACTS/cyber.domain/cyber.domain.abi", "hash":""},
+            "code": {"path": "$CYBERWAY_CONTRACTS/cyber.domain/cyber.domain.wasm", "hash":""}
+        },
+        {"name": "cyber.msig",
+            "update": true,
+            "abi":  {"path": "$CYBERWAY_CONTRACTS/cyber.msig/cyber.msig.abi", "hash":""},
+            "code": {"path": "$CYBERWAY_CONTRACTS/cyber.msig/cyber.msig.wasm", "hash":""}
+        },
+        {"name": "cyber.govern",
+            "update": true,
+            "abi":  {"path": "$CYBERWAY_CONTRACTS/cyber.govern/cyber.govern.abi", "hash":""},
+            "code": {"path": "$CYBERWAY_CONTRACTS/cyber.govern/cyber.govern.wasm", "hash":""}
+        },
+        {"name": "cyber.stake",
+            "update": true,
+            "abi":  {"path": "$CYBERWAY_CONTRACTS/cyber.stake/cyber.stake.abi", "hash":""},
+            "code": {"path": "$CYBERWAY_CONTRACTS/cyber.stake/cyber.stake.wasm", "hash":""}
+        },
+        {"name": "cyber.token",
+            "permissions": [
+                {"name": "owner", "key": "INITIAL"},
+                {"name": "active", "key": "INITIAL"}
+            ],
             "abi":  {"path": "$CYBERWAY_CONTRACTS/cyber.token/cyber.token.abi", "hash":""},
             "code": {"path": "$CYBERWAY_CONTRACTS/cyber.token/cyber.token.wasm", "hash":""}
         },
-#        {"name": "cyber.msig",   "owner_key": "INITIAL",   "active_key": "INITIAL",
-#            "abi":  {"path": "$CYBERWAY_CONTRACTS/cyber.msig/cyber.msig.abi", "hash":""},
-#            "code": {"path": "$CYBERWAY_CONTRACTS/cyber.msig/cyber.msig.wasm", "hash":""}
-#        },
-#        {"name": "cyber.govern",   "owner_key": "INITIAL",   "active_key": "INITIAL",
-#            "abi":  {"path": "$CYBERWAY_CONTRACTS/cyber.govern/cyber.govern.abi", "hash":""},
-#            "code": {"path": "$CYBERWAY_CONTRACTS/cyber.govern/cyber.govern.wasm", "hash":""}
-#        },
-#        {"name": "cyber.stake",   "owner_key": "INITIAL",   "active_key": "INITIAL",
-#            "abi":  {"path": "$CYBERWAY_CONTRACTS/cyber.stake/cyber.stake.abi", "hash":""},
-#            "code": {"path": "$CYBERWAY_CONTRACTS/cyber.stake/cyber.stake.wasm", "hash":""}
-#        },
-        {"name": "cyber.worker",  "owner_key": "INITIAL",   "active_key": "INITIAL"},
+        {"name": "cyber.worker",
+            "permissions": [
+                {"name": "owner", "key": "INITIAL"},
+                {"name": "active", "key": "INITIAL"}
+            ]
+        },
 
-        {"name": "gls.issuer",
+        {"name": "gls",
             "permissions": [
                 {"name": "owner", "key": "INITIAL"},
                 {"name": "active", "key": "INITIAL", "accounts": ["gls.ctrl@cyber.code", "gls.emit@cyber.code"]},
                 {"name": "issue", "key": "GLS5a2eDuRETEg7uy8eHbiCqGZM3wnh2pLjiXrFduLWBKVZKCkB62"},
+                {"name": "createuser", "key": "GLS5a2eDuRETEg7uy8eHbiCqGZM3wnh2pLjiXrFduLWBKVZKCkB62"},
                 {"name": "witn.smajor", "key": "INITIAL"},
                 {"name": "witn.major", "key": "INITIAL"},
                 {"name": "witn.minor", "key": "INITIAL"}
@@ -157,17 +172,17 @@
     ],
     "auth_links": [
         {
-            "permission": "cyber@createuser",
-            "links": ["cyber:newaccount", "cyber.token:open", "gls.vesting:open"]
+            "permission": "gls@createuser",
+            "links": ["cyber:newaccount", "cyber.domain:newusername", "cyber.token:open", "gls.vesting:open"]
         },{
-            "permission": "gls.issuer@issue",
+            "permission": "gls@issue",
             "links": ["cyber.token:issue", "cyber.token:transfer"]
         }
     ],
     "golos": {
         "domain": "golos",
         "names": {
-            "issuer": "gls.issuer",
+            "issuer": "gls",
             "control": "gls.ctrl",
             "vesting": "gls.vesting",
             "posting": "gls.publish",
