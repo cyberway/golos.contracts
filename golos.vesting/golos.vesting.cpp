@@ -75,7 +75,8 @@ void vesting::on_transfer(name from, name to, asset quantity, std::string memo) 
 }
 
 void vesting::on_transfer_vesting(name from, name to, asset quantity, std::string memo) {
-    eosio_assert(_self != to, "_self == to");
+    if (_self != to)
+        return;
 
     auto recipient = get_recipient(memo);
     if (token::get_issuer(config::token_name, quantity.symbol.code()) == from && recipient == name())
@@ -85,11 +86,8 @@ void vesting::on_transfer_vesting(name from, name to, asset quantity, std::strin
 }
 
 void vesting::on_bulk_transfer(name from, std::vector<token::recipient> recipients) {
-
-    print("@BULK@\n");
-    return;
-
     eosio_assert(recipients.size(), "not item in vector");
+
     std::map<symbol, asset> map_assets;
     for (auto recipient_obj : recipients) {
         auto tokens = map_assets[recipient_obj.quantity.symbol];
