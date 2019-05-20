@@ -221,6 +221,26 @@ BOOST_FIXTURE_TEST_CASE(buy_vesting, golos_vesting_tester) try {
     CHECK_MATCHING_OBJECT(vest.get_stats(), mvo()("supply", vest.asset_str(buy1+buy2)));
 } FC_LOG_AND_RETHROW()
 
+BOOST_FIXTURE_TEST_CASE(bulk_buy_vesting, golos_vesting_tester) try {
+    BOOST_TEST_MESSAGE("Test buying vesting / converting token to vesting");
+    auto issue = 1000;
+    auto buy1 = 250;
+    auto buy2 = 100;
+    prepare_balances(100500, issue, issue, buy1, buy2);
+
+    BOOST_CHECK_EQUAL(success(), token.bulk_transfer( N(sania), {{cfg::vesting_name, token.make_asset(50), "buy vesting"},
+                                                                 {cfg::vesting_name, token.make_asset(50), "buy vesting"}}
+                                                    ));
+
+//    CHECK_MATCHING_OBJECT(token.get_account(N(sania)), mvo()("balance", token.asset_str(issue - buy1)));
+//    CHECK_MATCHING_OBJECT(token.get_account(N(pasha)), mvo()("balance", token.asset_str(issue - buy2)));
+//    CHECK_MATCHING_OBJECT(vest.get_balance(N(sania)), vest.make_balance(buy1));
+//    CHECK_MATCHING_OBJECT(vest.get_balance(N(pasha)), vest.make_balance(buy2));
+
+//    CHECK_MATCHING_OBJECT(token.get_account(cfg::vesting_name), mvo()("balance", token.asset_str(buy1+buy2)));
+//    CHECK_MATCHING_OBJECT(vest.get_stats(), mvo()("supply", vest.asset_str(buy1+buy2)));
+} FC_LOG_AND_RETHROW()
+
 BOOST_FIXTURE_TEST_CASE(withdraw, golos_vesting_tester) try {
     BOOST_TEST_MESSAGE("Test converting vesting to token");
 
