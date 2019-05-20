@@ -74,9 +74,35 @@ void vesting::on_transfer(name from, name to, asset quantity, std::string memo) 
     add_balance(recipient != name() ? recipient : from, converted, has_auth(to) ? to : from);
 }
 
+void vesting::on_transfer_vesting(name from, name to, asset quantity, std::string memo) {
+    eosio_assert(_self != to, "_self == to");
+
+    auto recipient = get_recipient(memo);
+    if (token::get_issuer(config::token_name, quantity.symbol.code()) == from && recipient == name())
+        return;     // just increase token supply
+
+    add_balance(recipient != name() ? recipient : from, quantity, has_auth(to) ? to : from);
+}
+
 void vesting::on_bulk_transfer(name from, std::vector<recipient> recipients) {
+    eosio_assert(recipients.size(), "not item in vector");
+    asset sum_quantity{0, recipients.at(0).quantity.symbol};
     for (auto recipient_obj : recipients)
-        on_transfer(from, recipient_obj.to, recipient_obj.quantity, recipient_obj.memo);
+        sum_quantity += recipient_obj.quantity;
+
+    vesting_table table_vesting(_self, _self.value);    // TODO: use symbol as scope #550
+    auto vesting = table_vesting.find(sum_quantity.symbol.code().raw());
+    eosio_assert(vesting != table_vesting.end(), "Token not found");
+    asset converted = token_to_vesting(sum_quantity, *vesting, -sum_quantity.amount);
+    table_vesting.modify(vesting, name(), [&](auto& item) {
+        item.supply += converted;
+        send_stat_event(item);
+    });
+
+    for (auto recipient_obj : recipients) {
+        auto quantity_recipient = static_cast<uint64_t>(converted.amount * (static_cast<double>(recipient_obj.quantity.amount) / sum_quantity.amount));
+        on_transfer_vesting(from, recipient_obj.to, asset(quantity_recipient, converted.symbol), recipient_obj.memo);
+    }
 }
 
 void vesting::retire(asset quantity, name user) {
