@@ -1,8 +1,6 @@
 #pragma once
 
 #include "config.hpp"
-#include <eosiolib/eosio.hpp>
-#include <eosiolib/asset.hpp>
 #include <eosiolib/dispatcher.hpp>
 
 template<typename T, typename... Args>
@@ -16,7 +14,6 @@ bool bulk_execute_action( eosio::name self, eosio::name code, void (T::*func)(Ar
     for (auto recipient : data.recipients) {
         std::tuple<std::decay_t<Args>...> args{data.from, recipient.to, recipient.quantity, recipient.memo};
         eosio::datastream<const char*> ds = eosio::datastream<const char*>(nullptr, 0);
-        ds << args;
 
         T inst(self, code, ds);
         auto f2 = [&]( auto... a ){
