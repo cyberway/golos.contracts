@@ -421,7 +421,7 @@ void publication::close_message(structures::mssgid message_id) {
         state.rshares = 0;
         state.rsharesfn = 0;
         
-        mssg_reward = asset(0, state.funds.symbol);
+        mssg_reward = asset(payout, state.funds.symbol);
     }
     else {
         auto total_rsharesfn = WP(state.rsharesfn);
