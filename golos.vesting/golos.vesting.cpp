@@ -86,36 +86,30 @@ void vesting::on_transfer_vesting(name from, name to, asset quantity, std::strin
 }
 
 void vesting::on_bulk_transfer(name from, std::vector<token::recipient> recipients) {
-    eosio_assert(recipients.size(), "not item in vector");
+    auto token_symbol = recipients.at(0).quantity.symbol;
 
-    std::map<symbol, asset> map_assets;
+    asset sum_quantity(0, token_symbol);
     for (auto recipient_obj : recipients) {
-        auto tokens = map_assets[recipient_obj.quantity.symbol];
-        if (tokens.amount)
-            map_assets[recipient_obj.quantity.symbol] = tokens + recipient_obj.quantity;
-        else
-            map_assets[recipient_obj.quantity.symbol] = recipient_obj.quantity;
+        sum_quantity += recipient_obj.quantity;
     }
 
     vesting_table table_vesting(_self, _self.value);    // TODO: use symbol as scope #550
-    for (auto token_symbol : map_assets) {
-        auto sum_quantity = token_symbol.second;
-        auto vesting = table_vesting.find(token_symbol.first.code().raw());
-        eosio_assert(vesting != table_vesting.end(), "Token not found");
-        asset converted = token_to_vesting(sum_quantity, *vesting, -sum_quantity.amount);
+    auto vesting = table_vesting.find(token_symbol.code().raw());
+    eosio_assert(vesting != table_vesting.end(), "Token not found");
+    asset converted = token_to_vesting(sum_quantity, *vesting, -sum_quantity.amount);
 
-        uint64_t sum_quantity_recipient = 0;
-        for (auto recipient_obj : recipients) {
-            auto quantity_recipient = static_cast<uint64_t>(converted.amount * (static_cast<double>(recipient_obj.quantity.amount) / sum_quantity.amount));
-            sum_quantity_recipient += quantity_recipient;
-            on_transfer_vesting(from, recipient_obj.to, asset(quantity_recipient, converted.symbol), recipient_obj.memo);
-        }
-
-        table_vesting.modify(vesting, name(), [&](auto& item) {
-            item.supply += asset(sum_quantity_recipient, converted.symbol);
-            send_stat_event(item);
-        });
+    uint64_t sum_quantity_recipient = 0;
+    for (auto recipient_obj : recipients) {
+        auto quantity_recipient = static_cast<uint64_t>(converted.amount * (static_cast<double>(recipient_obj.quantity.amount) / sum_quantity.amount));
+        sum_quantity_recipient += quantity_recipient;
+        on_transfer_vesting(from, recipient_obj.to, asset(quantity_recipient, converted.symbol), recipient_obj.memo);
     }
+
+    table_vesting.modify(vesting, name(), [&](auto& item) {
+        item.supply += asset(sum_quantity_recipient, converted.symbol);
+        send_stat_event(item);
+    });
+
 }
 
 void vesting::retire(asset quantity, name user) {
