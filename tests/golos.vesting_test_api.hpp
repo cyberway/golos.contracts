@@ -99,7 +99,7 @@ struct golos_vesting_api: base_contract_api {
     }
 
     action_result retire(asset quantity, name user, name issuer) {
-        return push_msig(N(retire), {{issuer, golos::config::invoice_name}}, {issuer}, args()
+        return push(N(retire), issuer, args()
             ("quantity", quantity)
             ("user", user)
         );

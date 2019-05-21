@@ -274,12 +274,10 @@ public:
     void fill_from_state(statemap& s) const {
         s.clear();
         for (auto& b : _state.balances) {
-            s.set_balance(b.first, {b.second.tokenamount, b.second.vestamount});
-            if (b.first == _forum_name)
-                s.set_balance(b.first, {b.second.tokenamount, b.second.vestamount, b.second.paymentsamount});
-            else
-                s.set_balance(_forum_name, {0.0, 0.0, 0.0});
+            s.set_balance(b.first, {b.second.tokenamount, b.second.vestamount, b.second.paymentsamount});
         }
+        if (_state.balances.find(_forum_name) == _state.balances.end())
+            s.set_balance(_forum_name, {0.0, 0.0, 0.0});
         for (auto& p : _state.pools) {
             double pool_rshares_sum = 0.0;
             double pool_rsharesfn_sum = 0.0;
@@ -312,6 +310,7 @@ public:
         for (auto& user : _users) {
             set_token_balance_from_table(user, s);
             set_vesting_balance_from_table(user, s);
+            set_payments_balance_from_table(user, s);
         }
         set_token_balance_from_table(_forum_name, s);
         set_vesting_balance_from_table(_forum_name, s);
@@ -397,14 +396,12 @@ public:
                         }
                     }
                     for (auto& r : cur_rewards) {
-                        auto cur_rwrd = get_converted_to_vesting(r.second);
                         if (_state.balances[r.first].vestclosed) {
-                            _state.balances[_forum_name].paymentsamount += cur_rwrd;
-                            BOOST_TEST_MESSAGE("1");
+                            _state.balances[_forum_name].paymentsamount += (r.second + close_acc_delta);
+                            _state.balances[_forum_name].tokenamount += (r.second + close_acc_delta);
                         }
                         else {
-                            _state.balances[r.first].vestamount += cur_rwrd;
-                            BOOST_TEST_MESSAGE("2");
+                            _state.balances[r.first].vestamount += get_converted_to_vesting(r.second);
                         }
                         unclaimed_funds -= r.second;
                     }
@@ -413,14 +410,12 @@ public:
                     double ben_payout_sum = 0.0;
                     for (auto& ben : m.beneficiaries) {
                         double ben_payout = author_payout * get_prop(ben.weight);
-                        auto ben_rwrd = get_converted_to_vesting(ben_payout);
                         if (_state.balances[ben.account].vestclosed) {
-                            _state.balances[_forum_name].paymentsamount += ben_rwrd;
-                            BOOST_TEST_MESSAGE("3");
+                            _state.balances[_forum_name].paymentsamount += (ben_payout + close_acc_delta);
+                            _state.balances[_forum_name].tokenamount += (ben_payout + close_acc_delta);
                         }
                         else {
-                            _state.balances[ben.account].vestamount += ben_rwrd;
-                            BOOST_TEST_MESSAGE("4");
+                            _state.balances[ben.account].vestamount += get_converted_to_vesting(ben_payout);
                         }
                         ben_payout_sum += ben_payout;
                     }
@@ -429,20 +424,18 @@ public:
                     auto author_token_rwrd = author_payout * m.tokenprop;
                     if (_state.balances[m.key.author].tokenclosed) {
                         _state.balances[_forum_name].paymentsamount += author_token_rwrd;
-                        BOOST_TEST_MESSAGE("5");
+                        _state.balances[_forum_name].tokenamount += author_token_rwrd;
                     }
                     else {
                         _state.balances[m.key.author].tokenamount += author_token_rwrd;
-                        BOOST_TEST_MESSAGE("6");
                     }
-                    auto author_vest_rwrd = get_converted_to_vesting(author_payout * (1.0 - m.tokenprop));
+                    auto author_vest_rwrd = author_payout * (1.0 - m.tokenprop);
                     if (_state.balances[m.key.author].vestclosed) {
-                        _state.balances[_forum_name].paymentsamount += author_vest_rwrd;
-                        BOOST_TEST_MESSAGE("7");
+                        _state.balances[_forum_name].paymentsamount += (author_vest_rwrd + close_acc_delta);
+                        _state.balances[_forum_name].tokenamount += (author_vest_rwrd + close_acc_delta);
                     }
                     else {
-                        _state.balances[m.key.author].vestamount += author_vest_rwrd;
-                        BOOST_TEST_MESSAGE("8");
+                        _state.balances[m.key.author].vestamount += get_converted_to_vesting(author_vest_rwrd);
                     }
 
                     p.messages.erase(itr_m++);
@@ -591,6 +584,13 @@ public:
         auto ret = vest.close(owner, symbol);
         if (ret == success())
             _state.balances[owner].vestclosed = true;
+        return ret;
+    }
+
+    action_result retire_vest(asset quantity, name user, name issuer) {
+        auto ret = vest.retire(quantity, user, issuer);
+        if (ret == success())
+            _state.balances[user].vestamount = 0.0;
         return ret;
     }
 };
@@ -970,10 +970,8 @@ BOOST_FIXTURE_TEST_CASE(golos_close_acc_test, reward_calcs_tester) try {
     BOOST_CHECK_EQUAL(success(), addvote(_users[1], {_users[0], "permlink"}, 10000));
     check();
 
-    BOOST_CHECK_EQUAL(success(), vest.retire(vest.get_balance_raw(_users[0])["vesting"].as<asset>(), _users[0], _issuer));
-    BOOST_TEST_MESSAGE(vest.get_balance_raw(_users[0])["vesting"].as<asset>()); 
+    BOOST_CHECK_EQUAL(success(), retire_vest(vest.get_balance_raw(_users[0])["vesting"].as<asset>(), _users[0], _issuer));
     check();
-    BOOST_TEST_MESSAGE(vest.get_balance_raw(_users[0])["vesting"].as<asset>()); 
 
     BOOST_CHECK_EQUAL(success(), close_token_acc(_users[0], _token_symbol));
     BOOST_CHECK_EQUAL(success(), close_vest_acc(_users[0], _token_symbol));

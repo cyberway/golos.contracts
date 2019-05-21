@@ -111,7 +111,7 @@ void publication::create_message(
     std::optional<uint16_t> curators_prcnt = std::nullopt
 ) {
     require_auth(message_id.author);
-    eosio::print("CREATE MSSG!");
+
     eosio_assert(message_id.permlink.length() && message_id.permlink.length() < config::max_length, "Permlink length is empty or more than 256.");
     eosio_assert(validate_permlink(message_id.permlink), "Permlink contains wrong symbol.");
     eosio_assert(headermssg.length() < config::max_length, "Title length is more than 256.");
@@ -333,22 +333,18 @@ void publication::payto(name user, eosio::asset quantity, enum_t mode, std::stri
     if(static_cast<payment_t>(mode) == payment_t::TOKEN) {
         if (token::balance_exist(config::token_name, user, quantity.symbol.code())) {
             INLINE_ACTION_SENDER(token, payment) (config::token_name, {_self, config::active_name}, {_self, user, quantity, memo});
-            print("\ntoken balance exists");
         } 
         else {
             INLINE_ACTION_SENDER(token, payment) (config::token_name, {_self, config::active_name}, {_self, _self, quantity, memo});
-            print("\ntoken balance doesn't exist");
         }
     }
     else if(static_cast<payment_t>(mode) == payment_t::VESTING) {
         if (golos::vesting::balance_exist(config::vesting_name, user, quantity.symbol.code())) {
             INLINE_ACTION_SENDER(token, transfer) (config::token_name, {_self, config::active_name},
             {_self, config::vesting_name, quantity, std::string(config::send_prefix + name{user}.to_string()  + "; " + memo)});
-            print("\nvesting balance exists");
         } 
         else {
             INLINE_ACTION_SENDER(token, payment) (config::token_name, {_self, config::active_name}, {_self, _self, quantity, memo});
-            print("\nvesting balance doesn't exist");
         }
     }
     else
@@ -412,7 +408,7 @@ void publication::use_postbw_charge(tables::limit_table& lims, name issuer, name
 
 void publication::close_message(structures::mssgid message_id) {
     require_auth(_self);
-    eosio::print("CLOSE MSSG!");
+    
     tables::permlink_table permlink_table(_self, message_id.author.value);
     auto permlink_index = permlink_table.get_index<"byvalue"_n>();
     auto permlink_itr = permlink_index.find(message_id.permlink);
@@ -428,7 +424,6 @@ void publication::close_message(structures::mssgid message_id) {
     auto pool = get_pool(pools, mssg_itr->date);
 
     eosio_assert(pool->state.msgs != 0, "LOGIC ERROR! publication::payrewards: pool.msgs is equal to zero");
-    check_acc_vest_balance(message_id.author, pool->state.funds.symbol);
     atmsp::machine<fixp_t> machine;
     fixp_t sharesfn = set_and_run(machine, pool->rules.mainfunc.code, {FP(mssg_itr->state.netshares)}, {{fixp_t(0), FP(pool->rules.mainfunc.maxarg)}});
 
