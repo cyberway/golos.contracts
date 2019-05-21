@@ -23,7 +23,6 @@ struct golos_vesting_api: base_contract_api {
         );
         if (base_tester::success() == result) {
             _tester->link_authority(creator, _code, golos::config::invoice_name, N(retire));
-            BOOST_TEST_MESSAGE("LINK AUTH!");
         }
         return result;
     }

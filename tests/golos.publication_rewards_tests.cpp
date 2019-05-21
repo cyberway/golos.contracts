@@ -271,13 +271,15 @@ public:
         }
     }
 
-    void fill_from_state(statemap& s) const {
+    void fill_from_state(statemap& s) {
         s.clear();
         for (auto& b : _state.balances) {
-            s.set_balance(b.first, {b.second.tokenamount, b.second.vestamount, b.second.paymentsamount});
+            s.set_balance(b.first, {b.second.tokenamount, b.second.vestamount});
         }
         if (_state.balances.find(_forum_name) == _state.balances.end())
             s.set_balance(_forum_name, {0.0, 0.0, 0.0});
+        else
+            s.set_balance(_forum_name, {_state.balances[_forum_name].tokenamount, _state.balances[_forum_name].vestamount, _state.balances[_forum_name].paymentsamount});
         for (auto& p : _state.pools) {
             double pool_rshares_sum = 0.0;
             double pool_rsharesfn_sum = 0.0;
@@ -310,7 +312,6 @@ public:
         for (auto& user : _users) {
             set_token_balance_from_table(user, s);
             set_vesting_balance_from_table(user, s);
-            set_payments_balance_from_table(user, s);
         }
         set_token_balance_from_table(_forum_name, s);
         set_vesting_balance_from_table(_forum_name, s);
