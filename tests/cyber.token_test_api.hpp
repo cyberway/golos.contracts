@@ -3,6 +3,11 @@
 
 namespace eosio { namespace testing {
 
+struct recipient {
+    name    to;
+    asset   quantity;
+    string  memo;
+};
 
 struct cyber_token_api: base_contract_api {
     cyber_token_api(golos_tester* tester, name code, symbol sym)
@@ -60,6 +65,13 @@ struct cyber_token_api: base_contract_api {
         );
     }
 
+    action_result bulk_transfer( account_name from, std::vector<recipient> recipients ) {
+       return push( N(bulktransfer), from, args()
+            ( "from", from)
+            ( "recipients", recipients)
+       );
+    }
+
     //// token tables
     variant get_stats() {
         auto sname = _symbol.to_symbol_code().value;
@@ -102,3 +114,4 @@ struct cyber_token_api: base_contract_api {
 
 
 }} // eosio::testing
+FC_REFLECT(eosio::testing::recipient, (to)(quantity)(memo))

@@ -74,6 +74,49 @@ void vesting::on_transfer(name from, name to, asset quantity, std::string memo) 
     add_balance(recipient != name() ? recipient : from, converted, has_auth(to) ? to : from);
 }
 
+void vesting::do_transfer_vesting(name from, name to, asset quantity, std::string memo) {
+    auto recipient = get_recipient(memo);
+    if (token::get_issuer(config::token_name, quantity.symbol.code()) == from && recipient == name())
+        return;     // just increase token supply
+
+    add_balance(recipient != name() ? recipient : from, quantity, has_auth(to) ? to : from);
+}
+
+void vesting::on_bulk_transfer(name from, std::vector<token::recipient> recipients) {
+    auto token_symbol = recipients.at(0).quantity.symbol;
+
+    asset sum_quantity(0, token_symbol);
+    for (auto recipient_obj : recipients) {
+        if (_self != recipient_obj.to)
+            continue;
+
+        sum_quantity += recipient_obj.quantity;
+    }
+
+    if (!sum_quantity.amount)
+        return;
+
+    vesting_table table_vesting(_self, _self.value);    // TODO: use symbol as scope #550
+    auto vesting = table_vesting.find(token_symbol.code().raw());
+    eosio_assert(vesting != table_vesting.end(), "Token not found");
+
+    asset sum_quantity_recipient(0, vesting->supply.symbol);
+    for (auto recipient_obj : recipients) {
+        if (_self != recipient_obj.to)
+            continue;
+
+        asset quantity_recipient = token_to_vesting(recipient_obj.quantity, *vesting, -sum_quantity.amount);
+        sum_quantity_recipient += quantity_recipient;
+        do_transfer_vesting(from, recipient_obj.to, quantity_recipient, recipient_obj.memo);
+    }
+
+    table_vesting.modify(vesting, name(), [&](auto& item) {
+        item.supply += sum_quantity_recipient;
+        send_stat_event(item);
+    });
+
+}
+
 void vesting::retire(asset quantity, name user) {
     require_auth(name(token::get_issuer(config::token_name, quantity.symbol.code())));
     eosio_assert(quantity.is_valid(), "invalid quantity");
@@ -527,6 +570,6 @@ void vesting::paydelegator(name account, asset reward, name delegator, uint8_t p
 
 } // golos
 
-DISPATCH_WITH_TRANSFER(golos::vesting, on_transfer, (validateprms)(setparams)
+DISPATCH_WITH_BULK_TRANSFER(golos::vesting, on_transfer, on_bulk_transfer, (validateprms)(setparams)
         (retire)(unlocklimit)(withdraw)(stopwithdraw)(delegate)(undelegate)(create)
         (open)(close)(timeout)(timeoutconv)(timeoutrdel)(paydelegator))
