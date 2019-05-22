@@ -169,6 +169,18 @@ inline std::ostream& operator<< (std::ostream& os, const statemap& rhs) {
     return os;
 }
 
+struct delegation {
+    account_name delegator;
+    account_name delegatee;
+    uint16_t interest_rate;
+    uint8_t payout_strategy;
+    double amount;
+};
+
+struct delegate_balance {
+    double delegated;
+    double received;
+};
 
 struct vote {
     account_name voter;
@@ -371,6 +383,8 @@ struct rewardpool {
 struct state {
     std::map<account_name, balance_data> balances;
     std::vector<rewardpool> pools;
+    std::vector<delegation> delegators;
+    std::map<account_name, delegate_balance> dlg_balances;
     void clear() { balances.clear(); pools.clear(); };
 };
 

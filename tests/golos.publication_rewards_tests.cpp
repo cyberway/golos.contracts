@@ -425,8 +425,19 @@ public:
                         }
                     }
                     for (auto& r : cur_rewards) {
-                        pay(_forum_name, r.first, r.second, payment_t::VESTING);
-                        unclaimed_funds -= r.second;
+                        auto dlg_payout_sum = 0;
+                        for (auto& dlg : _state.delegators) {
+                            if (v.voter == dlg.delegatee) { // TODO: check it and r.first below
+                                auto available_vesting = _state.balances[r.first].vestamount - _state.dlg_balances[r.first].delegated;
+                                auto effective_vesting = available_vesting + _state.dlg_balances[r.first].received;
+                                auto interest_rate = dlg.amount * dlg.interest_rate / effective_vesting;
+                                auto dlg_payout = r.second * interest_rate / golos::config::_100percent;                      
+                                dlg_payout_sum += dlg_payout;
+                            }
+                        }
+                        auto cur_payout = r.second - dlg_payout_sum;
+                        pay(_forum_name, r.first, cur_payout, payment_t::VESTING);
+                        unclaimed_funds -= cur_payout;
                     }
 
                     auto author_payout =  payout - curation_payout;
@@ -595,6 +606,23 @@ public:
         auto ret = vest.retire(quantity, user, issuer);
         if (ret == success())
             _state.balances[user].vestamount = 0.0;
+    }
+
+    action_result delegate_vest(account_name from, account_name to, asset quantity, uint16_t interest_rate, uint8_t payout_strategy) {
+        auto ret = vest.delegate(from, to, quantity, interest_rate, payout_strategy);
+        if (ret == success()) {
+            _state.delegators.emplace_back(delegators{
+                from,
+                to,
+                interest_rate,
+                payout_strategy,
+                quantity.amount
+            });
+            _state.dlg_balances[from].delegated += quantity.amount; 
+            _state.balances[from].vestamount -= quantity.amount;
+            _state.dlg_balances[to].received += quantity.amount;
+            _state.balances[to].vestamount += quantity.amount;
+        }
         return ret;
     }
 };
@@ -1020,6 +1048,58 @@ BOOST_FIXTURE_TEST_CASE(close_vest_acc_test, reward_calcs_tester) try {
     auto forum_name_balance = token.get_account(_forum_name)["payments"].as<asset>();
     produce_blocks(golos::seconds_to_blocks(post.window));
     BOOST_CHECK_GT(token.get_account(_forum_name)["payments"].as<asset>(), forum_name_balance); 
+    check();
+} FC_LOG_AND_RETHROW()
+
+BOOST_FIXTURE_TEST_CASE(golos_delegators_test, reward_calcs_tester) try {
+    BOOST_TEST_MESSAGE("golos_delegators_test");
+    int64_t maxfp = std::numeric_limits<fixp_t>::max();
+    auto bignum = 500000000000;
+    init(bignum, 500000);
+    produce_blocks();
+    BOOST_TEST_MESSAGE("--- setrules");
+    using namespace golos_curation;
+    BOOST_CHECK_EQUAL(success(), setrules({"x", maxfp}, {golos_curation::func_str, maxfp}, {"1", bignum},
+        [](double x){ return x; }, golos_curation::func, [](double x){ return 1.0; }));
+    check();
+
+    BOOST_TEST_MESSAGE("--- add_funds_to_forum");
+    BOOST_CHECK_EQUAL(success(), add_funds_to_forum(50000));
+    check();
+    
+    BOOST_TEST_MESSAGE("--- create_message: " << name{_users[0]}.to_string());
+    BOOST_CHECK_EQUAL(success(), create_message({_users[0], "permlink"}));
+    check();
+    
+    const uint8_t withdraw_intervals = 1;
+    const uint32_t withdraw_interval_seconds = 12;
+    const uint64_t vesting_min_amount = 0;
+    const uint64_t delegation_min_amount = 5e6;
+    const uint64_t delegation_min_remainder = 15e3;
+    const uint32_t delegation_min_time = 0;
+    const uint16_t delegation_max_interest = 50;
+    const uint32_t delegation_return_time = 120;
+
+    auto vesting_withdraw = vest.withdraw_param(withdraw_intervals, withdraw_interval_seconds);
+    auto vesting_amount = vest.amount_param(vesting_min_amount);
+    auto delegation = vest.delegation_param(delegation_min_amount, delegation_min_remainder, delegation_min_time, delegation_max_interest, delegation_return_time);
+
+    auto params = "[" + vesting_withdraw + "," + vesting_amount + "," + delegation + "]";
+    BOOST_CHECK_EQUAL(success(), vest.set_params(_issuer, _token_symbol, params));
+
+    BOOST_TEST_MESSAGE("--- delegate_vesting");
+    const int divider = vest.make_asset(1).get_amount();
+    const auto min_fract = 1. / divider;
+    const int min_remainder = delegation_min_remainder / divider;
+    const auto amount = vest.make_asset(min_remainder);
+    const auto charge_prop = 0.7;
+    BOOST_CHECK_EQUAL(success(), delegate_vest(_users[2], _users[1], amount, 30, 0, {_users[0], "permlink"}, _users[1]));
+
+    BOOST_TEST_MESSAGE("--- " << name{_users[1]}.to_string() << " voted");
+    BOOST_CHECK_EQUAL(success(), addvote(_users[1], {_users[0], "permlink"}, 10000));
+    //check();
+
+    produce_blocks(golos::seconds_to_blocks(post.window));
     check();
 } FC_LOG_AND_RETHROW()
 
