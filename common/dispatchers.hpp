@@ -48,19 +48,3 @@ extern "C" { \
         } \
    } \
 } \
-
-#define DISPATCH_WITH_BULK_TRANSFER(TYPE, TRANSFER, BULKTRANSFER, MEMBERS) \
-extern "C" { \
-   void apply(uint64_t receiver, uint64_t code, uint64_t action) { \
-        if (code == receiver) { \
-            switch (action) { \
-                EOSIO_DISPATCH_HELPER(TYPE, MEMBERS) \
-            } \
-        } else if (code == golos::config::token_name.value && action == "transfer"_n.value) { \
-            eosio::execute_action(eosio::name(receiver), eosio::name(code), &TYPE::TRANSFER); \
-        } \
-        else if (code == golos::config::token_name.value && action == "bulktransfer"_n.value) { \
-            eosio::execute_action(eosio::name(receiver), eosio::name(code), &TYPE::BULKTRANSFER); \
-        } \
-   } \
-} \
