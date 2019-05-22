@@ -234,12 +234,18 @@ BOOST_FIXTURE_TEST_CASE(bulk_buy_vesting, golos_vesting_tester) try {
     BOOST_CHECK_EQUAL(success(), vest.open(N(vania)));
     produce_block();
 
-    BOOST_CHECK_EQUAL(success(), token.bulk_transfer( N(sania), {{cfg::vesting_name, token.make_asset(200), "buy vesting"},
-                                                                 {cfg::vesting_name, token.make_asset(100), "buy vesting"}}
+    BOOST_CHECK_EQUAL(success(), token.bulk_transfer( N(sania), {{cfg::vesting_name, token.make_asset(200), golos::config::send_prefix + name{"pasha"}.to_string()},
+                                                                 {cfg::vesting_name, token.make_asset(100), golos::config::send_prefix + name{"vania"}.to_string()}}
                                                     ));
 
-    CHECK_MATCHING_OBJECT(token.get_account(N(sania)), mvo()("balance", token.asset_str(200)));
-    CHECK_MATCHING_OBJECT(vest.get_balance(N(sania)), vest.make_balance(300));
+    BOOST_CHECK_EQUAL(success(), token.bulk_transfer( N(sania), {{cfg::vesting_name, token.make_asset(50), "buy vesting"},
+                                                                 {cfg::vesting_name, token.make_asset(50), "buy vesting"}}
+                                                    ));
+
+    CHECK_MATCHING_OBJECT(token.get_account(N(sania)), mvo()("balance", token.asset_str(100)));
+    CHECK_MATCHING_OBJECT(vest.get_balance(N(sania)), vest.make_balance(100));
+    CHECK_MATCHING_OBJECT(vest.get_balance(N(pasha)), vest.make_balance(200));
+    CHECK_MATCHING_OBJECT(vest.get_balance(N(vania)), vest.make_balance(100));
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE(withdraw, golos_vesting_tester) try {

@@ -11,11 +11,6 @@ namespace golos {
 using namespace eosio;
 
 class vesting : public contract {
-    struct recipient {
-        name    to;
-        asset   quantity;
-        string  memo;
-    };
 public:
     using contract::contract;
 
