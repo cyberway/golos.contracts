@@ -10,9 +10,7 @@
 #include <fc/log/logger.hpp>
 #include <Runtime/Runtime.h>
 
-// #include "cyber.system_tester.hpp"
 
-// using namespace cyber_system;
 #define BOOST_TEST_STATIC_LINK
 
 void translate_fc_exception(const fc::exception& e) {

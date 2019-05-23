@@ -179,6 +179,76 @@
             "links": ["cyber.token:issue", "cyber.token:transfer"]
         }
     ],
+    "tables": [
+        {
+            "code": "gls.emit",
+            "table": "emitparams",
+            "abi_type": "emit_state",
+            "rows": [{"scope":"gls.emit", "payer": "gls.emit", "pk": 6097199460613750784, "data": {
+                "id": 6097199460613750784,
+                "infrate": {"start":1500, "stop":95, "narrowing":250000},
+                "pools": {"pools":[
+                    {"name":"gls.ctrl", "percent":0},
+                    {"name":"gls.publish", "percent":6000},
+                    {"name":"gls.vesting", "percent":2400}]},
+                "token": {"symbol":"3,GOLOS"},
+                "interval": {"value":900}
+            }}]
+        },{
+            "code": "gls.vesting",
+            "table": "vestparams",
+            "abi_type": "vesting_state",
+            "rows": [{"scope":"GOLOS", "payer": "gls.vesting", "pk": 15758546561230307328, "data": {
+                "id": 15758546561230307328,
+                "withdraw": {"intervals":13, "interval_seconds":120},
+                "min_amount": {"min_amount":10000},
+                "delegation": {
+                    "min_amount":5000000,
+                    "min_remainder":15000000,
+                    "return_time":120,
+                    "min_time":0,
+                    "max_interest":0}
+            }}]
+        },{
+            "code": "gls.ctrl",
+            "table": "ctrlparams",
+            "abi_type": "ctrl_state",
+            "rows": [{"scope":"gls.ctrl", "payer": "gls.ctrl", "pk": 5075304557665714176, "data": {
+                "id": 5075304557665714176,
+                "token": {"code":"GOLOS"},
+                "multisig": {"name":"gls"},
+                "witnesses": {"max":21},
+                "msig_perms": {"super_majority":0, "majority":0, "minority":0},
+                "witness_votes": {"max":30},
+                "update_auth_period": {"period":300}
+            }}]
+        },{
+            "code": "gls.publish",
+            "table": "pstngparams",
+            "abi_type": "posting_state",
+            "rows": [{"scope":"gls.publish", "payer": "gls.publish", "pk": 12552436324427411456, "data": {
+                "id": 12552436324427411456,
+                "max_vote_changes": {"value":5},
+                "cashout_window": {"window":120, "upvote_lockout":15},
+                "max_beneficiaries": {"value":64},
+                "max_comment_depth": {"value":127},
+                "social_acc": {"value":"gls.social"},
+                "referral_acc": {"value":""},
+                "curators_prcnt": {"min_curators_prcnt":0, "max_curators_prcnt":9000}
+            }}]
+        },{
+            "code": "gls.referral",
+            "table": "refparams",
+            "abi_type": "referral_state",
+            "rows": [{"scope":"gls.referral", "payer": "gls.referral", "pk": 13445306870675800064, "data": {
+                "id": 13445306870675800064,
+                "breakout_params": {"min_breakout":"10000.000 GOLOS", "max_breakout":"100000.000 GOLOS"},
+                "expire_params": {"max_expire":604800},
+                "percent_params": {"max_percent":5000},
+                "delay_params": {"delay_clear_old_ref":84600}
+            }}]
+        }
+    ],
     "golos": {
         "domain": "golos",
         "names": {
