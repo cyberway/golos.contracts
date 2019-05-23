@@ -158,10 +158,12 @@ public:
     }
 
     action_result add_funds_to_forum(int64_t amount) {
-        auto ret = token.transfer(_issuer, _forum_name, asset(amount, _token_symbol));
+        asset quantity = asset(amount, _token_symbol);
+        auto ret = token.transfer(_issuer, _forum_name, quantity);
         if (ret == success()) {
             BOOST_REQUIRE_MESSAGE(!_state.pools.empty(), "issue: _state.pools is empty");
             fill_depleted_pool(amount, _state.pools.size());
+            _state.balances[_forum_name].tokenamount = quantity.to_real();
         }
         return ret;
     }
@@ -245,7 +247,7 @@ public:
             s.set_balance_token(user, 0.0);
         } else {
             auto cur = *accs.begin();
-            s.set_balance_token(user, static_cast<double>(cur["payments"].as<asset>().to_real()));
+            s.set_balance_token(user, static_cast<double>(cur["balance"].as<asset>().to_real()));
         }
     }
 
@@ -399,7 +401,6 @@ public:
                     for (auto& r : cur_rewards) {
                         if (_state.balances[r.first].vestclosed) {
                             _state.balances[_forum_name].paymentsamount += (r.second + close_acc_delta);
-                            _state.balances[_forum_name].tokenamount += (r.second + close_acc_delta);
                         }
                         else {
                             _state.balances[r.first].vestamount += get_converted_to_vesting(r.second);
@@ -413,7 +414,6 @@ public:
                         double ben_payout = author_payout * get_prop(ben.weight);
                         if (_state.balances[ben.account].vestclosed) {
                             _state.balances[_forum_name].paymentsamount += (ben_payout + close_acc_delta);
-                            _state.balances[_forum_name].tokenamount += (ben_payout + close_acc_delta);
                         }
                         else {
                             _state.balances[ben.account].vestamount += get_converted_to_vesting(ben_payout);
@@ -425,7 +425,6 @@ public:
                     auto author_token_rwrd = author_payout * m.tokenprop;
                     if (_state.balances[m.key.author].tokenclosed) {
                         _state.balances[_forum_name].paymentsamount += author_token_rwrd;
-                        _state.balances[_forum_name].tokenamount += author_token_rwrd;
                     }
                     else {
                         _state.balances[m.key.author].tokenamount += author_token_rwrd;
@@ -433,7 +432,6 @@ public:
                     auto author_vest_rwrd = author_payout * (1.0 - m.tokenprop);
                     if (_state.balances[m.key.author].vestclosed) {
                         _state.balances[_forum_name].paymentsamount += (author_vest_rwrd + close_acc_delta);
-                        _state.balances[_forum_name].tokenamount += (author_vest_rwrd + close_acc_delta);
                     }
                     else {
                         _state.balances[m.key.author].vestamount += get_converted_to_vesting(author_vest_rwrd);
@@ -441,6 +439,7 @@ public:
 
                     p.messages.erase(itr_m++);
                     p.funds -= (payout - unclaimed_funds);
+                    _state.balances[_forum_name].tokenamount -= payout;
 
                     if (p.messages.size() == 0) {
                         auto itr_p_next = itr_p;
