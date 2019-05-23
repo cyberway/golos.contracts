@@ -271,6 +271,7 @@ void publication::delete_message(structures::mssgid message_id) {
     auto mssg_itr = message_table.find(permlink_itr->id);
     if (mssg_itr != message_table.end()) {
         eosio::check(FP(mssg_itr->state.netshares) <= 0, "Cannot delete a comment with net positive votes.");
+        eosio_assert((!mssg_itr->closed || (mssg_itr->mssg_reward.amount == 0)), "Cannot delete comment with unpaid payout");
     }
 
     if (permlink_itr->parentacc) {
