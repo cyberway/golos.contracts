@@ -223,6 +223,7 @@ void publication::create_message(
         item.beneficiaries = beneficiaries;
         item.rewardweight = config::_100percent;    // can be corrected later in calcrwrdwt
         item.curators_prcnt = *curators_prcnt;
+        item.mssg_reward = asset(0, pool->state.funds.symbol);
     });
 
     permlink_table.emplace(message_id.author, [&]( auto &item) {
