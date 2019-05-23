@@ -241,7 +241,7 @@ BOOST_FIXTURE_TEST_CASE(register_witness, golos_ctrl_tester) try {
     BOOST_CHECK_EQUAL(err.no_witness, ctrl.stop_witness(_w[1]));
 
     BOOST_TEST_MESSAGE("--- check unreg");
-    BOOST_CHECK_EQUAL(err.assert_erase_wtnss, ctrl.unreg_witness(_w[0]));
+    BOOST_CHECK_EQUAL(success(), ctrl.unreg_witness(_w[0]));
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE(register_update_witness, golos_ctrl_tester) try {
@@ -322,6 +322,7 @@ BOOST_FIXTURE_TEST_CASE(vote_witness, golos_ctrl_tester) try {
     BOOST_CHECK_EQUAL(success(), ctrl.vote_witness(_alice, _w[2]));
     BOOST_CHECK_EQUAL(success(), ctrl.vote_witness(_alice, _w[3]));
     BOOST_CHECK_EQUAL(err.no_more_votes, ctrl.vote_witness(_alice, _w[4]));
+    BOOST_CHECK_EQUAL(err.assert_erase_wtnss, ctrl.unreg_witness(_w[0]));
     produce_block();
     BOOST_CHECK_EQUAL(success(), ctrl.vote_witness(_bob, _w[0]));
     produce_block();
