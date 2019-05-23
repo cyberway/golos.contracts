@@ -196,6 +196,14 @@
       {
         "name": "curators_prcnt",
         "type": "percent_t"
+      },
+      {
+        "name": "closed",
+        "type": "bool"
+      },
+      {
+        "name": "mssg_reward",
+        "type": "asset"
       }
     ]
   },
@@ -750,6 +758,16 @@
     ]
   },
   {
+    "name": "paymssgrwrd",
+    "base": "",
+    "fields": [
+        {
+            "name": "message_id",
+            "type": "mssgid"
+        }
+    ]
+  },
+  {
     "name": "post_event",
     "base": "",
     "fields": [
@@ -856,6 +874,10 @@
   {
     "name": "calcrwrdwt",
     "type": "calcrwrdwt"
+  },
+  {
+    "name": "paymssgrwrd",
+    "type": "paymssgrwrd"
   }
   ],
   "tables": [

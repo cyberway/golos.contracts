@@ -48,6 +48,8 @@ struct message {
     uint16_t rewardweight;  // percent
     messagestate state;
     uint16_t curators_prcnt;
+    bool closed = false;
+    eosio::asset mssg_reward; 
 
     uint64_t primary_key() const {
         return id;
