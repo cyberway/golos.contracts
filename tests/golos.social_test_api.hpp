@@ -53,25 +53,9 @@ struct golos_social_api: base_contract_api {
         );
     }
     
-    action_result deletereput(account_name account) {
-        return push("deletereput"_n, account, args()
-            ("account", account)
-        );
-    }
-
-    action_result create_reput(account_name account) {
-        return push("createreput"_n, account, args()
-            ("account", account)
-        );
-    }
-
     //// social tables
     std::vector<variant> get_pinblocks(account_name pinner_blocker) {
         return _tester->get_all_chaindb_rows(_code, pinner_blocker, N(pinblock), false);
-    }
-
-    variant get_reputation(account_name acc) {
-        return _tester->get_chaindb_singleton(_code, acc, "reputation"_n, "get reputation");
     }
 
     variant get_accountmeta(account_name acc) {
