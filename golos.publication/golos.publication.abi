@@ -762,10 +762,6 @@
     "base": "",
     "fields": [
         {
-            "name": "payout",
-            "type": "asset"
-        },
-        {
             "name": "message_id",
             "type": "mssgid"
         }

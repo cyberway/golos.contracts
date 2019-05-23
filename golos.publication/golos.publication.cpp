@@ -402,6 +402,7 @@ void publication::close_message(structures::mssgid message_id) {
     tables::message_table message_table(_self, message_id.author.value);
     auto mssg_itr = message_table.find(permlink_itr->id);
     eosio::check(mssg_itr != message_table.end(), "Message doesn't exist in cashout window.");
+    eosio::check(!mssg_itr->closed, "Message is closed.");
 
     tables::reward_pools pools(_self, _self.value);
     auto pool = get_pool(pools, mssg_itr->date);
@@ -477,12 +478,12 @@ void publication::close_message(structures::mssgid message_id) {
         });
 
     transaction trx;
-    trx.actions.emplace_back(action{permission_level(_self, config::active_name), _self, "paymssgrwrd"_n, std::make_tuple(mssg_reward, message_id)});
+    trx.actions.emplace_back(action{permission_level(_self, config::active_name), _self, "paymssgrwrd"_n, message_id});
     trx.delay_sec = 0;
     trx.send((static_cast<uint128_t>(mssg_itr->id) << 64) | message_id.author.value, _self);
 }
 
-void publication::paymssgrwrd(asset payout, structures::mssgid message_id) {
+void publication::paymssgrwrd(structures::mssgid message_id) {
     require_auth(_self);
 
     tables::permlink_table permlink_table(_self, message_id.author.value);
@@ -496,6 +497,7 @@ void publication::paymssgrwrd(asset payout, structures::mssgid message_id) {
     eosio::check(mssg_itr != message_table.end(), "Message doesn't exist in cashout window.");
     eosio::check(mssg_itr->closed, "Message doesn't closed.");
 
+    auto payout = mssg_itr->mssg_reward;
     tables::reward_pools pools(_self, _self.value);
 
     elaf_t percent(elai_t(mssg_itr->curators_prcnt) / elai_t(config::_100percent));
@@ -584,6 +586,7 @@ void publication::set_vote(name voter, const structures::mssgid& message_id, int
     tables::message_table message_table(_self, message_id.author.value);
     auto mssg_itr = message_table.find(permlink_itr->id);
     eosio::check(mssg_itr != message_table.end(), "Message doesn't exist in cashout window.");
+    eosio::check(!mssg_itr->closed, "Message is closed.");
 
     tables::reward_pools pools(_self, _self.value);
     auto pool = get_pool(pools, mssg_itr->date);
@@ -934,6 +937,7 @@ void publication::set_curators_prcnt(structures::mssgid message_id, uint16_t cur
     tables::message_table message_table(_self, message_id.author.value);
     auto message_itr = message_table.find(permlink_itr->id);
     eosio::check(message_itr != message_table.end(), "Message doesn't exist in cashout window.");
+    eosio::check(!message_itr->closed, "Message is closed.");
 
     eosio::check(message_itr->state.voteshares == 0, "Curators percent can be changed only before voting.");
     eosio::check(message_itr->curators_prcnt != curators_prcnt, "Same curators percent value is already set."); // TODO: tests #617

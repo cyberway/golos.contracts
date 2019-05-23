@@ -29,7 +29,7 @@ public:
     void reblog(name rebloger, structures::mssgid message_id, std::string headermssg, std::string bodymssg);
     void set_curators_prcnt(structures::mssgid message_id, uint16_t curators_prcnt);
     void calcrwrdwt(name account, int64_t mssg_id, int64_t post_charge);
-    void paymssgrwrd(asset payout, structures::mssgid message_id);
+    void paymssgrwrd(structures::mssgid message_id);
 private:
     const posting_state& params();
     void close_message_timer(structures::mssgid message_id, uint64_t id, uint64_t delay_sec);
