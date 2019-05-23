@@ -1,331 +1,108 @@
 {
   "version": "cyberway::abi/1.1",
-  "types": [
-  ],
+  "types": [ ],
   "structs": [
-  {
-    "name": "pinblock_record",
-    "base": "",
-    "fields": [
-      {
-        "name": "account",
-        "type": "name"
-      },
-      {
-        "name": "pinning",
-        "type": "bool"
-      },
-      {
-        "name": "blocking",
-        "type": "bool"
-      }
-    ]
-  },
-  {
-    "name": "reputation_record",
-    "base": "",
-    "fields": [
-      {
-        "name": "id",
-        "type": "uint64"
-      },
-      {
-        "name": "reputation",
-        "type": "int64"
-      }
-    ]
-  },
-  {
-    "name": "accountmeta",
-    "base": "",
-    "fields": [
-      {
-        "name": "type",
-        "type": "string?"
-      },
-      {
-        "name": "app",
-        "type": "string?"
-      },
-      {
-        "name": "email",
-        "type": "string?"
-      },
-      {
-        "name": "phone",
-        "type": "string?"
-      },
-      {
-        "name": "facebook",
-        "type": "string?"
-      },
-      {
-        "name": "instagram",
-        "type": "string?"
-      },
-      {
-        "name": "telegram",
-        "type": "string?"
-      },
-      {
-        "name": "vk",
-        "type": "string?"
-      },
-      {
-        "name": "website",
-        "type": "string?"
-      },
-      {
-        "name": "first_name",
-        "type": "string?"
-      },
-      {
-        "name": "last_name",
-        "type": "string?"
-      },
-      {
-        "name": "name",
-        "type": "string?"
-      },
-      {
-        "name": "birth_date",
-        "type": "string?"
-      },
-      {
-        "name": "gender",
-        "type": "string?"
-      },
-      {
-        "name": "location",
-        "type": "string?"
-      },
-      {
-        "name": "city",
-        "type": "string?"
-      },
-      {
-        "name": "about",
-        "type": "string?"
-      },
-      {
-        "name": "occupation",
-        "type": "string?"
-      },
-      {
-        "name": "i_can",
-        "type": "string?"
-      },
-      {
-        "name": "looking_for",
-        "type": "string?"
-      },
-      {
-        "name": "business_category",
-        "type": "string?"
-      },
-      {
-        "name": "background_image",
-        "type": "string?"
-      },
-      {
-        "name": "cover_image",
-        "type": "string?"
-      },
-      {
-        "name": "profile_image",
-        "type": "string?"
-      },
-      {
-        "name": "user_image",
-        "type": "string?"
-      },
-      {
-        "name": "ico_address",
-        "type": "string?"
-      },
-      {
-        "name": "target_date",
-        "type": "string?"
-      },
-      {
-        "name": "target_plan",
-        "type": "string?"
-      },
-      {
-        "name": "target_point_a",
-        "type": "string?"
-      },
-      {
-        "name": "target_point_b",
-        "type": "string?"
-      }
-    ]
-  },
-  {
-    "name": "pin",
-    "base": "",
-    "fields": [
-      {
-        "name": "pinner",
-        "type": "name"
-      },
-      {
-        "name": "pinning",
-        "type": "name"
-      }
-    ]
-  },
-  {
-    "name": "block",
-    "base": "",
-    "fields": [
-      {
-        "name": "blocker",
-        "type": "name"
-      },
-      {
-        "name": "blocking",
-        "type": "name"
-      }
-    ]
-  },
-  {
-      "name": "createreput",
-      "base": "",
-      "fields": [
-        {
-          "name": "account",
-          "type": "name"
-        }
-      ]
-  },
-  {
-    "name": "changereput",
-    "base": "",
-    "fields": [
-      {
-        "name": "voter",
-        "type": "name"
-      },
-      {
-        "name": "author",
-        "type": "name"
-      },
-      {
-        "name": "rshares",
-        "type": "int64"
-      }
-    ]
-  },
-  {
-    "name": "changereput_event",
-    "base": "",
-    "fields": [
-      {
-        "name": "author",
-        "type": "name"
-      },
-      {
-        "name": "reputation",
-        "type": "int64"
-      }
-    ]
-  },
-  {
-    "name": "updatemeta",
-    "base": "",
-    "fields": [
-      {
-        "name": "account",
-        "type": "name"
-      },
-      {
-        "name": "meta",
-        "type": "accountmeta"
-      }
-    ]
-  },
-  {
-    "name": "delete",
-    "base": "",
-    "fields": [
-      {
-        "name": "account",
-        "type": "name"
-      }
-    ]
-  }
+     {
+        "name": "pinblock_record",
+        "base": "",
+        "fields": [
+           {"name": "account",   "type": "name"},
+           {"name": "pinning",   "type": "bool"},
+           {"name": "blocking",  "type": "bool"}
+        ]
+     },
+     {
+        "name": "accountmeta",
+        "base": "",
+        "fields": [
+           {"name": "type",              "type": "string?"},
+           {"name": "app",               "type": "string?"},
+           {"name": "email",             "type": "string?"},
+           {"name": "phone",             "type": "string?"},
+           {"name": "facebook",          "type": "string?"},
+           {"name": "instagram",         "type": "string?"},
+           {"name": "telegram",          "type": "string?"},
+           {"name": "vk",                "type": "string?"},
+           {"name": "website",           "type": "string?"},
+           {"name": "first_name",        "type": "string?"},
+           {"name": "last_name",         "type": "string?"},
+           {"name": "name",              "type": "string?"},
+           {"name": "birth_date",        "type": "string?"},
+           {"name": "gender",            "type": "string?"},
+           {"name": "location",          "type": "string?"},
+           {"name": "city",              "type": "string?"},
+           {"name": "about",             "type": "string?"},
+           {"name": "occupation",        "type": "string?"},
+           {"name": "i_can",             "type": "string?"},
+           {"name": "looking_for",       "type": "string?"},
+           {"name": "business_category", "type": "string?"},
+           {"name": "background_image",  "type": "string?"},
+           {"name": "cover_image",       "type": "string?"},
+           {"name": "profile_image",     "type": "string?"},
+           {"name": "user_image",        "type": "string?"},
+           {"name": "ico_address",       "type": "string?"},
+           {"name": "target_date",       "type": "string?"},
+           {"name": "target_plan",       "type": "string?"},
+           {"name": "target_point_a",    "type": "string?"},
+           {"name": "target_point_b",    "type": "string?"}
+        ]
+     },
+     {
+        "name": "pin",
+        "base": "",
+        "fields": [
+           {"name": "pinner",    "type": "name"},
+           {"name": "pinning",   "type": "name"}
+        ]
+     },
+     {
+        "name": "block",
+        "base": "",
+        "fields": [
+           {"name": "blocker",   "type": "name"},
+           {"name": "blocking",  "type": "name"}
+        ]
+     },
+     {
+        "name": "updatemeta",
+        "base": "",
+        "fields": [
+           {"name": "account",   "type": "name"},
+           {"name": "meta",      "type": "accountmeta"}
+        ]
+     },
+     {
+        "name": "delete",
+        "base": "",
+        "fields": [
+           {"name": "account",   "type": "name"}
+        ]
+     }
   ],
   "actions": [
-  {
-    "name": "pin",
-    "type": "pin"
-  },
-  {
-    "name": "unpin",
-    "type": "pin"
-  },
-  {
-    "name": "block",
-    "type": "block"
-  },
-  {
-    "name": "unblock",
-    "type": "block"
-  },
-  {
-      "name": "createreput",
-      "type": "createreput"
-  },
-  {
-    "name": "changereput",
-    "type": "changereput"
-  },
-  {
-    "name": "updatemeta",
-    "type": "updatemeta"
-  },
-  {
-    "name": "deletemeta",
-    "type": "delete"
-  },
-  {
-    "name": "deletereput",
-    "type": "delete"
-  }
-
+     {"name": "pin",          "type": "pin"},
+     {"name": "unpin",        "type": "pin"},
+     {"name": "block",        "type": "block"},
+     {"name": "unblock",      "type": "block"},
+     {"name": "updatemeta",   "type": "updatemeta"},
+     {"name": "deletemeta",   "type": "delete"},
   ],
-  "events": [
-     {"name": "changereput","type": "changereput_event"}
-  ],
+  "events": [ ],
   "tables": [
-  {
-    "name": "pinblock",
-    "type": "pinblock_record",
-    "indexes": [
-      {
-        "name": "primary",
-        "unique": "true",
-        "orders": [
-          {"field": "account", "order": "asc"}
+     {
+        "name": "pinblock",
+        "type": "pinblock_record",
+        "indexes": [
+           {
+              "name": "primary",
+              "unique": "true",
+              "orders": [
+                 {"field": "account", "order": "asc"}
+              ]
+           }
         ]
-      }
-    ]
-  },
-  {
-    "name": "reputation",
-    "type": "reputation_record",
-    "indexes": [
-      {
-        "name": "primary",
-        "unique": "true",
-        "orders": [
-          {"field": "id", "order": "asc"}
-        ]
-      }
-    ]
-  }
+     },
   ],
-  "error_messages": [],
-  "abi_extensions": []
+  "error_messages": [ ],
+  "abi_extensions": [ ]
 }
