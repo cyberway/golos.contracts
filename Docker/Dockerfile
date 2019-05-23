@@ -54,7 +54,6 @@ COPY --from=builder /usr/local/lib/libbson-1.0.so.0.0.0 /usr/local/lib/
 COPY --from=cyberway /opt/cyberway/bin/cleos /opt/cyberway/bin/cleos
 COPY --from=cyberway /opt/cyberway/bin/keosd /opt/cyberway/bin/keosd
 COPY --from=cyberway /opt/cyberway/bin/create-genesis /opt/cyberway/bin/create-genesis
-COPY --from=cyberway /opt/cyberway/bin/create-genesis-ee /opt/cyberway/bin/create-genesis-ee
 
 RUN ldconfig && ln -s ../cyberway.contracts /opt/golos.contracts/cyberway.contracts
 
