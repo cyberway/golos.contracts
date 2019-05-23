@@ -371,7 +371,7 @@ void control::send_witness_event(const witness_info& wi) {
 void control::active_witness(name witness, bool flag) {
     // TODO: simplify upsert to allow passing just inner lambda
     bool exists = upsert_tbl<witness_tbl>(witness, [&](bool) {
-        return [&](witness_info& w) {            
+        return [&](witness_info& w) {
             eosio_assert(flag != w.active, "active flag not updated");
             w.active = flag;
 
