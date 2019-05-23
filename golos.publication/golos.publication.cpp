@@ -712,12 +712,6 @@ void publication::set_vote(name voter, const structures::mssgid& message_id, int
         item.rshares = rshares.data();
         send_votestate_event(voter, item, message_id.author, *permlink_itr);
     });
-
-    if (social_acc_param.account) {
-        INLINE_ACTION_SENDER(golos::social, changereput)
-            (social_acc_param.account, {social_acc_param.account, config::active_name},
-            {voter, message_id.author, (rshares.data() >> 6)});
-    }
 }
 
 void publication::fill_depleted_pool(tables::reward_pools& pools, eosio::asset quantity, tables::reward_pools::const_iterator excluded) {
