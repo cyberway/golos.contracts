@@ -179,7 +179,7 @@ void control::unregwitness(name witness) {
 
     witness_tbl witness_table(_self, _self.value);
     auto it = witness_table.find(witness.value);
-    eosio_assert(it->counter_votes, "not possible to remove witness as there are votes");
+    eosio_assert(!it->counter_votes, "not possible to remove witness as there are votes");
     witness_table.erase(*it);
 
     //TODO remove votes for witness
