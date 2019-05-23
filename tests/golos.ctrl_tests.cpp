@@ -244,7 +244,6 @@ BOOST_FIXTURE_TEST_CASE(register_witness, golos_ctrl_tester) try {
     BOOST_CHECK_EQUAL(err.assert_erase_wtnss, ctrl.unreg_witness(_w[0]));
 } FC_LOG_AND_RETHROW()
 
-#if 0
 BOOST_FIXTURE_TEST_CASE(register_update_witness, golos_ctrl_tester) try {
     BOOST_TEST_MESSAGE("Witness registration");
 
@@ -310,7 +309,6 @@ BOOST_FIXTURE_TEST_CASE(register_update_witness, golos_ctrl_tester) try {
         BOOST_CHECK_EQUAL(true, result);
     }
 } FC_LOG_AND_RETHROW()
-#endif
 
 BOOST_FIXTURE_TEST_CASE(vote_witness, golos_ctrl_tester) try {
     BOOST_TEST_MESSAGE("Witness vote");
