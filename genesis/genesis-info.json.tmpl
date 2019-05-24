@@ -99,77 +99,84 @@
 
         {"name": "gls",
             "permissions": [
-                {"name": "owner", "key": "INITIAL"},
-                {"name": "active", "key": "INITIAL", "accounts": ["gls.ctrl@cyber.code", "gls.emit@cyber.code"]},
-                {"name": "issue", "key": "GLS5a2eDuRETEg7uy8eHbiCqGZM3wnh2pLjiXrFduLWBKVZKCkB62"},
-                {"name": "createuser", "key": "GLS5a2eDuRETEg7uy8eHbiCqGZM3wnh2pLjiXrFduLWBKVZKCkB62"},
-                {"name": "witn.smajor", "key": "INITIAL"},
-                {"name": "witn.major", "key": "INITIAL"},
-                {"name": "witn.minor", "key": "INITIAL"},
-                {"name": "invoice", "accounts": ["gls.publish@cyber.code"]}
+                {"name": "owner",      "accounts": ["gls@smajor", "gls@testing"]},
+                {"name": "active",     "accounts": ["gls@smajor", "gls.ctrl@cyber.code", "gls@testing"]},
+                {"name": "testing",    "key": "GLS5a2eDuRETEg7uy8eHbiCqGZM3wnh2pLjiXrFduLWBKVZKCkB62"},
+                {"name": "issue",      "accounts": ["gls.emit@cyber.code", "gls@testing"]},
+                {"name": "createuser", "accounts": ["gls@testing"]},
+                {"name": "invoice",    "accounts": ["gls.publish@cyber.code"]},
+                {"name": "changevest", "accounts": ["gls.vesting@cyber.code"]},
+                {"name": "witn.smajor"},
+                {"name": "witn.major"},
+                {"name": "witn.minor"}
             ]
         },
         {"name": "gls.ctrl",
             "permissions": [
-                {"name": "owner", "key": "INITIAL"},
-                {"name": "active", "key": "INITIAL", "accounts": ["@cyber.code"]}
+                {"name": "owner",      "accounts": ["gls@owner"]},
+                {"name": "active",     "accounts": ["gls@active"]},
+                {"name": "cyber.code", "accounts": ["@cyber.code"]}
             ],
             "abi": {"path": "$GOLOS_CONTRACTS/golos.ctrl/golos.ctrl.abi", "hash":""},
             "code": {"path": "$GOLOS_CONTRACTS/golos.ctrl/golos.ctrl.wasm", "hash":""}
         },
         {"name": "gls.emit",
             "permissions": [
-                {"name": "owner", "key": "INITIAL"},
-                {"name": "active", "key": "INITIAL", "accounts": ["@cyber.code"]}
+                {"name": "owner",      "accounts": ["gls@owner"]},
+                {"name": "active",     "accounts": ["gls@active"]},
+                {"name": "cyber.code", "accounts": ["@cyber.code"]}
             ],
             "abi": {"path": "$GOLOS_CONTRACTS/golos.emit/golos.emit.abi", "hash":""},
             "code": {"path": "$GOLOS_CONTRACTS/golos.emit/golos.emit.wasm", "hash":""}
         },
         {"name": "gls.vesting",
             "permissions": [
-                {"name": "owner", "key": "INITIAL"},
-                {"name": "active", "key": "INITIAL", "accounts": ["@cyber.code"]}
+                {"name": "owner",      "accounts": ["gls@owner"]},
+                {"name": "active",     "accounts": ["gls@active"]},
+                {"name": "cyber.code", "accounts": ["@cyber.code"]}
             ],
             "abi": {"path": "$GOLOS_CONTRACTS/golos.vesting/golos.vesting.abi", "hash":""},
             "code": {"path": "$GOLOS_CONTRACTS/golos.vesting/golos.vesting.wasm", "hash":""}
         },
         {"name": "gls.publish",
             "permissions": [
-                {"name": "owner", "key": "INITIAL"},
-                {"name": "active", "key": "INITIAL", "accounts": ["@cyber.code"]},
-                {"name": "calcrwrdwt", "accounts": ["gls.charge@cyber.code"]},
+                {"name": "owner",      "accounts": ["gls@owner"]},
+                {"name": "active",     "accounts": ["gls@active"]},
+                {"name": "cyber.code", "accounts": ["@cyber.code"]},
+                {"name": "calcrwrdwt", "accounts": ["gls.charge@cyber.code"]}
             ],
             "abi": {"path": "$GOLOS_CONTRACTS/golos.publication/golos.publication.abi", "hash":""},
             "code": {"path": "$GOLOS_CONTRACTS/golos.publication/golos.publication.wasm", "hash":""}
         },
         {"name": "gls.social",
             "permissions": [
-                {"name": "owner", "key": "INITIAL"},
-                {"name": "active", "key": "INITIAL", "accounts": ["gls.publish@cyber.code"]}
+                {"name": "owner", "accounts": ["gls@owner"]},
+                {"name": "active", "accounts": ["gls@active"]}
             ],
             "abi": {"path": "$GOLOS_CONTRACTS/golos.social/golos.social.abi", "hash":""},
             "code": {"path": "$GOLOS_CONTRACTS/golos.social/golos.social.wasm", "hash":""}
         },
         {"name": "gls.charge",
             "permissions": [
-                {"name": "owner", "key": "INITIAL"},
-                {"name": "active", "key": "INITIAL"}
+                {"name": "owner", "accounts": ["gls@owner"]},
+                {"name": "active", "accounts": ["gls@active"]}
             ],
             "abi": {"path": "$GOLOS_CONTRACTS/golos.charge/golos.charge.abi", "hash":""},
             "code": {"path": "$GOLOS_CONTRACTS/golos.charge/golos.charge.wasm", "hash":""}
         },
         {"name": "gls.referral",
             "permissions": [
-                {"name": "owner", "key": "INITIAL"},
-                {"name": "active", "key": "INITIAL"}
+                {"name": "owner",      "accounts": ["gls@owner"]},
+                {"name": "active",     "accounts": ["gls@active"]},
+                {"name": "cyber.code", "accounts": ["@cyber.code"]}
             ],
             "abi": {"path": "$GOLOS_CONTRACTS/golos.referral/golos.referral.abi", "hash":""},
             "code": {"path": "$GOLOS_CONTRACTS/golos.referral/golos.referral.wasm", "hash":""}
         },
         {"name": "gls.worker",
             "permissions": [
-                {"name": "owner", "key": "INITIAL"},
-                {"name": "active", "key": "INITIAL"}
+                {"name": "owner", "accounts": ["gls@owner"]},
+                {"name": "active", "accounts": ["gls@active"]}
             ]
         }
     ],
@@ -184,8 +191,26 @@
             "permission": "gls@invoice",
             "links": ["gls.charge:use", "gls.charge:usenotifygt"]
         },{
+            "permission": "gls@changevest",
+            "links": ["gls.ctrl:changevest"]
+        },{
+            "permission": "gls.ctrl@cyber.code",
+            "links": ["cyber.token:transfer"]
+        },{
+            "permission": "gls.emit@cyber.code",
+            "links": ["gls.emit:emit"]
+        },{
+            "permission": "gls.vesting@cyber.code",
+            "links": ["cyber.token:transfer", "gls.vesting:timeout", "gls.vesting:timeoutconv", "gls.vesting:timeoutrdel"]
+        },{
+            "permission": "gls.publish@cyber.code",
+            "links": ["cyber.token:transfer", "gls.publish:closemssg", "gls.publish:calcrwrdwt", "gls.publish:paymssgrwrd"]]
+        },{
             "permission": "gls.publish@calcrwrdwt",
             "links": ["gls.publish:calcrwrdwt"]
+        },{
+            "permission": "gls.referral@cyber.code",
+            "links": ["gls.referral:closeoldref"]
         }
     ],
     "tables": [

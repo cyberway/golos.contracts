@@ -35,6 +35,18 @@ public:
 
         BOOST_CHECK_EQUAL(success(), token.create(cfg::emission_name, token.make_asset(10000), {cfg::vesting_name}));
         BOOST_CHECK_EQUAL(success(), token.open(cfg::publish_name, _sym, cfg::publish_name));
+
+        authority auth(1, {});
+        auth.accounts.emplace_back(permission_level_weight{.permission = {cfg::vesting_name, config::eosio_code_name}, .weight = 1});
+        set_authority(cfg::emission_name, golos::config::changevest_name, auth, "active");
+        link_authority(cfg::emission_name, cfg::control_name, golos::config::changevest_name, N(changevest));
+
+        auth = authority(1, {});
+        auth.accounts.emplace_back(permission_level_weight{.permission = {_code, config::eosio_code_name}, .weight = 1});
+        set_authority(_code, golos::config::ccode_name, auth, "active");
+        link_authority(_code, _code, golos::config::ccode_name, N(closeoldref));
+        link_authority(_code, cfg::token_name, golos::config::ccode_name, N(transfer));
+
         produce_blocks();
 
         BOOST_CHECK_EQUAL(success(), vest.create_vesting(cfg::emission_name));

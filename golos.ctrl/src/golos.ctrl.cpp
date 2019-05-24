@@ -112,7 +112,7 @@ void control::on_transfer(name from, name to, asset quantity, string memo) {
         auto token = quantity.symbol;
         auto transfer = [&](auto from, auto to, auto amount) {
             if (amount > 0) {
-                INLINE_ACTION_SENDER(token, payment)(config::token_name, {from, config::active_name},
+                INLINE_ACTION_SENDER(token, payment)(config::token_name, {from, config::code_name},
                     {from, to, asset(amount, token), memo});
             }
         };
@@ -259,7 +259,7 @@ void control::unvotewitn(name voter, name witness) {
 
 void control::changevest(name who, asset diff) {
     if (!_cfg.exists()) return;       // allow silent exit if changing vests before community created
-    require_auth(config::vesting_name);
+    require_auth(token::get_issuer(config::token_name, diff.symbol.code()));
     eosio_assert(diff.amount != 0, "diff is 0. something broken");          // in normal conditions sender must guarantee it
     eosio_assert(diff.symbol.code() == props().token.code, "wrong symbol. something broken");  // in normal conditions sender must guarantee it
     change_voter_vests(who, diff.amount);

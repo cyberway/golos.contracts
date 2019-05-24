@@ -14,6 +14,20 @@ struct golos_charge_api: base_contract_api {
         _tester->link_authority(issuer, _code, golos::config::invoice_name, N(usenotifylt));
         _tester->link_authority(issuer, _code, golos::config::invoice_name, N(useandstore));
         _tester->link_authority(issuer, _code, golos::config::invoice_name, N(removestored));
+
+#if 0
+        authority auth(1, {});
+        auth.accounts.emplace_back(permission_level_weight{.permission = {invoice, config::eosio_code_name}, .weight = 1});
+        std::sort(auth.accounts.begin(), auth.accounts.end(),
+            [](const permission_level_weight& l, const permission_level_weight& r) {
+                return std::tie(l.permission.actor, l.permission.permission) <
+                    std::tie(r.permission.actor, r.permission.permission);
+            });
+
+        _tester->set_authority(issuer, golos::config::invoice_name, auth, "active");
+        _tester->link_authority(issuer, _code, golos::config::invoice_name, N(action));
+#endif
+
     }
 
     action_result set_restorer(name issuer, uint8_t charge_id, std::string func_str,

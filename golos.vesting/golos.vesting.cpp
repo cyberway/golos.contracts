@@ -378,7 +378,7 @@ void vesting::timeoutconv() {
                     send_stat_event(v);
                 });
                 // TODO: payment action #549
-                INLINE_ACTION_SENDER(token, transfer)(config::token_name, {_self, config::active_name},
+                INLINE_ACTION_SENDER(token, transfer)(config::token_name, {_self, config::code_name},
                     {_self, to, converted, memo});
                 correction += converted.amount;    // accumulate
             } else {
@@ -438,7 +438,7 @@ void vesting::notify_balance_change(name owner, asset diff) {
     vesting_table table_vesting(_self, _self.value);
     auto notify = table_vesting.find(diff.symbol.code().raw());
     action(
-        permission_level{_self, config::active_name},
+        permission_level{token::get_issuer(config::token_name, diff.symbol.code()), config::changevest_name},
         notify->notify_acc,
         "changevest"_n,
         std::make_tuple(owner, diff)
@@ -536,9 +536,9 @@ const asset vesting::token_to_vesting(const asset& src, const vesting_stats& vin
 void vesting::timeout() {
     require_auth(_self);
     transaction trx;
-    trx.actions.emplace_back(action{permission_level(_self, config::active_name), _self, "timeoutrdel"_n, ""});
-    trx.actions.emplace_back(action{permission_level(_self, config::active_name), _self, "timeoutconv"_n, ""});
-    trx.actions.emplace_back(action{permission_level(_self, config::active_name), _self, "timeout"_n,     ""});
+    trx.actions.emplace_back(action{permission_level(_self, config::code_name), _self, "timeoutrdel"_n, ""});
+    trx.actions.emplace_back(action{permission_level(_self, config::code_name), _self, "timeoutconv"_n, ""});
+    trx.actions.emplace_back(action{permission_level(_self, config::code_name), _self, "timeout"_n,     ""});
     trx.delay_sec = config::vesting_delay_tx_timeout;
     trx.send(_self.value, _self);
 }

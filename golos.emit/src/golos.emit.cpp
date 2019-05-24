@@ -108,13 +108,13 @@ void emission::emit() {
         const auto trans_memo = "emission";
         auto from = _self;
         INLINE_ACTION_SENDER(token, issue)(config::token_name,
-            {{issuer, config::active_name}},
+            {{issuer, config::issue_name}},
             {_self, asset(new_tokens, token.symbol), issue_memo});
 
         auto transfer = [&](auto from, auto to, auto amount) {
             if (amount > 0) {
                 auto memo = to == config::vesting_name ? "" : trans_memo;   // vesting contract requires empty memo to add to supply
-                INLINE_ACTION_SENDER(token, transfer)(config::token_name, {from, config::active_name},
+                INLINE_ACTION_SENDER(token, transfer)(config::token_name, {from, config::issue_name},
                     {from, to, asset(amount, token.symbol), memo});
             }
         };
@@ -144,7 +144,7 @@ void emission::schedule_next(state& s, uint32_t delay) {
     auto sender_id = (uint128_t(_cfg.get().token.symbol.raw()) << 64) | s.prev_emit;
 
     transaction trx;
-    trx.actions.emplace_back(action{permission_level(_self, config::active_name), _self, "emit"_n, std::tuple<>()});
+    trx.actions.emplace_back(action{permission_level(_self, config::code_name), _self, "emit"_n, std::tuple<>()});
     trx.delay_sec = delay;
     trx.send(sender_id, _self);
 

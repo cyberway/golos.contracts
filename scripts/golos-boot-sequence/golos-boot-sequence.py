@@ -19,27 +19,75 @@ class Struct(object): pass
 
 args = None
 logFile = None
+golosAccounts = []
 
 unlockTimeout = 999999999
 
-_golosAccounts = [
-    # name           inGenesis    contract
-    ('gls',          True,       None),
-    ('gls.ctrl',     True,       'golos.ctrl'),
-    ('gls.emit',     True,       'golos.emit'),
-    ('gls.vesting',  True,       'golos.vesting'),
-    ('gls.publish',  True,       'golos.publication'),
-    ('gls.social',   True,       'golos.social'),
-    ('gls.charge',   True,       'golos.charge'),
-    ('gls.referral', True,       'golos.referral'),
-    ('gls.worker',   True,       None),
-]
-
-golosAccounts = []
-for (name, inGenesis, contract) in _golosAccounts:
-    acc = Struct()
-    (acc.name, acc.inGenesis, acc.contract) = (name, inGenesis, contract)
-    golosAccounts.append(acc)
+def fillGolosAccounts(golosAccounts):
+    _golosAccounts = [
+        # name           inGenesis    contract    permissions (name, keys, accounts, links)
+        ('gls',          True,       None,
+            [("owner",       [], ["gls@smajor"], []),
+             ("active",      [], ["gls@smajor", "gls.ctrl@cyber.code", args.public_key], []),
+             ("testing",     ["GLS5a2eDuRETEg7uy8eHbiCqGZM3wnh2pLjiXrFduLWBKVZKCkB62"], [], []),
+             ("issue",       [], ["gls.emit@cyber.code", "gls@testing"], ["cyber.token:issue", "cyber.token:transfer"]),
+             ("createuser",  [], ["gls@testing"], ["cyber:newaccount", "cyber.domain:newusername", "cyber.token:open", "gls.vesting:open"]),
+             ("invoice",     [], ["gls.publish@cyber.code"], ["gls.charge:*"]),
+             ("changevest",  [], ["gls.vesting@cyber.code"], ["gls.ctrl:changevest"]),
+             ("witn.smajor", [], [], []),
+             ("witn.major",  [], [], []),
+             ("witn.minor",  [], [], []),
+            ]),
+        ('gls.ctrl',     True,       'golos.ctrl',
+            [("owner",       [], ["gls@owner"], []),
+             ("active",      [], ["gls@active"], []),
+             ("cyber.code",  [], ["gls.ctrl@cyber.code"], ["cyber.token:transfer"]),
+            ]),
+        ('gls.emit',     True,       'golos.emit',
+            [("owner",       [], ["gls@owner"], []),
+             ("active",      [], ["gls@active"], []),
+             ("cyber.code",  [], ["gls.emit@cyber.code"], ["gls.emit:emit"]),
+            ]),
+        ('gls.vesting',  True,       'golos.vesting',
+            [("owner",       [], ["gls@owner"], []),
+             ("active",      [], ["gls@active"], []),
+             ("cyber.code",  [], ["gls.vesting@cyber.code"], ["cyber.token:transfer", "gls.vesting:timeout", "gls.vesting:timeoutconv", "gls.vesting:timeoutrdel"]),
+            ]),
+        ('gls.publish',  True,       'golos.publication',
+            [("owner",       [], ["gls@owner"], []),
+             ("active",      [], ["gls@active"], []),
+             ("cyber.code",  [], ["gls.publish@cyber.code"], ["cyber.token:transfer", "gls.publish:closemssg", "gls.publish:calcrwrdwt", "gls.publish:paymssgrwrd"]),
+             ("calcrwrdwt",  [], ["gls.charge@cyber.code"], ["gls.publish:calcrwrdwt"]),
+            ]),
+        ('gls.social',   True,       'golos.social',
+            [("owner",       [], ["gls@owner"], []),
+             ("active",      [], ["gls@active"], []),
+            ]),
+        ('gls.charge',   True,       'golos.charge',
+            [("owner",       [], ["gls@owner"], []),
+             ("active",      [], ["gls@active"], []),
+            ]),
+        ('gls.referral', True,       'golos.referral',
+            [("owner",       [], ["gls@owner"], []),
+             ("active",      [], ["gls@active"], []),
+             ("cyber.code",  [], ["gls.referral@cyber.code"], ["gls.referral:closeoldref"]),
+            ]),
+        ('gls.worker',   True,       None,
+            [("owner",       [], ["gls@owner"], []),
+             ("active",      [], ["gls@active"], []),
+            ]),
+    ]
+    
+    for (name, inGenesis, contract, permissions) in _golosAccounts:
+        acc = Struct()
+        perms = []
+        for (name, keys, accounts, links) in permissions:
+            perm = Struct()
+            parent = "owner" if name == "active" else "active"
+            (perm.name, perm.parent, perm.keys, perm.accounts, perm.links) = (name, parent, keys, accounts, links)
+            perms.append(perm)
+        (acc.name, acc.inGenesis, acc.contract, acc.permissions) = (name, inGenesis, contract, perms)
+        golosAccounts.append(acc)
 
 def jsonArg(a):
     return " '" + json.dumps(a) + "' "
@@ -123,6 +171,8 @@ def updateAuth(account, permission, parent, keys, accounts):
     }) + '-p ' + account)
 
 def linkAuth(account, code, action, permission):
+    if action == '*':
+        action = ''
     retry(args.cleos + 'set action permission %s %s %s %s -p %s'%(account, code, action, permission, account))
 
 def createAuthority(keys, accounts):
@@ -223,27 +273,32 @@ def createGolosAccounts():
     for acc in golosAccounts:
         if not (args.golos_genesis and acc.inGenesis):
             createAccount('cyber', acc.name, args.public_key)
+            for perm in acc.permissions:
+                updateAuth(acc.name, acc.name, acc.parent, acc.keys, acc.accounts)
+                for link in perm.links:
+                    (code, action) = link.split(':',2)
+                    linkAuth(acc.name, code, action, perm.name)
 
-    if not args.golos_genesis:
-        updateAuth('gls',  'witn.major', 'active', [args.public_key], [])
-        updateAuth('gls',  'witn.minor', 'active', [args.public_key], [])
-        updateAuth('gls',  'witn.smajor', 'active', [args.public_key], [])
-        updateAuth('gls',  'active', 'owner', [args.public_key], ['gls.ctrl@cyber.code', 'gls.emit@cyber.code'])
-        updateAuth('gls.ctrl',    'active', 'owner', [args.public_key], ['gls.ctrl@cyber.code'])
-        updateAuth('gls.publish', 'active', 'owner', [args.public_key], ['gls.publish@cyber.code'])
-        updateAuth('gls.vesting', 'active', 'owner', [args.public_key], ['gls.vesting@cyber.code'])
-        updateAuth('gls.social',  'active', 'owner', [args.public_key], ['gls.publish@cyber.code'])
-        updateAuth('gls.emit',    'active', 'owner', [args.public_key], ['gls.emit@cyber.code'])
-
-        updateAuth('gls', 'createuser', 'active', ['GLS5a2eDuRETEg7uy8eHbiCqGZM3wnh2pLjiXrFduLWBKVZKCkB62'], [])
-        linkAuth('gls', 'cyber', 'newaccount', 'createuser')
-        linkAuth('gls', 'cyber.domain', 'newusername', 'createuser')
-        linkAuth('gls', 'gls.vesting', 'open', 'createuser')
-        linkAuth('gls', 'cyber.token', 'open', 'createuser')
-
-        updateAuth('gls',  'issue', 'active', ['GLS5a2eDuRETEg7uy8eHbiCqGZM3wnh2pLjiXrFduLWBKVZKCkB62'], [])
-        linkAuth('gls', 'cyber.token', 'issue', 'issue')
-        linkAuth('gls', 'cyber.token', 'transfer', 'issue')
+#    if not args.golos_genesis:
+#        updateAuth('gls',  'witn.major', 'active', [args.public_key], [])
+#        updateAuth('gls',  'witn.minor', 'active', [args.public_key], [])
+#        updateAuth('gls',  'witn.smajor', 'active', [args.public_key], [])
+#        updateAuth('gls',  'active', 'owner', [args.public_key], ['gls.ctrl@cyber.code', 'gls.emit@cyber.code'])
+#        updateAuth('gls.ctrl',    'active', 'owner', [args.public_key], ['gls.ctrl@cyber.code'])
+#        updateAuth('gls.publish', 'active', 'owner', [args.public_key], ['gls.publish@cyber.code'])
+#        updateAuth('gls.vesting', 'active', 'owner', [args.public_key], ['gls.vesting@cyber.code'])
+#        updateAuth('gls.social',  'active', 'owner', [args.public_key], ['gls.publish@cyber.code'])
+#        updateAuth('gls.emit',    'active', 'owner', [args.public_key], ['gls.emit@cyber.code'])
+#
+#        updateAuth('gls', 'createuser', 'active', ['GLS5a2eDuRETEg7uy8eHbiCqGZM3wnh2pLjiXrFduLWBKVZKCkB62'], [])
+#        linkAuth('gls', 'cyber', 'newaccount', 'createuser')
+#        linkAuth('gls', 'cyber.domain', 'newusername', 'createuser')
+#        linkAuth('gls', 'gls.vesting', 'open', 'createuser')
+#        linkAuth('gls', 'cyber.token', 'open', 'createuser')
+#
+#        updateAuth('gls',  'issue', 'active', ['GLS5a2eDuRETEg7uy8eHbiCqGZM3wnh2pLjiXrFduLWBKVZKCkB62'], [])
+#        linkAuth('gls', 'cyber.token', 'issue', 'issue')
+#        linkAuth('gls', 'cyber.token', 'transfer', 'issue')
 
         updateAuth('gls',  'invoice', 'active', ['gls.publish@cyber.code'])
         linkAuth('gls', 'gls.charge', 'use', 'invoice')
@@ -477,8 +532,9 @@ args.token = '%d,%s' % (args.token_precision, args.symbol)
 args.vesting = '%d,%s' % (args.vesting_precision, args.symbol)
 
 logFile = open(args.log_path, 'a')
-
 logFile.write('\n\n' + '*' * 80 + '\n\n\n')
+
+fillGolosAccounts(golosAccounts)
 
 accounts_filename = os.path.dirname(os.path.realpath(__file__)) + '/accounts.json'
 with open(accounts_filename) as f:

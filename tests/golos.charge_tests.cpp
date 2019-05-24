@@ -37,10 +37,14 @@ public:
     {
         create_accounts({_code, cfg::token_name, cfg::charge_name, cfg::control_name, cfg::emission_name, cfg::publish_name});
         create_accounts(_users);
-        produce_blocks(2);
         install_contract(_code, contracts::vesting_wasm(), contracts::vesting_abi());
         install_contract(cfg::token_name, contracts::token_wasm(), contracts::token_abi());
         install_contract(cfg::charge_name, contracts::charge_wasm(), contracts::charge_abi());
+
+        authority auth(1, {});
+        auth.accounts.emplace_back(permission_level_weight{.permission = {cfg::vesting_name, config::eosio_code_name}, .weight = 1});
+        set_authority(cfg::emission_name, golos::config::changevest_name, auth, "active");
+        link_authority(cfg::emission_name, cfg::control_name, golos::config::changevest_name, N(changevest));
     }
 
     void init(int64_t issuer_funds, int64_t user_vesting_funds) {
