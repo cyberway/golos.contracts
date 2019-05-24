@@ -135,7 +135,8 @@
         {"name": "gls.publish",
             "permissions": [
                 {"name": "owner", "key": "INITIAL"},
-                {"name": "active", "key": "INITIAL", "accounts": ["@cyber.code"]}
+                {"name": "active", "key": "INITIAL", "accounts": ["@cyber.code"]},
+                {"name": "calcrwrdwt", "accounts": ["gls.charge@cyber.code"]},
             ],
             "abi": {"path": "$GOLOS_CONTRACTS/golos.publication/golos.publication.abi", "hash":""},
             "code": {"path": "$GOLOS_CONTRACTS/golos.publication/golos.publication.wasm", "hash":""}
@@ -181,6 +182,9 @@
         },{
             "permission": "gls@invoice",
             "links": ["gls.charge:use", "gls.charge:usenotifygt"]
+        },{
+            "permission": "gls.publish@calcrwrdwt",
+            "links": ["gls.publish:calcrwrdwt"]
         }
     ],
     "tables": [

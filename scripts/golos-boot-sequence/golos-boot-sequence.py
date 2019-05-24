@@ -249,6 +249,9 @@ def createGolosAccounts():
         linkAuth('gls', 'gls.charge', 'use', 'invoice')
         linkAuth('gls', 'gls.charge', 'usenotifygt', 'invoice')
 
+        updateAuth('gls.publish', 'calcrwrdwt', 'active', ['gls.charge@cyber.code'])
+        linkAuth('gls.publish', 'gls.publush', 'calcrwrdwt', 'calcrwrdwt')
+
 def stepInstallContracts():
     for acc in golosAccounts:
         if not (args.golos_genesis and acc.inGenesis) and (acc.contract != None):
