@@ -13,6 +13,7 @@ import time
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 from config import golos_curation_func_str
 from utils import fixp_max
+from utils import _100percent
 
 class Struct(object): pass
 
@@ -244,6 +245,13 @@ def createGolosAccounts():
         linkAuth('gls', 'cyber.token', 'issue', 'issue')
         linkAuth('gls', 'cyber.token', 'transfer', 'issue')
 
+        updateAuth('gls',  'invoice', 'active', ['gls.publish@cyber.code'])
+        linkAuth('gls', 'gls.charge', 'use', 'invoice')
+        linkAuth('gls', 'gls.charge', 'usenotifygt', 'invoice')
+
+        updateAuth('gls.publish', 'calcrwrdwt', 'active', ['gls.charge@cyber.code'])
+        linkAuth('gls.publish', 'gls.publush', 'calcrwrdwt', 'calcrwrdwt')
+
 def stepInstallContracts():
     for acc in golosAccounts:
         if not (args.golos_genesis and acc.inGenesis) and (acc.contract != None):
@@ -262,75 +270,76 @@ def stepCreateTokens():
     sleep(1)
 
 def createCommunity():
-    retry(args.cleos + 'push action gls.emit setparams ' + jsonArg([
-        [
-            ['inflation_rate',{
-                'start':1500,
-                'stop':95,
-                'narrowing':250000
-            }],
-            ['reward_pools',{
-                'pools':[
-                    {'name':'gls.ctrl','percent':0},
-                    {'name':'gls.publish','percent':6000},
-                    {'name':'gls.vesting','percent':2400}
-                ]
-            }],
-            ['emit_token',{
-                'symbol':args.token
-            }],
-            ['emit_interval',{
-                'value':900
-            }]
-        ]]) + '-p gls.emit')
-    retry(args.cleos + 'push action gls.vesting setparams ' + jsonArg([
-        args.vesting,
-        [
-            ['vesting_withdraw',{
-                'intervals':13,
-                'interval_seconds':120
-            }],
-            ['vesting_amount',{
-                'min_amount':10000
-            }],
-            ['vesting_delegation',{
-                'min_amount':5000000,
-                'min_remainder':15000000,
-                'min_time':0,
-                'max_interest':0,
-                'return_time':120
-            }]
-        ]]) + '-p gls')
-    retry(args.cleos + 'push action gls.ctrl setparams ' + jsonArg([
-        [
-            ['ctrl_token',{
-                'code':args.symbol
-            }],
-            ['multisig_acc',{
-                'name':'gls'
-            }],
-            ['max_witnesses',{
-                'max':5
-            }],
-            ['multisig_perms',{
-                'super_majority':0,
-                'majority':0,
-                'minority':0
-            }],
-            ['max_witness_votes',{
-                'max':30
-            }],
-            ['update_auth',{
-                'period':300
-            }]
-        ]]) + '-p gls.ctrl')
+    if not args.golos_genesis:
+        retry(args.cleos + 'push action gls.emit setparams ' + jsonArg([
+            [
+                ['inflation_rate',{
+                    'start':1500,
+                    'stop':95,
+                    'narrowing':250000
+                }],
+                ['reward_pools',{
+                    'pools':[
+                        {'name':'gls.ctrl','percent':0},
+                        {'name':'gls.publish','percent':6000},
+                        {'name':'gls.vesting','percent':2400}
+                    ]
+                }],
+                ['emit_token',{
+                    'symbol':args.token
+                }],
+                ['emit_interval',{
+                    'value':900
+                }]
+            ]]) + '-p gls.emit')
+        retry(args.cleos + 'push action gls.vesting setparams ' + jsonArg([
+            args.vesting,
+            [
+                ['vesting_withdraw',{
+                    'intervals':13,
+                    'interval_seconds':120
+                }],
+                ['vesting_amount',{
+                    'min_amount':10000
+                }],
+                ['vesting_delegation',{
+                    'min_amount':5000000,
+                    'min_remainder':15000000,
+                    'min_time':0,
+                    'max_interest':0,
+                    'return_time':120
+                }]
+            ]]) + '-p gls')
+        retry(args.cleos + 'push action gls.ctrl setparams ' + jsonArg([
+            [
+                ['ctrl_token',{
+                    'code':args.symbol
+                }],
+                ['multisig_acc',{
+                    'name':'gls'
+                }],
+                ['max_witnesses',{
+                    'max':5
+                }],
+                ['multisig_perms',{
+                    'super_majority':0,
+                    'majority':0,
+                    'minority':0
+                }],
+                ['max_witness_votes',{
+                    'max':30
+                }],
+                ['update_auth',{
+                    'period':300
+                }]
+            ]]) + '-p gls.ctrl')
 
-    retry(args.cleos + 'push action gls.referral setparams ' + jsonArg([[
-        ['breakout_parametrs', {'min_breakout': intToToken(10000), 'max_breakout': intToToken(100000)}],
-        ['expire_parametrs', {'max_expire': 7*24*3600}],  # sec
-        ['percent_parametrs', {'max_percent': 5000}],     # 50.00%
-        ['delay_parametrs', {'delay_clear_old_ref': 1*24*3600}] # sec
-    ]]) + '-p gls.referral')
+        retry(args.cleos + 'push action gls.referral setparams ' + jsonArg([[
+            ['breakout_parametrs', {'min_breakout': intToToken(10000), 'max_breakout': intToToken(100000)}],
+            ['expire_parametrs', {'max_expire': 7*24*3600}],  # sec
+            ['percent_parametrs', {'max_percent': 5000}],     # 50.00%
+            ['delay_parametrs', {'delay_clear_old_ref': 1*24*3600}] # sec
+        ]]) + '-p gls.referral')
 
 def createWitnessAccounts():
     for i in range(firstWitness, firstWitness + numWitness):
@@ -342,53 +351,61 @@ def createWitnessAccounts():
         voteWitness('gls.ctrl', a['name'], a['name'])
 
 def initCommunity():
-    retry(args.cleos + 'push action gls.publish setparams ' + jsonArg([[
-        ['st_max_vote_changes', {'value':5}],
-        ['st_cashout_window', {'window': 120, 'upvote_lockout': 15}],
-        ['st_max_beneficiaries', {'value': 64}],
-        ['st_max_comment_depth', {'value': 127}],
-        ['st_social_acc', {'value': 'gls.social'}],
-        ['st_referral_acc', {'value': ''}], # TODO Add referral contract to posting-settings
-        ['st_curators_prcnt', {'min_curators_prcnt': 0, 'max_curators_prcnt': 9000}]
-    ]]) + '-p gls.publish')
+    if not args.golos_genesis:
+        retry(args.cleos + 'push action gls.publish setparams ' + jsonArg([[
+            ['st_max_vote_changes', {'value':5}],
+            ['st_cashout_window', {'window': 120, 'upvote_lockout': 15}],
+            ['st_max_beneficiaries', {'value': 64}],
+            ['st_max_comment_depth', {'value': 127}],
+            ['st_social_acc', {'value': 'gls.social'}],
+            ['st_referral_acc', {'value': ''}], # TODO Add referral contract to posting-settings
+            ['st_curators_prcnt', {'min_curators_prcnt': 0, 'max_curators_prcnt': 9000}]
+        ]]) + '-p gls.publish')
+    
+        retry(args.cleos + 'push action gls.publish setrules ' + jsonArg({
+            "mainfunc":{"str":"x","maxarg":fixp_max},
+            "curationfunc":{"str":golos_curation_func_str,"maxarg":fixp_max},
+            "timepenalty":{"str":"x/1800","maxarg":1800},
+            "maxtokenprop":5000,
+            "tokensymbol":args.token
+        }) + '-p gls.publish')
 
-    retry(args.cleos + 'push action gls.publish setrules ' + jsonArg({
-        "mainfunc":{"str":"x","maxarg":fixp_max},
-        "curationfunc":{"str":golos_curation_func_str,"maxarg":fixp_max},
-        "timepenalty":{"str":"x/1800","maxarg":1800},
-        "maxtokenprop":5000,
-        "tokensymbol":args.token
-    }) + '-p gls.publish')
-
-# TODO initialize the limits in the same way as in Golos
-#        "lims":{
-#            "restorers":["t / 3600"],
-#            "limitedacts":[
-#                {"chargenum":0, "restorernum": 0, "cutoffval":20000, "chargeprice":9900},
-#                {"chargenum":0, "restorernum": 0, "cutoffval":30000, "chargeprice":1000},
-#                {"chargenum":1, "restorernum": 0, "cutoffval":10000, "chargeprice":1000},
-#                {"chargenum":0, "restorernum":-1, "cutoffval":10000, "chargeprice":   0}
-#            ],
-#            "vestingprices":[-1, -1],
-#            "minvestings":[0, 0, 0]
-#        }
-#    }) + '-p gls.publish')
+    # testnet
     limits = [
-        # action            charge_id   price   cutoff  vest_price  min_vest
-        ("post",            0,          -1,     0,      0,          0),
-        ("comment",         0,          -1,     0,      0,          0),
-        ("vote",            0,          -1,     0,      0,          0),
-        ("post bandwidth",  0,          -1,     0,      0,          0),
+        # action            charge_id   price                cutoff        vest_price  min_vest
+        ("post",            1,          _100percent,         _100percent,  0,          0),
+        ("comment",         2,          _100percent/10,      _100percent,  0,          0),
+        ("vote",            0,          _100percent/(5*40),  _100percent,  0,          0),
+        ("post bandwidth",  3,          _100percent/4,       _100percent,  0,          0),
     ]
+    restorers = [
+        # charge_id     restorer        max_prev    max_vest    max_elapsed
+        (1,             "t/300",        fixp_max,   fixp_max,   fixp_max),
+        (2,             "t/200",        fixp_max,   fixp_max,   fixp_max),
+        (0,             "t/(5*86400)",  fixp_max,   fixp_max,   fixp_max),
+        (3,             "t*p/86400",    fixp_max,   fixp_max,   fixp_max),
+    ]
+
+    if not args.golos_genesis:
+        for (charge_id, restorer, max_prev, max_vest, max_elapsed) in restorers:
+            retry(args.cleos + 'push action gls.charge setrestorer ' + jsonArg({
+                "token_code": args.symbol,
+                "charge_id": charge_id,
+                "func_str": restorer,
+                "max_prev": max_prev,
+                "max_vesting": max_vest,
+                "max_elapsed": max_elapsed
+            }) + '-p gls')
+
     for (action, charge_id, price, cutoff, vest_price, min_vest) in limits:
         retry(args.cleos + 'push action gls.publish setlimit ' + jsonArg({
             "act": action,
             "token_code": args.symbol,
             "charge_id" : charge_id,
-            "price": price,
-            "cutoff": cutoff,
-            "vesting_price": vest_price,
-            "min_vesting": min_vest
+            "price": int(price),
+            "cutoff": int(cutoff),
+            "vesting_price": int(vest_price),
+            "min_vesting": int(min_vest)
         }) + '-p gls.publish')
 
     retry(args.cleos + 'push action gls.emit start ' + jsonArg([]) + '-p gls.emit')
