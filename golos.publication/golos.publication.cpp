@@ -526,18 +526,18 @@ void publication::paymssgrwrd(structures::mssgid message_id) {
     
     int64_t ben_payout_sum = 0;
     for (auto& ben: mssg_itr->beneficiaries) {
-        auto ben_payout = cyber::safe_pct(payout, ben.weight);
-        eosio_assert((0 <= ben_payout) && (ben_payout <= payout - ben_payout_sum), "LOGIC ERROR! publication::payrewards: wrong ben_payout value");
-        payto(ben.account, eosio::asset(ben_payout, state.funds.symbol), static_cast<enum_t>(payment_t::VESTING), get_memo("benefeciary", message_id));
+        auto ben_payout = cyber::safe_pct(payout.amount, ben.weight);
+        eosio_assert((0 <= ben_payout) && (ben_payout <= payout.amount - ben_payout_sum), "LOGIC ERROR! publication::payrewards: wrong ben_payout value");
+        payto(ben.account, eosio::asset(ben_payout, payout.symbol), static_cast<enum_t>(payment_t::VESTING), get_memo("benefeciary", message_id));
         ben_payout_sum += ben_payout;
     }
     payout.amount -= ben_payout_sum;
 
     elaf_t token_prop(elai_t(mssg_itr->tokenprop) / elai_t(config::_100percent));
-    auto token_payout = int_cast(elai_t(payout) * token_prop);
-    eosio_assert(payout >= token_payout, "publication::payrewards: wrong token_payout value");
-    payto(message_id.author, eosio::asset(token_payout, state.funds.symbol), static_cast<enum_t>(payment_t::TOKEN), get_memo("author", message_id));
-    payto(message_id.author, eosio::asset(payout - token_payout, state.funds.symbol), static_cast<enum_t>(payment_t::VESTING), get_memo("author", message_id));
+    auto token_payout = int_cast(elai_t(payout.amount) * token_prop);
+    eosio_assert(payout.amount >= token_payout, "publication::payrewards: wrong token_payout value");
+    payto(message_id.author, eosio::asset(token_payout, payout.symbol), static_cast<enum_t>(payment_t::TOKEN), get_memo("author", message_id));
+    payto(message_id.author, eosio::asset(payout.amount - token_payout, payout.symbol), static_cast<enum_t>(payment_t::VESTING), get_memo("author", message_id));
 
     tables::vote_table vote_table(_self, message_id.author.value);
     auto votetable_index = vote_table.get_index<"messageid"_n>();
