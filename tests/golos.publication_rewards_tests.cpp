@@ -427,7 +427,7 @@ public:
                     for (auto& r : cur_rewards) {
                         auto dlg_payout_sum = 0;
                         for (auto& dlg : _state.delegators) {
-                            if (v.voter == dlg.delegatee) { // TODO: check it and r.first below
+                            if (r.first == dlg.delegatee) {
                                 auto available_vesting = _state.balances[r.first].vestamount - _state.dlg_balances[r.first].delegated;
                                 auto effective_vesting = available_vesting + _state.dlg_balances[r.first].received;
                                 auto interest_rate = dlg.amount * dlg.interest_rate / effective_vesting;
@@ -611,17 +611,15 @@ public:
     action_result delegate_vest(account_name from, account_name to, asset quantity, uint16_t interest_rate, uint8_t payout_strategy) {
         auto ret = vest.delegate(from, to, quantity, interest_rate, payout_strategy);
         if (ret == success()) {
-            _state.delegators.emplace_back(delegators{
+            _state.delegators.emplace_back(delegation{
                 from,
                 to,
                 interest_rate,
                 payout_strategy,
-                quantity.amount
+                quantity.to_real()
             });
-            _state.dlg_balances[from].delegated += quantity.amount; 
-            _state.balances[from].vestamount -= quantity.amount;
-            _state.dlg_balances[to].received += quantity.amount;
-            _state.balances[to].vestamount += quantity.amount;
+            _state.dlg_balances[from].delegated += quantity.to_real(); 
+            _state.dlg_balances[to].received += quantity.to_real();
         }
         return ret;
     }
@@ -1077,7 +1075,7 @@ BOOST_FIXTURE_TEST_CASE(golos_delegators_test, reward_calcs_tester) try {
     const uint64_t delegation_min_amount = 5e6;
     const uint64_t delegation_min_remainder = 15e3;
     const uint32_t delegation_min_time = 0;
-    const uint16_t delegation_max_interest = 50;
+    const uint16_t delegation_max_interest = 5000;
     const uint32_t delegation_return_time = 120;
 
     auto vesting_withdraw = vest.withdraw_param(withdraw_intervals, withdraw_interval_seconds);
@@ -1093,11 +1091,12 @@ BOOST_FIXTURE_TEST_CASE(golos_delegators_test, reward_calcs_tester) try {
     const int min_remainder = delegation_min_remainder / divider;
     const auto amount = vest.make_asset(min_remainder);
     const auto charge_prop = 0.7;
-    BOOST_CHECK_EQUAL(success(), delegate_vest(_users[2], _users[1], amount, 30, 0, {_users[0], "permlink"}, _users[1]));
+    BOOST_CHECK_EQUAL(success(), delegate_vest(_users[2], _users[1], amount, 3000, 0));
+    check();
 
     BOOST_TEST_MESSAGE("--- " << name{_users[1]}.to_string() << " voted");
     BOOST_CHECK_EQUAL(success(), addvote(_users[1], {_users[0], "permlink"}, 10000));
-    //check();
+    check();
 
     produce_blocks(golos::seconds_to_blocks(post.window));
     check();
