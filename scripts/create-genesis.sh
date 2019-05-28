@@ -19,7 +19,7 @@ docker run --rm \
     -v `readlink -f $DEST`:/genesis-data \
     $GOLOS_IMAGE bash -c \
     'ls -l / /opt/cyberway/bin/ /opt/golos.contracts /opt/golos.contracts/genesis &&
-     sed "s|\${INITIAL_TIMESTAMP}|'$INITIAL_TIMESTAMP'|" /opt/golos.contracts/genesis/genesis.json.tmpl | tee genesis.json && \
+     sed "s|\${INITIAL_TIMESTAMP}|'$INITIAL_TIMESTAMP'|; /^#/d" /opt/golos.contracts/genesis/genesis.json.tmpl | tee genesis.json && \
      sed "s|\$CYBERWAY_CONTRACTS|$CYBERWAY_CONTRACTS|;s|\$GOLOS_CONTRACTS|$GOLOS_CONTRACTS|; /^#/d" /opt/golos.contracts/genesis/genesis-info.json.tmpl | tee genesis-info.json && \
      /opt/cyberway/bin/create-genesis -g genesis-info.json -o /genesis-data/genesis.dat -e /genesis-data/event-genesis/ && \
      sed "s|\${GENESIS_DATA_HASH}|$(sha256sum /genesis-data/genesis.dat | cut -f1 -d" ")|" genesis.json | tee /genesis-data/genesis.json'

@@ -14,7 +14,12 @@
     "max_transaction_cpu_usage": 1800000,
     "min_transaction_cpu_usage": 100,
     "max_transaction_lifetime": 3600,
-    "deferred_trx_expiration_window": 600,
+
+# NOTE: The expiration interval for deferred transactions was increased (for 3 hours) 
+# due to the fact that current value (10 minutes) is not enough to close a large 
+# number of posts in testnet (about 60,000). In the real system there will not be 
+# such a number of posts and this value should be revised.
+    "deferred_trx_expiration_window": 10800,
     "max_transaction_delay": 3888000,
     "max_inline_action_size": 4096,
     "max_inline_action_depth": 4,
