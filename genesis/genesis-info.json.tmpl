@@ -3,6 +3,7 @@
     "genesis_json": "genesis.json",
     "params":{
         "stake":{
+            "enabled": false,
             "max_proxies":[30, 10, 3, 1],
             "frame_length":1800,
             "payout_step_length":43200,
@@ -245,10 +246,55 @@
                 "curators_prcnt": {"min_curators_prcnt":0, "max_curators_prcnt":9000}
             }}]
         },{
+            "code": "gls.publish",
+            "table": "limit",
+            "abi_type": "limitparams",
+            "rows": [{
+                "scope": "gls.publish", "payer": "gls.publish", "pk": 0,
+                "data": {
+                    "act": 0,
+                    "charge_id": 1,
+                    "price": 10000,
+                    "cutoff": 10000,
+                    "vesting_price": 0,
+                    "min_vesting": 0
+                }
+            },{
+                "scope": "gls.publish", "payer": "gls.publish", "pk": 1,
+                "data": {
+                    "act": 1,
+                    "charge_id": 2,
+                    "price": 1000,
+                    "cutoff": 10000,
+                    "vesting_price": 0,
+                    "min_vesting": 0
+                }
+            },{
+                "scope": "gls.publish", "payer": "gls.publish", "pk": 2,
+                "data": {
+                    "act": 2,
+                    "charge_id": 0,
+                    "price": 50,
+                    "cutoff": 10000,
+                    "vesting_price": 0,
+                    "min_vesting": 0
+                }
+            },{
+                "scope": "gls.publish", "payer": "gls.publish", "pk": 3,
+                "data": {
+                    "act": 3,
+                    "charge_id": 3,
+                    "price": 10000,
+                    "cutoff": 40000,
+                    "vesting_price": 0,
+                    "min_vesting": 0
+                }
+            }]
+        },{
             "code": "gls.referral",
             "table": "refparams",
             "abi_type": "referral_state",
-            "rows": [{"scope":"gls.referral", "payer": "gls.referral", "pk": 13445306870675800064, "data": {
+            "rows": [{"scope": "gls.referral", "payer": "gls.referral", "pk": 13445306870675800064, "data": {
                 "id": 13445306870675800064,
                 "breakout_params": {"min_breakout":"10000.000 GOLOS", "max_breakout":"100000.000 GOLOS"},
                 "expire_params": {"max_expire":604800},
@@ -261,33 +307,33 @@
             "abi_type": "restorer",
             "rows": [
                 {
-                    "scope": "gls.charge", "payer": "gls", "pk": 91600047785729, 
+                    "scope": "gls.charge", "payer": "gls", "pk": 91600047785729,
                     "data": {
-	                    "charge_symbol" : 91600047785729, "token_code" : "GOLOS", "charge_id" : 1,
-	                    "func" : {
+                        "charge_symbol" : 91600047785729, "token_code" : "GOLOS", "charge_id" : 1,
+                        "func" : {
                             "varssize" : 3,
-		                    "operators" : [0, 0, 4],
-		                    "values" : [{"kind" : 1, "idx" : 2}, {"kind": 0, "idx": 0}],
-		                    "nums" : [1228800],
-		                    "consts" : [ ]
-	                    },
-	                    "max_prev" : 922337203685477, "max_vesting" : 922337203685477, "max_elapsed" : 922337203685477
-                    }
-                },{
-                    "scope": "gls.charge", "payer": "gls", "pk": 91600047785730, 
-                    "data": {
-	                    "charge_symbol" : 91600047785730, "token_code" : "GOLOS", "charge_id" : 2,
-	                    "func" : {
-		                    "varssize" : 3,
-		                    "operators" : [0, 0, 4],
-	                    	"values" : [{"kind" : 1, "idx" : 2}, {"kind" : 0, "idx" : 0}],
-		                    "nums" : [819200],
+                            "operators" : [0, 0, 4],
+                            "values" : [{"kind" : 1, "idx" : 2}, {"kind": 0, "idx": 0}],
+                            "nums" : [1228800],
                             "consts" : [ ]
                         },
                         "max_prev" : 922337203685477, "max_vesting" : 922337203685477, "max_elapsed" : 922337203685477
                     }
                 },{
-                    "scope": "gls.charge", "payer": "gls", "pk": 91600047785728, 
+                    "scope": "gls.charge", "payer": "gls", "pk": 91600047785730,
+                    "data": {
+                            "charge_symbol" : 91600047785730, "token_code" : "GOLOS", "charge_id" : 2,
+                            "func" : {
+                            "varssize" : 3,
+                        "operators" : [0, 0, 4],
+                        "values" : [{"kind" : 1, "idx" : 2}, {"kind" : 0, "idx" : 0}],
+                        "nums" : [819200],
+                            "consts" : [ ]
+                        },
+                        "max_prev" : 922337203685477, "max_vesting" : 922337203685477, "max_elapsed" : 922337203685477
+                    }
+                },{
+                    "scope": "gls.charge", "payer": "gls", "pk": 91600047785728,
                     "data": {
                         "charge_symbol" : 91600047785728, "token_code" : "GOLOS", "charge_id" : 0,
                         "func" : {
@@ -300,7 +346,7 @@
                         "max_prev" : 922337203685477, "max_vesting" : 922337203685477, "max_elapsed" : 922337203685477
                     }
                 },{
-                    "scope": "gls.charge", "payer": "gls", "pk": 91600047785731, 
+                    "scope": "gls.charge", "payer": "gls", "pk": 91600047785731,
                     "data": {
                         "charge_symbol" : 91600047785731, "token_code" : "GOLOS", "charge_id" : 3,
                         "func" : {
