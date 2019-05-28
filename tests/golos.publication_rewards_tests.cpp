@@ -496,11 +496,8 @@ public:
         const auto current_time = control->head_block_time().sec_since_epoch();
         if ((ret == success()) || (ret_str.find("forum::apply_limits:") != string::npos)) {
             auto apply_ret = _state.pools.back().lims.apply(
-                        limits::VOTE,
-                        _state.pools.back().charges[voter],
-                        _state.balances[voter].vestamount,
-                        seconds(current_time).count(),
-                        get_prop(std::abs(weight)));
+                        limits::VOTE, _state.pools.back().charges[voter],
+                        _state.balances[voter].vestamount, seconds(current_time).count(), get_prop(std::abs(weight)));
 
             BOOST_REQUIRE_MESSAGE(((ret == success()) == (apply_ret >= 0.0)), "wrong ret_str: " + ret_str
                 + "; vesting = " + std::to_string(_state.balances[voter].vestamount)
@@ -512,14 +509,14 @@ public:
                 for (auto& m : p.messages) {
                     if (m.key == message_id) {
                         auto vote_itr = std::find_if(m.votes.begin(), m.votes.end(), [voter](const vote& v) {return v.voter == voter;});
-                        if (vote_itr == m.votes.end()) {
+                        if (vote_itr == m.votes.end())
                             m.votes.emplace_back(vote{
                                 voter,
                                 std::min(get_prop(weight), 1.0),
                                 PRECISION_DIV * static_cast<double>(FP(_state.balances[voter].vestamount)), //raw amount
                                 static_cast<double>(current_time)
                             });
-                        } else {
+                        else {
                             vote_itr->revote_diff = std::min(get_prop(weight), 1.0) - vote_itr->weight;
                             vote_itr->revote_vesting =
                                 PRECISION_DIV * static_cast<double>(FP(_state.balances[voter].vestamount));

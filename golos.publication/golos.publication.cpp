@@ -359,11 +359,15 @@ int64_t publication::pay_curators(name author, uint64_t msgid, int64_t max_rewar
     return unclaimed_rewards;
 }
 
-void publication::use_charge(tables::limit_table& lims, structures::limitparams::act_t act, name issuer,
+elaf_t publication::use_charge(tables::limit_table& lims, structures::limitparams::act_t act, name issuer,
                             name account, int64_t eff_vesting, symbol_code token_code, bool vestpayment, elaf_t weight) {
     auto lim_itr = lims.find(act);
     eosio_assert(lim_itr != lims.end(), "publication::use_charge: limit parameters not set");
     eosio_assert(eff_vesting >= lim_itr->min_vesting, "insufficient effective vesting amount");
+
+    auto current_power = charge::get_current_value(config::charge_name, account, token_code, lim_itr->charge_id);
+    elaf_t charge = elai_t(config::_100percent - current_power) / elai_t(config::_100percent);
+    elaf_t abs_wc = weight * charge;
 
     if(lim_itr->price >= 0)
         INLINE_ACTION_SENDER(charge, use) (config::charge_name,
@@ -375,6 +379,8 @@ void publication::use_charge(tables::limit_table& lims, structures::limitparams:
                 lim_itr->cutoff,
                 vestpayment ? int_cast(elai_t(lim_itr->vesting_price) * weight) : 0
             });
+
+    return abs_wc;
 }
 
 void publication::use_postbw_charge(tables::limit_table& lims, name issuer, name account, symbol_code token_code, int64_t mssg_id) {
@@ -562,18 +568,11 @@ fixp_t publication::calc_available_rshares(name voter, int16_t weight, uint64_t 
     tables::limit_table lims(_self, _self.value);
     int64_t eff_vesting = golos::vesting::get_account_effective_vesting(config::vesting_name, voter, token_code).amount;
 
+    elaf_t abs_w(elai_t(abs(weight)) / elai_t(config::_100percent));
+    elaf_t abs_wc = use_charge(lims, structures::limitparams::VOTE, token::get_issuer(config::token_name,
+                               token_code), voter, eff_vesting, token_code, false, abs_w);
 
-    auto lim_itr = lims.find(structures::limitparams::VOTE);
-    eosio_assert(lim_itr != lims.end(), "publication::use_charge: limit parameters not set");
-    eosio_assert(eff_vesting >= lim_itr->min_vesting, "insufficient effective vesting amount");
-
-    auto current_power = charge::get_current_value(config::charge_name, voter, token_code, lim_itr->charge_id);
-    elaf_t charge = elai_t(config::_100percent - current_power) / elai_t(config::_100percent);
-    elaf_t abs_w = elaf_t(elai_t(abs(weight)) / elai_t(config::_100percent)) * charge;
-
-    use_charge(lims, structures::limitparams::VOTE, token::get_issuer(config::token_name, token_code), voter, eff_vesting, token_code, false, abs_w);
-
-    fixp_t abs_rshares = FP(eff_vesting) * abs_w;
+    fixp_t abs_rshares = FP(eff_vesting) * abs_wc;
     return (weight < 0) ? -abs_rshares : abs_rshares;
 }
 
