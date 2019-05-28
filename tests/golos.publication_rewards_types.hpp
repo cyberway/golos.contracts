@@ -171,8 +171,17 @@ struct vote {
     double revote_vesting = 0.0;
     double revote_weight() const { return weight + revote_diff; };
     double rshares(int64_t charge = 0) const {
-        double current_power = std::min(static_cast<int>(golos::config::_100percent - charge), golos::config::_100percent) / golos::config::_100percent;
-        return revote_diff ? revote_weight() * current_power * revote_vesting : weight * current_power * vesting;
+        const auto denom = 200;
+        double current_power = std::min(static_cast<int>(golos::config::_100percent - charge), golos::config::_100percent);
+
+        auto lambda = [&](double weight, double charge) -> int {
+            return (weight * charge + denom - 1) / (denom);
+        };
+
+        auto test = lambda(revote_weight(), current_power);
+        auto test2 = revote_diff ? lambda(revote_weight(), current_power) * revote_vesting : lambda(weight, current_power) * vesting;
+
+        return revote_diff ? lambda(revote_weight(), current_power) * revote_vesting : lambda(weight, current_power) * vesting ;
     };
     double voteshares() const { return weight > 0.0 ? weight * vesting : 0.0; };
 };
