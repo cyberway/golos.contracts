@@ -372,11 +372,11 @@ def initCommunity():
 
     # testnet
     limits = [
-        # action            charge_id   price                cutoff        vest_price  min_vest
-        ("post",            1,          _100percent,         _100percent,  0,          0),
-        ("comment",         2,          _100percent/10,      _100percent,  0,          0),
-        ("vote",            0,          _100percent/(5*40),  _100percent,  0,          0),
-        ("post bandwidth",  3,          _100percent/4,       _100percent,  0,          0),
+        # action            charge_id   price                cutoff         vest_price  min_vest
+        ("post",            1,          _100percent,         _100percent,   0,          0),
+        ("comment",         2,          _100percent/10,      _100percent,   0,          0),
+        ("vote",            0,          _100percent/(5*40),  _100percent,   0,          0),
+        ("post bandwidth",  3,          _100percent,         _100percent*4, 0,          0),
     ]
     restorers = [
         # charge_id     restorer        max_prev    max_vest    max_elapsed
