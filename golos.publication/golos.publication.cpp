@@ -568,8 +568,8 @@ fixp_t publication::calc_available_rshares(name voter, int16_t weight, uint64_t 
     eosio_assert(eff_vesting >= lim_itr->min_vesting, "insufficient effective vesting amount");
 
     auto current_power = charge::get_current_value(config::charge_name, voter, token_code, lim_itr->charge_id);
-    elai_t charge = elai_t(config::_100percent - current_power) / elai_t(config::_100percent);
-    elaf_t abs_w(elai_t(abs(weight) * charge) / elai_t(config::_100percent));
+    elaf_t charge = elai_t(config::_100percent - current_power) / elai_t(config::_100percent);
+    elaf_t abs_w = elaf_t(elai_t(abs(weight)) / elai_t(config::_100percent)) * charge;
 
     use_charge(lims, structures::limitparams::VOTE, token::get_issuer(config::token_name, token_code), voter, eff_vesting, token_code, false, abs_w);
 
