@@ -49,12 +49,6 @@ inline double get_prop(int64_t arg) {
     return static_cast<double>(arg) / static_cast<double>(golos::config::_100percent);
 }
 
-inline double get_prop_t(int64_t arg, int64_t charge = 0) {
-    auto test = ((((10000 - charge) * abs(arg)) / 10000) + 200 - 1) / 200;
-    auto prnt = static_cast<double>(test) / static_cast<double>(golos::config::_100percent);
-    return prnt;
-}
-
 struct mssgid {
     eosio::chain::name author;
     std::string permlink;
@@ -175,11 +169,12 @@ struct vote {
     double created;         // time
     double revote_diff = 0.0;
     double revote_vesting = 0.0;
-    double revote_weight() const { return get_prop_t(weight) + revote_diff; };
-    double rshares() const {
-        return revote_diff ? get_prop(revote_weight()) * revote_vesting : get_prop_t(weight) * vesting; }
-    ;
-    double voteshares() const { return weight > 0.0 ? /*get_prop_t*/(weight) * vesting : 0.0; };
+    double revote_weight() const { return weight + revote_diff; };
+    double rshares(int64_t charge = 0) const {
+        double current_power = std::min(static_cast<int>(golos::config::_100percent - charge), golos::config::_100percent) / golos::config::_100percent;
+        return revote_diff ? revote_weight() * current_power * revote_vesting : weight * current_power * vesting;
+    };
+    double voteshares() const { return weight > 0.0 ? weight * vesting : 0.0; };
 };
 
 struct beneficiary {

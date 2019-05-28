@@ -561,21 +561,19 @@ fixp_t publication::calc_available_rshares(name voter, int16_t weight, uint64_t 
     auto token_code = pool.state.funds.symbol.code();
     tables::limit_table lims(_self, _self.value);
     int64_t eff_vesting = golos::vesting::get_account_effective_vesting(config::vesting_name, voter, token_code).amount;
-    elaf_t abs_w(elai_t(abs(weight)) / elai_t(config::_100percent));
+
 
     auto lim_itr = lims.find(structures::limitparams::VOTE);
     eosio_assert(lim_itr != lims.end(), "publication::use_charge: limit parameters not set");
     eosio_assert(eff_vesting >= lim_itr->min_vesting, "insufficient effective vesting amount");
 
-    auto test = charge::get_current_value(config::charge_name, voter, token_code, lim_itr->charge_id);
-    uint64_t used_charge = ((((10000 - test) * abs(weight)) / 10000) + 200 - 1) / 200;
+    auto current_power = charge::get_current_value(config::charge_name, voter, token_code, lim_itr->charge_id);
+    elai_t charge = elai_t(config::_100percent - current_power) / elai_t(config::_100percent);
+    elaf_t abs_w(elai_t(abs(weight) * charge) / elai_t(config::_100percent));
 
-    use_charge(lims, structures::limitparams::VOTE, token::get_issuer(config::token_name, token_code),
-        voter, eff_vesting, token_code, false, elaf_t(used_charge));
+    use_charge(lims, structures::limitparams::VOTE, token::get_issuer(config::token_name, token_code), voter, eff_vesting, token_code, false, abs_w);
 
-    used_charge = used_charge / elai_t(config::_100percent);
     fixp_t abs_rshares = FP(eff_vesting) * abs_w;
-
     return (weight < 0) ? -abs_rshares : abs_rshares;
 }
 

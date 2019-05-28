@@ -385,7 +385,7 @@ public:
                     auto author_payout =  payout - curation_payout;
                     double ben_payout_sum = 0.0;
                     for (auto& ben : m.beneficiaries) {
-                        double ben_payout = author_payout * get_prop_t(ben.weight);
+                        double ben_payout = author_payout * get_prop(ben.weight);
                         _state.balances[ben.account].vestamount += get_converted_to_vesting(ben_payout);
                         ben_payout_sum += ben_payout;
                     }
@@ -500,7 +500,7 @@ public:
                         _state.pools.back().charges[voter],
                         _state.balances[voter].vestamount,
                         seconds(current_time).count(),
-                        get_prop_t(std::abs(weight)));
+                        get_prop(std::abs(weight)));
 
             BOOST_REQUIRE_MESSAGE(((ret == success()) == (apply_ret >= 0.0)), "wrong ret_str: " + ret_str
                 + "; vesting = " + std::to_string(_state.balances[voter].vestamount)
@@ -515,12 +515,12 @@ public:
                         if (vote_itr == m.votes.end()) {
                             m.votes.emplace_back(vote{
                                 voter,
-                                std::min(get_prop_t(weight), 1.0),
+                                std::min(get_prop(weight), 1.0),
                                 PRECISION_DIV * static_cast<double>(FP(_state.balances[voter].vestamount)), //raw amount
                                 static_cast<double>(current_time)
                             });
                         } else {
-                            vote_itr->revote_diff = std::min(get_prop_t(weight), 1.0) - get_prop_t(vote_itr->weight);
+                            vote_itr->revote_diff = std::min(get_prop(weight), 1.0) - vote_itr->weight;
                             vote_itr->revote_vesting =
                                 PRECISION_DIV * static_cast<double>(FP(_state.balances[voter].vestamount));
                         }
