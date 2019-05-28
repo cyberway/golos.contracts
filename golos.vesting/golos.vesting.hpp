@@ -34,7 +34,6 @@ public:
     [[eosio::action]] void timeout();
     [[eosio::action]] void timeoutconv();
     [[eosio::action]] void timeoutrdel();
-    [[eosio::action]] void paydelegator(name account, asset reward, name delegator, uint8_t payout_strategy);
 
     void on_transfer(name from, name to, asset quantity, std::string memo);
     void do_transfer_vesting(name from, name to, asset quantity, std::string memo);

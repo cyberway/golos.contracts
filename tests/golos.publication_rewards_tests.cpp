@@ -425,19 +425,22 @@ public:
                         }
                     }
                     for (auto& r : cur_rewards) {
-                        auto dlg_payout_sum = 0;
+                        auto dlg_payout_sum = 0.0;
                         for (auto& dlg : _state.delegators) {
                             if (r.first == dlg.delegatee) {
                                 auto available_vesting = _state.balances[r.first].vestamount - _state.dlg_balances[r.first].delegated;
                                 auto effective_vesting = available_vesting + _state.dlg_balances[r.first].received;
                                 auto interest_rate = dlg.amount * dlg.interest_rate / effective_vesting;
-                                auto dlg_payout = r.second * interest_rate / golos::config::_100percent;                      
+                                if (interest_rate == 0)
+                                    continue;
+                                auto dlg_payout = r.second * interest_rate / golos::config::_100percent;
+                                _state.balances[dlg.delegator].vestamount += dlg_payout; 
+
                                 dlg_payout_sum += dlg_payout;
                             }
                         }
-                        auto cur_payout = r.second - dlg_payout_sum;
-                        pay(_forum_name, r.first, cur_payout, payment_t::VESTING);
-                        unclaimed_funds -= cur_payout;
+                        pay(_forum_name, r.first, r.second - dlg_payout_sum, payment_t::VESTING);
+                        unclaimed_funds -= r.second;
                     }
 
                     auto author_payout =  payout - curation_payout;
@@ -571,7 +574,7 @@ public:
                             m.votes.emplace_back(vote{
                                 voter,
                                 std::min(get_prop(weight), 1.0),
-                                PRECISION_DIV * static_cast<double>(FP(_state.balances[voter].vestamount)), //raw amount
+                                PRECISION_DIV * static_cast<double>(FP(_state.balances[voter].vestamount + _state.dlg_balances[voter].received)), //raw amount
                                 static_cast<double>(current_time)
                             });
                         else {

@@ -351,8 +351,8 @@ void publication::payto(name user, eosio::asset quantity, enum_t mode, std::stri
         eosio_assert(false, "publication::payto: unknown kind of payment");
 }
 
-int64_t publication::pay_curators(name author, uint64_t msgid, int64_t max_rewards, fixp_t weights_sum, symbol tokensymbol, std::string memo) {
-    tables::vote_table vs(_self, author.value);
+int64_t publication::pay_curators(structures::mssgid message_id, uint64_t msgid, int64_t max_rewards, fixp_t weights_sum, symbol tokensymbol, std::string memo) {
+    tables::vote_table vs(_self, message_id.author.value);
     int64_t unclaimed_rewards = max_rewards;
 
     auto idx = vs.get_index<"messageid"_n>();
@@ -363,7 +363,7 @@ int64_t publication::pay_curators(name author, uint64_t msgid, int64_t max_rewar
             eosio_assert(claim <= unclaimed_rewards, "LOGIC ERROR! publication::pay_curators: claim > unclaimed_rewards");
             if(claim > 0) {
                 unclaimed_rewards -= claim;
-                claim -= pay_delegators(claim, v->voter, tokensymbol, v->delegators);
+                claim -= pay_delegators(claim, v->voter, tokensymbol, v->delegators, message_id);
                 payto(v->voter, eosio::asset(claim, tokensymbol), static_cast<enum_t>(payment_t::VESTING), memo);
             }
         }
@@ -518,7 +518,7 @@ void publication::paymssgrwrd(structures::mssgid message_id) {
     auto curation_payout = int_cast(percent * elai_t(payout.amount));
 
     eosio_assert((curation_payout <= payout.amount) && (curation_payout >= 0), "publication::payrewards: wrong curation_payout");
-    auto unclaimed_rewards = pay_curators(message_id.author, mssg_itr->id, curation_payout, FP(mssg_itr->state.sumcuratorsw), payout.symbol, get_memo("curators", message_id));
+    auto unclaimed_rewards = pay_curators(message_id, mssg_itr->id, curation_payout, FP(mssg_itr->state.sumcuratorsw), payout.symbol, get_memo("curators", message_id));
 
     eosio_assert(unclaimed_rewards >= 0, "publication::payrewards: unclaimed_rewards < 0");
     
@@ -910,14 +910,12 @@ void publication::erase_reblog(name rebloger, structures::mssgid message_id) {
 }
 
 int64_t publication::pay_delegators(int64_t claim, name voter,
-        eosio::symbol tokensymbol, std::vector<structures::delegate_voter> delegate_list) {
+        eosio::symbol tokensymbol, std::vector<structures::delegate_voter> delegate_list, structures::mssgid message_id) {
     int64_t dlg_payout_sum = 0;
     for (auto delegate_obj : delegate_list) {
         auto dlg_payout = claim * delegate_obj.interest_rate / config::_100percent;
-        INLINE_ACTION_SENDER(golos::vesting, paydelegator) (config::vesting_name,
-            {config::vesting_name, config::active_name},
-            {voter, eosio::asset(dlg_payout, tokensymbol), delegate_obj.delegator,
-            delegate_obj.payout_strategy});
+        payto(delegate_obj.delegator, eosio::asset(dlg_payout, tokensymbol), static_cast<enum_t>(payment_t::VESTING), get_memo("delegator", message_id));
+
         dlg_payout_sum += dlg_payout;
     }
     return dlg_payout_sum;

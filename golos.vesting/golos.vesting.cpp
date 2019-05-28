@@ -544,33 +544,8 @@ void vesting::timeout() {
     trx.send(_self.value, _self);
 }
 
-void vesting::paydelegator(name account, asset reward, name delegator, uint8_t payout_strategy) {
-    require_auth(_self);
-    if (payout_strategy == config::payout_strategy::to_delegated_vesting) {
-        delegation_table table(_self, reward.symbol.code().raw());
-        auto index_table = table.get_index<"delegator"_n>();
-        auto delegate_record = index_table.find({delegator, account});
-        if (delegate_record != index_table.end()) {
-            account_table acc_table_dlg(_self, delegator.value);
-            auto balance_dlg = acc_table_dlg.find(reward.symbol.code().raw());
-            acc_table_dlg.modify(balance_dlg, name(), [&](auto& item) {
-                item.delegated += reward;
-            });
-            account_table acc_table_rcv(_self, account.value);
-            auto balance_rcv = acc_table_rcv.find(reward.symbol.code().raw());
-            acc_table_rcv.modify(balance_rcv, name(), [&](auto& item) {
-                item.received += reward;
-            });
-            index_table.modify(delegate_record, name(), [&](auto& item) {
-                item.quantity += reward;
-            });
-        }
-    }
-    add_balance(delegator, reward, same_payer);
-}
-
 } // golos
 
 DISPATCH_WITH_BULK_TRANSFER(golos::vesting, on_transfer, on_bulk_transfer, (validateprms)(setparams)
         (retire)(unlocklimit)(withdraw)(stopwithdraw)(delegate)(undelegate)(create)
-        (open)(close)(timeout)(timeoutconv)(timeoutrdel)(paydelegator))
+        (open)(close)(timeout)(timeoutconv)(timeoutrdel))

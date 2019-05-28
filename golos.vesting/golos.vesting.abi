@@ -158,16 +158,6 @@
       ]
     },
     {
-       "name": "paydelegator",
-       "base": "",
-       "fields": [
-          {"name":"voter",            "type":"name"},
-          {"name":"reward",           "type":"asset"},
-          {"name":"delegator",        "type":"name"},
-          {"name":"payout_strategy",  "type":"uint8"}
-       ]
-    },
-    {
        "name": "vesting_state",
        "base": "",
        "fields": [
@@ -221,7 +211,6 @@
     {"name":"stopwithdraw", "type":"stop_withdraw"},
     {"name":"delegate",     "type":"delegate"},
     {"name":"undelegate",   "type":"base_transfer"},
-    {"name":"paydelegator", "type":"paydelegator"},
     {"name":"timeoutrdel",  "type":"empty"},
     {"name":"timeoutconv",  "type":"empty"},
     {"name":"timeout",      "type":"empty"}
