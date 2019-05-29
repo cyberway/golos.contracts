@@ -80,6 +80,16 @@ struct golos_posting_api: base_contract_api {
         );
     }
 
+    action_result erase_reblog_msg(
+        account_name rebloger,
+        mssgid message_id
+    ) {
+        return push(N(erasereblog), rebloger, args()
+            ("rebloger", rebloger)
+            ("message_id", message_id)
+        );
+    }
+
     action_result update_msg(
         mssgid message_id,
         std::string title,

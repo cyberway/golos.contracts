@@ -707,6 +707,10 @@ BOOST_FIXTURE_TEST_CASE(reblog_message, golos_publication_tester) try {
                                                  {N(brucelee), "permlink"},
                                                  "",
                                                  "bodymssg"));
+
+    BOOST_TEST_MESSAGE("--- checking message for erase reblog.");
+    BOOST_CHECK_EQUAL(success(), post.erase_reblog_msg(N(chucknorris),
+                                                 {N(brucelee), "permlink"}));
 } FC_LOG_AND_RETHROW()
 
 BOOST_AUTO_TEST_SUITE_END()

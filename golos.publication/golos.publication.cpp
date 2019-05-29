@@ -48,6 +48,8 @@ extern "C" {
             execute_action(&publication::set_params);
         if (NN(reblog) == action)
             execute_action(&publication::reblog);
+        if (NN(erasereblog) == action)
+            execute_action(&publication::erase_reblog);
         if (NN(setcurprcnt) == action)
             execute_action(&publication::set_curators_prcnt);
         if (NN(calcrwrdwt) == action)
@@ -882,6 +884,17 @@ void publication::reblog(name rebloger, structures::mssgid message_id, std::stri
     auto permlink_itr = permlink_index.find(message_id.permlink);
     eosio::check(permlink_itr != permlink_index.end(),
                  "You can't reblog, because this message doesn't exist.");
+}
+
+void publication::erase_reblog(name rebloger, structures::mssgid message_id) {
+    require_auth(rebloger);
+    eosio_assert(rebloger != message_id.author, "You cannot erase reblog your own content.");
+
+    tables::permlink_table permlink_table(_self, message_id.author.value);
+    auto permlink_index = permlink_table.get_index<"byvalue"_n>();
+    auto permlink_itr = permlink_index.find(message_id.permlink);
+    eosio::check(permlink_itr != permlink_index.end(),
+                 "You can't erase reblog, because this message doesn't exist.");
 }
 
 int64_t publication::pay_delegators(int64_t claim, name voter,

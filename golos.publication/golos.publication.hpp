@@ -27,6 +27,7 @@ public:
     void close_message(structures::mssgid message_id);
     void set_params(std::vector<posting_params> params);
     void reblog(name rebloger, structures::mssgid message_id, std::string headermssg, std::string bodymssg);
+    void erase_reblog(name rebloger, structures::mssgid message_id);
     void set_curators_prcnt(structures::mssgid message_id, uint16_t curators_prcnt);
     void calcrwrdwt(name account, int64_t mssg_id, int64_t post_charge);
     void paymssgrwrd(structures::mssgid message_id);
