@@ -41,7 +41,7 @@ public:
 
         produce_block();
         create_accounts(_users);
-        create_accounts({"issuer"_n, cfg::control_name, cfg::token_name, cfg::vesting_name, cfg::social_name});
+        create_accounts({"issuer"_n, cfg::control_name, cfg::token_name, cfg::vesting_name, cfg::social_name, cfg::charge_name});
         produce_block();
 
         set_authority(cfg::social_name, "active", authority(1,
