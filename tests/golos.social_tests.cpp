@@ -4,6 +4,7 @@
 #include "golos.vesting_test_api.hpp"
 #include "cyber.token_test_api.hpp"
 #include "golos.social_test_api.hpp"
+#include "golos.charge_test_api.hpp"
 #include <common/config.hpp>
 #include "contracts.hpp"
 
@@ -24,6 +25,7 @@ protected:
     golos_vesting_api vest;
     cyber_token_api token;
     golos_social_api social;
+    golos_charge_api charge;
 
     std::vector<account_name> _users;
 public:
@@ -34,6 +36,7 @@ public:
         , vest({this, cfg::vesting_name, _vesting_sym})
         , token({this, cfg::token_name, _token_sym})
         , social({this, cfg::social_name, _token_sym})
+        , charge(this, cfg::charge_name, _token_sym)
         , _users{_code, "dave"_n, "erin"_n} {
 
         produce_block();
@@ -50,6 +53,7 @@ public:
         install_contract(cfg::vesting_name, contracts::vesting_wasm(), contracts::vesting_abi());
         install_contract(cfg::token_name, contracts::token_wasm(), contracts::token_abi());
         install_contract(cfg::social_name, contracts::social_wasm(), contracts::social_abi());
+        install_contract(cfg::charge_name, contracts::charge_wasm(), contracts::charge_abi());
     }
 
     void init(int64_t issuer_funds, int64_t user_vesting_funds) {
