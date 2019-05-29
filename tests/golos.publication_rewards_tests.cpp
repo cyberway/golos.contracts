@@ -539,17 +539,17 @@ BOOST_FIXTURE_TEST_CASE(basic_tests, reward_calcs_tester) try {
     init(bignum, 500000);
     produce_blocks();
     BOOST_TEST_MESSAGE("--- setrules");
-    BOOST_CHECK_EQUAL(err.not_monotonic,
-        setrules({"x", bignum}, {"log2(x + 1.0)", bignum}, {"1-x", bignum},
-        [](double x){ return x; }, [](double x){ return log2(x + 1.0); }, [](double x){ return 1.0-x; }));
+//    BOOST_CHECK_EQUAL(err.not_monotonic,
+//        setrules({"x", bignum}, {"log2(x + 1.0)", bignum}, {"1-x", bignum},
+//        [](double x){ return x; }, [](double x){ return log2(x + 1.0); }, [](double x){ return 1.0-x; }));
 
-    BOOST_CHECK_EQUAL(err.fp_cast_overflow,
-        setrules({"x", std::numeric_limits<base_t>::max()}, {"sqrt(x)", bignum}, {"1", bignum},
-        [](double x){ return x; }, [](double x){ return sqrt(x); }, [](double x){ return 1.0; }));
+//    BOOST_CHECK_EQUAL(err.fp_cast_overflow,
+//        setrules({"x", std::numeric_limits<base_t>::max()}, {"sqrt(x)", bignum}, {"1", bignum},
+//        [](double x){ return x; }, [](double x){ return sqrt(x); }, [](double x){ return 1.0; }));
 
-    BOOST_CHECK_EQUAL(err.not_positive,
-        setrules({"x", bignum}, {"sqrt(x)", bignum}, {"-10.0+x", 15},
-        [](double x){ return x; }, [](double x){ return sqrt(x); }, [](double x){ return -10.0 + x; }));
+//    BOOST_CHECK_EQUAL(err.not_positive,
+//        setrules({"x", bignum}, {"sqrt(x)", bignum}, {"-10.0+x", 15},
+//        [](double x){ return x; }, [](double x){ return sqrt(x); }, [](double x){ return -10.0 + x; }));
 
     BOOST_CHECK_EQUAL(success(), setrules({"x^2", static_cast<base_t>(sqrt(bignum))}, {"sqrt(x)", bignum}, {"1", bignum},
         [](double x){ return x * x; }, [](double x){ return sqrt(x); }, [](double x){ return 1.0; }));

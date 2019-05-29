@@ -56,8 +56,8 @@ private:
     static fixp_t get_delta(atmsp::machine<fixp_t>& machine, fixp_t old_val, fixp_t new_val,
         const structures::funcinfo& func);
 
-    elaf_t use_charge(tables::limit_table& lims, structures::limitparams::act_t act, name issuer,
-                        name account, int64_t eff_vesting, symbol_code token_code, bool vestpayment, elaf_t weight = elaf_t(1));
+    int16_t use_charge(tables::limit_table& lims, structures::limitparams::act_t act, name issuer,
+                        name account, int64_t eff_vesting, symbol_code token_code, bool vestpayment, int16_t weight = config::_100percent);
     void use_postbw_charge(tables::limit_table& lims, name issuer, name account, symbol_code token_code, int64_t mssg_id);
 
     fixp_t calc_available_rshares(name voter, int16_t weight, uint64_t cur_time, const structures::rewardpool& pool);

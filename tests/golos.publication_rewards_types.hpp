@@ -171,10 +171,19 @@ struct vote {
     double revote_vesting = 0.0;
     double revote_weight() const { return weight + revote_diff; };
     double rshares(int64_t charge = 0) const {
-        double current_power = std::min(static_cast<int>(golos::config::_100percent - charge), golos::config::_100percent) / golos::config::_100percent;
-        return revote_diff ? revote_weight() * current_power * revote_vesting : weight * current_power * vesting;
+        auto weight_charge = [&](double weight) -> double {
+            double current_power = std::min(static_cast<int>(golos::config::_100percent - charge), golos::config::_100percent) / golos::config::_100percent;
+            int used_charge = ((abs(weight) * golos::config::_100percent * current_power) + 200 - 1) / 200;
+            return used_charge;
+        };
+
+        auto weight_rshares = revote_diff ? revote_weight() : weight;
+        auto abs_rshares = revote_diff ? weight_charge(weight_rshares) * revote_vesting : weight_charge(weight_rshares) * vesting;
+        return (weight_rshares < 0) ? -abs_rshares : abs_rshares;
     };
-    double voteshares() const { return weight > 0.0 ? weight * vesting : 0.0; };
+    double voteshares() const {
+        return weight > 0.0 ? weight * vesting : 0.0;
+    };
 };
 
 struct beneficiary {
