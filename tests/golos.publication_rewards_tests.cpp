@@ -188,7 +188,7 @@ public:
         std::function<double(double)>&& mainfunc_,
         std::function<double(double)>&& curationfunc_,
         std::function<double(double)>&& timepenalty_,
-        const limitsarg& lims = {{"0"}, {{0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}}, {0, 0}, {0, 0, 0}},
+        limitsarg lims = {{"0"}, {{0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}}, {0, 0}, {0, 0, 0}},
         vector<limits::func_t>&& func_restorers = {
             [](double, double, double){ return 0.0; }
         }
@@ -1285,6 +1285,52 @@ BOOST_FIXTURE_TEST_CASE(golos_delegators_test, reward_calcs_tester) try {
     BOOST_CHECK_EQUAL(vest.get_balance_raw(_users[24])["vesting"].as<asset>(), voter_amount);
     BOOST_CHECK_GT(vest.get_balance_raw(_users[15])["vesting"].as<asset>(), delegator_amount);
     check();
+} FC_LOG_AND_RETHROW()
+
+BOOST_FIXTURE_TEST_CASE(posting_bw_penalty, reward_calcs_tester) try {
+    BOOST_TEST_MESSAGE("Posting bw penalty testing");
+    int64_t maxfp = std::numeric_limits<fixp_t>::max();
+    auto bignum = 500000000000;
+    auto five_min = 5*60;
+    auto window = 5000;
+    init(bignum, 500000);
+    produce_blocks();
+    
+    name action = "calcrwrdwt"_n;
+    auto auth = authority(1, {}, {
+        {.permission = {golos::config::charge_name, config::eosio_code_name}, .weight = 1}
+    });
+    set_authority(_code, action, auth, "active");
+    link_authority(_code, _code, action, action);
+
+    auto params = "[" + post.get_str_cashout_window(window, post.upvote_lockout) + "]";
+    BOOST_CHECK_EQUAL(success(), post.set_params(params));
+
+    BOOST_TEST_MESSAGE("--- setrules");
+    using namespace golos_curation;
+    limitsarg lims = {{"t/300", "t/200", "t/(5*86400)", "t*p/86400"}, {{1, 0, cfg::_100percent, cfg::_100percent}, {2, 1, cfg::_100percent, cfg::_100percent/10}, {0, 2, cfg::_100percent, cfg::_100percent/(5*40)}, {3, 3, cfg::_100percent*4, cfg::_100percent}}, {0, 0}, {0, 0, 0}};
+    vector<limits::func_t> restorers_fn = {
+            [](double p, double v, double t){ return t/300; },
+            [](double p, double v, double t){ return t/200; }, 
+            [](double p, double v, double t){ return t/(5*86400); },
+            [](double p, double v, double t){ return t*p/86400; }
+        };
+    
+    BOOST_CHECK_EQUAL(success(), setrules({"x", maxfp}, {golos_curation::func_str, maxfp}, {"x/1800", 1800},
+        [](double x){ return x; }, golos_curation::func, [](double x){ return x / 1800.0; }, lims, std::move(restorers_fn)));
+    check();
+    
+    BOOST_TEST_MESSAGE("--- create four messages");
+    for (auto i = 0; i < 4; i++) {
+        BOOST_TEST_MESSAGE("--- create_message: " << name{_users[0]}.to_string());
+        BOOST_CHECK_EQUAL(success(), create_message({_users[0], "permlink" + std::to_string(i)}));
+        BOOST_TEST_CHECK(post.get_message(_users[0], i+1)["rewardweight"].as<uint16_t>(), cfg::_100percent);
+        produce_blocks(golos::seconds_to_blocks(five_min));
+    }
+
+    BOOST_TEST_MESSAGE("--- create_message: " << name{_users[0]}.to_string());
+    BOOST_CHECK_EQUAL(success(), create_message({_users[0], "permlink5"}));
+    BOOST_CHECK(post.get_message(_users[0], 5)["rewardweight"].as<uint16_t>() < cfg::_100percent);
 } FC_LOG_AND_RETHROW()
 
 BOOST_AUTO_TEST_SUITE_END()
