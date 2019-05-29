@@ -360,6 +360,13 @@ public:
         }
 #endif
     }
+
+    bool check_vest_acc(account_name user) {
+        if (_state.balances[user].vestclosed)
+            return true;
+        return false;
+    }
+
     void pay_rewards_in_state() {
         const auto now = control->head_block_time().sec_since_epoch();
         for (auto itr_p = _state.pools.begin(); itr_p != _state.pools.end(); itr_p++) {
@@ -399,9 +406,9 @@ public:
                         }
                     }
                     for (auto& r : cur_rewards) {
-                        if (_state.balances[r.first].vestclosed) {
-                            _state.balances[_forum_name].paymentsamount += (r.second + close_acc_delta);
-                            _state.balances[_forum_name].tokenamount -= (r.second + close_acc_delta);
+                        if (check_vest_acc(r.first)) {
+                            _state.balances[_forum_name].paymentsamount += r.second;
+                            _state.balances[_forum_name].tokenamount -= r.second;
                         }
                         else {
                             _state.balances[r.first].vestamount += get_converted_to_vesting(r.second);
@@ -414,9 +421,9 @@ public:
                     double ben_payout_sum = 0.0;
                     for (auto& ben : m.beneficiaries) {
                         double ben_payout = author_payout * get_prop(ben.weight);
-                        if (_state.balances[ben.account].vestclosed) {
-                            _state.balances[_forum_name].paymentsamount += (ben_payout + close_acc_delta);
-                            _state.balances[_forum_name].tokenamount -= (ben_payout + close_acc_delta);
+                        if (check_vest_acc(ben.account)) {
+                            _state.balances[_forum_name].paymentsamount += ben_payout;
+                            _state.balances[_forum_name].tokenamount -= ben_payout;
                         }
                         else {
                             _state.balances[ben.account].vestamount += get_converted_to_vesting(ben_payout);
@@ -435,9 +442,9 @@ public:
                     }
                     _state.balances[_forum_name].tokenamount -= author_token_rwrd;
                     auto author_vest_rwrd = author_payout * (1.0 - m.tokenprop);
-                    if (_state.balances[m.key.author].vestclosed) {
-                        _state.balances[_forum_name].paymentsamount += (author_vest_rwrd + close_acc_delta);
-                        _state.balances[_forum_name].tokenamount -= (author_token_rwrd + close_acc_delta);
+                    if (check_vest_acc(m.key.author)) {
+                        _state.balances[_forum_name].paymentsamount += author_vest_rwrd;
+                        _state.balances[_forum_name].tokenamount -= author_token_rwrd;
                     }
                     else {
                         _state.balances[m.key.author].vestamount += get_converted_to_vesting(author_vest_rwrd);
@@ -951,7 +958,7 @@ BOOST_FIXTURE_TEST_CASE(golos_curation_test, reward_calcs_tester) try {
     check();
 } FC_LOG_AND_RETHROW()
 
-BOOST_FIXTURE_TEST_CASE(golos_close_acc_test, reward_calcs_tester) try {
+BOOST_FIXTURE_TEST_CASE(close_token_acc_test, reward_calcs_tester) try {
     BOOST_TEST_MESSAGE("golos_close_acc_test");
     int64_t maxfp = std::numeric_limits<fixp_t>::max();
     auto bignum = 500000000000;
@@ -980,9 +987,48 @@ BOOST_FIXTURE_TEST_CASE(golos_close_acc_test, reward_calcs_tester) try {
     check();
 
     BOOST_CHECK_EQUAL(success(), close_token_acc(_users[0], _token_symbol));
-    BOOST_CHECK_EQUAL(success(), close_vest_acc(_users[0], _token_symbol));
+    BOOST_TEST_CHECK(token.get_account(_users[0]).is_null());
 
+    auto forum_name_balance = token.get_account(_forum_name)["payments"].as<asset>();
     produce_blocks(golos::seconds_to_blocks(post.window));
+    BOOST_CHECK_GT(token.get_account(_forum_name)["payments"].as<asset>(), forum_name_balance); 
+    check();
+} FC_LOG_AND_RETHROW()
+
+BOOST_FIXTURE_TEST_CASE(close_vest_acc_test, reward_calcs_tester) try {
+    BOOST_TEST_MESSAGE("golos_close_acc_test");
+    int64_t maxfp = std::numeric_limits<fixp_t>::max();
+    auto bignum = 500000000000;
+    init(bignum, 500000);
+    produce_blocks();
+    BOOST_TEST_MESSAGE("--- setrules");
+    using namespace golos_curation;
+    BOOST_CHECK_EQUAL(success(), setrules({"x", maxfp}, {golos_curation::func_str, maxfp}, {"1", bignum},
+        [](double x){ return x; }, golos_curation::func, [](double x){ return 1.0; }));
+    check();
+
+    BOOST_TEST_MESSAGE("--- add_funds_to_forum");
+    BOOST_CHECK_EQUAL(success(), add_funds_to_forum(50000));
+    check();
+
+    BOOST_TEST_MESSAGE("--- checking payout if account is closed");
+    BOOST_TEST_MESSAGE("--- create_message: " << name{_users[0]}.to_string());
+    BOOST_CHECK_EQUAL(success(), create_message({_users[0], "permlink"}));
+    check();
+
+    BOOST_TEST_MESSAGE("--- " << name{_users[1]}.to_string() << " voted");
+    BOOST_CHECK_EQUAL(success(), addvote(_users[1], {_users[0], "permlink"}, 10000));
+    check();
+
+    BOOST_CHECK_EQUAL(success(), retire_vest(vest.get_balance_raw(_users[0])["vesting"].as<asset>(), _users[0], _issuer));
+    check();
+
+    BOOST_CHECK_EQUAL(success(), close_vest_acc(_users[0], _token_symbol));
+    BOOST_TEST_CHECK(vest.get_balance_raw(_users[0]).is_null());
+
+    auto forum_name_balance = token.get_account(_forum_name)["payments"].as<asset>();
+    produce_blocks(golos::seconds_to_blocks(post.window));
+    BOOST_CHECK_GT(token.get_account(_forum_name)["payments"].as<asset>(), forum_name_balance); 
     check();
 } FC_LOG_AND_RETHROW()
 

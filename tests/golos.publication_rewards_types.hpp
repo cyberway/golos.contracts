@@ -46,8 +46,6 @@ constexpr double balance_delta = 0.01;
 constexpr double funds_delta = 0.01;
 constexpr double pool_rshares_delta = 0.01;
 constexpr double pool_rsharesfn_delta = 0.01;
-constexpr double close_acc_delta = 0.001;
-
 
 inline double get_prop(int64_t arg) {
     return static_cast<double>(arg) / static_cast<double>(golos::config::_100percent);
