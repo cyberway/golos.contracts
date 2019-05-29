@@ -361,10 +361,27 @@ public:
 #endif
     }
 
-    bool check_vest_acc(account_name user) {
-        if (_state.balances[user].vestclosed)
-            return true;
-        return false;
+    void set_payout(
+            account_name user, 
+            double payout, 
+            std::string type = "", 
+            double author_token_rwrd = 0.0, 
+            double tokenprop = 0.0) 
+    {
+        auto pt = payout;
+        if (type == "author") {
+            pt = author_token_rwrd;
+            payout = payout * (1.0 - tokenprop);
+        }
+
+        if (_state.balances[user].vestclosed) {
+            _state.balances[_forum_name].paymentsamount += payout;
+            _state.balances[_forum_name].tokenamount -= pt;
+        }
+        else {
+            _state.balances[user].vestamount += get_converted_to_vesting(payout);
+            _state.balances[_forum_name].tokenamount -= payout;
+        }
     }
 
     void pay_rewards_in_state() {
@@ -406,14 +423,7 @@ public:
                         }
                     }
                     for (auto& r : cur_rewards) {
-                        if (check_vest_acc(r.first)) {
-                            _state.balances[_forum_name].paymentsamount += r.second;
-                            _state.balances[_forum_name].tokenamount -= r.second;
-                        }
-                        else {
-                            _state.balances[r.first].vestamount += get_converted_to_vesting(r.second);
-                            _state.balances[_forum_name].tokenamount -= r.second;
-                        }
+                        set_payout(r.first, r.second);
                         unclaimed_funds -= r.second;
                     }
 
@@ -421,14 +431,7 @@ public:
                     double ben_payout_sum = 0.0;
                     for (auto& ben : m.beneficiaries) {
                         double ben_payout = author_payout * get_prop(ben.weight);
-                        if (check_vest_acc(ben.account)) {
-                            _state.balances[_forum_name].paymentsamount += ben_payout;
-                            _state.balances[_forum_name].tokenamount -= ben_payout;
-                        }
-                        else {
-                            _state.balances[ben.account].vestamount += get_converted_to_vesting(ben_payout);
-                            _state.balances[_forum_name].tokenamount -= ben_payout;
-                        }
+                        set_payout(ben.account, ben_payout);
                         ben_payout_sum += ben_payout;
                     }
                     author_payout -= ben_payout_sum;
@@ -441,15 +444,7 @@ public:
                         _state.balances[m.key.author].paymentsamount += author_token_rwrd;
                     }
                     _state.balances[_forum_name].tokenamount -= author_token_rwrd;
-                    auto author_vest_rwrd = author_payout * (1.0 - m.tokenprop);
-                    if (check_vest_acc(m.key.author)) {
-                        _state.balances[_forum_name].paymentsamount += author_vest_rwrd;
-                        _state.balances[_forum_name].tokenamount -= author_token_rwrd;
-                    }
-                    else {
-                        _state.balances[m.key.author].vestamount += get_converted_to_vesting(author_vest_rwrd);
-                        _state.balances[_forum_name].tokenamount -= author_vest_rwrd;
-                    }
+                    set_payout(m.key.author, author_payout, "author", author_token_rwrd, m.tokenprop);
 
                     p.messages.erase(itr_m++);
                     p.funds -= (payout - unclaimed_funds);
