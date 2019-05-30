@@ -368,7 +368,7 @@ int16_t publication::use_charge(tables::limit_table& lims, structures::limitpara
     int16_t k = 200;
     if (lim_itr->price)
         k = config::_100percent / lim_itr->price;
-    print("\n k: ", k);
+
     if (act == structures::limitparams::VOTE) {
         print("\n@@ ", account.value);
         print("\n weight: ", weight);
@@ -376,10 +376,8 @@ int16_t publication::use_charge(tables::limit_table& lims, structures::limitpara
         auto current_power = charge::get_current_value(config::charge_name, account, token_code, lim_itr->charge_id);
         int16_t charge = config::_100percent - current_power;
 
-        auto used_charge = static_cast<int16_t>((((static_cast<int64_t>(abs(weight)) * charge) / config::_100percent)  + k - 1) / k);
-        print("\n charge: ", used_charge);
-
-        return used_charge;
+        weight = static_cast<int16_t>((((static_cast<int64_t>(abs(weight)) * charge) / config::_100percent)  + k - 1) / k);
+        print("\n charge: ", weight);
     }
 
     if(lim_itr->price >= 0)
@@ -587,8 +585,10 @@ fixp_t publication::calc_available_rshares(name voter, int16_t weight, uint64_t 
     eosio_assert(used_power, "ASSERT: used_power = 0");
     print("\n used_power: ", used_power);
 
-    fixp_t abs_rshares = (FP(eff_vesting) * elaf_t(elai_t(used_power) / elai_t(config::_100percent)));
-    print("\n abs_rshares: ",  int_cast(abs_rshares * elai_t(config::_100percent)));
+    fixp_t abs_rshares = (FP(eff_vesting * used_power) / elai_t(config::_100percent));
+
+    print("\n eff_vesting: ",  eff_vesting);
+    print("\n abs_rshares: ",  int_cast(abs_rshares * elai_t(1000000)));
     return (weight < 0) ? -abs_rshares : abs_rshares;
 }
 
