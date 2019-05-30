@@ -173,7 +173,7 @@ struct vote {
     double rshares(int64_t charge = 0) const {
         auto weight_charge = [&](double weight) -> double {
             double current_power = std::min(static_cast<int>(golos::config::_100percent - charge), golos::config::_100percent) / golos::config::_100percent;
-            int used_charge = (((abs(weight) * golos::config::_100percent * current_power) / 200) + 200 - 1) / 200;
+            int used_charge = ((abs(weight) * golos::config::_100percent * current_power) + 200 - 1) / 200;
             return used_charge;
         };
 

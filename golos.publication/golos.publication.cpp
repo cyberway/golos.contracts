@@ -376,8 +376,8 @@ int16_t publication::use_charge(tables::limit_table& lims, structures::limitpara
         auto current_power = charge::get_current_value(config::charge_name, account, token_code, lim_itr->charge_id);
         int16_t charge = config::_100percent - current_power;
 
-        auto used_charge = static_cast<int16_t>(((((static_cast<int64_t>(abs(weight)) * charge) / config::_100percent) / k)  + k - 1) / k);
-        print("\n charge: ", weight);
+        auto used_charge = static_cast<int16_t>((((static_cast<int64_t>(abs(weight)) * charge) / config::_100percent)  + k - 1) / k);
+        print("\n charge: ", used_charge);
 
         return used_charge;
     }
