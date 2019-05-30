@@ -66,7 +66,8 @@ public:
     }
 
     void prepare_balances() {
-        BOOST_CHECK_EQUAL(success(), token.create(cfg::emission_name, token.make_asset(1e5), {_code}));
+        // token.create_invoice_authority(cfg::emission_name, {_code});
+        BOOST_CHECK_EQUAL(success(), token.create(cfg::emission_name, token.make_asset(1e5)));
         produce_block();
 
         BOOST_CHECK_EQUAL(success(), vest.create_vesting(cfg::emission_name));

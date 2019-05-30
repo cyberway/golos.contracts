@@ -1,12 +1,23 @@
 #pragma once
 #include "test_api_helper.hpp"
 #include "../common/config.hpp"
+#include "contracts.hpp"
 
 namespace eosio { namespace testing {
+
+namespace cfg = golos::config;
 
 struct golos_referral_api: base_contract_api {
     golos_referral_api(golos_tester* tester, name code)
         :   base_contract_api(tester, code) {}
+
+    void initialize_contract(name token_name) {
+        _tester->install_contract(_code, contracts::referral_wasm(), contracts::referral_abi());
+
+        _tester->set_authority(_code, cfg::code_name, create_code_authority({_code}), "active");
+        _tester->link_authority(_code, _code, cfg::code_name, N(closeoldref));
+        _tester->link_authority(_code, token_name, cfg::code_name, N(transfer));
+    }
 
     //// referral actions
      action_result create_referral(name referrer, name referral, uint32_t percent, uint64_t expire, asset breakout) {

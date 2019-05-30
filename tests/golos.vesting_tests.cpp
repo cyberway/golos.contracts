@@ -42,7 +42,8 @@ public:
     }
 
     void prepare_balances(int supply = 1e5, int issue1 = 500, int issue2 = 500, int buy1 = default_vesting_amount, int buy2 = default_vesting_amount) {
-        BOOST_CHECK_EQUAL(success(), token.create(cfg::emission_name, token.make_asset(supply), {cfg::charge_name, cfg::publish_name}));
+        // token.create_invoice_authority(cfg::emission_name, {cfg::charge_name, cfg::publish_name});
+        BOOST_CHECK_EQUAL(success(), token.create(cfg::emission_name, token.make_asset(supply)));
         BOOST_CHECK_EQUAL(success(), token.issue(cfg::emission_name, N(sania), token.make_asset(issue1), "issue tokens sania"));
         BOOST_CHECK_EQUAL(success(), token.issue(cfg::emission_name, N(pasha), token.make_asset(issue2), "issue tokens pasha"));
         produce_block();
@@ -188,7 +189,8 @@ BOOST_FIXTURE_TEST_CASE(create_vesting, golos_vesting_tester) try {
     BOOST_TEST_MESSAGE("Test creating vesting");
     auto issuer = cfg::emission_name;
 
-    BOOST_CHECK_EQUAL(success(), token.create(issuer, token.make_asset(100000), {cfg::charge_name}));
+    // token.create_invoice_authority(issuer, {cfg::charge_name});
+    BOOST_CHECK_EQUAL(success(), token.create(issuer, token.make_asset(100000)));
 
     BOOST_TEST_MESSAGE("--- fail on non-existing token");
     BOOST_CHECK_EQUAL(err.key_not_found, vest.create_vesting(issuer, symbol(_token_precision, "GOLOSA")));
@@ -223,7 +225,8 @@ BOOST_FIXTURE_TEST_CASE(buy_vesting, golos_vesting_tester) try {
 
 BOOST_FIXTURE_TEST_CASE(bulk_buy_vesting, golos_vesting_tester) try {
     BOOST_TEST_MESSAGE("Test bulk buying vesting / converting token to vesting");
-    BOOST_CHECK_EQUAL(success(), token.create(cfg::emission_name, token.make_asset(100000), {cfg::charge_name, cfg::publish_name}));
+    // token.create_invoice_authority(cfg::emission_name, {cfg::charge_name, cfg::publish_name});
+    BOOST_CHECK_EQUAL(success(), token.create(cfg::emission_name, token.make_asset(100000)));
     BOOST_CHECK_EQUAL(success(), token.issue(cfg::emission_name, N(sania), token.make_asset(100000), "issue tokens sania"));
     produce_block();
 

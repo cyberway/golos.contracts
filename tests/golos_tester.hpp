@@ -2,6 +2,7 @@
 #include <boost/test/unit_test.hpp>
 #include <eosio/testing/tester.hpp>
 #include <eosio/chain/abi_serializer.hpp>
+#include <eosio/chain/permission_link_object.hpp>
 #include <fc/variant_object.hpp>
 
 #define UNIT_TEST_ENV
@@ -27,6 +28,7 @@
 namespace eosio { namespace testing {
 
 uint64_t hash64(const std::string& arg);
+authority create_code_authority(const std::vector<name> contracts);
 
 // TODO: maybe use native db struct
 struct permission {
@@ -60,6 +62,10 @@ public:
     void install_contract(account_name acc, const std::vector<uint8_t>& wasm, const std::vector<char>& abi, bool produce = true);
 
     std::vector<permission> get_account_permissions(account_name a);
+    fc::optional<permission> get_account_permission(account_name a, permission_name p);
+
+    bool has_code_authority(name account, permission_name perm, name code);
+    bool has_link_authority(name account, permission_name perm, name code, action_name action);
 
     action_result push_and_check_action(account_name, action_name, account_name, const variant_object&);
     action_result push_action(account_name code, action_name name, account_name signer, const variant_object& data);

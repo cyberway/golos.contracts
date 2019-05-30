@@ -16,24 +16,24 @@ struct cyber_token_api: base_contract_api {
 
     symbol _symbol;
 
-    //// token actions
-    action_result create(account_name issuer, asset maximum_supply, std::vector<name> invoicers = {}) {
-        if (invoicers.size()) {
-            authority auth(1, {});
-            for (auto invoicer : invoicers) {
-                auth.accounts.emplace_back(permission_level_weight{.permission = {invoicer, config::eosio_code_name}, .weight = 1});
-            }
-            if (std::find(invoicers.begin(), invoicers.end(), issuer) == invoicers.end()) {
-                auth.accounts.emplace_back(permission_level_weight{.permission = {issuer, config::eosio_code_name}, .weight = 1});
-            }
-            std::sort(auth.accounts.begin(), auth.accounts.end(),
-                [](const permission_level_weight& l, const permission_level_weight& r) {
-                    return std::tie(l.permission.actor, l.permission.permission) <
-                        std::tie(r.permission.actor, r.permission.permission);
-                });
-            _tester->set_authority(issuer, golos::config::invoice_name, auth, "owner");
+    void create_invoice_authority(account_name issuer, std::vector<name> invoicers) {
+        authority auth(1, {});
+        for (auto invoicer : invoicers) {
+            auth.accounts.emplace_back(permission_level_weight{.permission = {invoicer, config::eosio_code_name}, .weight = 1});
         }
+        if (std::find(invoicers.begin(), invoicers.end(), issuer) == invoicers.end()) {
+            auth.accounts.emplace_back(permission_level_weight{.permission = {issuer, config::eosio_code_name}, .weight = 1});
+        }
+        std::sort(auth.accounts.begin(), auth.accounts.end(),
+            [](const permission_level_weight& l, const permission_level_weight& r) {
+                return std::tie(l.permission.actor, l.permission.permission) <
+                    std::tie(r.permission.actor, r.permission.permission);
+            });
+        _tester->set_authority(issuer, golos::config::invoice_name, auth, "active");
+    }
 
+    //// token actions
+    action_result create(account_name issuer, asset maximum_supply) {
         return push(N(create), _code, args()
             ("issuer", issuer)
             ("maximum_supply", maximum_supply)

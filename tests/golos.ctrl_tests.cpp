@@ -143,7 +143,8 @@ public:
     }
 
     void prepare_balances() {
-        BOOST_CHECK_EQUAL(success(), token.create(_issuer, dasset(100500), {cfg::vesting_name}));
+        // token.create_invoice_authority(_issuer, {cfg::vesting_name});
+        BOOST_CHECK_EQUAL(success(), token.create(_issuer, dasset(100500)));
         BOOST_CHECK_EQUAL(success(), vest.create_vesting(_issuer));
         BOOST_CHECK_EQUAL(success(), vest.open(cfg::vesting_name, _token, cfg::vesting_name));
         vector<std::pair<uint64_t,double>> amounts = {

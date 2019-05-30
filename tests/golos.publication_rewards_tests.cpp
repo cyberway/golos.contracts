@@ -61,7 +61,8 @@ protected:
         BOOST_CHECK_EQUAL(success(), post.init_default_params());
 
         auto total_funds = issuer_funds + _users.size() * user_vesting_funds;
-        BOOST_CHECK_EQUAL(success(), token.create(_issuer, asset(total_funds, _token_symbol), {_issuer, cfg::charge_name, _forum_name}));
+        // token.create_invoice_authority(_issuer, {_issuer, cfg::charge_name, _forum_name});
+        BOOST_CHECK_EQUAL(success(), token.create(_issuer, asset(total_funds, _token_symbol)));
         produce_blocks();
 
         BOOST_CHECK_EQUAL(success(), token.issue(_issuer, _issuer, asset(total_funds, _token_symbol), "HERE COULD BE YOUR ADVERTISEMENT"));
@@ -69,7 +70,7 @@ protected:
 
         BOOST_CHECK_EQUAL(success(), token.open(_forum_name, _token_symbol, _forum_name));
         BOOST_CHECK_EQUAL(success(), vest.create_vesting(_issuer, _token_symbol, cfg::control_name));
-        charge.link_invoice_permission(_issuer);
+        //charge.link_invoice_permission(_issuer);
         produce_blocks();
 
         BOOST_CHECK_EQUAL(success(), vest.open(_forum_name, _token_symbol, _forum_name));
@@ -674,7 +675,7 @@ BOOST_FIXTURE_TEST_CASE(limits_test, reward_calcs_tester) try {
 
     name action = "calcrwrdwt"_n;
     auto auth = authority(1, {}, {
-        {.permission = {golos::config::charge_name, golos::config::code_name}, .weight = 1}
+        {.permission = {golos::config::charge_name, config::eosio_code_name}, .weight = 1}
     });
     set_authority(_code, action, auth, "active");
     link_authority(_code, _code, action, action);

@@ -76,7 +76,7 @@ void referral::on_transfer(name from, name to, asset quantity, std::string memo)
     eosio_assert(it_referral->breakout.amount == quantity.amount, "Amount of funds doesn't equal.");
     
     INLINE_ACTION_SENDER(token, transfer)
-        (config::token_name, {_self, config::ccode_name},
+        (config::token_name, {_self, config::code_name},
         {_self, it_referral->referrer, quantity, ""});
 
     referrals.erase(it_referral);
@@ -98,7 +98,7 @@ void referral::closeoldref(uint64_t hash) {
     }
 
     transaction trx;
-    trx.actions.emplace_back( action(permission_level(_self, config::ccode_name), _self, "closeoldref"_n, st_hash{now()}) );
+    trx.actions.emplace_back( action(permission_level(_self, config::code_name), _self, "closeoldref"_n, st_hash{now()}) );
     trx.delay_sec = cfg.get().delay_params.delay_clear_old_ref;
     trx.send(_self.value, _self);
 }

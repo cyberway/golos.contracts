@@ -1,15 +1,25 @@
 #pragma once
 #include "test_api_helper.hpp"
 #include "golos.publication_rewards_types.hpp"
+#include <contracts.hpp>
 
 namespace eosio { namespace testing {
 
+namespace cfg = golos::config;
 
 struct golos_posting_api: base_contract_api {
     golos_posting_api(golos_tester* tester, name code, symbol sym)
     :   base_contract_api(tester, code)
     ,   _symbol(sym) {}
     symbol _symbol;
+
+    void initialize_contract(name token_name) {
+        _tester->install_contract(_code, contracts::posting_wasm(), contracts::posting_abi());
+
+        _tester->set_authority(_code, cfg::code_name, create_code_authority({_code}), "active");
+        _tester->link_authority(_code, _code, cfg::code_name, N(closemssg));
+        _tester->link_authority(_code, token_name, cfg::code_name, N(transfer));
+    }
 
     //// posting actions
     action_result set_rules(

@@ -30,6 +30,17 @@ public:
 
         install_contract(_code, contracts::emit_wasm(), contracts::emit_abi());
         install_contract(cfg::token_name, contracts::token_wasm(), contracts::token_abi());
+
+        authority auth(1, {});
+        auth.accounts.emplace_back(permission_level_weight{.permission = {_code, config::eosio_code_name}, .weight = 1});
+        set_authority(_code, golos::config::code_name, auth, "active");
+        link_authority(_code, _code, golos::config::code_name, N(emit));
+
+        auth = authority(1, {});
+        auth.accounts.emplace_back(permission_level_weight{.permission = {_code, config::eosio_code_name}, .weight = 1});
+        set_authority(_code, golos::config::issue_name, auth, "active");
+        link_authority(_code, golos::config::token_name, golos::config::issue_name, N(issue));
+        link_authority(_code, golos::config::token_name, golos::config::issue_name, N(transfer));
     }
 
 
