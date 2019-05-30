@@ -479,7 +479,7 @@ void publication::close_message(structures::mssgid message_id) {
             send_poolstate_event(item);
         });
 
-    transaction trx;
+    transaction trx(time_point_sec(now() + config::paymssgrwrd_expiration_sec));
     trx.actions.emplace_back(action{permission_level(_self, config::active_name), _self, "paymssgrwrd"_n, message_id});
     trx.delay_sec = 0;
     trx.send((static_cast<uint128_t>(mssg_itr->id) << 64) | message_id.author.value, _self);
