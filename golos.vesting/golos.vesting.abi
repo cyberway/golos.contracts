@@ -166,8 +166,7 @@
           {"name":"delegator",        "type":"name"},
           {"name":"payout_strategy",  "type":"uint8"}
        ]
-    }
-
+    },
     {
        "name": "vesting_state",
        "base": "",
@@ -234,7 +233,7 @@
       "indexes": [{
           "name": "primary",
           "unique": true,
-          "orders": [{"field": "supply.sym", "order": "asc"}]
+          "orders": [{"field": "supply._sym", "order": "asc"}]
       }]
     },
     {
@@ -243,12 +242,13 @@
       "indexes": [{
           "name": "primary",
           "unique": true,
-          "orders": [{"field": "vesting.sym", "order": "asc"}]
+          "orders": [{"field": "vesting._sym", "order": "asc"}]
       }]
     },
     {
       "name": "delegation",
       "type": "delegation",
+      "scope_type": "symbol_code",
       "indexes": [{
           "name": "primary",
           "unique": true,
@@ -282,6 +282,7 @@
     {
       "name": "withdrawal",
       "type": "withdrawal",
+      "scope_type": "symbol_code",
       "indexes": [{
           "name": "primary",
           "unique": true,
@@ -295,6 +296,7 @@
     {
       "name": "vestparams",
       "type": "vesting_state",
+      "scope_type": "symbol_code",
       "indexes": [{
           "name": "primary",
           "unique": true,

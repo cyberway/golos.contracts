@@ -133,7 +133,7 @@ void charge::send_charge_event(name user, const balance& state) {
 template<typename Lambda>
 void charge::consume_and_notify(name user, symbol_code token_code, uint8_t charge_id, int64_t price_arg, int64_t id, name code, name action_name, int64_t cutoff, name issuer, Lambda &&compare) {
     auto charge = consume_charge(issuer, user, token_code, charge_id, price_arg);
-    auto new_val = from_fixp(FP(charge.data()));
+    auto new_val = from_fixp(charge);
 
     if (compare(new_val, cutoff)) {
         action(

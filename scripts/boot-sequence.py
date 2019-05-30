@@ -25,6 +25,7 @@ args = {
 bios_boot_sequence=('{basedir}/cyberway.contracts/scripts/bios-boot-sequence/bios-boot-sequence.py '
                      '--cleos "{cleos}" --contracts-dir "{cyberway_contracts_dir}" '
                      '--public-key {public_key} --private-key {private_key} '
+                     '--symbol=CYBER '
                      '--docker --all {extra_args}').format(**args)
 if subprocess.call(bios_boot_sequence, shell=True):
     print('bios-boot-sequence.py exited with error')

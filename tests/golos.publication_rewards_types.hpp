@@ -34,8 +34,8 @@ struct message_data {
 };
 
 constexpr struct {
-    balance_data balance {10.0, 20.0};
-    pool_data pool {0.001, 15, -0.01, -0.01};
+    balance_data balance {0.01, 0.02};            // this values are divided to PRECISION_DIV, scale if change
+    pool_data pool {0.001, 0.015, -0.01, -0.01};  // 0.015 value is divided to PRECISION_DIV (=15 if PRECISION_DIV=1.0)
     message_data message {-0.01, -0.01, -0.01};
 } delta;
 
@@ -52,14 +52,13 @@ inline double get_prop(int64_t arg) {
 struct mssgid {
     eosio::chain::name author;
     std::string permlink;
-    uint64_t ref_block_num;
 
     auto get_unique_key() const {
-        return std::pair<std::string, uint64_t>(permlink, ref_block_num);
+        return permlink;
     }
 
     bool operator ==(const mssgid& rhs) const {
-        return author == rhs.author && permlink == rhs.permlink && ref_block_num == rhs.ref_block_num;
+        return author == rhs.author && permlink == rhs.permlink;
     }
 };
 
@@ -68,15 +67,16 @@ struct aprox_val_t {
     double val;
     double delta;
     bool operator ==(const aprox_val_t& rhs) const {
+        static constexpr double eps = 1.e-5;
         BOOST_REQUIRE_MESSAGE((rhs.delta >= 0.0 && delta >= 0.0) || (rhs.delta <= 0.0 && delta <= 0.0),
             "aprox_val_t operator ==(): wrong comparison mode");
-        if ((rhs.val > 0.0 && val < 0.0) || (rhs.val < 0.0 && val > 0.0))
+        if ((rhs.val > eps && val < -eps) || (rhs.val < -eps && val > eps))
             return false;
         double d = std::min(double(std::abs(rhs.delta)), std::abs(double(delta)));
         if (delta < 0.0) {
             double a = std::min(std::abs(rhs.val), std::abs(val));
             double b = std::max(std::abs(rhs.val), std::abs(val));
-            return b < 1.e-5 || (a / b) > (1.0 - d);
+            return b < eps || (a / b) > (1.0 - d);
         } else {
             return (val - d) <= rhs.val && rhs.val <= (val + d);
         }
@@ -100,10 +100,10 @@ struct statemap : public std::map<std::string, aprox_val_t> {
         return "balance of " +  acc.to_string() + ": ";
     }
     static std::string get_message_str(const mssgid& msg) {
-        return "message of " + msg.author.to_string() + " #" + msg.permlink + ", " + std::to_string(msg.ref_block_num) + ": ";
+        return "message of " + msg.author.to_string() + " #" + msg.permlink + ": ";
     }
     static std::string get_vote_str(account_name voter, const mssgid& msg) {
-        return "vote of " + voter.to_string() + " for message of " + msg.author.to_string() + " #" + msg.permlink + ", " + std::to_string(msg.ref_block_num) + ": ";
+        return "vote of " + voter.to_string() + " for message of " + msg.author.to_string() + " #" + msg.permlink + ": ";
     }
     void set_pool(uint64_t id, const pool_data& data = {}) {
         auto prefix = get_pool_str(id);
@@ -176,11 +176,7 @@ struct vote {
 
 struct beneficiary {
     account_name account;
-    int64_t deductprcnt;
-};
-
-struct tags {
-    std::string tag;
+    uint16_t weight;
 };
 
 struct message {
@@ -236,8 +232,8 @@ struct limits {
     enum kind_t: enum_t {POST, COMM, VOTE, POSTBW, UNDEF};
     std::vector<func_t> restorers; //(funcs of: prev_charge (p), vesting (v), elapsed_seconds (t))
     std::vector<limitedact> limitedacts;
-    std::vector<int64_t> vestingprices;//disabled if < 0
-    std::vector<int64_t> minvestings;
+    std::vector<double> vestingprices;//disabled if < 0
+    std::vector<double> minvestings;
 
     const limitedact& get_limited_act(kind_t kind) const {
         return limitedacts.at(static_cast<size_t>(kind));
@@ -373,6 +369,5 @@ struct state {
 
 }} // eosio::testing
 
-FC_REFLECT(eosio::testing::beneficiary, (account)(deductprcnt))
-FC_REFLECT(eosio::testing::tags, (tag))
-FC_REFLECT(eosio::testing::mssgid, (author)(permlink)(ref_block_num))
+FC_REFLECT(eosio::testing::beneficiary, (account)(weight))
+FC_REFLECT(eosio::testing::mssgid, (author)(permlink))

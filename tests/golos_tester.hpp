@@ -37,7 +37,7 @@ struct permission {
 
 struct contract_error_messages {
 protected:
-    const string amsg(const string& x) { return base_tester::wasm_assert_msg(x); }
+    const string amsg(const string& x) const { return base_tester::wasm_assert_msg(x); }
 };
 
 
@@ -49,7 +49,10 @@ protected:
     std::map<account_name, abi_serializer> _abis;
 
 public:
-    golos_tester(name code): tester(), _code(code), _chaindb(control->chaindb()) {
+    golos_tester(name code)
+    : tester(base_tester::default_config("_GOLOSTEST_"))
+    , _code(code)
+    , _chaindb(control->chaindb()) {
     }
     ~golos_tester() {
     }

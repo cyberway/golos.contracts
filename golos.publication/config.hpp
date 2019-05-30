@@ -5,6 +5,7 @@ namespace golos { namespace config {
 
 constexpr int64_t max_cashout_time = 60 * 60 * 24 * 40; //40 days
 constexpr size_t check_monotonic_steps = 10;
+constexpr unsigned paymssgrwrd_expiration_sec = 3*60*60;
 
 namespace limit_restorer_domain {//TODO: it will look better in a rule settings
     using namespace fixed_point_utils;

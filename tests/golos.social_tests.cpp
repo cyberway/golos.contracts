@@ -58,7 +58,7 @@ public:
         BOOST_CHECK_EQUAL(success(), vest.create_vesting("issuer"_n));
 
         funcparams fn{"0", 1};
-        BOOST_CHECK_EQUAL(success(), post.set_rules(fn, fn, fn, 0));
+        BOOST_CHECK_EQUAL(success(), post.set_rules(fn, fn, fn, 5000));
         BOOST_CHECK_EQUAL(success(), post.set_limit("post"));
         BOOST_CHECK_EQUAL(success(), post.set_limit("comment"));
         BOOST_CHECK_EQUAL(success(), post.set_limit("vote"));
@@ -92,7 +92,6 @@ protected:
         const string cannot_unblock_not_blocked = amsg("You have not blocked this account");
         const string already_blocked            = amsg("You already have blocked this account");
         const string you_are_blocked            = amsg("You are blocked by this account");
-        const string no_reputation              = amsg("The reputation has already removed");
     } err;
 };
 
@@ -174,14 +173,12 @@ BOOST_FIXTURE_TEST_CASE(golos_blocked_commenting_test, golos_social_tester) try 
     init(bignum, 10);
 
     BOOST_TEST_MESSAGE("--- create post: dave");
-    auto ref_block_num_dave = control->head_block_header().block_num();
-    BOOST_CHECK_EQUAL(success(), post.create_msg({"dave"_n, "permlink", ref_block_num_dave}));
+    BOOST_CHECK_EQUAL(success(), post.create_msg({"dave"_n, "permlink"}));
     produce_block();
 
     BOOST_TEST_MESSAGE("--- create comment: erin to dave");
-    auto ref_block_num_erin = control->head_block_header().block_num();
-    BOOST_CHECK_EQUAL(success(), post.create_msg({"erin"_n, "permlink2", ref_block_num_erin},
-                                                 {"dave"_n, "permlink", ref_block_num_dave}));
+    BOOST_CHECK_EQUAL(success(), post.create_msg({"erin"_n, "permlink2"},
+                                                 {"dave"_n, "permlink"}));
     produce_block();
 
     BOOST_TEST_MESSAGE("--- block: dave erin");
@@ -189,95 +186,9 @@ BOOST_FIXTURE_TEST_CASE(golos_blocked_commenting_test, golos_social_tester) try 
     produce_block();
 
     BOOST_TEST_MESSAGE("--- create comment: erin to dave again (fail)");
-    auto ref_block_num_erin1 = control->head_block_header().block_num();
-    BOOST_CHECK_EQUAL(err.you_are_blocked, post.create_msg({"erin"_n, "permlink3", ref_block_num_erin1},
-                                                           {"dave"_n, "permlink", ref_block_num_dave}));
+    BOOST_CHECK_EQUAL(err.you_are_blocked, post.create_msg({"erin"_n, "permlink3"},
+                                                           {"dave"_n, "permlink"}));
     produce_block();
-} FC_LOG_AND_RETHROW()
-
-BOOST_FIXTURE_TEST_CASE(golos_reputation_test, golos_social_tester) try {
-    BOOST_TEST_MESSAGE("Simple golos reputation test");
-
-    auto bignum = 1000000;
-    init(bignum, 10);
-
-    int perm_i = 1;
-    std::string permlink;
-    auto new_permlink = [&]() {
-        permlink = "permlink" + std::to_string(++perm_i);
-    };
-
-    BOOST_TEST_MESSAGE("--- hack attempt: erin wants to increase his reputation, it should not be success");
-    auto hack_attempt = social.push("changereput"_n, "erin"_n, social.args()
-        ("voter", "dave"_n)
-        ("author", "erin"_n)
-        ("rhares", 1000000)
-    );
-    BOOST_CHECK_NE(success(), hack_attempt);
-
-    BOOST_TEST_MESSAGE("--- upvote: dave erin 1000");
-    new_permlink();
-    auto ref_block_num_erin = control->head_block_header().block_num();
-    BOOST_CHECK_EQUAL(success(), post.create_msg({"erin"_n, permlink, ref_block_num_erin}));
-    BOOST_CHECK_EQUAL(success(), social.create_reput({"erin"_n}));
-    BOOST_CHECK_EQUAL(success(), social.create_reput({"dave"_n}));
-    BOOST_CHECK_EQUAL(success(), post.upvote("dave"_n, {"erin"_n, permlink, ref_block_num_erin}, 1000));
-    produce_block();
-
-    auto erin_rep = social.get_reputation("erin"_n);
-    BOOST_CHECK(!erin_rep.is_null());
-    BOOST_CHECK_GT(erin_rep["reputation"].as<int64_t>(), 0);
-
-    BOOST_TEST_MESSAGE("--- downvote: erin dave 200");
-    new_permlink();
-    auto ref_block_num_dave = control->head_block_header().block_num();
-    BOOST_CHECK_EQUAL(success(), post.create_msg({"dave"_n, permlink, ref_block_num_dave}));
-    BOOST_CHECK_EQUAL(success(), post.downvote("erin"_n, {"dave"_n, permlink, ref_block_num_dave}, 200));
-    produce_block();
-
-    BOOST_TEST_MESSAGE("--- downvote: dave erin 200 (check rule #1)");
-    new_permlink();
-    auto ref_block_num_erin1 = control->head_block_header().block_num();
-    BOOST_CHECK_EQUAL(success(), post.create_msg({"erin"_n, permlink, ref_block_num_erin1}));
-    BOOST_CHECK_EQUAL(success(), post.downvote("dave"_n, {"erin"_n, permlink, ref_block_num_erin1}, 10));
-    produce_block();
-
-    auto new_erin_rep = social.get_reputation("erin"_n);
-    BOOST_CHECK_EQUAL(erin_rep["reputation"].as<int64_t>(), new_erin_rep["reputation"].as<int64_t>());
-
-    BOOST_TEST_MESSAGE("--- upvote: erin dave 100");
-    new_permlink();
-    auto ref_block_num_dave1 = control->head_block_header().block_num();
-    BOOST_CHECK_EQUAL(success(), post.create_msg({"dave"_n, permlink, ref_block_num_dave1}));
-    BOOST_CHECK_EQUAL(success(), post.upvote("erin"_n, {"dave"_n, permlink, ref_block_num_dave1}, 100));
-    produce_block();
-
-    BOOST_TEST_MESSAGE("--- downvote: dave erin 200 (check rule #2)");
-    new_permlink();
-    auto ref_block_num_erin2 = control->head_block_header().block_num();
-    BOOST_CHECK_EQUAL(success(), post.create_msg({"erin"_n, permlink, ref_block_num_erin2}));
-    BOOST_CHECK_EQUAL(success(), post.downvote("dave"_n, {"erin"_n, permlink, ref_block_num_erin2}, 10));
-    produce_block();
-
-    auto new_erin_rep2 = social.get_reputation("erin"_n);
-    BOOST_CHECK_EQUAL(erin_rep["reputation"].as<int64_t>(), new_erin_rep2["reputation"].as<int64_t>());
-
-    BOOST_TEST_MESSAGE("--- upvote: erin dave 100");
-    new_permlink();
-    auto ref_block_num_dave2 = control->head_block_header().block_num();
-    BOOST_CHECK_EQUAL(success(), post.create_msg({"dave"_n, permlink, ref_block_num_dave2}));
-    BOOST_CHECK_EQUAL(success(), post.upvote("erin"_n, {"dave"_n, permlink, ref_block_num_dave2}, 10000));
-    produce_block();
-
-    BOOST_TEST_MESSAGE("--- downvote: dave erin 200 (conforming rules)");
-    new_permlink();
-    auto ref_block_num_erin3 = control->head_block_header().block_num();
-    BOOST_CHECK_EQUAL(success(), post.create_msg({"erin"_n, permlink, ref_block_num_erin3}));
-    BOOST_CHECK_EQUAL(success(), post.downvote("dave"_n, {"erin"_n, permlink, ref_block_num_erin3}, 10));
-    produce_block();
-
-    auto new_erin_rep3 = social.get_reputation("erin"_n);
-    BOOST_CHECK_GT(erin_rep["reputation"].as<int64_t>(), new_erin_rep3["reputation"].as<int64_t>());
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE(golos_accountmeta_test, golos_social_tester) try {
@@ -309,30 +220,6 @@ BOOST_FIXTURE_TEST_CASE(golos_accountmeta_test, golos_social_tester) try {
     BOOST_TEST_MESSAGE("--- deletemeta: dave");
     BOOST_CHECK_EQUAL(success(), social.deletemeta("dave"_n));
     produce_block();
-} FC_LOG_AND_RETHROW()
-
-BOOST_FIXTURE_TEST_CASE(delete_reputation, golos_social_tester) try {
-    BOOST_TEST_MESSAGE("Delete reputation test");
-    init(1000000, 10);
-
-    BOOST_TEST_MESSAGE("--- checking that reputation was added");
-    auto ref_block_num_erin = control->head_block_header().block_num();
-    BOOST_CHECK_EQUAL(success(), post.create_msg({"erin"_n, "permlink", ref_block_num_erin}));
-    BOOST_CHECK_EQUAL(success(), social.create_reput({"erin"_n}));
-    BOOST_CHECK_EQUAL(success(), post.upvote("dave"_n, {"erin"_n, "permlink", ref_block_num_erin}, 1000));
-    produce_block();
-    auto erin_rep = social.get_reputation("erin"_n);
-    BOOST_CHECK(!erin_rep.is_null());
-    BOOST_CHECK_GT(erin_rep["reputation"].as<int64_t>(), 0);
-
-    BOOST_TEST_MESSAGE("--- checking that reputation was deleted");
-    BOOST_CHECK_EQUAL(success(), social.deletereput("erin"_n));
-    erin_rep = social.get_reputation("erin"_n);
-    BOOST_CHECK(erin_rep.is_null());
-    produce_block();
-
-    BOOST_TEST_MESSAGE("--- checking that reputation has already deleted");
-    BOOST_CHECK_EQUAL(err.no_reputation, social.deletereput("erin"_n));
 } FC_LOG_AND_RETHROW()
 
 BOOST_AUTO_TEST_SUITE_END()
