@@ -365,14 +365,21 @@ int16_t publication::use_charge(tables::limit_table& lims, structures::limitpara
     eosio_assert(lim_itr != lims.end(), "publication::use_charge: limit parameters not set");
     eosio_assert(eff_vesting >= lim_itr->min_vesting, "insufficient effective vesting amount");
 
+    int16_t k = 200;
+    if (lim_itr->price)
+        k = config::_100percent / lim_itr->price;
+    print("\n k: ", k);
     if (act == structures::limitparams::VOTE) {
-        print("@@ ", account.value);
-        auto current_power = charge::get_current_value(config::charge_name, account, token_code, lim_itr->charge_id);
-        int16_t charge = config::_100percent - current_power;
+        print("\n@@ ", account.value);
         print("\n weight: ", weight);
 
-        weight = ( ((abs(weight) * charge) / config::_100percent)  + 200 - 1) / 200;
+        auto current_power = charge::get_current_value(config::charge_name, account, token_code, lim_itr->charge_id);
+        int16_t charge = config::_100percent - current_power;
+
+        auto used_charge = static_cast<int16_t>(((((static_cast<int64_t>(abs(weight)) * charge) / config::_100percent) / k)  + k - 1) / k);
         print("\n charge: ", weight);
+
+        return used_charge;
     }
 
     if(lim_itr->price >= 0)
@@ -381,9 +388,9 @@ int16_t publication::use_charge(tables::limit_table& lims, structures::limitpara
                 account,
                 token_code,
                 lim_itr->charge_id,
-                (lim_itr->price * weight) / config::_100percent,
+                (lim_itr->price * (weight * k)) / config::_100percent,
                 lim_itr->cutoff,
-                vestpayment ? (lim_itr->vesting_price * weight) / config::_100percent : 0
+                vestpayment ? (lim_itr->vesting_price * (weight * k)) / config::_100percent : 0
             });
 
     return weight;
@@ -574,10 +581,13 @@ fixp_t publication::calc_available_rshares(name voter, int16_t weight, uint64_t 
     tables::limit_table lims(_self, _self.value);
     int64_t eff_vesting = golos::vesting::get_account_effective_vesting(config::vesting_name, voter, token_code).amount;
 
-    auto abs_wc = use_charge(lims, structures::limitparams::VOTE, token::get_issuer(config::token_name,
-                               token_code), voter, eff_vesting, token_code, false, weight);
+    auto used_power = use_charge(lims, structures::limitparams::VOTE, token::get_issuer(config::token_name,
+                                 token_code), voter, eff_vesting, token_code, false, weight);
 
-    fixp_t abs_rshares = FP(eff_vesting) * elai_t(abs_wc);
+    eosio_assert(used_power, "ASSERT: used_power = 0");
+    print("\n used_power: ", used_power);
+
+    fixp_t abs_rshares = (FP(eff_vesting) * elaf_t(elai_t(used_power) / elai_t(config::_100percent)));
     print("\n abs_rshares: ",  int_cast(abs_rshares * elai_t(config::_100percent)));
     return (weight < 0) ? -abs_rshares : abs_rshares;
 }
@@ -618,6 +628,7 @@ void publication::set_vote(name voter, const structures::mssgid& message_id, int
 
         atmsp::machine<fixp_t> machine;
         fixp_t rshares = calc_available_rshares(voter, weight, cur_time, *pool);
+        print("\n rshares: ", int_cast(rshares * elai_t(config::_100percent)));
         if(rshares > FP(vote_itr->rshares))
             check_upvote_time(cur_time, mssg_itr->date);
 
@@ -658,6 +669,9 @@ void publication::set_vote(name voter, const structures::mssgid& message_id, int
     }
     atmsp::machine<fixp_t> machine;
     fixp_t rshares = calc_available_rshares(voter, weight, cur_time, *pool);
+
+    print("\n rshares: ", int_cast(rshares * elai_t(config::_100percent)));
+
     if(rshares > 0)
         check_upvote_time(cur_time, mssg_itr->date);
 
@@ -673,6 +687,8 @@ void publication::set_vote(name voter, const structures::mssgid& message_id, int
 
     pools.modify(*pool, _self, [&](auto &item) {
          item.state.rshares = (WP(item.state.rshares) + wdfp_t(rshares)).data();
+
+
          item.state.rsharesfn = (WP(item.state.rsharesfn) + wdfp_t(rsharesfn_delta)).data();
          send_poolstate_event(item);
     });
