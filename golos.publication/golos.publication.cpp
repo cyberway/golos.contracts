@@ -386,9 +386,9 @@ int16_t publication::use_charge(tables::limit_table& lims, structures::limitpara
                 account,
                 token_code,
                 lim_itr->charge_id,
-                (lim_itr->price * (weight * k)) / config::_100percent,
+                (lim_itr->price * weight) / config::_100percent,
                 lim_itr->cutoff,
-                vestpayment ? (lim_itr->vesting_price * (weight * k)) / config::_100percent : 0
+                vestpayment ? (lim_itr->vesting_price * weight) / config::_100percent : 0
             });
 
     return weight;
@@ -628,7 +628,7 @@ void publication::set_vote(name voter, const structures::mssgid& message_id, int
 
         atmsp::machine<fixp_t> machine;
         fixp_t rshares = calc_available_rshares(voter, weight, cur_time, *pool);
-        print("\n rshares: ", int_cast(rshares * elai_t(config::_100percent)));
+        print("\n true rshares: ", int_cast(rshares * elai_t(config::_100percent)));
         if(rshares > FP(vote_itr->rshares))
             check_upvote_time(cur_time, mssg_itr->date);
 
@@ -655,6 +655,7 @@ void publication::set_vote(name voter, const structures::mssgid& message_id, int
                 )
             );
         });
+        print("\n voteshares: ", int_cast(FP(mssg_itr->state.voteshares) * elai_t(10000000)));
 
         votetable_index.modify(vote_itr, voter, [&]( auto &item ) {
             item.weight = weight;
@@ -670,16 +671,17 @@ void publication::set_vote(name voter, const structures::mssgid& message_id, int
     atmsp::machine<fixp_t> machine;
     fixp_t rshares = calc_available_rshares(voter, weight, cur_time, *pool);
 
-    print("\n rshares: ", int_cast(rshares * elai_t(config::_100percent)));
+    print("\n false rshares: ", int_cast(rshares * elai_t(config::_100percent)));
 
     if(rshares > 0)
         check_upvote_time(cur_time, mssg_itr->date);
 
+
     structures::messagestate msg_new_state = {
         .netshares = add_cut(FP(mssg_itr->state.netshares), rshares).data(),
         .voteshares = ((rshares > fixp_t(0)) ?
-            add_cut(FP(mssg_itr->state.voteshares), rshares) :
-            FP(mssg_itr->state.voteshares)).data()
+        add_cut(FP(mssg_itr->state.voteshares), rshares) :
+        FP(mssg_itr->state.voteshares)).data()
         //.sumcuratorsw = see below
     };
 
@@ -687,12 +689,12 @@ void publication::set_vote(name voter, const structures::mssgid& message_id, int
 
     pools.modify(*pool, _self, [&](auto &item) {
          item.state.rshares = (WP(item.state.rshares) + wdfp_t(rshares)).data();
-
-
          item.state.rsharesfn = (WP(item.state.rsharesfn) + wdfp_t(rsharesfn_delta)).data();
          send_poolstate_event(item);
     });
     eosio_assert(WP(pool->state.rsharesfn) >= 0, "pool state rsharesfn overflow");
+
+    print("\n pull rshares: ", int_cast(WP(mssg_itr->state.rshares) * elai_t(10000000)));
 
     auto sumcuratorsw_delta = get_delta(machine, FP(mssg_itr->state.voteshares), FP(msg_new_state.voteshares), pool->rules.curationfunc);
     msg_new_state.sumcuratorsw = (FP(mssg_itr->state.sumcuratorsw) + sumcuratorsw_delta).data();
@@ -709,6 +711,9 @@ void publication::set_vote(name voter, const structures::mssgid& message_id, int
             )
         );
     });
+
+    print("\n pull netshares: ", int_cast(FP(mssg_itr->state.netshares) * elai_t(10000000)));
+    print("\n pull voteshares: ", int_cast(FP(mssg_itr->state.voteshares) * elai_t(10000000)));
 
     auto time_delta = static_cast<int64_t>((cur_time - mssg_itr->date) / seconds(1).count());
     elap_t curatorsw_factor =
