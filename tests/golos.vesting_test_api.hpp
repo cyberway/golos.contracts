@@ -17,6 +17,9 @@ struct golos_vesting_api: base_contract_api {
     void initialize_contract(name token_name) {
         _tester->install_contract(cfg::vesting_name, contracts::vesting_wasm(), contracts::vesting_abi());
         _tester->set_authority(_code, cfg::code_name, create_code_authority({_code}), "active");
+        _tester->link_authority(_code, _code, cfg::code_name, N(timeout));
+        _tester->link_authority(_code, _code, cfg::code_name, N(timeoutconv));
+        _tester->link_authority(_code, _code, cfg::code_name, N(timeoutrdel));
         _tester->link_authority(_code, token_name, cfg::code_name, N(transfer));
     }
 
@@ -24,9 +27,11 @@ struct golos_vesting_api: base_contract_api {
     action_result create_vesting(name creator) {
         return create_vesting(creator, _symbol, golos::config::control_name);
     }
-    action_result create_vesting(name creator, symbol vesting_symbol, name notify_acc = N(notify.acc)) {
-        BOOST_CHECK(_tester->has_code_authority(creator, cfg::changevest_name, _code));
-        BOOST_CHECK(_tester->has_link_authority(creator, cfg::changevest_name, notify_acc, N(changevest)));
+    action_result create_vesting(name creator, symbol vesting_symbol, name notify_acc = N(notify.acc), bool skip_authority_check = false) {
+        if (!skip_authority_check) {
+            BOOST_CHECK(_tester->has_code_authority(creator, cfg::changevest_name, _code));
+            BOOST_CHECK(_tester->has_link_authority(creator, cfg::changevest_name, notify_acc, N(changevest)));
+        }
 
         return push(N(create), creator, args()
             ("symbol", vesting_symbol)

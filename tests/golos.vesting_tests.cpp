@@ -36,9 +36,13 @@ public:
             _code, cfg::token_name, cfg::control_name, cfg::emission_name, cfg::publish_name, cfg::charge_name});
         produce_blocks(2);
 
-        install_contract(_code, contracts::vesting_wasm(), contracts::vesting_abi());
         install_contract(cfg::token_name, contracts::token_wasm(), contracts::token_abi());
-        install_contract(cfg::charge_name, contracts::charge_wasm(), contracts::charge_abi());
+        vest.initialize_contract(cfg::token_name);
+        charge.initialize_contract();
+        
+        // It's need to call control:changevest from vesting
+        set_authority(cfg::emission_name, cfg::changevest_name, create_code_authority({cfg::vesting_name}), "active");
+        link_authority(cfg::emission_name, cfg::control_name, cfg::changevest_name, N(changevest));
     }
 
     void prepare_balances(int supply = 1e5, int issue1 = 500, int issue2 = 500, int buy1 = default_vesting_amount, int buy2 = default_vesting_amount) {
@@ -188,15 +192,16 @@ BOOST_FIXTURE_TEST_CASE(set_params, golos_vesting_tester) try {
 BOOST_FIXTURE_TEST_CASE(create_vesting, golos_vesting_tester) try {
     BOOST_TEST_MESSAGE("Test creating vesting");
     auto issuer = cfg::emission_name;
+    const bool skip_authority_check = true;
 
     // token.create_invoice_authority(issuer, {cfg::charge_name});
     BOOST_CHECK_EQUAL(success(), token.create(issuer, token.make_asset(100000)));
 
     BOOST_TEST_MESSAGE("--- fail on non-existing token");
-    BOOST_CHECK_EQUAL(err.key_not_found, vest.create_vesting(issuer, symbol(_token_precision, "GOLOSA")));
+    BOOST_CHECK_EQUAL(err.key_not_found, vest.create_vesting(issuer, symbol(_token_precision, "GOLOSA"), N(notify.acc), skip_authority_check));
 
     BOOST_TEST_MESSAGE("--- fails when not issuer");
-    BOOST_CHECK_EQUAL(err.issuer_not_autority, vest.create_vesting(N(sania)));
+    BOOST_CHECK_EQUAL(err.issuer_not_autority, vest.create_vesting(N(sania), _vesting_sym, N(notify.acc), skip_authority_check));
     // TODO: test issuers list
 
     BOOST_CHECK_EQUAL(err.not_found_token_vesting, vest.open(N(sania)));
