@@ -582,7 +582,7 @@ fixp_t publication::calc_available_rshares(name voter, int16_t weight, uint64_t 
     auto used_power = use_charge(lims, structures::limitparams::VOTE, token::get_issuer(config::token_name,
                                  token_code), voter, eff_vesting, token_code, false, weight);
 
-    eosio_assert(used_power, "ASSERT: used_power = 0");
+//    eosio_assert(used_power, "ASSERT: used_power = 0");
     print("\n used_power: ", used_power);
 
     fixp_t abs_rshares = (FP(eff_vesting * used_power) / elai_t(config::_100percent));
@@ -675,7 +675,6 @@ void publication::set_vote(name voter, const structures::mssgid& message_id, int
 
     if(rshares > 0)
         check_upvote_time(cur_time, mssg_itr->date);
-
 
     structures::messagestate msg_new_state = {
         .netshares = add_cut(FP(mssg_itr->state.netshares), rshares).data(),
