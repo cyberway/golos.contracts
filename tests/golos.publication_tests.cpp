@@ -41,10 +41,14 @@ public:
         create_accounts({cfg::charge_name, cfg::token_name, cfg::vesting_name, cfg::emission_name, cfg::control_name, N(dan.larimer)});
         produce_block();
 
-        install_contract(_code, contracts::posting_wasm(), contracts::posting_abi());
-        install_contract(cfg::vesting_name, contracts::vesting_wasm(), contracts::vesting_abi());
-        install_contract(cfg::charge_name, contracts::charge_wasm(), contracts::charge_abi());
         install_contract(cfg::token_name, contracts::token_wasm(), contracts::token_abi());
+        vest.initialize_contract(cfg::token_name);
+        charge.initialize_contract();
+        post.initialize_contract(cfg::token_name);
+
+        // It's need to call control:changevest from vesting
+        set_authority(cfg::emission_name, cfg::changevest_name, create_code_authority({cfg::vesting_name}), "active");
+        link_authority(cfg::emission_name, cfg::control_name, cfg::changevest_name, N(changevest));
     }
 
     void init() {

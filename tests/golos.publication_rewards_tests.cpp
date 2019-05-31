@@ -109,10 +109,19 @@ public:
         create_accounts(_users);
         produce_blocks(2);
 
-        install_contract(_forum_name, contracts::posting_wasm(), contracts::posting_abi());
         install_contract(cfg::token_name, contracts::token_wasm(), contracts::token_abi());
-        install_contract(cfg::vesting_name, contracts::vesting_wasm(), contracts::vesting_abi());
-        install_contract(cfg::charge_name, contracts::charge_wasm(), contracts::charge_abi());
+        vest.initialize_contract(cfg::token_name);
+        charge.initialize_contract();
+        post.initialize_contract(cfg::token_name);
+
+        // It's need to call control:changevest from vesting
+        set_authority(_issuer, cfg::changevest_name, create_code_authority({cfg::vesting_name}), "active");
+        link_authority(_issuer, cfg::control_name, cfg::changevest_name, N(changevest));
+
+        set_authority(_issuer, cfg::invoice_name, create_code_authority({charge._code, vest._code, post._code}), "active");
+        link_authority(_issuer, charge._code, cfg::invoice_name, N(use));
+        link_authority(_issuer, charge._code, cfg::invoice_name, N(usenotifygt));
+        link_authority(_issuer, vest._code, cfg::invoice_name, N(retire));
     }
 
     action_result add_funds_to(account_name user, int64_t amount) {

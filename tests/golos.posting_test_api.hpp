@@ -18,7 +18,9 @@ struct golos_posting_api: base_contract_api {
 
         _tester->set_authority(_code, cfg::code_name, create_code_authority({_code}), "active");
         _tester->link_authority(_code, _code, cfg::code_name, N(closemssg));
+        _tester->link_authority(_code, _code, cfg::code_name, N(paymssgrwrd));
         _tester->link_authority(_code, token_name, cfg::code_name, N(transfer));
+        _tester->link_authority(_code, token_name, cfg::code_name, N(payment));
     }
 
     //// posting actions
