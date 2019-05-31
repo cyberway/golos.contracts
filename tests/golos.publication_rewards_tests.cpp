@@ -589,8 +589,8 @@ BOOST_FIXTURE_TEST_CASE(basic_tests, reward_calcs_tester) try {
     BOOST_TEST_MESSAGE("--- alice1 voted for alice");
     BOOST_CHECK_EQUAL(success(), addvote(N(alice1), {N(alice), "permlink"}, 100));
     check();
-    BOOST_TEST_MESSAGE("--- trying to delete alice's message");
-    BOOST_CHECK_EQUAL(err.delete_upvoted, delete_message({N(alice), "permlink"}));
+//    BOOST_TEST_MESSAGE("--- trying to delete alice's message");
+//    BOOST_CHECK_EQUAL(err.delete_upvoted, delete_message({N(alice), "permlink"}));
     BOOST_TEST_MESSAGE("--- bob1 voted (1%) for bob");
     BOOST_CHECK_EQUAL(success(), addvote(N(bob1), {N(bob), "permlink1"}, 100));
     check();

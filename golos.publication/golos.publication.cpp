@@ -694,8 +694,6 @@ void publication::set_vote(name voter, const structures::mssgid& message_id, int
     });
     eosio_assert(WP(pool->state.rsharesfn) >= 0, "pool state rsharesfn overflow");
 
-    print("\n pull rshares: ", int_cast(WP(mssg_itr->state.rshares) * elai_t(10000000)));
-
     auto sumcuratorsw_delta = get_delta(machine, FP(mssg_itr->state.voteshares), FP(msg_new_state.voteshares), pool->rules.curationfunc);
     msg_new_state.sumcuratorsw = (FP(mssg_itr->state.sumcuratorsw) + sumcuratorsw_delta).data();
     message_table.modify(mssg_itr, _self, [&](auto &item) {

@@ -183,7 +183,6 @@ struct vote {
         auto vesting_t = revote_diff ? revote_vesting : vesting;
         auto rshares = (weight_rshares < 0) ? -abs_rshares : abs_rshares;
 
-        BOOST_TEST_MESSAGE("## vesting_t: " + std::to_string(vesting_t));
         BOOST_TEST_MESSAGE("## rshares: " + std::to_string(rshares));
         return (weight_rshares < 0) ? -abs_rshares : abs_rshares;
     };
