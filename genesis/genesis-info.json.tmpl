@@ -99,12 +99,12 @@
 
         {"name": "gls",
             "permissions": [
-                {"name": "owner",      "accounts": ["gls@smajor", "gls@testing"]},
-                {"name": "active",     "accounts": ["gls@smajor", "gls.ctrl@cyber.code", "gls@testing"]},
+                {"name": "owner",      "accounts": ["gls@witn.smajor"]},
+                {"name": "active",     "accounts": ["gls@witn.smajor", "gls.ctrl@cyber.code", "gls@testing"]},
                 {"name": "testing",    "key": "GLS5a2eDuRETEg7uy8eHbiCqGZM3wnh2pLjiXrFduLWBKVZKCkB62"},
                 {"name": "issue",      "accounts": ["gls.emit@cyber.code", "gls@testing"]},
                 {"name": "createuser", "accounts": ["gls@testing"]},
-                {"name": "invoice",    "accounts": ["gls.publish@cyber.code"]},
+                {"name": "invoice",    "accounts": ["gls.charge@cyber.code", "gls.publish@cyber.code"]},
                 {"name": "changevest", "accounts": ["gls.vesting@cyber.code"]},
                 {"name": "witn.smajor"},
                 {"name": "witn.major"},
@@ -115,7 +115,7 @@
             "permissions": [
                 {"name": "owner",      "accounts": ["gls@owner"]},
                 {"name": "active",     "accounts": ["gls@active"]},
-                {"name": "cyber.code", "accounts": ["@cyber.code"]}
+                {"name": "code",       "accounts": ["@cyber.code"]}
             ],
             "abi": {"path": "$GOLOS_CONTRACTS/golos.ctrl/golos.ctrl.abi", "hash":""},
             "code": {"path": "$GOLOS_CONTRACTS/golos.ctrl/golos.ctrl.wasm", "hash":""}
@@ -124,7 +124,7 @@
             "permissions": [
                 {"name": "owner",      "accounts": ["gls@owner"]},
                 {"name": "active",     "accounts": ["gls@active"]},
-                {"name": "cyber.code", "accounts": ["@cyber.code"]}
+                {"name": "code",       "accounts": ["@cyber.code"]}
             ],
             "abi": {"path": "$GOLOS_CONTRACTS/golos.emit/golos.emit.abi", "hash":""},
             "code": {"path": "$GOLOS_CONTRACTS/golos.emit/golos.emit.wasm", "hash":""}
@@ -133,7 +133,7 @@
             "permissions": [
                 {"name": "owner",      "accounts": ["gls@owner"]},
                 {"name": "active",     "accounts": ["gls@active"]},
-                {"name": "cyber.code", "accounts": ["@cyber.code"]}
+                {"name": "code",       "accounts": ["@cyber.code"]}
             ],
             "abi": {"path": "$GOLOS_CONTRACTS/golos.vesting/golos.vesting.abi", "hash":""},
             "code": {"path": "$GOLOS_CONTRACTS/golos.vesting/golos.vesting.wasm", "hash":""}
@@ -142,7 +142,7 @@
             "permissions": [
                 {"name": "owner",      "accounts": ["gls@owner"]},
                 {"name": "active",     "accounts": ["gls@active"]},
-                {"name": "cyber.code", "accounts": ["@cyber.code"]},
+                {"name": "code",       "accounts": ["@cyber.code"]},
                 {"name": "calcrwrdwt", "accounts": ["gls.charge@cyber.code"]}
             ],
             "abi": {"path": "$GOLOS_CONTRACTS/golos.publication/golos.publication.abi", "hash":""},
@@ -168,7 +168,7 @@
             "permissions": [
                 {"name": "owner",      "accounts": ["gls@owner"]},
                 {"name": "active",     "accounts": ["gls@active"]},
-                {"name": "cyber.code", "accounts": ["@cyber.code"]}
+                {"name": "code",       "accounts": ["@cyber.code"]}
             ],
             "abi": {"path": "$GOLOS_CONTRACTS/golos.referral/golos.referral.abi", "hash":""},
             "code": {"path": "$GOLOS_CONTRACTS/golos.referral/golos.referral.wasm", "hash":""}
@@ -189,7 +189,7 @@
             "links": ["cyber.token:issue", "cyber.token:transfer"]
         },{
             "permission": "gls@invoice",
-            "links": ["gls.charge:use", "gls.charge:usenotifygt"]
+            "links": ["gls.charge:use", "gls.charge:usenotifygt", "gls.vesting:retire"]
         },{
             "permission": "gls@changevest",
             "links": ["gls.ctrl:changevest"]
@@ -204,13 +204,13 @@
             "links": ["cyber.token:transfer", "gls.vesting:timeout", "gls.vesting:timeoutconv", "gls.vesting:timeoutrdel"]
         },{
             "permission": "gls.publish@cyber.code",
-            "links": ["cyber.token:transfer", "gls.publish:closemssg", "gls.publish:calcrwrdwt", "gls.publish:paymssgrwrd"]]
+            "links": ["cyber.token:payment", "cyber.token:transfer", "gls.publish:closemssg", "gls.publish:paymssgrwrd"]
         },{
             "permission": "gls.publish@calcrwrdwt",
             "links": ["gls.publish:calcrwrdwt"]
         },{
             "permission": "gls.referral@cyber.code",
-            "links": ["gls.referral:closeoldref"]
+            "links": ["gls.referral:closeoldref", "cyber.token:transfer]
         }
     ],
     "tables": [

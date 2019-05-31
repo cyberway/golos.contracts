@@ -118,7 +118,7 @@ public:
         set_authority(_issuer, cfg::changevest_name, create_code_authority({cfg::vesting_name}), "active");
         link_authority(_issuer, cfg::control_name, cfg::changevest_name, N(changevest));
 
-        set_authority(_issuer, cfg::invoice_name, create_code_authority({charge._code, vest._code, post._code}), "active");
+        set_authority(_issuer, cfg::invoice_name, create_code_authority({charge._code, post._code}), "active");
         link_authority(_issuer, charge._code, cfg::invoice_name, N(use));
         link_authority(_issuer, charge._code, cfg::invoice_name, N(usenotifygt));
         link_authority(_issuer, vest._code, cfg::invoice_name, N(retire));
