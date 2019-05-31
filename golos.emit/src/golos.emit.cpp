@@ -106,10 +106,9 @@ void emission::emit() {
     if (new_tokens > 0) {
         const auto issue_memo = "emission"; // TODO: make configurable?
         const auto trans_memo = "emission";
-        auto from = _self;
         INLINE_ACTION_SENDER(token, issue)(config::token_name,
             {{issuer, config::issue_name}},
-            {_self, asset(new_tokens, token.symbol), issue_memo});
+            {issuer, asset(new_tokens, token.symbol), issue_memo});
 
         auto transfer = [&](auto from, auto to, auto amount) {
             if (amount > 0) {
@@ -127,11 +126,11 @@ void emission::emit() {
             }
             auto reward = total * pool.percent / config::_100percent;
             eosio_assert(reward <= new_tokens, "SYSTEM: not enough tokens to pay emission reward"); // must not happen
-            transfer(from, pool.name, reward);
+            transfer(issuer, pool.name, reward);
             new_tokens -= reward;
         }
         eosio_assert(remainder != name(), "SYSTEM: emission remainder pool is not set"); // must not happen
-        transfer(from, remainder, new_tokens);
+        transfer(issuer, remainder, new_tokens);
     } else {
         print("no emission\n");
     }

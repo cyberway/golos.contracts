@@ -18,29 +18,21 @@ protected:
     golos_emit_api emit;
     cyber_token_api token;
 
+    const account_name issuer = cfg::issuer_name;
+
 public:
     golos_emit_tester()
         : golos_tester(cfg::emission_name)
-        , emit({this, _code})
+        , emit({this, cfg::emission_name})
         , token({this, cfg::token_name, _token})
     {
-        create_accounts({_code, BLOG, N(witn1), N(witn2), N(witn3), N(witn4), N(witn5), _alice, _bob, _carol,
-            cfg::control_name, cfg::vesting_name, cfg::token_name, cfg::workers_name});
+        create_accounts({BLOG, cfg::emission_name, cfg::issuer_name, cfg::control_name, cfg::vesting_name, cfg::token_name, cfg::workers_name});
         produce_block();
 
-        install_contract(_code, contracts::emit_wasm(), contracts::emit_abi());
+        set_authority(issuer, cfg::issue_name, create_code_authority({emit._code}), "active");
+
         install_contract(cfg::token_name, contracts::token_wasm(), contracts::token_abi());
-
-        authority auth(1, {});
-        auth.accounts.emplace_back(permission_level_weight{.permission = {_code, config::eosio_code_name}, .weight = 1});
-        set_authority(_code, golos::config::code_name, auth, "active");
-        link_authority(_code, _code, golos::config::code_name, N(emit));
-
-        auth = authority(1, {});
-        auth.accounts.emplace_back(permission_level_weight{.permission = {_code, config::eosio_code_name}, .weight = 1});
-        set_authority(_code, golos::config::issue_name, auth, "active");
-        link_authority(_code, golos::config::token_name, golos::config::issue_name, N(issue));
-        link_authority(_code, golos::config::token_name, golos::config::issue_name, N(transfer));
+        emit.initialize_contract(cfg::token_name, issuer);
     }
 
 
@@ -48,47 +40,17 @@ public:
         return token.make_asset(val);
     }
 
-    // constants
-    const uint16_t _max_witnesses = 3;
-    const uint16_t _smajor_witn_count = _max_witnesses * 2 / 3 + 1;
-
     const account_name BLOG = N(blog);
-    const account_name _alice = N(alice);
-    const account_name _bob = N(bob);
-    const account_name _carol = N(carol);
-    const uint64_t _w[5] = {N(witn1), N(witn2), N(witn3), N(witn4), N(witn5)};
-    const size_t _n_w = sizeof(_w) / sizeof(_w[0]);
     const uint16_t _interval = 15*60;
-
-    vector<account_name> witness_vect(size_t n) const {
-        vector<account_name> r;
-        auto l = std::min(n, _n_w);
-        r.reserve(l);
-        while (l--) {
-            r.push_back(_w[l]);
-        }
-        return r;
-    }
 
     struct errors: contract_error_messages {
         const string no_pool_account   = amsg("pool account must exist");
         const string interval0         = amsg("interval must be positive");
     } err;
 
-    const string _test_key = string(fc::crypto::config::public_key_legacy_prefix)
-        + "6MRyAjQq8ud7hVNYcfnVPJqcVpscN5So8BhtHuGYqET5GDW5CV";
-
-    // prepare; TODO: reuse ctrl code
-    enum prep_step {
-        step_0,
-        step_only_create,
-        step_reg_witnesses,
-        step_vote_witnesses
-    };
-
     void prepare_balances() {
-        BOOST_CHECK_EQUAL(success(), token.create(_code, dasset(100500'000)));
-        BOOST_CHECK_EQUAL(success(), token.issue(_code, BLOG, dasset(4600'000), "issue"));
+        BOOST_CHECK_EQUAL(success(), token.create(issuer, dasset(100500'000)));
+        BOOST_CHECK_EQUAL(success(), token.issue(issuer, BLOG, dasset(4600'000), "issue"));
     }
 };
 
