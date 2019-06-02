@@ -361,27 +361,24 @@ public:
 #endif
     }
 
-    void set_payout(
-            account_name user, 
-            double payout, 
-            std::string type = "", 
-            double author_token_rwrd = 0.0, 
-            double tokenprop = 0.0) 
+    void pay(
+            account_name from,
+            account_name to, 
+            double payout,
+            enum_t mode) 
     {
-        auto pt = payout;
-        if (type == "author") {
-            pt = author_token_rwrd;
-            payout = payout * (1.0 - tokenprop);
+        if (static_cast<payment_t>(mode) == payment_t::TOKEN) {
+            if (!_state.balances[to].tokenclosed)
+                _state.balances[to].paymentsamount += payout;
+            else
+                _state.balances[from].paymentsamount += payout;
+        } else if (static_cast<payment_t>(mode) == payment_t::VESTING) {
+            if (!_state.balances[to].vestclosed)
+                _state.balances[to].vestamount += get_converted_to_vesting(payout);
+            else
+                _state.balances[from].paymentsamount += payout;
         }
-
-        if (_state.balances[user].vestclosed) {
-            _state.balances[_forum_name].paymentsamount += payout;
-            _state.balances[_forum_name].tokenamount -= pt;
-        }
-        else {
-            _state.balances[user].vestamount += get_converted_to_vesting(payout);
-            _state.balances[_forum_name].tokenamount -= payout;
-        }
+        _state.balances[from].tokenamount -= payout;
     }
 
     void pay_rewards_in_state() {
@@ -423,7 +420,7 @@ public:
                         }
                     }
                     for (auto& r : cur_rewards) {
-                        set_payout(r.first, r.second);
+                        pay(_forum_name, r.first, r.second, static_cast<enum_t>(payment_t::VESTING));
                         unclaimed_funds -= r.second;
                     }
 
@@ -431,20 +428,14 @@ public:
                     double ben_payout_sum = 0.0;
                     for (auto& ben : m.beneficiaries) {
                         double ben_payout = author_payout * get_prop(ben.weight);
-                        set_payout(ben.account, ben_payout);
+                        pay(_forum_name, ben.account, ben_payout, static_cast<enum_t>(payment_t::VESTING));
                         ben_payout_sum += ben_payout;
                     }
                     author_payout -= ben_payout_sum;
 
                     auto author_token_rwrd = author_payout * m.tokenprop;
-                    if (_state.balances[m.key.author].tokenclosed) {
-                        _state.balances[_forum_name].paymentsamount += author_token_rwrd;
-                    }
-                    else {
-                        _state.balances[m.key.author].paymentsamount += author_token_rwrd;
-                    }
-                    _state.balances[_forum_name].tokenamount -= author_token_rwrd;
-                    set_payout(m.key.author, author_payout, "author", author_token_rwrd, m.tokenprop);
+                    pay(_forum_name, m.key.author, author_token_rwrd, static_cast<enum_t>(payment_t::TOKEN)); 
+                    pay(_forum_name, m.key.author, author_payout - author_token_rwrd, static_cast<enum_t>(payment_t::VESTING));
 
                     p.messages.erase(itr_m++);
                     p.funds -= (payout - unclaimed_funds);
