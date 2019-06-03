@@ -415,6 +415,8 @@ BOOST_FIXTURE_TEST_CASE(delegate_vesting, golos_vesting_tester) try {
     BOOST_CHECK_EQUAL(err.delegation_no_funds2, vest.delegate(N(sania), N(pasha), vest.make_asset(10000)));
 
     BOOST_TEST_MESSAGE("--- fail when delegate more than scheduled to withdraw");
+    BOOST_CHECK_EQUAL(success(), vest.delegate(N(sania), N(pasha), amount, 0));
+    BOOST_CHECK_EQUAL(success(), vest.delegate(N(sania), N(tania), amount, 0));
     BOOST_CHECK_EQUAL(success(), vest.withdraw(N(sania), N(sania), vest.make_asset(100-3*min_remainder)));
     BOOST_CHECK_EQUAL(err.delegation_no_funds2, vest.delegate(N(sania), N(vania), vest.make_asset(min_remainder+1)));
     BOOST_TEST_MESSAGE("--- succeed when withdraval counted");
