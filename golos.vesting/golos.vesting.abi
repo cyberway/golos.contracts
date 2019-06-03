@@ -47,7 +47,6 @@
         {"name":"delegatee",            "type":"name"},
         {"name":"quantity",             "type":"asset"},
         {"name":"interest_rate",        "type":"uint16"},
-        {"name":"payout_strategy",      "type":"uint8"},
         {"name":"min_delegation_time",  "type":"time_point_sec"}
       ]
     },
@@ -153,8 +152,7 @@
       "name": "delegate",
       "base": "base_transfer",
       "fields": [
-        {"name":"interest_rate",    "type":"uint16"},
-        {"name":"payout_strategy",  "type":"uint8"}
+        {"name":"interest_rate",    "type":"uint16"}
       ]
     },
     {

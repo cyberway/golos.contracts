@@ -430,7 +430,7 @@ public:
                             if (r.first == dlg.delegatee) {
                                 auto available_vesting = _state.balances[r.first].vestamount - _state.dlg_balances[r.first].delegated;
                                 auto effective_vesting = available_vesting + _state.dlg_balances[r.first].received;
-                                auto interest_rate = dlg.amount * dlg.interest_rate / effective_vesting;
+                                auto interest_rate = static_cast<uint16_t>(dlg.amount * dlg.interest_rate / effective_vesting);
                                 if (interest_rate == 0)
                                     continue;
                                 auto dlg_payout = r.second * interest_rate / golos::config::_100percent;
@@ -611,14 +611,13 @@ public:
             _state.balances[user].vestamount = 0.0;
     }
 
-    action_result delegate_vest(account_name from, account_name to, asset quantity, uint16_t interest_rate, uint8_t payout_strategy) {
-        auto ret = vest.delegate(from, to, quantity, interest_rate, payout_strategy);
+    action_result delegate_vest(account_name from, account_name to, asset quantity, uint16_t interest_rate) {
+        auto ret = vest.delegate(from, to, quantity, interest_rate);
         if (ret == success()) {
             _state.delegators.emplace_back(delegation{
                 from,
                 to,
                 interest_rate,
-                payout_strategy,
                 quantity.to_real()
             });
             _state.dlg_balances[from].delegated += quantity.to_real(); 
@@ -1067,18 +1066,14 @@ BOOST_FIXTURE_TEST_CASE(golos_delegators_test, reward_calcs_tester) try {
     BOOST_TEST_MESSAGE("--- add_funds_to_forum");
     BOOST_CHECK_EQUAL(success(), add_funds_to_forum(50000));
     check();
-    
-    BOOST_TEST_MESSAGE("--- create_message: " << name{_users[0]}.to_string());
-    BOOST_CHECK_EQUAL(success(), create_message({_users[0], "permlink"}));
-    check();
-    
+
     const uint8_t withdraw_intervals = 1;
     const uint32_t withdraw_interval_seconds = 12;
     const uint64_t vesting_min_amount = 0;
     const uint64_t delegation_min_amount = 5e6;
     const uint64_t delegation_min_remainder = 15e3;
     const uint32_t delegation_min_time = 0;
-    const uint16_t delegation_max_interest = 5000;
+    const uint16_t delegation_max_interest = 10000;
     const uint32_t delegation_return_time = 120;
 
     auto vesting_withdraw = vest.withdraw_param(withdraw_intervals, withdraw_interval_seconds);
@@ -1088,20 +1083,131 @@ BOOST_FIXTURE_TEST_CASE(golos_delegators_test, reward_calcs_tester) try {
     auto params = "[" + vesting_withdraw + "," + vesting_amount + "," + delegation + "]";
     BOOST_CHECK_EQUAL(success(), vest.set_params(_issuer, _token_symbol, params));
 
-    BOOST_TEST_MESSAGE("--- delegate_vesting");
     const int divider = vest.make_asset(1).get_amount();
-    const auto min_fract = 1. / divider;
     const int min_remainder = delegation_min_remainder / divider;
     const auto amount = vest.make_asset(min_remainder);
-    const auto charge_prop = 0.7;
-    BOOST_CHECK_EQUAL(success(), delegate_vest(_users[2], _users[1], amount, 3000, 0));
+    uint16_t interest_rate = 3000;
+    uint8_t interest_rate0 = 0;
+    
+    BOOST_TEST_MESSAGE("--- one delegator interest_rate > 0");
+    BOOST_TEST_MESSAGE("--- create_message: " << name{_users[0]}.to_string());
+    BOOST_CHECK_EQUAL(success(), create_message({_users[0], "permlink"}));
     check();
-
+    BOOST_CHECK_EQUAL(success(), delegate_vest(_users[2], _users[1], amount, interest_rate));
+    check();
     BOOST_TEST_MESSAGE("--- " << name{_users[1]}.to_string() << " voted");
     BOOST_CHECK_EQUAL(success(), addvote(_users[1], {_users[0], "permlink"}, 10000));
     check();
-
+    auto voter_amount = vest.get_balance_raw(_users[1])["vesting"].as<asset>();
+    auto delegator_amount = vest.get_balance_raw(_users[2])["vesting"].as<asset>();
     produce_blocks(golos::seconds_to_blocks(post.window));
+    BOOST_CHECK_GT(vest.get_balance_raw(_users[1])["vesting"].as<asset>(), voter_amount);
+    BOOST_CHECK_GT(vest.get_balance_raw(_users[2])["vesting"].as<asset>(), delegator_amount);
+    check();
+    BOOST_TEST_MESSAGE(voter_amount);
+    BOOST_TEST_MESSAGE(delegator_amount);
+    BOOST_TEST_MESSAGE(vest.get_balance_raw(_users[1])["vesting"].as<asset>());
+    BOOST_TEST_MESSAGE(vest.get_balance_raw(_users[2])["vesting"].as<asset>());
+
+    BOOST_TEST_MESSAGE("--- add_funds_to_forum");
+    BOOST_CHECK_EQUAL(success(), add_funds_to_forum(50000));
+    check();
+
+    BOOST_TEST_MESSAGE("--- one delegator interest_rate == 100");
+    BOOST_TEST_MESSAGE("--- create_message: " << name{_users[0]}.to_string());
+    BOOST_CHECK_EQUAL(success(), create_message({_users[0], "permlink1"}));
+    check();
+    interest_rate = 10000;
+    BOOST_CHECK_EQUAL(success(), delegate_vest(_users[3], _users[1], amount, interest_rate));
+    check();
+    BOOST_TEST_MESSAGE("--- " << name{_users[1]}.to_string() << " voted");
+    BOOST_CHECK_EQUAL(success(), addvote(_users[1], {_users[0], "permlink1"}, 10000));
+    check();
+    voter_amount = vest.get_balance_raw(_users[1])["vesting"].as<asset>();
+    delegator_amount = vest.get_balance_raw(_users[3])["vesting"].as<asset>();
+    produce_blocks(golos::seconds_to_blocks(post.window));
+    BOOST_CHECK_GT(vest.get_balance_raw(_users[1])["vesting"].as<asset>(), voter_amount);
+    BOOST_CHECK_GT(vest.get_balance_raw(_users[3])["vesting"].as<asset>(), delegator_amount);
+    check();
+    BOOST_TEST_MESSAGE(voter_amount);
+    BOOST_TEST_MESSAGE(delegator_amount);
+    BOOST_TEST_MESSAGE(vest.get_balance_raw(_users[4])["vesting"].as<asset>());
+    BOOST_TEST_MESSAGE(vest.get_balance_raw(_users[3])["vesting"].as<asset>());
+
+    BOOST_TEST_MESSAGE("--- add_funds_to_forum");
+    BOOST_CHECK_EQUAL(success(), add_funds_to_forum(50000));
+    check();
+
+    BOOST_TEST_MESSAGE("--- one delegator interest_rate == 0");
+    BOOST_TEST_MESSAGE("--- create_message: " << name{_users[0]}.to_string());
+    BOOST_CHECK_EQUAL(success(), create_message({_users[0], "permlink2"}));
+    check();
+    interest_rate = 0;
+    BOOST_CHECK_EQUAL(success(), delegate_vest(_users[4], _users[1], amount, interest_rate0));
+    check();
+    BOOST_TEST_MESSAGE("--- " << name{_users[1]}.to_string() << " voted");
+    BOOST_CHECK_EQUAL(success(), addvote(_users[1], {_users[0], "permlink2"}, 10000));
+    check();
+    voter_amount = vest.get_balance_raw(_users[1])["vesting"].as<asset>();
+    delegator_amount = vest.get_balance_raw(_users[4])["vesting"].as<asset>();
+    produce_blocks(golos::seconds_to_blocks(post.window));
+    BOOST_CHECK_GT(vest.get_balance_raw(_users[1])["vesting"].as<asset>(), voter_amount);
+    BOOST_CHECK_EQUAL(vest.get_balance_raw(_users[4])["vesting"].as<asset>(), delegator_amount);
+    check();
+    
+    BOOST_TEST_MESSAGE("--- add_funds_to_forum");
+    BOOST_CHECK_EQUAL(success(), add_funds_to_forum(50000));
+    check();
+
+    BOOST_TEST_MESSAGE("--- several delegators interest_rate > 0");
+    BOOST_TEST_MESSAGE("--- create_message: " << name{_users[0]}.to_string());
+    BOOST_CHECK_EQUAL(success(), create_message({_users[0], "permlink3"}));
+    check();
+    interest_rate = 4500;
+    BOOST_CHECK_EQUAL(success(), delegate_vest(_users[5], _users[1], amount, interest_rate));
+    BOOST_CHECK_EQUAL(success(), delegate_vest(_users[6], _users[1], amount, interest_rate));
+    BOOST_CHECK_EQUAL(success(), delegate_vest(_users[7], _users[1], amount, interest_rate));
+    check();
+    BOOST_TEST_MESSAGE("--- " << name{_users[1]}.to_string() << " voted");
+    BOOST_CHECK_EQUAL(success(), addvote(_users[1], {_users[0], "permlink3"}, 10000));
+    check();
+    voter_amount = vest.get_balance_raw(_users[1])["vesting"].as<asset>();
+    auto delegator1_amount = vest.get_balance_raw(_users[5])["vesting"].as<asset>();
+    auto delegator2_amount = vest.get_balance_raw(_users[6])["vesting"].as<asset>();
+    auto delegator3_amount = vest.get_balance_raw(_users[7])["vesting"].as<asset>();
+    produce_blocks(golos::seconds_to_blocks(post.window));
+    BOOST_CHECK_GT(vest.get_balance_raw(_users[1])["vesting"].as<asset>(), voter_amount);
+    BOOST_CHECK_GT(vest.get_balance_raw(_users[5])["vesting"].as<asset>(), delegator_amount);
+    BOOST_CHECK_GT(vest.get_balance_raw(_users[6])["vesting"].as<asset>(), delegator_amount);
+    BOOST_CHECK_GT(vest.get_balance_raw(_users[7])["vesting"].as<asset>(), delegator_amount);
+    check();
+
+    BOOST_TEST_MESSAGE("--- add_funds_to_forum");
+    BOOST_CHECK_EQUAL(success(), add_funds_to_forum(50000));
+    check();
+
+    BOOST_TEST_MESSAGE("--- several delegators interest_rate > 0 with one interest_rate == 0");
+    BOOST_TEST_MESSAGE("--- create_message: " << name{_users[0]}.to_string());
+    BOOST_CHECK_EQUAL(success(), create_message({_users[0], "permlink4"}));
+    check();
+    interest_rate = 4500;
+    
+    BOOST_CHECK_EQUAL(success(), delegate_vest(_users[8], _users[1], amount, interest_rate));
+    BOOST_CHECK_EQUAL(success(), delegate_vest(_users[9], _users[1], amount, interest_rate));
+    BOOST_CHECK_EQUAL(success(), delegate_vest(_users[10], _users[1], amount, interest_rate0));
+    check();
+    BOOST_TEST_MESSAGE("--- " << name{_users[1]}.to_string() << " voted");
+    BOOST_CHECK_EQUAL(success(), addvote(_users[1], {_users[0], "permlink4"}, 10000));
+    check();
+    voter_amount = vest.get_balance_raw(_users[1])["vesting"].as<asset>();
+    delegator1_amount = vest.get_balance_raw(_users[8])["vesting"].as<asset>();
+    delegator2_amount = vest.get_balance_raw(_users[9])["vesting"].as<asset>();
+    delegator3_amount = vest.get_balance_raw(_users[10])["vesting"].as<asset>();
+    produce_blocks(golos::seconds_to_blocks(post.window));
+    BOOST_CHECK_GT(vest.get_balance_raw(_users[1])["vesting"].as<asset>(), voter_amount);
+    BOOST_CHECK_GT(vest.get_balance_raw(_users[8])["vesting"].as<asset>(), delegator_amount);
+    BOOST_CHECK_GT(vest.get_balance_raw(_users[9])["vesting"].as<asset>(), delegator_amount);
+    BOOST_CHECK_EQUAL(vest.get_balance_raw(_users[10])["vesting"].as<asset>(), delegator_amount);
     check();
 } FC_LOG_AND_RETHROW()
 

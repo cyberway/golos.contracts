@@ -140,10 +140,6 @@
       {
         "name": "interest_rate",
         "type": "percent_t"
-      },
-      {
-        "name": "payout_strategy",
-        "type": "uint8"
       }
     ]
   },

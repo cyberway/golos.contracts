@@ -112,7 +112,8 @@ void publication::create_message(
 ) {
     require_auth(message_id.author);
 
-    eosio_assert(message_id.permlink.length() && message_id.permlink.length() < config::max_length, "Permlink length is empty or more than 256.");
+    eosio_assert(message_id.permlink.length() && message_id.permlink.length() < config::max_length, 
+            "Permlink length is empty or more than 256.");
     eosio_assert(validate_permlink(message_id.permlink), "Permlink contains wrong symbol.");
     eosio_assert(headermssg.length() < config::max_length, "Title length is more than 256.");
     eosio_assert(bodymssg.length(), "Body is empty.");
@@ -132,7 +133,8 @@ void publication::create_message(
 
     if (parent_id.author) {
         if (social_acc_param.account) {
-            eosio_assert(!social::is_blocking(social_acc_param.account, parent_id.author, message_id.author), "You are blocked by this account");
+            eosio_assert(!social::is_blocking(social_acc_param.account, parent_id.author, message_id.author), 
+                    "You are blocked by this account");
         }
     }
 
@@ -145,8 +147,13 @@ void publication::create_message(
     auto issuer = token::get_issuer(config::token_name, token_code);
     tables::limit_table lims(_self, _self.value);
 
-    use_charge(lims, parent_id.author ? structures::limitparams::COMM : structures::limitparams::POST, issuer, message_id.author,
-        golos::vesting::get_account_effective_vesting(config::vesting_name, message_id.author, token_code).amount, token_code, vestpayment);
+    use_charge(
+            lims, 
+            parent_id.author ? structures::limitparams::COMM : structures::limitparams::POST, 
+            issuer, message_id.author,
+            golos::vesting::get_account_effective_vesting(config::vesting_name, message_id.author, token_code).amount, 
+            token_code, 
+            vestpayment);
 
     tables::permlink_table permlink_table(_self, message_id.author.value);
     tables::message_table message_table(_self, message_id.author.value);
@@ -187,13 +194,15 @@ void publication::create_message(
             .weight = ben.second
         });
 
-    eosio_assert((benefic_map.size() <= max_beneficiaries_param.max_beneficiaries), "publication::create_message: benafic_map.size() > MAX_BENEFICIARIES");
+    eosio_assert((benefic_map.size() <= max_beneficiaries_param.max_beneficiaries), 
+            "publication::create_message: benafic_map.size() > MAX_BENEFICIARIES");
 
     auto cur_time = current_time();
     atmsp::machine<fixp_t> machine;
 
     eosio_assert(cur_time >= pool->created, "publication::create_message: cur_time < pool.created");
-    eosio_assert(pool->state.msgs < std::numeric_limits<structures::counter_t>::max(), "publication::create_message: pool->msgs == max_counter_val");
+    eosio_assert(pool->state.msgs < std::numeric_limits<structures::counter_t>::max(), 
+            "publication::create_message: pool->msgs == max_counter_val");
     pools.modify(*pool, _self, [&](auto &item){ item.state.msgs++; });
 
     auto permlink_index = permlink_table.get_index<"byvalue"_n>();
@@ -351,7 +360,14 @@ void publication::payto(name user, eosio::asset quantity, enum_t mode, std::stri
         eosio_assert(false, "publication::payto: unknown kind of payment");
 }
 
-int64_t publication::pay_curators(structures::mssgid message_id, uint64_t msgid, int64_t max_rewards, fixp_t weights_sum, symbol tokensymbol, std::string memo) {
+int64_t publication::pay_curators(
+        structures::mssgid message_id, 
+        uint64_t msgid, 
+        int64_t max_rewards, 
+        fixp_t weights_sum, 
+        symbol tokensymbol, 
+        std::string memo) 
+{
     tables::vote_table vs(_self, message_id.author.value);
     int64_t unclaimed_rewards = max_rewards;
 
@@ -390,7 +406,12 @@ void publication::use_charge(tables::limit_table& lims, structures::limitparams:
             });
 }
 
-void publication::use_postbw_charge(tables::limit_table& lims, name issuer, name account, symbol_code token_code, int64_t mssg_id) {
+void publication::use_postbw_charge(
+        tables::limit_table& lims, 
+        name issuer, name account, 
+        symbol_code token_code, 
+        int64_t mssg_id) 
+{
     auto bw_lim_itr = lims.find(structures::limitparams::POSTBW);
     if(bw_lim_itr->price >= 0)
         INLINE_ACTION_SENDER(charge, usenotifygt) (config::charge_name,
@@ -425,15 +446,21 @@ void publication::close_message(structures::mssgid message_id) {
 
     eosio_assert(pool->state.msgs != 0, "LOGIC ERROR! publication::payrewards: pool.msgs is equal to zero");
     atmsp::machine<fixp_t> machine;
-    fixp_t sharesfn = set_and_run(machine, pool->rules.mainfunc.code, {FP(mssg_itr->state.netshares)}, {{fixp_t(0), FP(pool->rules.mainfunc.maxarg)}});
+    fixp_t sharesfn = set_and_run(
+            machine, 
+            pool->rules.mainfunc.code, 
+            {FP(mssg_itr->state.netshares)}, 
+            {{fixp_t(0), FP(pool->rules.mainfunc.maxarg)}});
 
     asset mssg_reward;
     auto state = pool->state;
     int64_t payout = 0;
     if(state.msgs == 1) {
         payout = state.funds.amount; //if we have the only message in the pool, the author receives a reward anyway
-        eosio_assert(state.rshares == mssg_itr->state.netshares, "LOGIC ERROR! publication::payrewards: pool->rshares != mssg_itr->netshares for last message");
-        eosio_assert(state.rsharesfn == sharesfn.data(), "LOGIC ERROR! publication::payrewards: pool->rsharesfn != sharesfn.data() for last message");
+        eosio_assert(state.rshares == mssg_itr->state.netshares, 
+                "LOGIC ERROR! publication::payrewards: pool->rshares != mssg_itr->netshares for last message");
+        eosio_assert(state.rsharesfn == sharesfn.data(), 
+                "LOGIC ERROR! publication::payrewards: pool->rsharesfn != sharesfn.data() for last message");
         state.funds.amount = 0;
         state.rshares = 0;
         state.rsharesfn = 0;
@@ -517,8 +544,15 @@ void publication::paymssgrwrd(structures::mssgid message_id) {
     elaf_t percent(elai_t(mssg_itr->curators_prcnt) / elai_t(config::_100percent));
     auto curation_payout = int_cast(percent * elai_t(payout.amount));
 
-    eosio_assert((curation_payout <= payout.amount) && (curation_payout >= 0), "publication::payrewards: wrong curation_payout");
-    auto unclaimed_rewards = pay_curators(message_id, mssg_itr->id, curation_payout, FP(mssg_itr->state.sumcuratorsw), payout.symbol, get_memo("curators", message_id));
+    eosio_assert((curation_payout <= payout.amount) && (curation_payout >= 0), 
+            "publication::payrewards: wrong curation_payout");
+    auto unclaimed_rewards = pay_curators(
+            message_id, 
+            mssg_itr->id, 
+            curation_payout, 
+            FP(mssg_itr->state.sumcuratorsw), 
+            payout.symbol, 
+            get_memo("curators", message_id));
 
     eosio_assert(unclaimed_rewards >= 0, "publication::payrewards: unclaimed_rewards < 0");
     
@@ -527,8 +561,13 @@ void publication::paymssgrwrd(structures::mssgid message_id) {
     int64_t ben_payout_sum = 0;
     for (auto& ben: mssg_itr->beneficiaries) {
         auto ben_payout = cyber::safe_pct(payout.amount, ben.weight);
-        eosio_assert((0 <= ben_payout) && (ben_payout <= payout.amount - ben_payout_sum), "LOGIC ERROR! publication::payrewards: wrong ben_payout value");
-        payto(ben.account, eosio::asset(ben_payout, payout.symbol), static_cast<enum_t>(payment_t::VESTING), get_memo("benefeciary", message_id));
+        eosio_assert((0 <= ben_payout) && (ben_payout <= payout.amount - ben_payout_sum), 
+                "LOGIC ERROR! publication::payrewards: wrong ben_payout value");
+        payto(
+                ben.account, 
+                eosio::asset(ben_payout, payout.symbol), 
+                static_cast<enum_t>(payment_t::VESTING), 
+                get_memo("benefeciary", message_id));
         ben_payout_sum += ben_payout;
     }
     payout.amount -= ben_payout_sum;
@@ -536,8 +575,16 @@ void publication::paymssgrwrd(structures::mssgid message_id) {
     elaf_t token_prop(elai_t(mssg_itr->tokenprop) / elai_t(config::_100percent));
     auto token_payout = int_cast(elai_t(payout.amount) * token_prop);
     eosio_assert(payout.amount >= token_payout, "publication::payrewards: wrong token_payout value");
-    payto(message_id.author, eosio::asset(token_payout, payout.symbol), static_cast<enum_t>(payment_t::TOKEN), get_memo("author", message_id));
-    payto(message_id.author, eosio::asset(payout.amount - token_payout, payout.symbol), static_cast<enum_t>(payment_t::VESTING), get_memo("author", message_id));
+    payto(
+            message_id.author, 
+            eosio::asset(token_payout, payout.symbol), 
+            static_cast<enum_t>(payment_t::TOKEN), 
+            get_memo("author", message_id));
+    payto(
+            message_id.author, 
+            eosio::asset(payout.amount - token_payout, payout.symbol), 
+            static_cast<enum_t>(payment_t::VESTING), 
+            get_memo("author", message_id));
 
     tables::vote_table vote_table(_self, message_id.author.value);
     auto votetable_index = vote_table.get_index<"messageid"_n>();
@@ -565,9 +612,10 @@ void publication::close_message_timer(structures::mssgid message_id, uint64_t id
 
 void publication::check_upvote_time(uint64_t cur_time, uint64_t mssg_date) {
     const auto& cashout_window_param = params().cashout_window_param;
-    eosio_assert((cur_time <= mssg_date + ((cashout_window_param.window - cashout_window_param.upvote_lockout) * seconds(1).count())) ||
-                 (cur_time > mssg_date + (cashout_window_param.window * seconds(1).count())),
-                 "You can't upvote, because publication will be closed soon.");
+    eosio_assert(
+        (cur_time <= mssg_date + ((cashout_window_param.window - cashout_window_param.upvote_lockout) * seconds(1).count())) ||
+        (cur_time > mssg_date + (cashout_window_param.window * seconds(1).count())),
+        "You can't upvote, because publication will be closed soon.");
 }
 
 fixp_t publication::calc_available_rshares(name voter, int16_t weight, uint64_t cur_time, const structures::rewardpool& pool) {
@@ -677,7 +725,11 @@ void publication::set_vote(name voter, const structures::mssgid& message_id, int
     });
     eosio_assert(WP(pool->state.rsharesfn) >= 0, "pool state rsharesfn overflow");
 
-    auto sumcuratorsw_delta = get_delta(machine, FP(mssg_itr->state.voteshares), FP(msg_new_state.voteshares), pool->rules.curationfunc);
+    auto sumcuratorsw_delta = get_delta(
+            machine, 
+            FP(mssg_itr->state.voteshares), 
+            FP(msg_new_state.voteshares), 
+            pool->rules.curationfunc);
     msg_new_state.sumcuratorsw = (FP(mssg_itr->state.sumcuratorsw) + sumcuratorsw_delta).data();
     message_table.modify(mssg_itr, _self, [&](auto &item) {
         item.state = msg_new_state;
@@ -696,7 +748,11 @@ void publication::set_vote(name voter, const structures::mssgid& message_id, int
     auto time_delta = static_cast<int64_t>((cur_time - mssg_itr->date) / seconds(1).count());
     elap_t curatorsw_factor =
         std::max(std::min(
-        set_and_run(machine, pool->rules.timepenalty.code, {fp_cast<fixp_t>(time_delta, false)}, {{fixp_t(0), FP(pool->rules.timepenalty.maxarg)}}),
+        set_and_run(
+            machine, 
+            pool->rules.timepenalty.code, 
+            {fp_cast<fixp_t>(time_delta, false)}, 
+            {{fixp_t(0), FP(pool->rules.timepenalty.maxarg)}}),
         fixp_t(1)), fixp_t(0));
 
     std::vector<structures::delegate_voter> delegators;
@@ -711,7 +767,7 @@ void publication::set_vote(name voter, const structures::mssgid& message_id, int
         if (interest_rate == 0)
             continue;
 
-        delegators.push_back({record.delegator, interest_rate, record.payout_strategy});
+        delegators.push_back({record.delegator, interest_rate});
     }
 
     vote_table.emplace(voter, [&]( auto &item ) {
@@ -728,7 +784,11 @@ void publication::set_vote(name voter, const structures::mssgid& message_id, int
     });
 }
 
-void publication::fill_depleted_pool(tables::reward_pools& pools, eosio::asset quantity, tables::reward_pools::const_iterator excluded) {
+void publication::fill_depleted_pool(
+        tables::reward_pools& pools, 
+        eosio::asset quantity, 
+        tables::reward_pools::const_iterator excluded) 
+{
     using namespace tables;
     using namespace structures;
     eosio_assert(quantity.amount >= 0, "fill_depleted_pool: quantity.amount < 0");
@@ -762,11 +822,22 @@ void publication::on_transfer(name from, name to, eosio::asset quantity, std::st
     fill_depleted_pool(pools, quantity, pools.end());
 }
 
-void publication::set_limit(std::string act_str, symbol_code token_code, uint8_t charge_id, int64_t price, int64_t cutoff, int64_t vesting_price, int64_t min_vesting) {
+void publication::set_limit(
+        std::string act_str, 
+        symbol_code token_code, 
+        uint8_t charge_id, 
+        int64_t price, 
+        int64_t cutoff, 
+        int64_t vesting_price, 
+        int64_t min_vesting) 
+{
     using namespace tables;
     using namespace structures;
     require_auth(_self);
-    eosio_assert(price < 0 || golos::charge::exist(config::charge_name, token_code, charge_id), "publication::set_limit: charge doesn't exist");
+    eosio_assert(
+            price < 0 || 
+            golos::charge::exist(config::charge_name, token_code, charge_id), 
+            "publication::set_limit: charge doesn't exist");
     auto act = limitparams::act_from_str(act_str);
     eosio_assert(act != limitparams::VOTE || charge_id == 0, "publication::set_limit: charge_id for VOTE should be 0");
     //? should we require cutoff to be _100percent if act == VOTE (to synchronize with vesting)?
@@ -836,13 +907,23 @@ void publication::send_poolerase_event(const structures::rewardpool& pool) {
     eosio::event(_self, "poolerase"_n, pool.created).send();
 }
 
-void publication::send_poststate_event(name author, const structures::permlink& permlink, const structures::message& post, fixp_t sharesfn) {
+void publication::send_poststate_event(
+        name author, 
+        const structures::permlink& permlink, 
+        const structures::message& post, 
+        fixp_t sharesfn) 
+{
     structures::post_event data{ author, permlink.value, post.state.netshares, post.state.voteshares,
         post.state.sumcuratorsw, static_cast<base_t>(sharesfn) };
     eosio::event(_self, "poststate"_n, data).send();
 }
 
-void publication::send_votestate_event(name voter, const structures::voteinfo& vote, name author, const structures::permlink& permlink) {
+void publication::send_votestate_event(
+        name voter, 
+        const structures::voteinfo& vote, 
+        name author, 
+        const structures::permlink& permlink) 
+{
     structures::vote_event data{voter, author, permlink.value, vote.weight, vote.curatorsw, vote.rshares};
     eosio::event(_self, "votestate"_n, data).send();
 }
@@ -852,7 +933,13 @@ void publication::send_rewardweight_event(structures::mssgid message_id, uint16_
     eosio::event(_self, "rewardweight"_n, data).send();
 }
 
-structures::funcinfo publication::load_func(const funcparams& params, const std::string& name, const atmsp::parser<fixp_t>& pa, atmsp::machine<fixp_t>& machine, bool inc) {
+structures::funcinfo publication::load_func(
+        const funcparams& params, 
+        const std::string& name, 
+        const atmsp::parser<fixp_t>& pa, 
+        atmsp::machine<fixp_t>& machine, 
+        bool inc) 
+{
     eosio_assert(params.maxarg > 0, "forum::load_func: params.maxarg <= 0");
     structures::funcinfo ret;
     ret.maxarg = fp_cast<fixp_t>(params.maxarg).data();
@@ -862,7 +949,12 @@ structures::funcinfo publication::load_func(const funcparams& params, const std:
     return ret;
 }
 
-fixp_t publication::get_delta(atmsp::machine<fixp_t>& machine, fixp_t old_val, fixp_t new_val, const structures::funcinfo& func) {
+fixp_t publication::get_delta(
+        atmsp::machine<fixp_t>& machine, 
+        fixp_t old_val, 
+        fixp_t new_val, 
+        const structures::funcinfo& func) 
+{
     func.code.to_machine(machine);
     elap_t old_fn = machine.run({old_val}, {{fixp_t(0), FP(func.maxarg)}});
     elap_t new_fn = machine.run({new_val}, {{fixp_t(0), FP(func.maxarg)}});
@@ -914,7 +1006,11 @@ int64_t publication::pay_delegators(int64_t claim, name voter,
     int64_t dlg_payout_sum = 0;
     for (auto delegate_obj : delegate_list) {
         auto dlg_payout = claim * delegate_obj.interest_rate / config::_100percent;
-        payto(delegate_obj.delegator, eosio::asset(dlg_payout, tokensymbol), static_cast<enum_t>(payment_t::VESTING), get_memo("delegator", message_id));
+        payto(
+                delegate_obj.delegator, 
+                eosio::asset(dlg_payout, tokensymbol), 
+                static_cast<enum_t>(payment_t::VESTING), 
+                get_memo("delegator", message_id));
 
         dlg_payout_sum += dlg_payout;
     }
@@ -957,7 +1053,9 @@ void publication::set_curators_prcnt(structures::mssgid message_id, uint16_t cur
     eosio::check(!message_itr->closed, "Message is closed.");
 
     eosio::check(message_itr->state.voteshares == 0, "Curators percent can be changed only before voting.");
-    eosio::check(message_itr->curators_prcnt != curators_prcnt, "Same curators percent value is already set."); // TODO: tests #617
+    eosio::check(
+            message_itr->curators_prcnt != curators_prcnt, 
+            "Same curators percent value is already set."); // TODO: tests #617
 
     message_table.modify(message_itr, name(), [&](auto& item) {
         item.curators_prcnt = curators_prcnt;

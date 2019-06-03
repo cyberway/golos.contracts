@@ -173,7 +173,6 @@ struct delegation {
     account_name delegator;
     account_name delegatee;
     uint16_t interest_rate;
-    uint8_t payout_strategy;
     double amount;
 };
 

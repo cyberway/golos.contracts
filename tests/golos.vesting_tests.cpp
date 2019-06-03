@@ -75,7 +75,6 @@ protected:
         const string key_not_found    = amsg("unable to find key");
         const string not_issuer       = amsg("Only token issuer can create it");
         const string self_delegate    = amsg("You can not delegate to yourself");
-        const string bad_strategy     = amsg("not valid value payout_strategy");
         const string tokens_lt0       = amsg("the number of tokens should not be less than 0");
         const string interest_to_high = amsg("Exceeded the percentage of delegated vesting");
         const string tokens_frozen    = amsg("Tokens are frozen until the end of the period");
@@ -404,9 +403,7 @@ BOOST_FIXTURE_TEST_CASE(delegate_vesting, golos_vesting_tester) try {
     BOOST_TEST_MESSAGE("--- fail when delegate to self");
     BOOST_CHECK_EQUAL(err.self_delegate, vest.delegate(N(sania), N(sania), amount));
 
-    BOOST_TEST_MESSAGE("--- fail on bad payout_strategy or interest rate");
-    BOOST_CHECK_EQUAL(err.bad_strategy, vest.delegate(N(sania), N(pasha), amount, 0, -1));
-    BOOST_CHECK_EQUAL(err.bad_strategy, vest.delegate(N(sania), N(pasha), amount, 0, 2));
+    BOOST_TEST_MESSAGE("--- fail on bad interest rate");
     BOOST_CHECK_EQUAL(err.interest_to_high, vest.delegate(N(sania), N(pasha), amount, 50*cfg::_1percent)); // TODO: test boundaries
 
     BOOST_TEST_MESSAGE("--- fail when delegate 0 or less than min_remainder");
@@ -416,10 +413,6 @@ BOOST_FIXTURE_TEST_CASE(delegate_vesting, golos_vesting_tester) try {
 
     BOOST_TEST_MESSAGE("--- insufficient funds assert");
     BOOST_CHECK_EQUAL(err.delegation_no_funds2, vest.delegate(N(sania), N(pasha), vest.make_asset(10000)));
-
-    BOOST_TEST_MESSAGE("--- succeed when correct arguments for both payout strategies");
-    BOOST_CHECK_EQUAL(success(), vest.delegate(N(sania), N(pasha), amount, 0, 0));  // amount = min_remainder
-    BOOST_CHECK_EQUAL(success(), vest.delegate(N(sania), N(tania), amount, 0, 1));  // TODO: disallow 0% + strategy
 
     BOOST_TEST_MESSAGE("--- fail when delegate more than scheduled to withdraw");
     BOOST_CHECK_EQUAL(success(), vest.withdraw(N(sania), N(sania), vest.make_asset(100-3*min_remainder)));

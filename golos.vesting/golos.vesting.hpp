@@ -23,7 +23,7 @@ public:
     [[eosio::action]] void withdraw(name from, name to, asset quantity);
     [[eosio::action]] void stopwithdraw(name owner, symbol type);
     [[eosio::action]] void delegate(name delegator, name delegatee, asset quantity,
-        uint16_t interest_rate, uint8_t payout_strategy);
+        uint16_t interest_rate);
     [[eosio::action]] void undelegate(name delegator, name delegatee, asset quantity);
 
     [[eosio::action]] void create(symbol symbol, name notify_acc);
@@ -78,7 +78,6 @@ public:
         name delegatee;
         asset quantity;
         uint16_t interest_rate;
-        uint8_t payout_strategy;
         time_point_sec min_delegation_time;
 
         auto primary_key() const {
