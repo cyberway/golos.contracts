@@ -300,12 +300,12 @@ def createGolosAccounts():
 #        linkAuth('gls', 'cyber.token', 'issue', 'issue')
 #        linkAuth('gls', 'cyber.token', 'transfer', 'issue')
 
-        updateAuth('gls',  'invoice', 'active', ['gls.publish@cyber.code'])
-        linkAuth('gls', 'gls.charge', 'use', 'invoice')
-        linkAuth('gls', 'gls.charge', 'usenotifygt', 'invoice')
-
-        updateAuth('gls.publish', 'calcrwrdwt', 'active', ['gls.charge@cyber.code'])
-        linkAuth('gls.publish', 'gls.publush', 'calcrwrdwt', 'calcrwrdwt')
+#        updateAuth('gls',  'invoice', 'active', ['gls.publish@cyber.code'])
+#        linkAuth('gls', 'gls.charge', 'use', 'invoice')
+#        linkAuth('gls', 'gls.charge', 'usenotifygt', 'invoice')
+#
+#        updateAuth('gls.publish', 'calcrwrdwt', 'active', ['gls.charge@cyber.code'])
+#        linkAuth('gls.publish', 'gls.publush', 'calcrwrdwt', 'calcrwrdwt')
 
 def stepInstallContracts():
     for acc in golosAccounts:
