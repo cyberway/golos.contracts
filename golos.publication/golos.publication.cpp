@@ -386,9 +386,9 @@ int16_t publication::use_charge(tables::limit_table& lims, structures::limitpara
                 account,
                 token_code,
                 lim_itr->charge_id,
-                (lim_itr->price * weight) / config::_100percent,
+                (lim_itr->price * weight * k) / config::_100percent,
                 lim_itr->cutoff,
-                vestpayment ? (lim_itr->vesting_price * weight) / config::_100percent : 0
+                vestpayment ? (lim_itr->vesting_price * weight * k) / config::_100percent : 0
             });
 
     return weight;
@@ -633,6 +633,7 @@ void publication::set_vote(name voter, const structures::mssgid& message_id, int
             check_upvote_time(cur_time, mssg_itr->date);
 
         fixp_t new_mssg_rshares = add_cut(FP(mssg_itr->state.netshares) - FP(vote_itr->rshares), rshares);
+        print("\n new rshares: ", int_cast(new_mssg_rshares * elai_t(config::_100percent)));
         auto rsharesfn_delta = get_delta(machine, FP(mssg_itr->state.netshares), new_mssg_rshares, pool->rules.mainfunc);
 
         pools.modify(*pool, _self, [&](auto &item) {
@@ -685,6 +686,9 @@ void publication::set_vote(name voter, const structures::mssgid& message_id, int
     };
 
     auto rsharesfn_delta = get_delta(machine, FP(mssg_itr->state.netshares), FP(msg_new_state.netshares), pool->rules.mainfunc);
+    print("\n rsharesfn_delta: ", int_cast((rsharesfn_delta) * elai_t(config::_100percent)));
+    print("\n old rhsaresfn: ", pool->state.rsharesfn);
+
 
     pools.modify(*pool, _self, [&](auto &item) {
          item.state.rshares = (WP(item.state.rshares) + wdfp_t(rshares)).data();
@@ -692,6 +696,8 @@ void publication::set_vote(name voter, const structures::mssgid& message_id, int
          send_poolstate_event(item);
     });
     eosio_assert(WP(pool->state.rsharesfn) >= 0, "pool state rsharesfn overflow");
+
+    print("\n rhsaresfn: ", pool->state.rsharesfn);
 
     auto sumcuratorsw_delta = get_delta(machine, FP(mssg_itr->state.voteshares), FP(msg_new_state.voteshares), pool->rules.curationfunc);
     msg_new_state.sumcuratorsw = (FP(mssg_itr->state.sumcuratorsw) + sumcuratorsw_delta).data();
