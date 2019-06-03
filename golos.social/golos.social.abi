@@ -23,6 +23,8 @@
            {"name": "instagram",         "type": "string?"},
            {"name": "telegram",          "type": "string?"},
            {"name": "vk",                "type": "string?"},
+           {"name": "whatsapp",          "type": "string?"},
+           {"name": "wechat",            "type": "string?"},
            {"name": "website",           "type": "string?"},
            {"name": "first_name",        "type": "string?"},
            {"name": "last_name",         "type": "string?"},
