@@ -31,7 +31,7 @@ struct cyber_token_api: base_contract_api {
                     return std::tie(l.permission.actor, l.permission.permission) <
                         std::tie(r.permission.actor, r.permission.permission);
                 });
-            _tester->set_authority(issuer, golos::config::invoice_name, auth, "owner");
+            _tester->set_authority(issuer, golos::config::invoice_name, auth, "active");
         }
 
         return push(N(create), _code, args()
@@ -53,6 +53,13 @@ struct cyber_token_api: base_contract_api {
             ("owner", owner)
             ("symbol", symbol)
             ("ram_payer", payer)
+        );
+    }
+
+    action_result close(account_name owner, symbol symbol) {
+        return push(N(close), owner, args()
+            ("owner", owner)
+            ("symbol", symbol)
         );
     }
 

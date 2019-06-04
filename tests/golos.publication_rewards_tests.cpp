@@ -81,6 +81,7 @@ protected:
             BOOST_CHECK_EQUAL(success(), buy_vesting_for(u, user_vesting_funds));
             produce_blocks();
         }
+
         check();
         _req.clear();
         _res.clear();
@@ -157,10 +158,12 @@ public:
     }
 
     action_result add_funds_to_forum(int64_t amount) {
-        auto ret = token.transfer(_issuer, _forum_name, asset(amount, _token_symbol));
+        asset quantity = asset(amount, _token_symbol);
+        auto ret = token.transfer(_issuer, _forum_name, quantity);
         if (ret == success()) {
             BOOST_REQUIRE_MESSAGE(!_state.pools.empty(), "issue: _state.pools is empty");
             fill_depleted_pool(amount, _state.pools.size());
+            _state.balances[_forum_name].tokenamount += quantity.to_real();
         }
         return ret;
     }
@@ -244,7 +247,18 @@ public:
             s.set_balance_token(user, 0.0);
         } else {
             auto cur = *accs.begin();
-            s.set_balance_token(user, static_cast<double>(cur["payments"].as<asset>().to_real()));
+            s.set_balance_token(user, static_cast<double>(cur["balance"].as<asset>().to_real()));
+        }
+    }
+
+    void set_payments_balance_from_table(account_name user, statemap& s) {
+        auto accs = token.get_accounts(user);
+        BOOST_CHECK_EQUAL(accs.size() <= 1, true);
+        if (accs.empty()) {
+            s.set_balance_payments(user, 0.0);
+        } else {
+            auto cur = *accs.begin();
+            s.set_balance_payments(user, static_cast<double>(cur["payments"].as<asset>().to_real()));
         }
     }
 
@@ -259,11 +273,15 @@ public:
         }
     }
 
-    void fill_from_state(statemap& s) const {
+    void fill_from_state(statemap& s) {
         s.clear();
         for (auto& b : _state.balances) {
             s.set_balance(b.first, {b.second.tokenamount, b.second.vestamount});
         }
+        if (_state.balances.find(_forum_name) == _state.balances.end())
+            s.set_balance(_forum_name, {0.0, 0.0, 0.0});
+        else
+            s.set_balance(_forum_name, {_state.balances[_forum_name].tokenamount, _state.balances[_forum_name].vestamount, _state.balances[_forum_name].paymentsamount});
         for (auto& p : _state.pools) {
             double pool_rshares_sum = 0.0;
             double pool_rsharesfn_sum = 0.0;
@@ -297,6 +315,9 @@ public:
             set_token_balance_from_table(user, s);
             set_vesting_balance_from_table(user, s);
         }
+        set_token_balance_from_table(_forum_name, s);
+        set_vesting_balance_from_table(_forum_name, s);
+        set_payments_balance_from_table(_forum_name, s);
         //pools
         {
             auto pools = post.get_reward_pools();
@@ -339,6 +360,27 @@ public:
         }
 #endif
     }
+
+    void pay(
+            account_name from,
+            account_name to, 
+            double payout,
+            payment_t mode) 
+    {
+        if (mode == payment_t::TOKEN) {
+            if (!_state.balances[to].tokenclosed)
+                _state.balances[to].paymentsamount += payout;
+            else
+                _state.balances[from].paymentsamount += payout;
+        } else if (mode == payment_t::VESTING) {
+            if (!_state.balances[to].vestclosed)
+                _state.balances[to].vestamount += get_converted_to_vesting(payout);
+            else
+                _state.balances[from].paymentsamount += payout;
+        }
+        _state.balances[from].tokenamount -= payout;
+    }
+
     void pay_rewards_in_state() {
         const auto now = control->head_block_time().sec_since_epoch();
         for (auto itr_p = _state.pools.begin(); itr_p != _state.pools.end(); itr_p++) {
@@ -378,7 +420,7 @@ public:
                         }
                     }
                     for (auto& r : cur_rewards) {
-                        _state.balances[r.first].vestamount += get_converted_to_vesting(r.second);
+                        pay(_forum_name, r.first, r.second, payment_t::VESTING);
                         unclaimed_funds -= r.second;
                     }
 
@@ -386,13 +428,14 @@ public:
                     double ben_payout_sum = 0.0;
                     for (auto& ben : m.beneficiaries) {
                         double ben_payout = author_payout * get_prop(ben.weight);
-                        _state.balances[ben.account].vestamount += get_converted_to_vesting(ben_payout);
+                        pay(_forum_name, ben.account, ben_payout, payment_t::VESTING);
                         ben_payout_sum += ben_payout;
                     }
                     author_payout -= ben_payout_sum;
 
-                    _state.balances[m.key.author].tokenamount += author_payout * m.tokenprop;
-                    _state.balances[m.key.author].vestamount += get_converted_to_vesting(author_payout * (1.0 - m.tokenprop));
+                    auto author_token_rwrd = author_payout * m.tokenprop;
+                    pay(_forum_name, m.key.author, author_token_rwrd, payment_t::TOKEN); 
+                    pay(_forum_name, m.key.author, author_payout - author_token_rwrd, payment_t::VESTING);
 
                     p.messages.erase(itr_m++);
                     p.funds -= (payout - unclaimed_funds);
@@ -526,6 +569,27 @@ public:
             }
             BOOST_REQUIRE_MESSAGE(false, "addvote: ret == success(), but message not found in state");
         }
+        return ret;
+    }
+
+    action_result close_token_acc(name owner, symbol symbol) {
+        auto ret = token.close(owner, symbol);
+        if (ret == success())
+            _state.balances[owner].tokenclosed = true;
+        return ret;
+    }
+    
+    action_result close_vest_acc(name owner, symbol symbol) {
+        auto ret = vest.close(owner, symbol);
+        if (ret == success())
+            _state.balances[owner].vestclosed = true;
+        return ret;
+    }
+
+    action_result retire_vest(asset quantity, name user, name issuer) {
+        auto ret = vest.retire(quantity, user, issuer);
+        if (ret == success())
+            _state.balances[user].vestamount = 0.0;
         return ret;
     }
 };
@@ -877,6 +941,80 @@ BOOST_FIXTURE_TEST_CASE(golos_curation_test, reward_calcs_tester) try {
         check();
     }
     produce_blocks(golos::seconds_to_blocks(150));
+    check();
+} FC_LOG_AND_RETHROW()
+
+BOOST_FIXTURE_TEST_CASE(close_token_acc_test, reward_calcs_tester) try {
+    BOOST_TEST_MESSAGE("golos_close_acc_test");
+    int64_t maxfp = std::numeric_limits<fixp_t>::max();
+    auto bignum = 500000000000;
+    init(bignum, 500000);
+    produce_blocks();
+    BOOST_TEST_MESSAGE("--- setrules");
+    using namespace golos_curation;
+    BOOST_CHECK_EQUAL(success(), setrules({"x", maxfp}, {golos_curation::func_str, maxfp}, {"1", bignum},
+        [](double x){ return x; }, golos_curation::func, [](double x){ return 1.0; }));
+    check();
+
+    BOOST_TEST_MESSAGE("--- add_funds_to_forum");
+    BOOST_CHECK_EQUAL(success(), add_funds_to_forum(50000));
+    check();
+
+    BOOST_TEST_MESSAGE("--- checking payout if account is closed");
+    BOOST_TEST_MESSAGE("--- create_message: " << name{_users[0]}.to_string());
+    BOOST_CHECK_EQUAL(success(), create_message({_users[0], "permlink"}));
+    check();
+
+    BOOST_TEST_MESSAGE("--- " << name{_users[1]}.to_string() << " voted");
+    BOOST_CHECK_EQUAL(success(), addvote(_users[1], {_users[0], "permlink"}, 10000));
+    check();
+
+    BOOST_CHECK_EQUAL(success(), retire_vest(vest.get_balance_raw(_users[0])["vesting"].as<asset>(), _users[0], _issuer));
+    check();
+
+    BOOST_CHECK_EQUAL(success(), close_token_acc(_users[0], _token_symbol));
+    BOOST_TEST_CHECK(token.get_account(_users[0]).is_null());
+
+    auto forum_name_balance = token.get_account(_forum_name)["payments"].as<asset>();
+    produce_blocks(golos::seconds_to_blocks(post.window));
+    BOOST_CHECK_GT(token.get_account(_forum_name)["payments"].as<asset>(), forum_name_balance); 
+    check();
+} FC_LOG_AND_RETHROW()
+
+BOOST_FIXTURE_TEST_CASE(close_vest_acc_test, reward_calcs_tester) try {
+    BOOST_TEST_MESSAGE("golos_close_acc_test");
+    int64_t maxfp = std::numeric_limits<fixp_t>::max();
+    auto bignum = 500000000000;
+    init(bignum, 500000);
+    produce_blocks();
+    BOOST_TEST_MESSAGE("--- setrules");
+    using namespace golos_curation;
+    BOOST_CHECK_EQUAL(success(), setrules({"x", maxfp}, {golos_curation::func_str, maxfp}, {"1", bignum},
+        [](double x){ return x; }, golos_curation::func, [](double x){ return 1.0; }));
+    check();
+
+    BOOST_TEST_MESSAGE("--- add_funds_to_forum");
+    BOOST_CHECK_EQUAL(success(), add_funds_to_forum(50000));
+    check();
+
+    BOOST_TEST_MESSAGE("--- checking payout if account is closed");
+    BOOST_TEST_MESSAGE("--- create_message: " << name{_users[0]}.to_string());
+    BOOST_CHECK_EQUAL(success(), create_message({_users[0], "permlink"}));
+    check();
+
+    BOOST_TEST_MESSAGE("--- " << name{_users[1]}.to_string() << " voted");
+    BOOST_CHECK_EQUAL(success(), addvote(_users[1], {_users[0], "permlink"}, 10000));
+    check();
+
+    BOOST_CHECK_EQUAL(success(), retire_vest(vest.get_balance_raw(_users[0])["vesting"].as<asset>(), _users[0], _issuer));
+    check();
+
+    BOOST_CHECK_EQUAL(success(), close_vest_acc(_users[0], _token_symbol));
+    BOOST_TEST_CHECK(vest.get_balance_raw(_users[0]).is_null());
+
+    auto forum_name_balance = token.get_account(_forum_name)["payments"].as<asset>();
+    produce_blocks(golos::seconds_to_blocks(post.window));
+    BOOST_CHECK_GT(token.get_account(_forum_name)["payments"].as<asset>(), forum_name_balance); 
     check();
 } FC_LOG_AND_RETHROW()
 

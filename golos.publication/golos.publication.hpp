@@ -41,8 +41,8 @@ private:
     int64_t pay_curators(name author, uint64_t msgid, int64_t max_rewards, fixp_t weights_sum,
                          symbol tokensymbol, std::string memo = "");
     void payto(name user, asset quantity, enum_t mode, std::string memo = "");
-    static void check_account(name user, symbol tokensymbol);
-    int64_t pay_delegators(int64_t claim, name voter,
+    static void check_acc_vest_balance(name user, symbol tokensymbol);
+    int64_t pay_delegators(int64_t claim, name voter, 
             eosio::symbol tokensymbol, std::vector<structures::delegate_voter> delegate_list);
     base_t get_checked_curators_prcnt(std::optional<uint16_t> curators_prcnt);
 
