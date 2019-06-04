@@ -365,14 +365,14 @@ public:
             account_name from,
             account_name to, 
             double payout,
-            enum_t mode) 
+            payment_t mode) 
     {
-        if (static_cast<payment_t>(mode) == payment_t::TOKEN) {
+        if (mode == payment_t::TOKEN) {
             if (!_state.balances[to].tokenclosed)
                 _state.balances[to].paymentsamount += payout;
             else
                 _state.balances[from].paymentsamount += payout;
-        } else if (static_cast<payment_t>(mode) == payment_t::VESTING) {
+        } else if (mode == payment_t::VESTING) {
             if (!_state.balances[to].vestclosed)
                 _state.balances[to].vestamount += get_converted_to_vesting(payout);
             else
@@ -420,7 +420,7 @@ public:
                         }
                     }
                     for (auto& r : cur_rewards) {
-                        pay(_forum_name, r.first, r.second, static_cast<enum_t>(payment_t::VESTING));
+                        pay(_forum_name, r.first, r.second, payment_t::VESTING);
                         unclaimed_funds -= r.second;
                     }
 
@@ -428,14 +428,14 @@ public:
                     double ben_payout_sum = 0.0;
                     for (auto& ben : m.beneficiaries) {
                         double ben_payout = author_payout * get_prop(ben.weight);
-                        pay(_forum_name, ben.account, ben_payout, static_cast<enum_t>(payment_t::VESTING));
+                        pay(_forum_name, ben.account, ben_payout, payment_t::VESTING);
                         ben_payout_sum += ben_payout;
                     }
                     author_payout -= ben_payout_sum;
 
                     auto author_token_rwrd = author_payout * m.tokenprop;
-                    pay(_forum_name, m.key.author, author_token_rwrd, static_cast<enum_t>(payment_t::TOKEN)); 
-                    pay(_forum_name, m.key.author, author_payout - author_token_rwrd, static_cast<enum_t>(payment_t::VESTING));
+                    pay(_forum_name, m.key.author, author_token_rwrd, payment_t::TOKEN); 
+                    pay(_forum_name, m.key.author, author_payout - author_token_rwrd, payment_t::VESTING);
 
                     p.messages.erase(itr_m++);
                     p.funds -= (payout - unclaimed_funds);
