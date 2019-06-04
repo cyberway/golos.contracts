@@ -99,11 +99,11 @@
 
         {"name": "gls",
             "permissions": [
-                {"name": "owner",      "accounts": ["gls@witn.smajor"]},
-                {"name": "active",     "accounts": ["gls@witn.smajor", "gls.ctrl@cyber.code", "gls@testing"]},
+                {"name": "owner",      "accounts": ["@witn.smajor"]},
+                {"name": "active",     "accounts": ["@witn.smajor", "gls.ctrl@cyber.code", "@testing"]},
                 {"name": "testing",    "key": "GLS5a2eDuRETEg7uy8eHbiCqGZM3wnh2pLjiXrFduLWBKVZKCkB62"},
-                {"name": "issue",      "accounts": ["gls.emit@cyber.code", "gls@testing"]},
-                {"name": "createuser", "accounts": ["gls@testing"]},
+                {"name": "issue",      "accounts": ["gls.emit@cyber.code", "@testing"]},
+                {"name": "createuser", "accounts": ["@testing"]},
                 {"name": "invoice",    "accounts": ["gls.charge@cyber.code", "gls.publish@cyber.code"]},
                 {"name": "changevest", "accounts": ["gls.vesting@cyber.code"]},
                 {"name": "witn.smajor"},
@@ -195,7 +195,7 @@
             "links": ["gls.ctrl:changevest"]
         },{
             "permission": "gls.ctrl@code",
-            "links": ["cyber.token:transfer"]
+            "links": ["cyber.token:transfer", "cyber.token:payment"]
         },{
             "permission": "gls.emit@code",
             "links": ["gls.emit:emit"]

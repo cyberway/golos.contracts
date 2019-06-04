@@ -41,7 +41,7 @@ def fillGolosAccounts(golosAccounts):
         ('gls.ctrl',     True,       'golos.ctrl',
             [("owner",       [], ["gls@owner"], []),
              ("active",      [], ["gls@active"], []),
-             ("code",        [], ["gls.ctrl@cyber.code"], ["cyber.token:transfer"]),
+             ("code",        [], ["gls.ctrl@cyber.code"], ["cyber.token:transfer", "cyber.token:payment"]),
             ]),
         ('gls.emit',     True,       'golos.emit',
             [("owner",       [], ["gls@owner"], []),
