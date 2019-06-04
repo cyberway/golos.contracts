@@ -81,10 +81,10 @@ def fillGolosAccounts(golosAccounts):
     for (name, inGenesis, contract, permissions) in _golosAccounts:
         acc = Struct()
         perms = []
-        for (name, keys, accounts, links) in permissions:
+        for (pname, keys, accounts, links) in permissions:
             perm = Struct()
-            parent = "owner" if name == "active" else "active"
-            (perm.name, perm.parent, perm.keys, perm.accounts, perm.links) = (name, parent, keys, accounts, links)
+            parent = "owner" if pname == "active" else "active"
+            (perm.name, perm.parent, perm.keys, perm.accounts, perm.links) = (pname, parent, keys, accounts, links)
             perms.append(perm)
         (acc.name, acc.inGenesis, acc.contract, acc.permissions) = (name, inGenesis, contract, perms)
         golosAccounts.append(acc)
