@@ -978,7 +978,7 @@ BOOST_FIXTURE_TEST_CASE(golos_curation_test, reward_calcs_tester) try {
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE(close_token_acc_test, reward_calcs_tester) try {
-    BOOST_TEST_MESSAGE("golos_close_acc_test");
+    BOOST_TEST_MESSAGE("close_token_acc_test");
     int64_t maxfp = std::numeric_limits<fixp_t>::max();
     auto bignum = 500000000000;
     init(bignum, 500000);
@@ -1002,9 +1002,6 @@ BOOST_FIXTURE_TEST_CASE(close_token_acc_test, reward_calcs_tester) try {
     BOOST_CHECK_EQUAL(success(), addvote(_users[1], {_users[0], "permlink"}, 10000));
     check();
 
-    BOOST_CHECK_EQUAL(success(), retire_vest(vest.get_balance_raw(_users[0])["vesting"].as<asset>(), _users[0], _issuer));
-    check();
-
     BOOST_CHECK_EQUAL(success(), close_token_acc(_users[0], _token_symbol));
     BOOST_TEST_CHECK(token.get_account(_users[0]).is_null());
 
@@ -1015,7 +1012,7 @@ BOOST_FIXTURE_TEST_CASE(close_token_acc_test, reward_calcs_tester) try {
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE(close_vest_acc_test, reward_calcs_tester) try {
-    BOOST_TEST_MESSAGE("golos_close_acc_test");
+    BOOST_TEST_MESSAGE("close_vest_acc_test");
     int64_t maxfp = std::numeric_limits<fixp_t>::max();
     auto bignum = 500000000000;
     init(bignum, 500000);
@@ -1104,10 +1101,6 @@ BOOST_FIXTURE_TEST_CASE(golos_delegators_test, reward_calcs_tester) try {
     BOOST_CHECK_GT(vest.get_balance_raw(_users[1])["vesting"].as<asset>(), voter_amount);
     BOOST_CHECK_GT(vest.get_balance_raw(_users[2])["vesting"].as<asset>(), delegator_amount);
     check();
-    BOOST_TEST_MESSAGE(voter_amount);
-    BOOST_TEST_MESSAGE(delegator_amount);
-    BOOST_TEST_MESSAGE(vest.get_balance_raw(_users[1])["vesting"].as<asset>());
-    BOOST_TEST_MESSAGE(vest.get_balance_raw(_users[2])["vesting"].as<asset>());
 
     BOOST_TEST_MESSAGE("--- add_funds_to_forum");
     BOOST_CHECK_EQUAL(success(), add_funds_to_forum(50000));
@@ -1129,10 +1122,6 @@ BOOST_FIXTURE_TEST_CASE(golos_delegators_test, reward_calcs_tester) try {
     BOOST_CHECK_GT(vest.get_balance_raw(_users[1])["vesting"].as<asset>(), voter_amount);
     BOOST_CHECK_GT(vest.get_balance_raw(_users[3])["vesting"].as<asset>(), delegator_amount);
     check();
-    BOOST_TEST_MESSAGE(voter_amount);
-    BOOST_TEST_MESSAGE(delegator_amount);
-    BOOST_TEST_MESSAGE(vest.get_balance_raw(_users[4])["vesting"].as<asset>());
-    BOOST_TEST_MESSAGE(vest.get_balance_raw(_users[3])["vesting"].as<asset>());
 
     BOOST_TEST_MESSAGE("--- add_funds_to_forum");
     BOOST_CHECK_EQUAL(success(), add_funds_to_forum(50000));
