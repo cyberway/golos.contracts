@@ -71,6 +71,7 @@ add_subdirectory(golos.publication)
 add_subdirectory(golos.charge)
 add_subdirectory(golos.social)
 add_subdirectory(golos.referral)
+add_subdirectory(golos.memo)
 
 if (APPLE)
    set(OPENSSL_ROOT "/usr/local/opt/openssl")

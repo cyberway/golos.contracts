@@ -166,6 +166,13 @@
             "abi": {"path": "$GOLOS_CONTRACTS/golos.referral/golos.referral.abi", "hash":""},
             "code": {"path": "$GOLOS_CONTRACTS/golos.referral/golos.referral.wasm", "hash":""}
         },
+        {"name": "gls.memo",
+            "permissions": [
+                {"name": "owner",  "accounts": ["gls@owner"]},
+                {"name": "active", "accounts": ["gls@active"]}
+            ],
+            "abi": {"path": "$GOLOS_CONTRACTS/golos.memo/golos.memo.abi", "hash":""}
+        },
         {"name": "gls.worker",
             "permissions": [
                 {"name": "owner", "key": "INITIAL"},
@@ -370,7 +377,8 @@
             "vesting": "gls.vesting",
             "posting": "gls.publish",
             "social": "gls.social",
-            "charge": "gls.charge"
+            "charge": "gls.charge",
+            "memo": "gls.memo"
         },
         "recovery": {
             "wait_days": 30
