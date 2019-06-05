@@ -56,6 +56,13 @@ struct cyber_token_api: base_contract_api {
         );
     }
 
+    action_result close(account_name owner, symbol symbol) {
+        return push(N(close), owner, args()
+            ("owner", owner)
+            ("symbol", symbol)
+        );
+    }
+
     action_result transfer(account_name from, account_name to, asset quantity, string memo = "") {
         return push(N(transfer), from, args()
             ("from", from)

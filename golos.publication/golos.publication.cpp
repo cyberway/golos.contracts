@@ -140,7 +140,7 @@ void publication::create_message(
     auto pool = pools.begin();   // TODO: Reverse iterators doesn't work correctly
     eosio_assert(pool != pools.end(), "publication::create_message: [pools] is empty");
     pool = --pools.end();
-    check_account(message_id.author, pool->state.funds.symbol);
+    check_acc_vest_balance(message_id.author, pool->state.funds.symbol);
     auto token_code = pool->state.funds.symbol.code();
     auto issuer = token::get_issuer(config::token_name, token_code);
     tables::limit_table lims(_self, _self.value);
@@ -161,7 +161,7 @@ void publication::create_message(
     for (auto& ben : beneficiaries) {
         validate_percent_not0(ben.weight, "beneficiary.weight");            // TODO: tests #617
         eosio::check(benefic_map.count(ben.account) == 0, "beneficiaries contain several entries for one account");
-        check_account(ben.account, pool->state.funds.symbol);
+        check_acc_vest_balance(ben.account, pool->state.funds.symbol);
         weights_sum += ben.weight;
         validate_percent_le(weights_sum, "weights_sum of beneficiaries");   // TODO: tests #617
         benefic_map[ben.account] = ben.weight;
@@ -330,11 +330,23 @@ void publication::payto(name user, eosio::asset quantity, enum_t mode, std::stri
     if(quantity.amount == 0)
         return;
 
-    if(static_cast<payment_t>(mode) == payment_t::TOKEN)
-        INLINE_ACTION_SENDER(token, payment) (config::token_name, {_self, config::code_name}, {_self, user, quantity, memo});
-    else if(static_cast<payment_t>(mode) == payment_t::VESTING)
-        INLINE_ACTION_SENDER(token, transfer) (config::token_name, {_self, config::code_name},
+    if(static_cast<payment_t>(mode) == payment_t::TOKEN) {
+        if (token::balance_exist(config::token_name, user, quantity.symbol.code())) {
+            INLINE_ACTION_SENDER(token, payment) (config::token_name, {_self, config::code_name}, {_self, user, quantity, memo});
+        } 
+        else {
+            INLINE_ACTION_SENDER(token, payment) (config::token_name, {_self, config::code_name}, {_self, _self, quantity, memo});
+        }
+    }
+    else if(static_cast<payment_t>(mode) == payment_t::VESTING) {
+        if (golos::vesting::balance_exist(config::vesting_name, user, quantity.symbol.code())) {
+            INLINE_ACTION_SENDER(token, transfer) (config::token_name, {_self, config::code_name},
             {_self, config::vesting_name, quantity, std::string(config::send_prefix + name{user}.to_string()  + "; " + memo)});
+        } 
+        else {
+            INLINE_ACTION_SENDER(token, payment) (config::token_name, {_self, config::code_name}, {_self, _self, quantity, memo});
+        }
+    }
     else
         eosio_assert(false, "publication::payto: unknown kind of payment");
 }
@@ -396,7 +408,7 @@ void publication::use_postbw_charge(tables::limit_table& lims, name issuer, name
 
 void publication::close_message(structures::mssgid message_id) {
     require_auth(_self);
-
+    
     tables::permlink_table permlink_table(_self, message_id.author.value);
     auto permlink_index = permlink_table.get_index<"byvalue"_n>();
     auto permlink_itr = permlink_index.find(message_id.permlink);
@@ -592,7 +604,7 @@ void publication::set_vote(name voter, const structures::mssgid& message_id, int
 
     tables::reward_pools pools(_self, _self.value);
     auto pool = get_pool(pools, mssg_itr->date);
-    check_account(voter, pool->state.funds.symbol);
+    check_acc_vest_balance(voter, pool->state.funds.symbol);
     tables::vote_table vote_table(_self, message_id.author.value);
 
     auto cur_time = current_time();
@@ -857,9 +869,9 @@ fixp_t publication::get_delta(atmsp::machine<fixp_t>& machine, fixp_t old_val, f
     return fp_cast<fixp_t>(new_fn - old_fn, false);
 }
 
-void publication::check_account(name user, eosio::symbol tokensymbol) {
+void publication::check_acc_vest_balance(name user, eosio::symbol tokensymbol) {
     eosio_assert(golos::vesting::balance_exist(config::vesting_name, user, tokensymbol.code()),
-        ("unregistered user: " + name{user}.to_string()).c_str());
+        ("vesting balance doesn't exist for " + name{user}.to_string()).c_str());
 }
 
 void publication::set_params(std::vector<posting_params> params) {

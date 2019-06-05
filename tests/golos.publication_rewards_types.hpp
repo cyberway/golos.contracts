@@ -17,6 +17,9 @@ using namespace eosio::chain;
 struct balance_data {
     double tokenamount = 0.0;
     double vestamount = 0.0;
+    double paymentsamount = 0.0;
+    bool tokenclosed = false;
+    bool vestclosed = false;
     //vesting delegation isn't covered by these tests
 };
 
@@ -34,7 +37,7 @@ struct message_data {
 };
 
 constexpr struct {
-    balance_data balance {0.01, 0.02};            // this values are divided to PRECISION_DIV, scale if change
+    balance_data balance {0.01, 0.02, 0.001};            // this values are divided to PRECISION_DIV, scale if change
     pool_data pool {0.001, 0.015, -0.01, -0.01};  // 0.015 value is divided to PRECISION_DIV (=15 if PRECISION_DIV=1.0)
     message_data message {-0.01, -0.01, -0.01};
 } delta;
@@ -43,7 +46,6 @@ constexpr double balance_delta = 0.01;
 constexpr double funds_delta = 0.01;
 constexpr double pool_rshares_delta = 0.01;
 constexpr double pool_rsharesfn_delta = 0.01;
-
 
 inline double get_prop(int64_t arg) {
     return static_cast<double>(arg) / static_cast<double>(golos::config::_100percent);
@@ -116,11 +118,17 @@ struct statemap : public std::map<std::string, aprox_val_t> {
         auto prefix = get_balance_str(acc);
         operator[](prefix + "tokenamount") = { data.tokenamount, delta.balance.tokenamount };
         operator[](prefix + "vestamount") = { data.vestamount, delta.balance.vestamount };
+        operator[](prefix + "paymentsamount") = { data.paymentsamount, delta.balance.paymentsamount };
     }
 
     void set_balance_token(account_name acc, double val) {
         auto prefix = get_balance_str(acc);
         operator[](prefix + "tokenamount") = { val, delta.balance.tokenamount };
+    }
+
+    void set_balance_payments(account_name acc, double val) {
+        auto prefix = get_balance_str(acc);
+        operator[](prefix + "paymentsamount") = { val, delta.balance.paymentsamount };
     }
 
     void set_balance_vesting(account_name acc, double val) {
