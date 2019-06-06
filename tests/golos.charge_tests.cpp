@@ -35,7 +35,7 @@ public:
         , charge({this, _code, _token_sym})
         , _users{N(alice), N(bob)}
     {
-        create_accounts({_code, cfg::token_name, cfg::charge_name, cfg::control_name, cfg::issuer_name, cfg::publish_name});
+        create_accounts({_code, cfg::token_name, cfg::vesting_name, cfg::control_name, cfg::issuer_name, cfg::publish_name});
         create_accounts(_users);
 
         set_authority(cfg::issuer_name, cfg::invoice_name, create_code_authority({cfg::charge_name}), "active");
