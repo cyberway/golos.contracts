@@ -23,6 +23,12 @@ struct golos_vesting_api: base_contract_api {
         _tester->link_authority(_code, token_name, cfg::code_name, N(transfer));
     }
 
+    void add_changevest_auth_to_issuer(account_name issuer, account_name control) {
+        // It's need to call control:changevest from vesting
+        set_authority(issuer, cfg::changevest_name, create_code_authority({_code}), "active");
+        link_authority(issuer, control, cfg::changevest_name, N(changevest));
+    }
+
     //// vesting actions
     action_result create_vesting(name creator) {
         return create_vesting(creator, _symbol, golos::config::control_name);

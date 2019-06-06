@@ -27,7 +27,7 @@ public:
 
     golos_vesting_tester()
         : golos_tester(cfg::vesting_name)
-        , vest({this, cfg::vesting_name, _vesting_sym})
+        , vest({this, _code, _vesting_sym})
         , token({this, cfg::token_name, _token_sym})
         , charge({this, cfg::charge_name, _token_sym})
 
@@ -37,16 +37,12 @@ public:
         produce_blocks(2);
 
         install_contract(cfg::token_name, contracts::token_wasm(), contracts::token_abi());
+        vest.add_changevest_auth_to_issuer(cfg::emission_name, cfg::control_name);
         vest.initialize_contract(cfg::token_name);
         charge.initialize_contract();
-        
-        // It's need to call control:changevest from vesting
-        set_authority(cfg::emission_name, cfg::changevest_name, create_code_authority({cfg::vesting_name}), "active");
-        link_authority(cfg::emission_name, cfg::control_name, cfg::changevest_name, N(changevest));
     }
 
     void prepare_balances(int supply = 1e5, int issue1 = 500, int issue2 = 500, int buy1 = default_vesting_amount, int buy2 = default_vesting_amount) {
-        // token.create_invoice_authority(cfg::emission_name, {cfg::charge_name, cfg::publish_name});
         BOOST_CHECK_EQUAL(success(), token.create(cfg::emission_name, token.make_asset(supply)));
         BOOST_CHECK_EQUAL(success(), token.issue(cfg::emission_name, N(sania), token.make_asset(issue1), "issue tokens sania"));
         BOOST_CHECK_EQUAL(success(), token.issue(cfg::emission_name, N(pasha), token.make_asset(issue2), "issue tokens pasha"));
@@ -194,7 +190,6 @@ BOOST_FIXTURE_TEST_CASE(create_vesting, golos_vesting_tester) try {
     auto issuer = cfg::emission_name;
     const bool skip_authority_check = true;
 
-    // token.create_invoice_authority(issuer, {cfg::charge_name});
     BOOST_CHECK_EQUAL(success(), token.create(issuer, token.make_asset(100000)));
 
     BOOST_TEST_MESSAGE("--- fail on non-existing token");
@@ -230,7 +225,6 @@ BOOST_FIXTURE_TEST_CASE(buy_vesting, golos_vesting_tester) try {
 
 BOOST_FIXTURE_TEST_CASE(bulk_buy_vesting, golos_vesting_tester) try {
     BOOST_TEST_MESSAGE("Test bulk buying vesting / converting token to vesting");
-    // token.create_invoice_authority(cfg::emission_name, {cfg::charge_name, cfg::publish_name});
     BOOST_CHECK_EQUAL(success(), token.create(cfg::emission_name, token.make_asset(100000)));
     BOOST_CHECK_EQUAL(success(), token.issue(cfg::emission_name, N(sania), token.make_asset(100000), "issue tokens sania"));
     produce_block();

@@ -279,33 +279,6 @@ def createGolosAccounts():
                     (code, action) = link.split(':',2)
                     linkAuth(acc.name, code, action, perm.name)
 
-#    if not args.golos_genesis:
-#        updateAuth('gls',  'witn.major', 'active', [args.public_key], [])
-#        updateAuth('gls',  'witn.minor', 'active', [args.public_key], [])
-#        updateAuth('gls',  'witn.smajor', 'active', [args.public_key], [])
-#        updateAuth('gls',  'active', 'owner', [args.public_key], ['gls.ctrl@cyber.code', 'gls.emit@cyber.code'])
-#        updateAuth('gls.ctrl',    'active', 'owner', [args.public_key], ['gls.ctrl@cyber.code'])
-#        updateAuth('gls.publish', 'active', 'owner', [args.public_key], ['gls.publish@cyber.code'])
-#        updateAuth('gls.vesting', 'active', 'owner', [args.public_key], ['gls.vesting@cyber.code'])
-#        updateAuth('gls.social',  'active', 'owner', [args.public_key], ['gls.publish@cyber.code'])
-#        updateAuth('gls.emit',    'active', 'owner', [args.public_key], ['gls.emit@cyber.code'])
-#
-#        updateAuth('gls', 'createuser', 'active', ['GLS5a2eDuRETEg7uy8eHbiCqGZM3wnh2pLjiXrFduLWBKVZKCkB62'], [])
-#        linkAuth('gls', 'cyber', 'newaccount', 'createuser')
-#        linkAuth('gls', 'cyber.domain', 'newusername', 'createuser')
-#        linkAuth('gls', 'gls.vesting', 'open', 'createuser')
-#        linkAuth('gls', 'cyber.token', 'open', 'createuser')
-#
-#        updateAuth('gls',  'issue', 'active', ['GLS5a2eDuRETEg7uy8eHbiCqGZM3wnh2pLjiXrFduLWBKVZKCkB62'], [])
-#        linkAuth('gls', 'cyber.token', 'issue', 'issue')
-#        linkAuth('gls', 'cyber.token', 'transfer', 'issue')
-
-#        updateAuth('gls',  'invoice', 'active', ['gls.publish@cyber.code'])
-#        linkAuth('gls', 'gls.charge', 'use', 'invoice')
-#        linkAuth('gls', 'gls.charge', 'usenotifygt', 'invoice')
-#
-#        updateAuth('gls.publish', 'calcrwrdwt', 'active', ['gls.charge@cyber.code'])
-#        linkAuth('gls.publish', 'gls.publush', 'calcrwrdwt', 'calcrwrdwt')
 
 def stepInstallContracts():
     for acc in golosAccounts:

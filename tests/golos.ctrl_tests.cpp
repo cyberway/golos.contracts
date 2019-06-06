@@ -33,11 +33,9 @@ public:
         produce_block();
 
         install_contract(cfg::token_name, contracts::token_wasm(), contracts::token_abi());
+        vest.add_changevest_auth_to_issuer(_issuer, ctrl._code);
         vest.initialize_contract(cfg::token_name);
         ctrl.initialize_contract(cfg::token_name);
-
-        set_authority(_issuer, cfg::changevest_name, create_code_authority({cfg::vesting_name}), "active");
-        link_authority(_issuer, ctrl._code, cfg::changevest_name, N(changevest));
 
         _test_params = ctrl.default_params(BLOG, _token, _max_witnesses, _max_witness_votes, _update_auth_period);
     }

@@ -33,7 +33,7 @@ public:
         , post({this, cfg::publish_name, _token_sym})
         , vest({this, cfg::vesting_name, _vesting_sym})
         , token({this, cfg::token_name, _token_sym})
-        , social({this, cfg::social_name, _token_sym})
+        , social({this, _code, _token_sym})
         , _users{"dave"_n, "erin"_n} {
 
         produce_block();
@@ -42,13 +42,10 @@ public:
         produce_block();
 
         install_contract(cfg::token_name, contracts::token_wasm(), contracts::token_abi());
+        vest.add_changevest_auth_to_issuer(cfg::issuer_name, cfg::control_name);
         vest.initialize_contract(cfg::token_name);
         post.initialize_contract(cfg::token_name);
         social.initialize_contract();
-
-        // It's need to call control:changevest from vesting
-        set_authority(cfg::issuer_name, cfg::changevest_name, create_code_authority({cfg::vesting_name}), "active");
-        link_authority(cfg::issuer_name, cfg::control_name, cfg::changevest_name, N(changevest));
 
         produce_block();
     }

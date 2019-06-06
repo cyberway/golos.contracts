@@ -61,7 +61,6 @@ protected:
         BOOST_CHECK_EQUAL(success(), post.init_default_params());
 
         auto total_funds = issuer_funds + _users.size() * user_vesting_funds;
-        // token.create_invoice_authority(_issuer, {_issuer, cfg::charge_name, _forum_name});
         BOOST_CHECK_EQUAL(success(), token.create(_issuer, asset(total_funds, _token_symbol)));
         produce_blocks();
 
@@ -70,7 +69,6 @@ protected:
 
         BOOST_CHECK_EQUAL(success(), token.open(_forum_name, _token_symbol, _forum_name));
         BOOST_CHECK_EQUAL(success(), vest.create_vesting(_issuer, _token_symbol, cfg::control_name));
-        //charge.link_invoice_permission(_issuer);
         produce_blocks();
 
         BOOST_CHECK_EQUAL(success(), vest.open(_forum_name, _token_symbol, _forum_name));
@@ -111,13 +109,10 @@ public:
         produce_blocks(2);
 
         install_contract(cfg::token_name, contracts::token_wasm(), contracts::token_abi());
+        vest.add_changevest_auth_to_issuer(_issuer, cfg::control_name);
         vest.initialize_contract(cfg::token_name);
         charge.initialize_contract();
         post.initialize_contract(cfg::token_name);
-
-        // It's need to call control:changevest from vesting
-        set_authority(_issuer, cfg::changevest_name, create_code_authority({cfg::vesting_name}), "active");
-        link_authority(_issuer, cfg::control_name, cfg::changevest_name, N(changevest));
 
         set_authority(_issuer, cfg::invoice_name, create_code_authority({charge._code, post._code}), "active");
         link_authority(_issuer, charge._code, cfg::invoice_name, N(use));

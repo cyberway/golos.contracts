@@ -23,7 +23,7 @@ protected:
 public:
     golos_emit_tester()
         : golos_tester(cfg::emission_name)
-        , emit({this, cfg::emission_name})
+        , emit({this, _code})
         , token({this, cfg::token_name, _token})
     {
         create_accounts({BLOG, cfg::emission_name, cfg::issuer_name, cfg::control_name, cfg::vesting_name, cfg::token_name, cfg::workers_name});

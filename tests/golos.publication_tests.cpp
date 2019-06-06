@@ -42,13 +42,10 @@ public:
         produce_block();
 
         install_contract(cfg::token_name, contracts::token_wasm(), contracts::token_abi());
+        vest.add_changevest_auth_to_issuer(cfg::emission_name, cfg::control_name);
         vest.initialize_contract(cfg::token_name);
         charge.initialize_contract();
         post.initialize_contract(cfg::token_name);
-
-        // It's need to call control:changevest from vesting
-        set_authority(cfg::emission_name, cfg::changevest_name, create_code_authority({cfg::vesting_name}), "active");
-        link_authority(cfg::emission_name, cfg::control_name, cfg::changevest_name, N(changevest));
     }
 
     void init() {
@@ -70,7 +67,6 @@ public:
     }
 
     void prepare_balances() {
-        // token.create_invoice_authority(cfg::emission_name, {_code});
         BOOST_CHECK_EQUAL(success(), token.create(cfg::emission_name, token.make_asset(1e5)));
         produce_block();
 

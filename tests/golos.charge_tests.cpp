@@ -29,22 +29,20 @@ protected:
 public:
 
     golos_charge_tester()
-        : golos_tester(cfg::vesting_name)
+        : golos_tester(cfg::charge_name)
         , vest({this, cfg::vesting_name, _vesting_sym})
         , token({this, cfg::token_name, _token_sym})
-        , charge({this, cfg::charge_name, _token_sym})
+        , charge({this, _code, _token_sym})
         , _users{N(alice), N(bob)}
     {
         create_accounts({_code, cfg::token_name, cfg::charge_name, cfg::control_name, cfg::issuer_name, cfg::publish_name});
         create_accounts(_users);
 
-        set_authority(cfg::issuer_name, cfg::changevest_name, create_code_authority({cfg::vesting_name}), "active");
-        link_authority(cfg::issuer_name, cfg::control_name, cfg::changevest_name, N(changevest));
-
         set_authority(cfg::issuer_name, cfg::invoice_name, create_code_authority({cfg::charge_name}), "active");
         link_authority(cfg::issuer_name, vest._code, cfg::invoice_name, N(retire));
 
         install_contract(cfg::token_name, contracts::token_wasm(), contracts::token_abi());
+        vest.add_changevest_auth_to_issuer(cfg::issuer_name, cfg::control_name);
         vest.initialize_contract(cfg::token_name);
         charge.initialize_contract();
     }

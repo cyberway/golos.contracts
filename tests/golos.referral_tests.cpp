@@ -17,9 +17,9 @@ public:
         : golos_tester(cfg::referral_name)
         , _sym(3, "GLS")
         , _sym_vest(6, "GLS")
-        , post( {this, cfg::publish_name, _sym} )
+        , post({this, cfg::publish_name, _sym})
         , vest({this, cfg::vesting_name, _sym_vest})
-        , referral( {this, cfg::referral_name} )
+        , referral({this, _code})
         , token({this, cfg::token_name, _sym})
         , _users{N(sania), N(pasha), N(tania), N(vania), N(issuer)}
     {
@@ -29,13 +29,10 @@ public:
         produce_blocks(2);
 
         install_contract(cfg::token_name, contracts::token_wasm(), contracts::token_abi());
+        vest.add_changevest_auth_to_issuer(cfg::issuer_name, cfg::control_name);
         vest.initialize_contract(cfg::token_name);
         post.initialize_contract(cfg::token_name);
         referral.initialize_contract(cfg::token_name);
-
-        // It's need to call control:changevest from vesting
-        set_authority(cfg::issuer_name, cfg::changevest_name, create_code_authority({cfg::vesting_name}), "active");
-        link_authority(cfg::issuer_name, cfg::control_name, cfg::changevest_name, N(changevest));
 
         BOOST_CHECK_EQUAL(success(), token.create(cfg::issuer_name, token.make_asset(10000)));
         BOOST_CHECK_EQUAL(success(), token.open(cfg::publish_name, _sym, cfg::publish_name));
