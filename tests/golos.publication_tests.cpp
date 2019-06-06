@@ -41,10 +41,11 @@ public:
         create_accounts({cfg::charge_name, cfg::token_name, cfg::vesting_name, cfg::emission_name, cfg::control_name, N(dan.larimer)});
         produce_block();
 
-        install_contract(_code, contracts::posting_wasm(), contracts::posting_abi());
-        install_contract(cfg::vesting_name, contracts::vesting_wasm(), contracts::vesting_abi());
-        install_contract(cfg::charge_name, contracts::charge_wasm(), contracts::charge_abi());
         install_contract(cfg::token_name, contracts::token_wasm(), contracts::token_abi());
+        vest.add_changevest_auth_to_issuer(cfg::emission_name, cfg::control_name);
+        vest.initialize_contract(cfg::token_name);
+        charge.initialize_contract();
+        post.initialize_contract(cfg::token_name);
     }
 
     void init() {
@@ -66,7 +67,7 @@ public:
     }
 
     void prepare_balances() {
-        BOOST_CHECK_EQUAL(success(), token.create(cfg::emission_name, token.make_asset(1e5), {_code}));
+        BOOST_CHECK_EQUAL(success(), token.create(cfg::emission_name, token.make_asset(1e5)));
         produce_block();
 
         BOOST_CHECK_EQUAL(success(), vest.create_vesting(cfg::emission_name));

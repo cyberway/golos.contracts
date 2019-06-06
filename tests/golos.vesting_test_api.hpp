@@ -1,9 +1,11 @@
 #pragma once
 #include "test_api_helper.hpp"
 #include "../common/config.hpp"
+#include "contracts.hpp"
 
 namespace eosio { namespace testing {
 
+namespace cfg = golos::config;
 
 struct golos_vesting_api: base_contract_api {
     golos_vesting_api(golos_tester* tester, name code, symbol sym)
@@ -12,19 +14,35 @@ struct golos_vesting_api: base_contract_api {
 
     symbol _symbol;
 
+    void initialize_contract(name token_name) {
+        _tester->install_contract(cfg::vesting_name, contracts::vesting_wasm(), contracts::vesting_abi());
+        _tester->set_authority(_code, cfg::code_name, create_code_authority({_code}), "active");
+        _tester->link_authority(_code, _code, cfg::code_name, N(timeout));
+        _tester->link_authority(_code, _code, cfg::code_name, N(timeoutconv));
+        _tester->link_authority(_code, _code, cfg::code_name, N(timeoutrdel));
+        _tester->link_authority(_code, token_name, cfg::code_name, N(transfer));
+    }
+
+    void add_changevest_auth_to_issuer(account_name issuer, account_name control) {
+        // It's need to call control:changevest from vesting
+        _tester->set_authority(issuer, cfg::changevest_name, create_code_authority({_code}), "active");
+        _tester->link_authority(issuer, control, cfg::changevest_name, N(changevest));
+    }
+
     //// vesting actions
     action_result create_vesting(name creator) {
         return create_vesting(creator, _symbol, golos::config::control_name);
     }
-    action_result create_vesting(name creator, symbol vesting_symbol, name notify_acc = N(notify.acc)) {
-        action_result result = push(N(create), creator, args()
+    action_result create_vesting(name creator, symbol vesting_symbol, name notify_acc = N(notify.acc), bool skip_authority_check = false) {
+        if (!skip_authority_check) {
+            BOOST_CHECK(_tester->has_code_authority(creator, cfg::changevest_name, _code));
+            BOOST_CHECK(_tester->has_link_authority(creator, cfg::changevest_name, notify_acc, N(changevest)));
+        }
+
+        return push(N(create), creator, args()
             ("symbol", vesting_symbol)
             ("notify_acc", notify_acc)
         );
-        if (base_tester::success() == result) {
-            _tester->link_authority(creator, _code, golos::config::invoice_name, N(retire));
-        }
-        return result;
     }
 
     action_result open(name owner) {

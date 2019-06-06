@@ -61,7 +61,7 @@ protected:
         BOOST_CHECK_EQUAL(success(), post.init_default_params());
 
         auto total_funds = issuer_funds + _users.size() * user_vesting_funds;
-        BOOST_CHECK_EQUAL(success(), token.create(_issuer, asset(total_funds, _token_symbol), {_issuer, cfg::charge_name, _forum_name}));
+        BOOST_CHECK_EQUAL(success(), token.create(_issuer, asset(total_funds, _token_symbol)));
         produce_blocks();
 
         BOOST_CHECK_EQUAL(success(), token.issue(_issuer, _issuer, asset(total_funds, _token_symbol), "HERE COULD BE YOUR ADVERTISEMENT"));
@@ -69,7 +69,6 @@ protected:
 
         BOOST_CHECK_EQUAL(success(), token.open(_forum_name, _token_symbol, _forum_name));
         BOOST_CHECK_EQUAL(success(), vest.create_vesting(_issuer, _token_symbol, cfg::control_name));
-        charge.link_invoice_permission(_issuer);
         produce_blocks();
 
         BOOST_CHECK_EQUAL(success(), vest.open(_forum_name, _token_symbol, _forum_name));
@@ -109,10 +108,16 @@ public:
         create_accounts(_users);
         produce_blocks(2);
 
-        install_contract(_forum_name, contracts::posting_wasm(), contracts::posting_abi());
         install_contract(cfg::token_name, contracts::token_wasm(), contracts::token_abi());
-        install_contract(cfg::vesting_name, contracts::vesting_wasm(), contracts::vesting_abi());
-        install_contract(cfg::charge_name, contracts::charge_wasm(), contracts::charge_abi());
+        vest.add_changevest_auth_to_issuer(_issuer, cfg::control_name);
+        vest.initialize_contract(cfg::token_name);
+        charge.initialize_contract();
+        post.initialize_contract(cfg::token_name);
+
+        set_authority(_issuer, cfg::invoice_name, create_code_authority({charge._code, post._code}), "active");
+        link_authority(_issuer, charge._code, cfg::invoice_name, N(use));
+        link_authority(_issuer, charge._code, cfg::invoice_name, N(usenotifygt));
+        link_authority(_issuer, vest._code, cfg::invoice_name, N(retire));
     }
 
     action_result add_funds_to(account_name user, int64_t amount) {
@@ -738,7 +743,7 @@ BOOST_FIXTURE_TEST_CASE(limits_test, reward_calcs_tester) try {
 
     name action = "calcrwrdwt"_n;
     auto auth = authority(1, {}, {
-        {.permission = {golos::config::charge_name, golos::config::code_name}, .weight = 1}
+        {.permission = {golos::config::charge_name, config::eosio_code_name}, .weight = 1}
     });
     set_authority(_code, action, auth, "active");
     link_authority(_code, _code, action, action);

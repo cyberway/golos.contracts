@@ -332,19 +332,19 @@ void publication::payto(name user, eosio::asset quantity, enum_t mode, std::stri
 
     if(static_cast<payment_t>(mode) == payment_t::TOKEN) {
         if (token::balance_exist(config::token_name, user, quantity.symbol.code())) {
-            INLINE_ACTION_SENDER(token, payment) (config::token_name, {_self, config::active_name}, {_self, user, quantity, memo});
+            INLINE_ACTION_SENDER(token, payment) (config::token_name, {_self, config::code_name}, {_self, user, quantity, memo});
         } 
         else {
-            INLINE_ACTION_SENDER(token, payment) (config::token_name, {_self, config::active_name}, {_self, _self, quantity, memo});
+            INLINE_ACTION_SENDER(token, payment) (config::token_name, {_self, config::code_name}, {_self, _self, quantity, memo});
         }
     }
     else if(static_cast<payment_t>(mode) == payment_t::VESTING) {
         if (golos::vesting::balance_exist(config::vesting_name, user, quantity.symbol.code())) {
-            INLINE_ACTION_SENDER(token, transfer) (config::token_name, {_self, config::active_name},
+            INLINE_ACTION_SENDER(token, transfer) (config::token_name, {_self, config::code_name},
             {_self, config::vesting_name, quantity, std::string(config::send_prefix + name{user}.to_string()  + "; " + memo)});
         } 
         else {
-            INLINE_ACTION_SENDER(token, payment) (config::token_name, {_self, config::active_name}, {_self, _self, quantity, memo});
+            INLINE_ACTION_SENDER(token, payment) (config::token_name, {_self, config::code_name}, {_self, _self, quantity, memo});
         }
     }
     else
@@ -492,7 +492,7 @@ void publication::close_message(structures::mssgid message_id) {
         });
 
     transaction trx(time_point_sec(now() + config::paymssgrwrd_expiration_sec));
-    trx.actions.emplace_back(action{permission_level(_self, config::active_name), _self, "paymssgrwrd"_n, message_id});
+    trx.actions.emplace_back(action{permission_level(_self, config::code_name), _self, "paymssgrwrd"_n, message_id});
     trx.delay_sec = 0;
     trx.send((static_cast<uint128_t>(mssg_itr->id) << 64) | message_id.author.value, _self);
 }
@@ -558,7 +558,7 @@ void publication::paymssgrwrd(structures::mssgid message_id) {
 
 void publication::close_message_timer(structures::mssgid message_id, uint64_t id, uint64_t delay_sec) {
     transaction trx;
-    trx.actions.emplace_back(action{permission_level(_self, config::active_name), _self, "closemssg"_n, message_id});
+    trx.actions.emplace_back(action{permission_level(_self, config::code_name), _self, "closemssg"_n, message_id});
     trx.delay_sec = delay_sec;
     trx.send((static_cast<uint128_t>(id) << 64) | message_id.author.value, _self);
 }

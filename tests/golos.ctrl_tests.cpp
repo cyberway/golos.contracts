@@ -32,9 +32,10 @@ public:
             cfg::vesting_name, cfg::token_name, cfg::workers_name, cfg::emission_name});
         produce_block();
 
-        install_contract(_code, contracts::ctrl_wasm(), contracts::ctrl_abi());
         install_contract(cfg::token_name, contracts::token_wasm(), contracts::token_abi());
-        install_contract(cfg::vesting_name, contracts::vesting_wasm(), contracts::vesting_abi());
+        vest.add_changevest_auth_to_issuer(_issuer, ctrl._code);
+        vest.initialize_contract(cfg::token_name);
+        ctrl.initialize_contract(cfg::token_name);
 
         _test_params = ctrl.default_params(BLOG, _token, _max_witnesses, _max_witness_votes, _update_auth_period);
     }
@@ -143,7 +144,8 @@ public:
     }
 
     void prepare_balances() {
-        BOOST_CHECK_EQUAL(success(), token.create(_issuer, dasset(100500), {cfg::vesting_name}));
+        // token.create_invoice_authority(_issuer, {cfg::vesting_name});
+        BOOST_CHECK_EQUAL(success(), token.create(_issuer, dasset(100500)));
         BOOST_CHECK_EQUAL(success(), vest.create_vesting(_issuer));
         BOOST_CHECK_EQUAL(success(), vest.open(cfg::vesting_name, _token, cfg::vesting_name));
         vector<std::pair<uint64_t,double>> amounts = {

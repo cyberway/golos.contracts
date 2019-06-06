@@ -27,7 +27,7 @@ public:
 
     golos_vesting_tester()
         : golos_tester(cfg::vesting_name)
-        , vest({this, cfg::vesting_name, _vesting_sym})
+        , vest({this, _code, _vesting_sym})
         , token({this, cfg::token_name, _token_sym})
         , charge({this, cfg::charge_name, _token_sym})
 
@@ -36,13 +36,14 @@ public:
             _code, cfg::token_name, cfg::control_name, cfg::emission_name, cfg::publish_name, cfg::charge_name});
         produce_blocks(2);
 
-        install_contract(_code, contracts::vesting_wasm(), contracts::vesting_abi());
         install_contract(cfg::token_name, contracts::token_wasm(), contracts::token_abi());
-        install_contract(cfg::charge_name, contracts::charge_wasm(), contracts::charge_abi());
+        vest.add_changevest_auth_to_issuer(cfg::emission_name, cfg::control_name);
+        vest.initialize_contract(cfg::token_name);
+        charge.initialize_contract();
     }
 
     void prepare_balances(int supply = 1e5, int issue1 = 500, int issue2 = 500, int buy1 = default_vesting_amount, int buy2 = default_vesting_amount) {
-        BOOST_CHECK_EQUAL(success(), token.create(cfg::emission_name, token.make_asset(supply), {cfg::charge_name, cfg::publish_name}));
+        BOOST_CHECK_EQUAL(success(), token.create(cfg::emission_name, token.make_asset(supply)));
         BOOST_CHECK_EQUAL(success(), token.issue(cfg::emission_name, N(sania), token.make_asset(issue1), "issue tokens sania"));
         BOOST_CHECK_EQUAL(success(), token.issue(cfg::emission_name, N(pasha), token.make_asset(issue2), "issue tokens pasha"));
         produce_block();
@@ -188,14 +189,15 @@ BOOST_FIXTURE_TEST_CASE(set_params, golos_vesting_tester) try {
 BOOST_FIXTURE_TEST_CASE(create_vesting, golos_vesting_tester) try {
     BOOST_TEST_MESSAGE("Test creating vesting");
     auto issuer = cfg::emission_name;
+    const bool skip_authority_check = true;
 
-    BOOST_CHECK_EQUAL(success(), token.create(issuer, token.make_asset(100000), {cfg::charge_name}));
+    BOOST_CHECK_EQUAL(success(), token.create(issuer, token.make_asset(100000)));
 
     BOOST_TEST_MESSAGE("--- fail on non-existing token");
-    BOOST_CHECK_EQUAL(err.key_not_found, vest.create_vesting(issuer, symbol(_token_precision, "GOLOSA")));
+    BOOST_CHECK_EQUAL(err.key_not_found, vest.create_vesting(issuer, symbol(_token_precision, "GOLOSA"), N(notify.acc), skip_authority_check));
 
     BOOST_TEST_MESSAGE("--- fails when not issuer");
-    BOOST_CHECK_EQUAL(err.issuer_not_autority, vest.create_vesting(N(sania)));
+    BOOST_CHECK_EQUAL(err.issuer_not_autority, vest.create_vesting(N(sania), _vesting_sym, N(notify.acc), skip_authority_check));
     // TODO: test issuers list
 
     BOOST_CHECK_EQUAL(err.not_found_token_vesting, vest.open(N(sania)));
@@ -226,7 +228,7 @@ BOOST_FIXTURE_TEST_CASE(buy_vesting, golos_vesting_tester) try {
 
 BOOST_FIXTURE_TEST_CASE(bulk_buy_vesting, golos_vesting_tester) try {
     BOOST_TEST_MESSAGE("Test bulk buying vesting / converting token to vesting");
-    BOOST_CHECK_EQUAL(success(), token.create(cfg::emission_name, token.make_asset(100000), {cfg::charge_name, cfg::publish_name}));
+    BOOST_CHECK_EQUAL(success(), token.create(cfg::emission_name, token.make_asset(100000)));
     BOOST_CHECK_EQUAL(success(), token.issue(cfg::emission_name, N(sania), token.make_asset(100000), "issue tokens sania"));
     produce_block();
 
