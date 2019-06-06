@@ -100,6 +100,7 @@ protected:
         const string cutoff = amsg("can't delegate, not enough power");
         const string not_found_token_vesting = amsg("not found token vesting");
         const string mismatch_of_accuracy = amsg("mismatch of accuracy of vesting");
+        const string owner_not_exists = amsg("owner account does not exist");
     } err;
 
     const uint8_t withdraw_intervals = 13;
@@ -203,6 +204,8 @@ BOOST_FIXTURE_TEST_CASE(create_vesting, golos_vesting_tester) try {
     BOOST_CHECK_EQUAL(success(), vest.create_vesting(issuer));
 
     BOOST_CHECK_EQUAL(err.mismatch_of_accuracy, vest.open(N(sania), _vesting_sym_e, N(sania)));
+    BOOST_CHECK_EQUAL(err.owner_not_exists, vest.open(N(denlarimer), _vesting_sym_e, N(sania)));
+
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE(buy_vesting, golos_vesting_tester) try {
