@@ -532,12 +532,16 @@ const asset vesting::token_to_vesting(const asset& src, const vesting_stats& vin
 
 void vesting::timeout() {
     require_auth(_self);
+    uint128_t sender_id = _self.value;
     transaction trx;
-    trx.actions.emplace_back(action{permission_level(_self, config::code_name), _self, "timeoutrdel"_n, ""});
-    trx.actions.emplace_back(action{permission_level(_self, config::code_name), _self, "timeoutconv"_n, ""});
-    trx.actions.emplace_back(action{permission_level(_self, config::code_name), _self, "timeout"_n,     ""});
     trx.delay_sec = config::vesting_delay_tx_timeout;
-    trx.send(_self.value, _self);
+    trx.actions.emplace_back(action{permission_level(_self, config::code_name), _self, "timeout"_n, ""});
+    trx.send(sender_id, _self);
+
+    transaction trx2;
+    trx2.actions.emplace_back(action{permission_level(_self, config::code_name), _self, "timeoutrdel"_n, ""});
+    trx2.actions.emplace_back(action{permission_level(_self, config::code_name), _self, "timeoutconv"_n, ""});
+    trx2.send(sender_id + 1, _self, true);
 }
 
 } // golos
