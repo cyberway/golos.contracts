@@ -93,7 +93,9 @@ public:
         , _users{
             N(alice),  N(alice1),  N(alice2), N(alice3), N(alice4), N(alice5),
             N(bob), N(bob1), N(bob2), N(bob3), N(bob4), N(bob5),
-            N(why), N(has), N(my), N(imagination), N(become), N(poor)}
+            N(why), N(has), N(my), N(imagination), N(become), N(poor),
+            N(voter),  N(voter1),  N(voter2),
+            N(voter3), N(voter4), N(voter5), N(voter6)}
         , _stranger(N(dan.larimer)) {
 
         produce_blocks(2);    // why 2?
@@ -1089,12 +1091,6 @@ BOOST_FIXTURE_TEST_CASE(golos_delegators_test, reward_calcs_tester) try {
     auto params = "[" + vesting_withdraw + "," + vesting_amount + "," + delegation + "]";
     BOOST_CHECK_EQUAL(success(), vest.set_params(_issuer, _token_symbol, params));
 
-    std::vector<account_name> voters{
-            N(voter),  N(voter1),  N(voter2),
-            N(voter3), N(voter4), N(voter5), N(voter6)
-    };
-    create_accounts(voters);
-    add_vesting(voters, 500000);
     const int divider = vest.make_asset(1).get_amount();
     const int min_remainder = delegation_min_remainder / divider;
     const auto amount = vest.make_asset(min_remainder);
@@ -1107,15 +1103,15 @@ BOOST_FIXTURE_TEST_CASE(golos_delegators_test, reward_calcs_tester) try {
     BOOST_TEST_MESSAGE("--- create_message: " << name{_users[0]}.to_string());
     BOOST_CHECK_EQUAL(success(), create_message({_users[0], "permlink"}));
     check();
-    BOOST_CHECK_EQUAL(success(), delegate_vest(_users[2], voters[0], amount, interest_rate));
+    BOOST_CHECK_EQUAL(success(), delegate_vest(_users[2], _users[18], amount, interest_rate));
     check();
-    BOOST_TEST_MESSAGE("--- " << name{voters[0]}.to_string() << " voted");
-    BOOST_CHECK_EQUAL(success(), addvote(voters[0], {_users[0], "permlink"}, 10000));
+    BOOST_TEST_MESSAGE("--- " << name{_users[18]}.to_string() << " voted");
+    BOOST_CHECK_EQUAL(success(), addvote(_users[18], {_users[18], "permlink"}, 10000));
     check();
-    auto voter_amount = vest.get_balance_raw(voters[0])["vesting"].as<asset>();
+    auto voter_amount = vest.get_balance_raw(_users[18])["vesting"].as<asset>();
     auto delegator_amount = vest.get_balance_raw(_users[2])["vesting"].as<asset>();
     produce_blocks(golos::seconds_to_blocks(post.window));
-    BOOST_CHECK_GT(vest.get_balance_raw(voters[0])["vesting"].as<asset>(), voter_amount);
+    BOOST_CHECK_GT(vest.get_balance_raw(_users[18])["vesting"].as<asset>(), voter_amount);
     BOOST_CHECK_GT(vest.get_balance_raw(_users[2])["vesting"].as<asset>(), delegator_amount);
     check();
 
@@ -1127,15 +1123,15 @@ BOOST_FIXTURE_TEST_CASE(golos_delegators_test, reward_calcs_tester) try {
     BOOST_TEST_MESSAGE("--- create_message: " << name{_users[0]}.to_string());
     BOOST_CHECK_EQUAL(success(), create_message({_users[0], "permlink1"}));
     check();
-    BOOST_CHECK_EQUAL(success(), delegate_vest(_users[3], voters[1], amount, interest_rate_100prcnt));
+    BOOST_CHECK_EQUAL(success(), delegate_vest(_users[3], _users[19], amount, interest_rate_100prcnt));
     check();
-    BOOST_TEST_MESSAGE("--- " << name{voters[1]}.to_string() << " voted");
-    BOOST_CHECK_EQUAL(success(), addvote(voters[1], {_users[0], "permlink1"}, 10000));
+    BOOST_TEST_MESSAGE("--- " << name{_users[19]}.to_string() << " voted");
+    BOOST_CHECK_EQUAL(success(), addvote(_users[19], {_users[0], "permlink1"}, 10000));
     check();
-    voter_amount = vest.get_balance_raw(voters[1])["vesting"].as<asset>();
+    voter_amount = vest.get_balance_raw(_users[19])["vesting"].as<asset>();
     delegator_amount = vest.get_balance_raw(_users[3])["vesting"].as<asset>();
     produce_blocks(golos::seconds_to_blocks(post.window));
-    BOOST_CHECK_GT(vest.get_balance_raw(voters[1])["vesting"].as<asset>(), voter_amount);
+    BOOST_CHECK_GT(vest.get_balance_raw(_users[19])["vesting"].as<asset>(), voter_amount);
     BOOST_CHECK_GT(vest.get_balance_raw(_users[3])["vesting"].as<asset>(), delegator_amount);
     check();
 
@@ -1147,15 +1143,15 @@ BOOST_FIXTURE_TEST_CASE(golos_delegators_test, reward_calcs_tester) try {
     BOOST_TEST_MESSAGE("--- create_message: " << name{_users[0]}.to_string());
     BOOST_CHECK_EQUAL(success(), create_message({_users[0], "permlink2"}));
     check();
-    BOOST_CHECK_EQUAL(success(), delegate_vest(_users[4], voters[2], amount, 0));
+    BOOST_CHECK_EQUAL(success(), delegate_vest(_users[4], _users[20], amount, 0));
     check();
-    BOOST_TEST_MESSAGE("--- " << name{voters[2]}.to_string() << " voted");
-    BOOST_CHECK_EQUAL(success(), addvote(voters[2], {_users[0], "permlink2"}, 10000));
+    BOOST_TEST_MESSAGE("--- " << name{_users[20]}.to_string() << " voted");
+    BOOST_CHECK_EQUAL(success(), addvote(_users[20], {_users[0], "permlink2"}, 10000));
     check();
-    voter_amount = vest.get_balance_raw(voters[2])["vesting"].as<asset>();
+    voter_amount = vest.get_balance_raw(_users[20])["vesting"].as<asset>();
     delegator_amount = vest.get_balance_raw(_users[4])["vesting"].as<asset>();
     produce_blocks(golos::seconds_to_blocks(post.window));
-    BOOST_CHECK_GT(vest.get_balance_raw(voters[2])["vesting"].as<asset>(), voter_amount);
+    BOOST_CHECK_GT(vest.get_balance_raw(_users[20])["vesting"].as<asset>(), voter_amount);
     BOOST_CHECK_EQUAL(vest.get_balance_raw(_users[4])["vesting"].as<asset>(), delegator_amount);
     check();
     
@@ -1168,19 +1164,19 @@ BOOST_FIXTURE_TEST_CASE(golos_delegators_test, reward_calcs_tester) try {
     BOOST_CHECK_EQUAL(success(), create_message({_users[0], "permlink3"}));
     check();
     interest_rate = 4500;
-    BOOST_CHECK_EQUAL(success(), delegate_vest(_users[5], voters[3], amount, interest_rate));
-    BOOST_CHECK_EQUAL(success(), delegate_vest(_users[6], voters[3], amount, interest_rate));
-    BOOST_CHECK_EQUAL(success(), delegate_vest(_users[7], voters[3], amount, interest_rate));
+    BOOST_CHECK_EQUAL(success(), delegate_vest(_users[5], _users[21], amount, interest_rate));
+    BOOST_CHECK_EQUAL(success(), delegate_vest(_users[6], _users[21], amount, interest_rate));
+    BOOST_CHECK_EQUAL(success(), delegate_vest(_users[7], _users[21], amount, interest_rate));
     check();
-    BOOST_TEST_MESSAGE("--- " << name{voters[3]}.to_string() << " voted");
-    BOOST_CHECK_EQUAL(success(), addvote(voters[3], {_users[0], "permlink3"}, 10000));
+    BOOST_TEST_MESSAGE("--- " << name{_users[21]}.to_string() << " voted");
+    BOOST_CHECK_EQUAL(success(), addvote(_users[21], {_users[0], "permlink3"}, 10000));
     check();
-    voter_amount = vest.get_balance_raw(voters[3])["vesting"].as<asset>();
+    voter_amount = vest.get_balance_raw(_users[21])["vesting"].as<asset>();
     auto delegator1_amount = vest.get_balance_raw(_users[5])["vesting"].as<asset>();
     auto delegator2_amount = vest.get_balance_raw(_users[6])["vesting"].as<asset>();
     auto delegator3_amount = vest.get_balance_raw(_users[7])["vesting"].as<asset>();
     produce_blocks(golos::seconds_to_blocks(post.window));
-    BOOST_CHECK_GT(vest.get_balance_raw(voters[3])["vesting"].as<asset>(), voter_amount);
+    BOOST_CHECK_GT(vest.get_balance_raw(_users[21])["vesting"].as<asset>(), voter_amount);
     BOOST_CHECK_GT(vest.get_balance_raw(_users[5])["vesting"].as<asset>(), delegator1_amount);
     BOOST_CHECK_GT(vest.get_balance_raw(_users[6])["vesting"].as<asset>(), delegator2_amount);
     BOOST_CHECK_GT(vest.get_balance_raw(_users[7])["vesting"].as<asset>(), delegator3_amount);
@@ -1194,19 +1190,19 @@ BOOST_FIXTURE_TEST_CASE(golos_delegators_test, reward_calcs_tester) try {
     BOOST_TEST_MESSAGE("--- create_message: " << name{_users[0]}.to_string());
     BOOST_CHECK_EQUAL(success(), create_message({_users[0], "permlink4"}));
     check();
-    BOOST_CHECK_EQUAL(success(), delegate_vest(_users[8], voters[4], amount, interest_rate));
-    BOOST_CHECK_EQUAL(success(), delegate_vest(_users[9], voters[4], amount, interest_rate));
-    BOOST_CHECK_EQUAL(success(), delegate_vest(_users[10], voters[4], amount, 0));
+    BOOST_CHECK_EQUAL(success(), delegate_vest(_users[8], _users[22], amount, interest_rate));
+    BOOST_CHECK_EQUAL(success(), delegate_vest(_users[9], _users[22], amount, interest_rate));
+    BOOST_CHECK_EQUAL(success(), delegate_vest(_users[10], _users[22], amount, 0));
     check();
-    BOOST_TEST_MESSAGE("--- " << name{voters[4]}.to_string() << " voted");
-    BOOST_CHECK_EQUAL(success(), addvote(voters[4], {_users[0], "permlink4"}, 10000));
+    BOOST_TEST_MESSAGE("--- " << name{_users[22]}.to_string() << " voted");
+    BOOST_CHECK_EQUAL(success(), addvote(_users[22], {_users[0], "permlink4"}, 10000));
     check();
-    voter_amount = vest.get_balance_raw(voters[4])["vesting"].as<asset>();
+    voter_amount = vest.get_balance_raw(_users[22])["vesting"].as<asset>();
     delegator1_amount = vest.get_balance_raw(_users[8])["vesting"].as<asset>();
     delegator2_amount = vest.get_balance_raw(_users[9])["vesting"].as<asset>();
     delegator3_amount = vest.get_balance_raw(_users[10])["vesting"].as<asset>();
     produce_blocks(golos::seconds_to_blocks(post.window));
-    BOOST_CHECK_GT(vest.get_balance_raw(voters[4])["vesting"].as<asset>(), voter_amount);
+    BOOST_CHECK_GT(vest.get_balance_raw(_users[22])["vesting"].as<asset>(), voter_amount);
     BOOST_CHECK_GT(vest.get_balance_raw(_users[8])["vesting"].as<asset>(), delegator1_amount);
     BOOST_CHECK_GT(vest.get_balance_raw(_users[9])["vesting"].as<asset>(), delegator2_amount);
     BOOST_CHECK_EQUAL(vest.get_balance_raw(_users[10])["vesting"].as<asset>(), delegator3_amount);
@@ -1220,19 +1216,19 @@ BOOST_FIXTURE_TEST_CASE(golos_delegators_test, reward_calcs_tester) try {
     BOOST_TEST_MESSAGE("--- create_message: " << name{_users[0]}.to_string());
     BOOST_CHECK_EQUAL(success(), create_message({_users[0], "permlink5"}));
     check();
-    BOOST_CHECK_EQUAL(success(), delegate_vest(_users[11], voters[5], amount, interest_rate_1prcnt));
-    BOOST_CHECK_EQUAL(success(), delegate_vest(_users[12], voters[5], amount, interest_rate_1prcnt));
-    BOOST_CHECK_EQUAL(success(), delegate_vest(_users[13], voters[5], amount, interest_rate));
+    BOOST_CHECK_EQUAL(success(), delegate_vest(_users[11], _users[23], amount, interest_rate_1prcnt));
+    BOOST_CHECK_EQUAL(success(), delegate_vest(_users[12], _users[23], amount, interest_rate_1prcnt));
+    BOOST_CHECK_EQUAL(success(), delegate_vest(_users[13], _users[23], amount, interest_rate));
     check();
-    BOOST_TEST_MESSAGE("--- " << name{voters[5]}.to_string() << " voted");
-    BOOST_CHECK_EQUAL(success(), addvote(voters[5], {_users[0], "permlink5"}, 10000));
+    BOOST_TEST_MESSAGE("--- " << name{_users[23]}.to_string() << " voted");
+    BOOST_CHECK_EQUAL(success(), addvote(_users[23], {_users[0], "permlink5"}, 10000));
     check();
-    voter_amount = vest.get_balance_raw(voters[5])["vesting"].as<asset>();
+    voter_amount = vest.get_balance_raw(_users[23])["vesting"].as<asset>();
     delegator1_amount = vest.get_balance_raw(_users[11])["vesting"].as<asset>();
     delegator2_amount = vest.get_balance_raw(_users[12])["vesting"].as<asset>();
     delegator3_amount = vest.get_balance_raw(_users[13])["vesting"].as<asset>();
     produce_blocks(golos::seconds_to_blocks(post.window));
-    BOOST_CHECK_GT(vest.get_balance_raw(voters[5])["vesting"].as<asset>(), voter_amount);
+    BOOST_CHECK_GT(vest.get_balance_raw(_users[23])["vesting"].as<asset>(), voter_amount);
     BOOST_CHECK_EQUAL(vest.get_balance_raw(_users[11])["vesting"].as<asset>(), delegator1_amount);
     BOOST_CHECK_EQUAL(vest.get_balance_raw(_users[12])["vesting"].as<asset>(), delegator2_amount);
     BOOST_CHECK_GT(vest.get_balance_raw(_users[13])["vesting"].as<asset>(), delegator3_amount);
@@ -1250,17 +1246,17 @@ BOOST_FIXTURE_TEST_CASE(golos_delegators_test, reward_calcs_tester) try {
     BOOST_CHECK_EQUAL(success(), create_message({_users[0], "permlink6"}));
     check();
     BOOST_TEST_MESSAGE("--- retire vesting for curator");
-    BOOST_CHECK_EQUAL(success(), retire_vest(vest.get_balance_raw(voters[6])["vesting"].as<asset>(), voters[6], _issuer));
-    BOOST_CHECK_EQUAL(success(), delegate_vest(_users[15], voters[6], vest_amount, interest_rate_100prcnt));
+    BOOST_CHECK_EQUAL(success(), retire_vest(vest.get_balance_raw(_users[24])["vesting"].as<asset>(), _users[24], _issuer));
+    BOOST_CHECK_EQUAL(success(), delegate_vest(_users[15], _users[24], vest_amount, interest_rate_100prcnt));
     check();
-    BOOST_TEST_MESSAGE("--- " << name{voters[6]}.to_string() << " voted");
-    BOOST_CHECK_EQUAL(success(), addvote(voters[6], {_users[0], "permlink6"}, 10000));
+    BOOST_TEST_MESSAGE("--- " << name{_users[24]}.to_string() << " voted");
+    BOOST_CHECK_EQUAL(success(), addvote(_users[24], {_users[0], "permlink6"}, 10000));
     check();
-    voter_amount = vest.get_balance_raw(voters[6])["vesting"].as<asset>();
+    voter_amount = vest.get_balance_raw(_users[24])["vesting"].as<asset>();
     delegator_amount = vest.get_balance_raw(_users[15])["vesting"].as<asset>();
     produce_blocks(golos::seconds_to_blocks(post.window));
     BOOST_CHECK_EQUAL(voter_amount.get_amount(), 0);
-    BOOST_CHECK_EQUAL(vest.get_balance_raw(voters[6])["vesting"].as<asset>(), voter_amount);
+    BOOST_CHECK_EQUAL(vest.get_balance_raw(_users[24])["vesting"].as<asset>(), voter_amount);
     BOOST_CHECK_GT(vest.get_balance_raw(_users[15])["vesting"].as<asset>(), delegator_amount);
     check();
 } FC_LOG_AND_RETHROW()
