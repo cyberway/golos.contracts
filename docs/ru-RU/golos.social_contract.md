@@ -35,6 +35,8 @@ struct accountmeta {
     optional<std::string> instagram;        // Имя пользователя в соцсети instagram
     optional<std::string> telegram;         // Имя пользователя в соцсети telegram
     optional<std::string> vk;               // Имя пользователя в соцсети vk
+    optional<std::string> whatsapp;         // Имя пользователя в соцсети whatsapp
+    optional<std::string> wechat;           // Имя пользователя в соцсети wechat
     optional<std::string> website;          // Название личного веб-сайта
 
     optional<std::string> first_name;       // Имя пользователя
