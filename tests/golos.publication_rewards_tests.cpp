@@ -1225,6 +1225,7 @@ BOOST_FIXTURE_TEST_CASE(golos_delegators_test, reward_calcs_tester) try {
     delegator1_amount = vest.get_balance_raw(_users[11])["vesting"].as<asset>();
     delegator2_amount = vest.get_balance_raw(_users[12])["vesting"].as<asset>();
     delegator3_amount = vest.get_balance_raw(_users[13])["vesting"].as<asset>();
+    BOOST_CHECK_EQUAL(post.get_vote(_users[0], 0)["delegators"].size(), 1);
     produce_blocks(golos::seconds_to_blocks(post.window));
     std::vector<account_name> dlg_vec_db;
     std::vector<account_name> dlg_vec_st{_users[11], _users[12], _users[13]};
@@ -1244,7 +1245,10 @@ BOOST_FIXTURE_TEST_CASE(golos_delegators_test, reward_calcs_tester) try {
      *
      * dlg_reward for _users[13]
      * interest_rate = 4500
-     * reward = 5 * 4500 / 515 = 43.689 
+     * reward = 5 * 4500 / 515 = 43.689
+     *
+     * dlg_reward will be payed only for _users[13],
+     * because 0.97 will be rounded to 0
     */
     BOOST_CHECK_GT(vest.get_balance_raw(_users[23])["vesting"].as<asset>(), voter_amount);
     BOOST_CHECK_EQUAL(vest.get_balance_raw(_users[11])["vesting"].as<asset>(), delegator1_amount);
