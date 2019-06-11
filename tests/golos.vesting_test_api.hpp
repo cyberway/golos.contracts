@@ -160,6 +160,10 @@ struct golos_vesting_api: base_contract_api {
         return get_struct(_symbol.to_symbol_code().value, N(withdrawal), from, "withdraw_record");
     }
 
+    std::vector<variant> get_delegators() {
+        return _tester->get_all_chaindb_rows(_code, _symbol.to_symbol_code().value, N(delegation), false);
+    }
+
     // TODO: delegation
 
     //// helpers
