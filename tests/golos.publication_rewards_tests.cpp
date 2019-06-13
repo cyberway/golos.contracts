@@ -366,6 +366,9 @@ public:
                         voteshares += v.voteshares();
                         double curation_fn_val = p.rules.curationfunc(voteshares);
                         double curation_fn_add = v.revote_diff ? 0.0 : curation_fn_val - prev_curation_fn_val;
+
+                        auto test = curation_fn_add * std::min(p.rules.timepenalty(v.created - m.created), 1.0);
+
                         cur_rewards.emplace_back(std::make_pair(v.voter, curation_fn_add *
                             std::min(p.rules.timepenalty(v.created - m.created), 1.0)
                         ));
@@ -461,6 +464,7 @@ public:
                 _state.balances[message_id.author].vestamount,
                 seconds(current_time).count(),
                 vestpayment);
+
             BOOST_REQUIRE_MESSAGE(((ret == success()) == (reward_weight >= 0.0)), "wrong ret_str: " + ret_str
                 + "; vesting = " + std::to_string(_state.balances[message_id.author].vestamount)
                 + "; reward_weight = " + std::to_string(reward_weight));
@@ -661,6 +665,9 @@ BOOST_FIXTURE_TEST_CASE(timepenalty_test, reward_calcs_tester) try {
         produce_blocks(votes_step);
     }
     produce_blocks(golos::seconds_to_blocks(post.window) - 1 - n_voters * (1 + votes_step));
+
+    BOOST_CHECK_EQUAL(success(), post.close_msg({N(bob), "permlink"}));
+    BOOST_CHECK_EQUAL(success(), post.payment_msg({N(bob), "permlink"}));
     BOOST_TEST_MESSAGE("--- state before post close");
     show();
     BOOST_TEST_MESSAGE("--- close post and check rewards");

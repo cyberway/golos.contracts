@@ -235,7 +235,7 @@ void publication::create_message(
         item.childcount = 0;
     });
 
-    close_message_timer(message_id, message_pk, cashout_window_param.window);
+//    close_message_timer(message_id, message_pk, cashout_window_param.window);
 }
 
 void publication::update_message(structures::mssgid message_id,
@@ -345,13 +345,21 @@ int64_t publication::pay_curators(name author, uint64_t msgid, int64_t max_rewar
     auto v = idx.lower_bound(msgid);
     while ((v != idx.end()) && (v->message_id == msgid)) {
         if((weights_sum > fixp_t(0)) && (max_rewards > 0)) {
+            print("\n curatorsw: ", v->curatorsw);
+
             auto claim = int_cast(elai_t(max_rewards) * elaf_t(elap_t(FP(v->curatorsw)) / elap_t(weights_sum)));
+
+            print("\n FP(v->curatorsw): ", int_cast(elaf_t(elap_t(FP(v->curatorsw))) * elai_t(10000)));
+
             eosio_assert(claim <= unclaimed_rewards, "LOGIC ERROR! publication::pay_curators: claim > unclaimed_rewards");
             if(claim > 0) {
                 unclaimed_rewards -= claim;
                 claim -= pay_delegators(claim, v->voter, tokensymbol, v->delegators);
                 payto(v->voter, eosio::asset(claim, tokensymbol), static_cast<enum_t>(payment_t::VESTING), memo);
             }
+
+            print("\n claim: ", claim);
+            print(" \n ");
         }
         //v = idx.erase(v);
         ++v;
@@ -412,7 +420,6 @@ void publication::use_postbw_charge(tables::limit_table& lims, name issuer, name
 
 void publication::close_message(structures::mssgid message_id) {
     require_auth(_self);
-
     tables::permlink_table permlink_table(_self, message_id.author.value);
     auto permlink_index = permlink_table.get_index<"byvalue"_n>();
     auto permlink_itr = permlink_index.find(message_id.permlink);
@@ -495,10 +502,10 @@ void publication::close_message(structures::mssgid message_id) {
             send_poolstate_event(item);
         });
 
-    transaction trx;
-    trx.actions.emplace_back(action{permission_level(_self, config::active_name), _self, "paymssgrwrd"_n, message_id});
-    trx.delay_sec = 0;
-    trx.send((static_cast<uint128_t>(mssg_itr->id) << 64) | message_id.author.value, _self);
+//    transaction trx;
+//    trx.actions.emplace_back(action{permission_level(_self, config::active_name), _self, "paymssgrwrd"_n, message_id});
+//    trx.delay_sec = 0;
+//    trx.send((static_cast<uint128_t>(mssg_itr->id) << 64) | message_id.author.value, _self);
 }
 
 void publication::paymssgrwrd(structures::mssgid message_id) {
@@ -523,7 +530,6 @@ void publication::paymssgrwrd(structures::mssgid message_id) {
 
     eosio_assert((curation_payout <= payout.amount) && (curation_payout >= 0), "publication::payrewards: wrong curation_payout");
     auto unclaimed_rewards = pay_curators(message_id.author, mssg_itr->id, curation_payout, FP(mssg_itr->state.sumcuratorsw), payout.symbol, get_memo("curators", message_id));
-
     eosio_assert(unclaimed_rewards >= 0, "publication::payrewards: unclaimed_rewards < 0");
     
     payout.amount -= curation_payout;
@@ -583,12 +589,12 @@ fixp_t publication::calc_available_rshares(name voter, int16_t weight, uint64_t 
                                  token_code), voter, eff_vesting, token_code, false, weight);
 
 //    eosio_assert(used_power, "ASSERT: used_power = 0");
-    print("\n used_power: ", used_power);
+//    print("\n used_power: ", used_power);
 
     fixp_t abs_rshares = (FP(eff_vesting * used_power) / elai_t(config::_100percent));
 
-    print("\n eff_vesting: ",  eff_vesting);
-    print("\n abs_rshares: ",  int_cast(abs_rshares * elai_t(1000000)));
+//    print("\n eff_vesting: ",  eff_vesting);
+//    print("\n abs_rshares: ",  int_cast(abs_rshares * elai_t(1000000)));
     return (weight < 0) ? -abs_rshares : abs_rshares;
 }
 
@@ -628,12 +634,12 @@ void publication::set_vote(name voter, const structures::mssgid& message_id, int
 
         atmsp::machine<fixp_t> machine;
         fixp_t rshares = calc_available_rshares(voter, weight, cur_time, *pool);
-        print("\n true rshares: ", int_cast(rshares * elai_t(config::_100percent)));
+//        print("\n true rshares: ", int_cast(rshares * elai_t(config::_100percent)));
         if(rshares > FP(vote_itr->rshares))
             check_upvote_time(cur_time, mssg_itr->date);
 
         fixp_t new_mssg_rshares = add_cut(FP(mssg_itr->state.netshares) - FP(vote_itr->rshares), rshares);
-        print("\n new rshares: ", int_cast(new_mssg_rshares * elai_t(config::_100percent)));
+//        print("\n new rshares: ", int_cast(new_mssg_rshares * elai_t(config::_100percent)));
         auto rsharesfn_delta = get_delta(machine, FP(mssg_itr->state.netshares), new_mssg_rshares, pool->rules.mainfunc);
 
         pools.modify(*pool, _self, [&](auto &item) {
@@ -656,7 +662,7 @@ void publication::set_vote(name voter, const structures::mssgid& message_id, int
                 )
             );
         });
-        print("\n voteshares: ", int_cast(FP(mssg_itr->state.voteshares) * elai_t(10000000)));
+//        print("\n voteshares: ", int_cast(FP(mssg_itr->state.voteshares) * elai_t(10000000)));
 
         votetable_index.modify(vote_itr, voter, [&]( auto &item ) {
             item.weight = weight;
@@ -672,7 +678,7 @@ void publication::set_vote(name voter, const structures::mssgid& message_id, int
     atmsp::machine<fixp_t> machine;
     fixp_t rshares = calc_available_rshares(voter, weight, cur_time, *pool);
 
-    print("\n false rshares: ", int_cast(rshares * elai_t(config::_100percent)));
+//    print("\n false rshares: ", int_cast(rshares * elai_t(config::_100percent)));
 
     if(rshares > 0)
         check_upvote_time(cur_time, mssg_itr->date);

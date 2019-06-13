@@ -66,6 +66,22 @@ struct golos_posting_api: base_contract_api {
         );
     }
 
+    action_result close_msg(
+        mssgid message_id
+    ) {
+        return push(N(closemssg), _code, args()
+            ("message_id", message_id)
+        );
+    }
+
+    action_result payment_msg(
+        mssgid message_id
+    ) {
+        return push(N(paymssgrwrd), _code, args()
+            ("message_id", message_id)
+        );
+    }
+
     action_result reblog_msg(
         account_name rebloger,
         mssgid message_id,

@@ -183,13 +183,13 @@ struct vote {
         auto vesting_t = revote_diff ? revote_vesting : vesting;
         auto rshares = (weight_rshares < 0) ? -abs_rshares : abs_rshares;
 
-        BOOST_TEST_MESSAGE("## rshares: " + std::to_string(rshares));
+//        BOOST_TEST_MESSAGE("## rshares: " + std::to_string(rshares));
         return (weight_rshares < 0) ? -abs_rshares : abs_rshares;
     };
 
     double voteshares() const {
         auto test = weight > 0.0 ? weight_charge(weight) * vesting  / golos::config::_100percent : 0.0;
-        BOOST_TEST_MESSAGE("## voteshares: " + std::to_string(test));
+//        BOOST_TEST_MESSAGE("## voteshares: " + std::to_string(test));
         return weight > 0.0 ? weight_charge(weight) * vesting  / golos::config::_100percent : 0.0;
     };
 };
