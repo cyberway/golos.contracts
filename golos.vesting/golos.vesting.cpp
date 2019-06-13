@@ -326,7 +326,7 @@ void vesting::create(symbol symbol, name notify_acc) {
 
 void vesting::timeoutconv() {
     require_auth(_self);
-    const int max_steps = 16;           // TODO: configurable #707
+    int max_steps = 16;           // TODO: configurable #707
     const auto memo = "withdraw";
     const auto now = time_point_sec(::now());
     vesting_table vestings(_self, _self.value);
