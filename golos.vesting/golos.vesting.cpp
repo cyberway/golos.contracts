@@ -326,6 +326,7 @@ void vesting::create(symbol symbol, name notify_acc) {
 
 void vesting::timeoutconv() {
     require_auth(_self);
+    const int max_steps = 16;           // TODO: configurable #707
     const auto memo = "withdraw";
     const auto now = time_point_sec(::now());
     vesting_table vestings(_self, _self.value);
@@ -366,9 +367,13 @@ void vesting::timeoutconv() {
             }
 
             if (to_send.amount > 0) {
-                sub_balance(from, to_send);
                 // First convert and only then reduce supply (conversion rate changes after subtract)
                 auto converted = vesting_to_token(to_send, vesting, -correction);   // TODO: get_balance can throw #549
+                if (converted.amount == 0) {
+                    obj = idx.erase(obj);   // amount is too low, it's impossible to withdraw
+                    continue;
+                }
+                sub_balance(from, to_send);
                 vestings.modify(vesting, name(), [&](auto& v) {
                     v.supply -= to_send;
                     send_stat_event(v);
@@ -380,6 +385,9 @@ void vesting::timeoutconv() {
             } else {
                 // possible only if minimal allowed withdraw is less than number of payments, skip
             }
+            max_steps--;
+            if (max_steps <= 0)
+                return;
         }
     }
 }
