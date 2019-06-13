@@ -345,11 +345,11 @@ int64_t publication::pay_curators(name author, uint64_t msgid, int64_t max_rewar
     auto v = idx.lower_bound(msgid);
     while ((v != idx.end()) && (v->message_id == msgid)) {
         if((weights_sum > fixp_t(0)) && (max_rewards > 0)) {
-            print("\n curatorsw: ", v->curatorsw);
-
             auto claim = int_cast(elai_t(max_rewards) * elaf_t(elap_t(FP(v->curatorsw)) / elap_t(weights_sum)));
-
-            print("\n FP(v->curatorsw): ", int_cast(elaf_t(elap_t(FP(v->curatorsw))) * elai_t(10000)));
+            print("\n claim: ", claim);
+            print("\n weights_sum: ", int_cast(elap_t(weights_sum) * elai_t(1000000)));
+            print("\n v->curatorsw: ", int_cast(elaf_t(elap_t(FP(v->curatorsw))) * elai_t(1000000)));
+            print("\n v->curatorsw data: ", v->curatorsw);
 
             eosio_assert(claim <= unclaimed_rewards, "LOGIC ERROR! publication::pay_curators: claim > unclaimed_rewards");
             if(claim > 0) {
@@ -357,8 +357,6 @@ int64_t publication::pay_curators(name author, uint64_t msgid, int64_t max_rewar
                 claim -= pay_delegators(claim, v->voter, tokensymbol, v->delegators);
                 payto(v->voter, eosio::asset(claim, tokensymbol), static_cast<enum_t>(payment_t::VESTING), memo);
             }
-
-            print("\n claim: ", claim);
             print(" \n ");
         }
         //v = idx.erase(v);
@@ -692,8 +690,8 @@ void publication::set_vote(name voter, const structures::mssgid& message_id, int
     };
 
     auto rsharesfn_delta = get_delta(machine, FP(mssg_itr->state.netshares), FP(msg_new_state.netshares), pool->rules.mainfunc);
-    print("\n rsharesfn_delta: ", int_cast((rsharesfn_delta) * elai_t(config::_100percent)));
-    print("\n old rhsaresfn: ", pool->state.rsharesfn);
+//    print("\n rsharesfn_delta: ", int_cast((rsharesfn_delta) * elai_t(config::_100percent)));
+//    print("\n old rhsaresfn: ", pool->state.rsharesfn);
 
 
     pools.modify(*pool, _self, [&](auto &item) {
@@ -703,7 +701,7 @@ void publication::set_vote(name voter, const structures::mssgid& message_id, int
     });
     eosio_assert(WP(pool->state.rsharesfn) >= 0, "pool state rsharesfn overflow");
 
-    print("\n rhsaresfn: ", pool->state.rsharesfn);
+//    print("\n rhsaresfn: ", pool->state.rsharesfn);
 
     auto sumcuratorsw_delta = get_delta(machine, FP(mssg_itr->state.voteshares), FP(msg_new_state.voteshares), pool->rules.curationfunc);
     msg_new_state.sumcuratorsw = (FP(mssg_itr->state.sumcuratorsw) + sumcuratorsw_delta).data();
@@ -721,8 +719,8 @@ void publication::set_vote(name voter, const structures::mssgid& message_id, int
         );
     });
 
-    print("\n pull netshares: ", int_cast(FP(mssg_itr->state.netshares) * elai_t(10000000)));
-    print("\n pull voteshares: ", int_cast(FP(mssg_itr->state.voteshares) * elai_t(10000000)));
+//    print("\n pull netshares: ", int_cast(FP(mssg_itr->state.netshares) * elai_t(10000000)));
+//    print("\n pull voteshares: ", int_cast(FP(mssg_itr->state.voteshares) * elai_t(10000000)));
 
     auto time_delta = static_cast<int64_t>((cur_time - mssg_itr->date) / seconds(1).count());
     elap_t curatorsw_factor =
@@ -757,6 +755,9 @@ void publication::set_vote(name voter, const structures::mssgid& message_id, int
         item.rshares = rshares.data();
         send_votestate_event(voter, item, message_id.author, *permlink_itr);
     });
+
+    print("\n curatorsw: ", voter, " ", int_cast(elaf_t(elap_t(sumcuratorsw_delta) * curatorsw_factor) * elai_t(1000000)));
+    print("\n curatorsw data: ", voter, " ", (fp_cast<fixp_t>(elap_t(sumcuratorsw_delta) * curatorsw_factor)).data());
 }
 
 void publication::fill_depleted_pool(tables::reward_pools& pools, eosio::asset quantity, tables::reward_pools::const_iterator excluded) {
