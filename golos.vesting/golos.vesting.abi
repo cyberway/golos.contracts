@@ -47,7 +47,6 @@
         {"name":"delegatee",            "type":"name"},
         {"name":"quantity",             "type":"asset"},
         {"name":"interest_rate",        "type":"uint16"},
-        {"name":"payout_strategy",      "type":"uint8"},
         {"name":"min_delegation_time",  "type":"time_point_sec"}
       ]
     },
@@ -153,19 +152,8 @@
       "name": "delegate",
       "base": "base_transfer",
       "fields": [
-        {"name":"interest_rate",    "type":"uint16"},
-        {"name":"payout_strategy",  "type":"uint8"}
+        {"name":"interest_rate",    "type":"uint16"}
       ]
-    },
-    {
-       "name": "paydelegator",
-       "base": "",
-       "fields": [
-          {"name":"voter",            "type":"name"},
-          {"name":"reward",           "type":"asset"},
-          {"name":"delegator",        "type":"name"},
-          {"name":"payout_strategy",  "type":"uint8"}
-       ]
     },
     {
        "name": "vesting_state",
@@ -221,7 +209,6 @@
     {"name":"stopwithdraw", "type":"stop_withdraw"},
     {"name":"delegate",     "type":"delegate"},
     {"name":"undelegate",   "type":"base_transfer"},
-    {"name":"paydelegator", "type":"paydelegator"},
     {"name":"timeoutrdel",  "type":"empty"},
     {"name":"timeoutconv",  "type":"empty"},
     {"name":"timeout",      "type":"empty"}

@@ -198,7 +198,7 @@ void vesting::unlocklimit(name owner, asset quantity) {
     });
 }
 
-void vesting::delegate(name from, name to, asset quantity, uint16_t interest_rate, uint8_t payout_strategy) {
+void vesting::delegate(name from, name to, asset quantity, uint16_t interest_rate) {
     require_auth(from);
 
     vesting_params_singleton cfg(_self, quantity.symbol.code().raw());
@@ -209,8 +209,6 @@ void vesting::delegate(name from, name to, asset quantity, uint16_t interest_rat
     const auto& withdraw_params = params.withdraw;
 
     eosio_assert(from != to, "You can not delegate to yourself");
-    eosio_assert(payout_strategy == config::to_delegator || payout_strategy == config::to_delegated_vesting,
-        "not valid value payout_strategy");
     eosio_assert(quantity.amount > 0, "the number of tokens should not be less than 0");
     eosio_assert(quantity.amount >= min_amount, "Insufficient funds for delegation");
     eosio_assert(interest_rate <= delegation_params.max_interest, "Exceeded the percentage of delegated vesting");
@@ -244,7 +242,6 @@ void vesting::delegate(name from, name to, asset quantity, uint16_t interest_rat
     auto delegate_record = index_table.find({from, to});
     if (delegate_record != index_table.end()) {
         eosio_assert(delegate_record->interest_rate == interest_rate, "interest_rate does not match");
-        eosio_assert(delegate_record->payout_strategy == payout_strategy, "payout_strategy does not match");
         index_table.modify(delegate_record, name(), [&](auto& item) {
             item.quantity += quantity;
         });
@@ -255,7 +252,6 @@ void vesting::delegate(name from, name to, asset quantity, uint16_t interest_rat
             item.delegatee = to;
             item.quantity = quantity;
             item.interest_rate = interest_rate;
-            item.payout_strategy = payout_strategy;
             item.min_delegation_time = time_point_sec(now() + delegation_params.min_time);
         });
     }
@@ -544,33 +540,8 @@ void vesting::timeout() {
     trx.send(_self.value, _self);
 }
 
-void vesting::paydelegator(name account, asset reward, name delegator, uint8_t payout_strategy) {
-    require_auth(_self);
-    if (payout_strategy == config::payout_strategy::to_delegated_vesting) {
-        delegation_table table(_self, reward.symbol.code().raw());
-        auto index_table = table.get_index<"delegator"_n>();
-        auto delegate_record = index_table.find({delegator, account});
-        if (delegate_record != index_table.end()) {
-            account_table acc_table_dlg(_self, delegator.value);
-            auto balance_dlg = acc_table_dlg.find(reward.symbol.code().raw());
-            acc_table_dlg.modify(balance_dlg, name(), [&](auto& item) {
-                item.delegated += reward;
-            });
-            account_table acc_table_rcv(_self, account.value);
-            auto balance_rcv = acc_table_rcv.find(reward.symbol.code().raw());
-            acc_table_rcv.modify(balance_rcv, name(), [&](auto& item) {
-                item.received += reward;
-            });
-            index_table.modify(delegate_record, name(), [&](auto& item) {
-                item.quantity += reward;
-            });
-        }
-    }
-    add_balance(delegator, reward, same_payer);
-}
-
 } // golos
 
 DISPATCH_WITH_BULK_TRANSFER(golos::vesting, on_transfer, on_bulk_transfer, (validateprms)(setparams)
         (retire)(unlocklimit)(withdraw)(stopwithdraw)(delegate)(undelegate)(create)
-        (open)(close)(timeout)(timeoutconv)(timeoutrdel)(paydelegator))
+        (open)(close)(timeout)(timeoutconv)(timeoutrdel))

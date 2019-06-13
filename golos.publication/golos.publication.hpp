@@ -38,12 +38,12 @@ private:
     void fill_depleted_pool(tables::reward_pools& pools, asset quantity,
         tables::reward_pools::const_iterator excluded);
     auto get_pool(tables::reward_pools& pools, uint64_t time);
-    int64_t pay_curators(name author, uint64_t msgid, int64_t max_rewards, fixp_t weights_sum,
+    int64_t pay_curators(structures::mssgid message_id, uint64_t msgid, int64_t max_rewards, fixp_t weights_sum,
                          symbol tokensymbol, std::string memo = "");
     void payto(name user, asset quantity, enum_t mode, std::string memo = "");
     static void check_acc_vest_balance(name user, symbol tokensymbol);
-    int64_t pay_delegators(int64_t claim, name voter, 
-            eosio::symbol tokensymbol, std::vector<structures::delegate_voter> delegate_list);
+    int64_t pay_delegators(int64_t claim, name voter,
+            eosio::symbol tokensymbol, std::vector<structures::delegate_voter> delegate_list, structures::mssgid message_id);
     base_t get_checked_curators_prcnt(std::optional<uint16_t> curators_prcnt);
 
     void send_poolstate_event(const structures::rewardpool& pool);
