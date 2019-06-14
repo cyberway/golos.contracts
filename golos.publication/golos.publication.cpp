@@ -371,20 +371,21 @@ int64_t publication::pay_curators(
     tables::vote_table vs(_self, message_id.author.value);
     int64_t unclaimed_rewards = max_rewards;
 
-    auto idx = vs.get_index<"messageid"_n>();
-    auto v = idx.lower_bound(msgid);
-    while ((v != idx.end()) && (v->message_id == msgid)) {
-        if((weights_sum > fixp_t(0)) && (max_rewards > 0)) {
+    if ((weights_sum > fixp_t(0)) && (max_rewards > 0)) {
+        auto idx = vs.get_index<"messageid"_n>();
+        auto v = idx.lower_bound(std::make_tuple(msgid, INT64_MAX));
+        while ((v != idx.end()) && (v->message_id == msgid)) {
             auto claim = int_cast(elai_t(max_rewards) * elaf_t(elap_t(FP(v->curatorsw)) / elap_t(weights_sum)));
             eosio_assert(claim <= unclaimed_rewards, "LOGIC ERROR! publication::pay_curators: claim > unclaimed_rewards");
-            if(claim > 0) {
-                unclaimed_rewards -= claim;
-                claim -= pay_delegators(claim, v->voter, tokensymbol, v->delegators, message_id);
-                payto(v->voter, eosio::asset(claim, tokensymbol), static_cast<enum_t>(payment_t::VESTING), memo);
+            if (claim == 0) {
+                break;
             }
+            unclaimed_rewards -= claim;
+            claim -= pay_delegators(claim, v->voter, tokensymbol, v->delegators, message_id);
+            payto(v->voter, eosio::asset(claim, tokensymbol), static_cast<enum_t>(payment_t::VESTING), memo);
+            //v = idx.erase(v);
+            ++v;
         }
-        //v = idx.erase(v);
-        ++v;
     }
     return unclaimed_rewards;
 }
