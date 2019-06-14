@@ -943,7 +943,8 @@
           "name": "messageid",
           "unique": "false",
           "orders": [
-              {"field": "message_id", "order": "asc"}
+              {"field": "message_id", "order": "asc"},
+              {"field": "curatorsw", "order": "desc"}
           ]
        },
        {
