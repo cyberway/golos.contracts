@@ -210,7 +210,9 @@ using permlink_value_index = indexed_by<N(byvalue), const_mem_fun<structures::pe
 using permlink_table = multi_index<N(permlink), structures::permlink, permlink_id_index, permlink_value_index>;
 
 using vote_id_index = indexed_by<N(id), const_mem_fun<structures::voteinfo, uint64_t, &structures::voteinfo::primary_key>>;
-using vote_messageid_index = indexed_by<N(messageid), const_mem_fun<structures::voteinfo, uint64_t, &structures::voteinfo::by_message>>;
+using vote_messageid_index = indexed_by<N(messageid), eosio::composite_key<structures::voteinfo,
+      eosio::member<structures::voteinfo, uint64_t, &structures::voteinfo::message_id>,
+      eosio::member<structures::voteinfo, base_t, &structures::voteinfo::curatorsw>>>;
 using vote_group_index = indexed_by<N(byvoter), eosio::composite_key<structures::voteinfo,
       eosio::member<structures::voteinfo, uint64_t, &structures::voteinfo::message_id>,
       eosio::member<structures::voteinfo, name, &structures::voteinfo::voter>>>;
