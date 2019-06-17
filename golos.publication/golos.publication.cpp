@@ -230,6 +230,7 @@ void publication::create_message(
     message_table.emplace(message_id.author, [&]( auto &item ) {
         item.id = message_pk;
         item.date = cur_time;
+        item.pool_date = pool->created;
         item.tokenprop = tokenprop,
         item.beneficiaries = beneficiaries;
         item.rewardweight = config::_100percent;    // can be corrected later in calcrwrdwt
@@ -264,10 +265,10 @@ void publication::update_message(structures::mssgid message_id,
 auto publication::get_pool(tables::reward_pools& pools, uint64_t time) {
     eosio_assert(pools.begin() != pools.end(), "publication::get_pool: [pools] is empty");
 
-    auto pool = pools.upper_bound(time);
+    auto pool = pools.find(time);
 
-    eosio_assert(pool != pools.begin(), "publication::get_pool: can't find an appropriate pool");
-    return (--pool);
+    eosio_assert(pool != pools.end(), "publication::get_pool: can't find an appropriate pool");
+    return pool;
 }
 
 void publication::delete_message(structures::mssgid message_id) {
@@ -443,7 +444,7 @@ void publication::close_message(structures::mssgid message_id) {
     eosio::check(!mssg_itr->closed, "Message is closed.");
 
     tables::reward_pools pools(_self, _self.value);
-    auto pool = get_pool(pools, mssg_itr->date);
+    auto pool = get_pool(pools, mssg_itr->pool_date);
 
     eosio_assert(pool->state.msgs != 0, "LOGIC ERROR! publication::payrewards: pool.msgs is equal to zero");
     atmsp::machine<fixp_t> machine;
@@ -652,7 +653,7 @@ void publication::set_vote(name voter, const structures::mssgid& message_id, int
     eosio::check(!mssg_itr->closed, "Message is closed.");
 
     tables::reward_pools pools(_self, _self.value);
-    auto pool = get_pool(pools, mssg_itr->date);
+    auto pool = get_pool(pools, mssg_itr->pool_date);
     check_acc_vest_balance(voter, pool->state.funds.symbol);
     tables::vote_table vote_table(_self, message_id.author.value);
 

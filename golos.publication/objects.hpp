@@ -43,6 +43,7 @@ struct message {
 
     uint64_t id;
     uint64_t date;
+    uint64_t pool_date;
     uint16_t tokenprop;     // percent
     std::vector<structures::beneficiary> beneficiaries;
     uint16_t rewardweight;  // percent
