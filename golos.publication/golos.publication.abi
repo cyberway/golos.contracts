@@ -823,6 +823,16 @@
         {"name": "message_id", "type": "mssgid"},
         {"name": "rewardweight", "type": "percent_t"}
     ]
+  },
+  {
+    "name": "post_reward_event",
+    "base": "",
+    "fields": [
+        {"name": "message_id", "type": "mssgid"},
+        {"name": "author_reward", "type": "asset"},
+        {"name": "benefactor_reward", "type": "asset"},
+        {"name": "curator_reward", "type": "asset"}
+    ]
   }
   ],
   "events": [
@@ -830,7 +840,8 @@
     {"name": "poolerase", "type": "uint64"},
     {"name": "poststate", "type": "post_event"},
     {"name": "votestate", "type": "vote_event"},
-    {"name": "rewardweight", "type": "reward_weight_event"}
+    {"name": "rewardweight", "type": "reward_weight_event"},
+    {"name": "postreward", "type": "post_reward_event"}
   ],
   "actions": [
   {
