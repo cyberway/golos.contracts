@@ -313,8 +313,6 @@ struct limits {
         auto restorer = get_restorer(kind);
         auto& chg = charges[lim_act.chargenum];
         update_charge(chg, restorer, cur_time, vesting, get_prop(lim_act.chargeprice), w);
-        if (kind == limits::POSTBW)
-            return (chg.data > get_prop(lim_act.cutoffval)) ? (get_prop(lim_act.cutoffval) * get_prop(lim_act.cutoffval)) / (chg.data * chg.data) : 1.0;
         return (chg.data > get_prop(lim_act.cutoffval)) ? get_prop(lim_act.cutoffval) / chg.data : 1.0;
     }
 
@@ -345,7 +343,9 @@ struct limits {
                 return -1.0;
             vesting_ref -= price;
         }
-        return calc_power(limits::POSTBW, charges, cur_time, vesting_ref, 1.0);
+
+        power =  calc_power(limits::POSTBW, charges, cur_time, vesting_ref, 1.0);
+        return power*power;
     }
 };
 

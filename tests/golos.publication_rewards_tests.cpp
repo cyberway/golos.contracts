@@ -1293,6 +1293,7 @@ BOOST_FIXTURE_TEST_CASE(posting_bw_penalty, reward_calcs_tester) try {
     auto bignum = 500000000000;
     auto five_min = 5*60;
     auto window = 5000;
+    auto reward_weight_delta = 0.0001;
     init(bignum, 500000);
     produce_blocks();
     
@@ -1320,7 +1321,7 @@ BOOST_FIXTURE_TEST_CASE(posting_bw_penalty, reward_calcs_tester) try {
         [](double x){ return x; }, golos_curation::func, [](double x){ return x / 1800.0; }, lims, std::move(restorers_fn)));
     check();
     
-    BOOST_TEST_MESSAGE("--- create four messages");
+    BOOST_TEST_MESSAGE("--- create messages");
     for (auto i = 0; i < 4; i++) {
         BOOST_TEST_MESSAGE("--- create_message: " << name{_users[0]}.to_string());
         BOOST_CHECK_EQUAL(success(), create_message({_users[0], "permlink" + std::to_string(i)}));
@@ -1330,7 +1331,14 @@ BOOST_FIXTURE_TEST_CASE(posting_bw_penalty, reward_calcs_tester) try {
 
     BOOST_TEST_MESSAGE("--- create_message: " << name{_users[0]}.to_string());
     BOOST_CHECK_EQUAL(success(), create_message({_users[0], "permlink5"}));
-    BOOST_CHECK(post.get_message(_users[0], 5)["rewardweight"].as<uint16_t>() < cfg::_100percent);
+    auto reward_weight_db = post.get_message(_users[0], 5)["rewardweight"].as<uint16_t>();
+    auto reward_weight_st = _state.pools.rbegin()->messages.back().reward_weight;
+    BOOST_CHECK(reward_weight_db < cfg::_100percent);
+    BOOST_CHECK_EQUAL(reward_weight_db, static_cast<uint16_t>((reward_weight_st - reward_weight_delta) * cfg::_100percent));
+    produce_blocks();
+
+    produce_blocks(golos::seconds_to_blocks(window));
+    check();
 } FC_LOG_AND_RETHROW()
 
 BOOST_AUTO_TEST_SUITE_END()
