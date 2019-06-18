@@ -344,8 +344,12 @@ struct limits {
             vesting_ref -= price;
         }
 
-        power =  calc_power(limits::POSTBW, charges, cur_time, vesting_ref, 1.0);
-        return power*power;
+        if (kind != limits::COMM) {
+            power =  calc_power(limits::POSTBW, charges, cur_time, vesting_ref, 1.0);
+            return power*power;
+        }
+
+        return 1.0;
     }
 };
 

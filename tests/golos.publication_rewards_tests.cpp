@@ -1293,6 +1293,7 @@ BOOST_FIXTURE_TEST_CASE(posting_bw_penalty, reward_calcs_tester) try {
     auto bignum = 500000000000;
     auto five_min = 5*60;
     auto window = 5000;
+    auto pb_cutoff = cfg::_100percent*4;
     auto reward_weight_delta = 0.0001;
     init(bignum, 500000);
     produce_blocks();
@@ -1309,7 +1310,7 @@ BOOST_FIXTURE_TEST_CASE(posting_bw_penalty, reward_calcs_tester) try {
 
     BOOST_TEST_MESSAGE("--- setrules");
     using namespace golos_curation;
-    limitsarg lims = {{"t/300", "t/200", "t/(5*86400)", "t*p/86400"}, {{1, 0, cfg::_100percent, cfg::_100percent}, {2, 1, cfg::_100percent, cfg::_100percent/10}, {0, 2, cfg::_100percent, cfg::_100percent/(5*40)}, {3, 3, cfg::_100percent*4, cfg::_100percent}}, {0, 0}, {0, 0, 0}};
+    limitsarg lims = {{"t/300", "t/200", "t/(5*86400)", "t*p/86400"}, {{1, 0, cfg::_100percent, cfg::_100percent}, {2, 1, cfg::_100percent, cfg::_100percent/10}, {0, 2, cfg::_100percent, cfg::_100percent/(5*40)}, {3, 3, pb_cutoff, cfg::_100percent}}, {0, 0}, {0, 0, 0}};
     vector<limits::func_t> restorers_fn = {
             [](double p, double v, double t){ return t/300; },
             [](double p, double v, double t){ return t/200; }, 
@@ -1322,19 +1323,33 @@ BOOST_FIXTURE_TEST_CASE(posting_bw_penalty, reward_calcs_tester) try {
     check();
     
     BOOST_TEST_MESSAGE("--- create messages");
+    auto charge = 0.0;
+    auto charge_prev = 0.0;
+    auto set_charge = [&]() {
+        charge_prev = charge*five_min/86400;
+        if (charge < charge_prev)
+            charge = 0.0;
+        charge -= charge_prev;
+    };
     for (auto i = 0; i < 4; i++) {
         BOOST_TEST_MESSAGE("--- create_message: " << name{_users[0]}.to_string());
+        set_charge();
         BOOST_CHECK_EQUAL(success(), create_message({_users[0], "permlink" + std::to_string(i)}));
+        charge += cfg::_100percent;
         BOOST_TEST_CHECK(post.get_message(_users[0], i+1)["rewardweight"].as<uint16_t>(), cfg::_100percent);
         produce_blocks(golos::seconds_to_blocks(five_min));
     }
 
     BOOST_TEST_MESSAGE("--- create_message: " << name{_users[0]}.to_string());
+    set_charge();
     BOOST_CHECK_EQUAL(success(), create_message({_users[0], "permlink5"}));
-    auto reward_weight_db = post.get_message(_users[0], 5)["rewardweight"].as<uint16_t>();
-    auto reward_weight_st = _state.pools.rbegin()->messages.back().reward_weight;
+    charge += cfg::_100percent;
+    auto reward_weight_db = post.get_message(_users[0], 5)["rewardweight"].as<double>();
+    double reward_weight_st = _state.pools.rbegin()->messages.back().reward_weight;
     BOOST_CHECK(reward_weight_db < cfg::_100percent);
-    BOOST_CHECK_EQUAL(reward_weight_db, static_cast<uint16_t>((reward_weight_st - reward_weight_delta) * cfg::_100percent));
+    CHECK_EQUAL_WITH_DELTA(reward_weight_db/cfg::_100percent, reward_weight_st);
+    double rwrdwt = (pb_cutoff*pb_cutoff)/(charge*charge);
+    CHECK_EQUAL_WITH_DELTA(reward_weight_db/cfg::_100percent, rwrdwt);
     produce_blocks();
 
     produce_blocks(golos::seconds_to_blocks(window));
