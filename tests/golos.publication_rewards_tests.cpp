@@ -107,7 +107,7 @@ public:
         vest.add_changevest_auth_to_issuer(_issuer, cfg::control_name);
         vest.initialize_contract(cfg::token_name);
         charge.initialize_contract();
-        post.initialize_contract(cfg::token_name);
+        post.initialize_contract(cfg::token_name, cfg::charge_name);
 
         set_authority(_issuer, cfg::invoice_name, create_code_authority({charge._code, post._code}), "active");
         link_authority(_issuer, charge._code, cfg::invoice_name, N(use));
@@ -780,13 +780,6 @@ BOOST_FIXTURE_TEST_CASE(limits_test, reward_calcs_tester) try {
     auto bignum = 500000000000;
     init(bignum, 500000);
 
-    name action = "calcrwrdwt"_n;
-    auto auth = authority(1, {}, {
-        {.permission = {golos::config::charge_name, config::eosio_code_name}, .weight = 1}
-    });
-    set_authority(_code, action, auth, "active");
-    link_authority(_code, _code, action, action);
-
     auto params = "[" + post.get_str_curators_prcnt(0, post.max_curators_prcnt) + "]";
     BOOST_CHECK_EQUAL(success(), post.set_params(params));
 
@@ -1294,17 +1287,10 @@ BOOST_FIXTURE_TEST_CASE(posting_bw_penalty, reward_calcs_tester) try {
     auto five_min = 5*60;
     auto window = 5000;
     auto pb_cutoff = cfg::_100percent*4;
-    auto reward_weight_delta = 0.0001;
+    auto reward_weight_delta = 0.001;
     init(bignum, 500000);
     produce_blocks();
     
-    name action = "calcrwrdwt"_n;
-    auto auth = authority(1, {}, {
-        {.permission = {golos::config::charge_name, config::eosio_code_name}, .weight = 1}
-    });
-    set_authority(_code, action, auth, "active");
-    link_authority(_code, _code, action, action);
-
     auto params = "[" + post.get_str_cashout_window(window, post.upvote_lockout) + "]";
     BOOST_CHECK_EQUAL(success(), post.set_params(params));
 
@@ -1347,9 +1333,9 @@ BOOST_FIXTURE_TEST_CASE(posting_bw_penalty, reward_calcs_tester) try {
     auto reward_weight_db = post.get_message(_users[0], 5)["rewardweight"].as<double>();
     double reward_weight_st = _state.pools.rbegin()->messages.back().reward_weight;
     BOOST_CHECK(reward_weight_db < cfg::_100percent);
-    CHECK_EQUAL_WITH_DELTA(reward_weight_db/cfg::_100percent, reward_weight_st);
+    CHECK_EQUAL_WITH_DELTA(reward_weight_db/cfg::_100percent, reward_weight_st, reward_weight_delta);
     double rwrdwt = (pb_cutoff*pb_cutoff)/(charge*charge);
-    CHECK_EQUAL_WITH_DELTA(reward_weight_db/cfg::_100percent, rwrdwt);
+    CHECK_EQUAL_WITH_DELTA(reward_weight_db/cfg::_100percent, rwrdwt, reward_weight_delta);
     produce_blocks();
 
     produce_blocks(golos::seconds_to_blocks(window));

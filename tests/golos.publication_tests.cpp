@@ -45,7 +45,7 @@ public:
         vest.add_changevest_auth_to_issuer(cfg::emission_name, cfg::control_name);
         vest.initialize_contract(cfg::token_name);
         charge.initialize_contract();
-        post.initialize_contract(cfg::token_name);
+        post.initialize_contract(cfg::token_name, cfg::charge_name);
     }
 
     void init() {
