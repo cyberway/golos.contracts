@@ -31,7 +31,7 @@ public:
         install_contract(cfg::token_name, contracts::token_wasm(), contracts::token_abi());
         vest.add_changevest_auth_to_issuer(cfg::issuer_name, cfg::control_name);
         vest.initialize_contract(cfg::token_name);
-        post.initialize_contract(cfg::token_name);
+        post.initialize_contract(cfg::token_name, cfg::charge_name);
         referral.initialize_contract(cfg::token_name);
 
         BOOST_CHECK_EQUAL(success(), token.create(cfg::issuer_name, token.make_asset(10000)));
