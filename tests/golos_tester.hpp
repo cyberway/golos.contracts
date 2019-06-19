@@ -78,8 +78,8 @@ public:
         variant r;
         try {
             bytes data = fc::raw::pack(key);
-            const auto& finfo = _chaindb.lower_bound({code, scope, tbl, indx}, data.data(), data.size());
-            r = _chaindb.value_at_cursor({code, finfo.cursor});
+            const auto& finfo = _chaindb.lower_bound({code, scope, tbl, indx}, cyberway::chaindb::cursor_kind::ManyRecords, data.data(), data.size());
+            r = _chaindb.object_at_cursor({code, finfo.cursor}).value;
         } catch (...) {
             // key not found
         }

@@ -158,7 +158,7 @@ variant golos_tester::get_chaindb_struct(name code, uint64_t scope, name tbl, ui
 ) const {
     variant r;
     try {
-        r = _chaindb.value_by_pk({code, scope, tbl}, id);
+        r = _chaindb.object_by_pk({code, scope, tbl}, id).value;
     } catch (...) {
         // key not found
     }
@@ -173,10 +173,10 @@ variant golos_tester::get_chaindb_singleton(name code, uint64_t scope, name tbl,
 
 vector<variant> golos_tester::get_all_chaindb_rows(name code, uint64_t scope, name tbl, bool strict) const {
     vector<variant> all;
-    auto info = _chaindb.lower_bound({code, scope, tbl, N(primary)}, nullptr, 0);
+    auto info = _chaindb.lower_bound({code, scope, tbl, N(primary)}, cyberway::chaindb::cursor_kind::ManyRecords, nullptr, 0);
     cyberway::chaindb::cursor_request cursor = {code, info.cursor};
     for (auto pk = _chaindb.current(cursor); pk != cyberway::chaindb::primary_key::End; pk = _chaindb.next(cursor)) {
-        auto v = _chaindb.value_at_cursor(cursor);
+        auto v = _chaindb.object_at_cursor(cursor).value;
         all.push_back(v);
     }
     if (!all.size()) {
