@@ -25,7 +25,8 @@ public:
     {
         create_accounts({N(sania), N(pasha), N(tania), N(vania), _code,
                          cfg::publish_name, cfg::token_name, cfg::issuer_name,
-                         cfg::vesting_name, cfg::social_name, cfg::control_name});
+                         cfg::vesting_name, cfg::social_name, cfg::control_name,
+                         cfg::charge_name});
         produce_blocks(2);
 
         install_contract(cfg::token_name, contracts::token_wasm(), contracts::token_abi());
