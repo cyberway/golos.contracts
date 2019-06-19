@@ -110,23 +110,22 @@ void control::on_transfer(name from, name to, asset quantity, string memo) {
         }
 
         auto token = quantity.symbol;
-        auto transfer = [&](auto from, auto to, auto amount) {
-            if (amount > 0) {
-                INLINE_ACTION_SENDER(token, payment)(config::token_name, {from, config::code_name},
-                    {from, to, asset(amount, token), memo});
-            }
-        };
         static const auto memo = "emission";
         auto random = tapos_block_prefix();     // trx.ref_block_prefix; can generate hash from timestamp insead
         auto winner = top[random % n];          // witness, who will receive fraction after reward division
         auto reward = total / n;
+
+        vector<eosio::token::recipient> top_recipients;
         for (const auto& w: top) {
             if (w == winner)
                 continue;
-            transfer(_self, w, reward);
+            top_recipients.push_back({w, asset(reward, token), memo});
             total -= reward;
         }
-        transfer(_self, winner, total);
+        top_recipients.push_back({winner, asset(total, token), memo});
+
+        INLINE_ACTION_SENDER(token, bulkpayment)(config::token_name, {_self, config::code_name},
+                            {_self, top_recipients});
     }
 }
 
