@@ -38,7 +38,8 @@ public:
 
         produce_block();
         create_accounts(_users);
-        create_accounts({cfg::issuer_name, cfg::control_name, cfg::token_name, cfg::vesting_name, cfg::social_name, cfg::publish_name});
+        create_accounts({cfg::issuer_name, cfg::control_name, cfg::token_name, 
+                cfg::vesting_name, cfg::social_name, cfg::publish_name, cfg::charge_name});
         produce_block();
 
         install_contract(cfg::token_name, contracts::token_wasm(), contracts::token_abi());
