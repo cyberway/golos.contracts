@@ -179,6 +179,13 @@ struct reward_weight_event {
     uint16_t rewardweight;
 };
 
+struct post_reward_event {
+    mssgid message_id;
+    asset author_reward;
+    asset benefactor_reward;
+    asset curator_reward;
+};
+
 struct limitparams {
     enum act_t: uint8_t {POST, COMM, VOTE, POSTBW};
     uint64_t act;
