@@ -25,6 +25,11 @@
         auto filtered = ::eosio::testing::filter_fields(a.get_object(), b.get_object()); \
         BOOST_CHECK_EQUAL_COLLECTIONS(a.get_object().begin(), a.get_object().end(), filtered.begin(), filtered.end()); }}
 
+#define CHECK_EQUAL_WITH_DELTA(left, right, delta) { \
+    BOOST_CHECK_EQUAL(typeid(left).name(), typeid(right).name()); \
+    BOOST_CHECK(std::abs(left - right) <= delta); \
+}
+
 namespace eosio { namespace testing {
 
 uint64_t hash64(const std::string& arg);

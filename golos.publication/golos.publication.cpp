@@ -1077,7 +1077,7 @@ void publication::calcrwrdwt(name account, int64_t mssg_id, int64_t post_charge)
     auto bw_lim_itr = lims.find(structures::limitparams::POSTBW);
     eosio_assert(bw_lim_itr != lims.end(), "publication::calc_reward_weight: limit parameters not set");
     if (post_charge > bw_lim_itr->cutoff) {
-        elaf_t weight(elai_t(bw_lim_itr->cutoff) / elai_t(post_charge));
+        elaf_t weight(elai_t(bw_lim_itr->cutoff * bw_lim_itr->cutoff) / elai_t(post_charge * post_charge));
         auto reward_weight = int_cast(elai_t(config::_100percent) * weight);
         validate_percent(reward_weight, "calculated reward weight");        // should never fail in normal conditions
 

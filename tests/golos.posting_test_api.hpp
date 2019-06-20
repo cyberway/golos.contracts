@@ -13,7 +13,7 @@ struct golos_posting_api: base_contract_api {
     ,   _symbol(sym) {}
     symbol _symbol;
 
-    void initialize_contract(name token_name) {
+    void initialize_contract(name token_name, name charge_name) {
         _tester->install_contract(_code, contracts::posting_wasm(), contracts::posting_abi());
 
         _tester->set_authority(_code, cfg::code_name, create_code_authority({_code}), "active");
@@ -21,6 +21,13 @@ struct golos_posting_api: base_contract_api {
         _tester->link_authority(_code, _code, cfg::code_name, N(paymssgrwrd));
         _tester->link_authority(_code, token_name, cfg::code_name, N(transfer));
         _tester->link_authority(_code, token_name, cfg::code_name, N(payment));
+
+        name action = "calcrwrdwt"_n;
+        auto auth = authority(1, {}, {
+            {.permission = {charge_name, config::eosio_code_name}, .weight = 1}
+        });
+        _tester->set_authority(_code, action, auth, "active");
+        _tester->link_authority(_code, _code, action, action);
     }
 
     //// posting actions

@@ -25,13 +25,14 @@ public:
     {
         create_accounts({N(sania), N(pasha), N(tania), N(vania), _code,
                          cfg::publish_name, cfg::token_name, cfg::issuer_name,
-                         cfg::vesting_name, cfg::social_name, cfg::control_name});
+                         cfg::vesting_name, cfg::social_name, cfg::control_name,
+                         cfg::charge_name});
         produce_blocks(2);
 
         install_contract(cfg::token_name, contracts::token_wasm(), contracts::token_abi());
         vest.add_changevest_auth_to_issuer(cfg::issuer_name, cfg::control_name);
         vest.initialize_contract(cfg::token_name);
-        post.initialize_contract(cfg::token_name);
+        post.initialize_contract(cfg::token_name, cfg::charge_name);
         referral.initialize_contract(cfg::token_name);
 
         BOOST_CHECK_EQUAL(success(), token.create(cfg::issuer_name, token.make_asset(10000)));
