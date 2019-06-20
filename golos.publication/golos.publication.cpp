@@ -56,6 +56,8 @@ extern "C" {
             execute_action(&publication::calcrwrdwt);
         if (NN(paymssgrwrd) == action)
             execute_action(&publication::paymssgrwrd);
+        if (NN(setmaxpayout) == action)
+            execute_action(&publication::set_max_payout);
     }
 #undef NN
 }
@@ -108,7 +110,8 @@ void publication::create_message(
     std::string languagemssg,
     std::vector<std::string> tags,
     std::string jsonmetadata,
-    std::optional<uint16_t> curators_prcnt = std::nullopt
+    std::optional<uint16_t> curators_prcnt = std::nullopt,
+    std::optional<asset> max_payout = std::nullopt
 ) {
     require_auth(message_id.author);
 
@@ -146,6 +149,12 @@ void publication::create_message(
     auto token_code = pool->state.funds.symbol.code();
     auto issuer = token::get_issuer(config::token_name, token_code);
     tables::limit_table lims(_self, _self.value);
+
+    if (!!max_payout) {
+        eosio::check(max_payout >= asset(0, pool->state.funds.symbol), "max_payout must not be negative.");
+    } else {
+        max_payout = asset(asset::max_amount, pool->state.funds.symbol);
+    }
 
     use_charge(
             lims, 
@@ -236,6 +245,7 @@ void publication::create_message(
         item.rewardweight = config::_100percent;    // can be corrected later in calcrwrdwt
         item.curators_prcnt = *curators_prcnt;
         item.mssg_reward = asset(0, pool->state.funds.symbol);
+        item.max_payout = *max_payout;
     });
 
     permlink_table.emplace(message_id.author, [&]( auto &item) {
@@ -456,9 +466,11 @@ void publication::close_message(structures::mssgid message_id) {
 
     asset mssg_reward;
     auto state = pool->state;
+    eosio_assert(mssg_itr->max_payout.symbol == state.funds.symbol, "LOGIC ERROR! publication::payrewards: mssg_itr->max_payout.symbol != state.funds.symbol");
     int64_t payout = 0;
     if(state.msgs == 1) {
         payout = state.funds.amount; //if we have the only message in the pool, the author receives a reward anyway
+        payout = std::min(payout, mssg_itr->max_payout.amount);
         eosio_assert(state.rshares == mssg_itr->state.netshares, 
                 "LOGIC ERROR! publication::payrewards: pool->rshares != mssg_itr->netshares for last message");
         eosio_assert(state.rsharesfn == sharesfn.data(), 
@@ -480,6 +492,8 @@ void publication::close_message(structures::mssgid message_id) {
             elaf_t reward_weight(elai_t(mssg_itr->rewardweight) / elai_t(config::_100percent));
             payout = int_cast(
                 reward_weight * elai_t(elai_t(state.funds.amount) * elaf_t(elap_t(numer) / elap_t(denom))));
+            payout = std::min(payout, mssg_itr->max_payout.amount);
+
             state.funds.amount -= payout;
             eosio_assert(state.funds.amount >= 0, "LOGIC ERROR! publication::payrewards: state.funds < 0");
         }
@@ -1044,30 +1058,51 @@ std::string publication::get_memo(const std::string &type, const structures::mss
                                                   + message_id.permlink);
 }
 
-void publication::set_curators_prcnt(structures::mssgid message_id, uint16_t curators_prcnt) {
-    require_auth(message_id.author);
-
-    const auto& param = params().curators_prcnt_param;
-    param.validate_value(curators_prcnt);
-
+const auto& publication::get_message(const tables::message_table& messages, const structures::mssgid& message_id) {
     tables::permlink_table permlink_table(_self, message_id.author.value);
     auto permlink_index = permlink_table.get_index<"byvalue"_n>();
     auto permlink_itr = permlink_index.find(message_id.permlink);
     // rare case - not critical for performance
     eosio::check(permlink_itr != permlink_index.end(), "Permlink doesn't exist.");
 
-    tables::message_table message_table(_self, message_id.author.value);
-    auto message_itr = message_table.find(permlink_itr->id);
-    eosio::check(message_itr != message_table.end(), "Message doesn't exist in cashout window.");
-    eosio::check(!message_itr->closed, "Message is closed.");
+    auto message_itr = messages.find(permlink_itr->id);
+    eosio::check(message_itr != messages.end(), "Message doesn't exist in cashout window.");
+    return *message_itr;
+}
 
-    eosio::check(message_itr->state.voteshares == 0, "Curators percent can be changed only before voting.");
+void publication::set_curators_prcnt(structures::mssgid message_id, uint16_t curators_prcnt) {
+    require_auth(message_id.author);
+
+    const auto& param = params().curators_prcnt_param;
+    param.validate_value(curators_prcnt);
+
+    tables::message_table message_table(_self, message_id.author.value);
+    const auto& mssg = get_message(message_table, message_id);
+
+    eosio::check(mssg.state.voteshares == 0, "Curators percent can be changed only before voting.");
     eosio::check(
-            message_itr->curators_prcnt != curators_prcnt, 
+            mssg.curators_prcnt != curators_prcnt,
             "Same curators percent value is already set."); // TODO: tests #617
 
-    message_table.modify(message_itr, name(), [&](auto& item) {
+    message_table.modify(mssg, name(), [&](auto& item) {
         item.curators_prcnt = curators_prcnt;
+    });
+}
+
+void publication::set_max_payout(structures::mssgid message_id, asset max_payout) {
+    require_auth(message_id.author);
+
+    tables::message_table message_table(_self, message_id.author.value);
+    const auto& mssg = get_message(message_table, message_id);
+
+    eosio::check(mssg.state.voteshares == 0, "Max payout can be changed only before voting.");
+
+    eosio::check(max_payout != mssg.max_payout, "Same max payout is already set.");
+    eosio::check(max_payout >= asset(0, mssg.max_payout.symbol), "max_payout must not be negative.");
+    eosio::check(max_payout < mssg.max_payout, "Cannot replace max payout with greater one.");
+
+    message_table.modify(mssg, name(), [&](auto& item) {
+        item.max_payout = max_payout;
     });
 }
 

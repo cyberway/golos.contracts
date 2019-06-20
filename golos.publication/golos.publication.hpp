@@ -17,7 +17,7 @@ public:
     void create_message(structures::mssgid message_id, structures::mssgid parent_id,
         std::vector<structures::beneficiary> beneficiaries, uint16_t tokenprop, bool vestpayment,
         std::string headermssg, std::string bodymssg, std::string languagemssg, std::vector<std::string> tags,
-        std::string jsonmetadata, std::optional<uint16_t> curators_prcnt);
+        std::string jsonmetadata, std::optional<uint16_t> curators_prcnt, std::optional<asset> max_payout);
     void update_message(structures::mssgid message_id, std::string headermssg, std::string bodymssg,
                         std::string languagemssg, std::vector<std::string> tags, std::string jsonmetadata);
     void delete_message(structures::mssgid message_id);
@@ -29,6 +29,7 @@ public:
     void reblog(name rebloger, structures::mssgid message_id, std::string headermssg, std::string bodymssg);
     void erase_reblog(name rebloger, structures::mssgid message_id);
     void set_curators_prcnt(structures::mssgid message_id, uint16_t curators_prcnt);
+    void set_max_payout(structures::mssgid message_id, asset max_payout);
     void calcrwrdwt(name account, int64_t mssg_id, int64_t post_charge);
     void paymssgrwrd(structures::mssgid message_id);
 private:
@@ -67,6 +68,8 @@ private:
     static bool validate_permlink(std::string permlink);
 
     std::string get_memo(const std::string &type, const structures::mssgid &message_id);
+
+    const auto& get_message(const tables::message_table& messages, const structures::mssgid& message_id);
 };
 
 } // golos
