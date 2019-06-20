@@ -409,8 +409,8 @@ public:
                     } else if (pool_rsharesfn_sum > 1.e-20) {
                         payout = (p.rules.mainfunc(m.get_rshares_sum()) * p.funds) / pool_rsharesfn_sum;
                         payout *= m.reward_weight;
+                        payout = std::min(payout, m.max_payout);
                     }
-                    payout = std::min(payout, m.max_payout);
 
                     auto curation_payout = itr_m->curators_prcnt * payout;
                     double unclaimed_funds = curation_payout;
@@ -1381,8 +1381,8 @@ BOOST_FIXTURE_TEST_CASE(message_max_payout_test, reward_calcs_tester) try {
         );
     };
 
-    BOOST_TEST_MESSAGE("--- create_message without max_payout: alice");
-    BOOST_CHECK_EQUAL(success(), create_msg({N(alice), "permlink"}));
+    BOOST_TEST_MESSAGE("--- create_message without max_payout: alice1");
+    BOOST_CHECK_EQUAL(success(), create_msg({N(alice1), "permlink"}));
     check();
 
     BOOST_TEST_MESSAGE("--- create_message with max_payout = 0: alice2");
@@ -1393,30 +1393,38 @@ BOOST_FIXTURE_TEST_CASE(message_max_payout_test, reward_calcs_tester) try {
     BOOST_CHECK_EQUAL(success(), create_msg({N(alice3), "permlink"}, token.make_asset(1000000)));
     check();
 
-    BOOST_TEST_MESSAGE("--- bob voted for alice");
-    BOOST_CHECK_EQUAL(success(), addvote(N(bob), {N(alice), "permlink"}, 10000));
-    produce_blocks();
+    BOOST_TEST_MESSAGE("--- create_message with max_payout = 0: alice4");
+    BOOST_CHECK_EQUAL(success(), create_msg({N(alice4), "permlink"}, token.make_asset(0)));
     check();
-    BOOST_TEST_MESSAGE("--- bob voted for alice2");
+
+    BOOST_TEST_MESSAGE("--- bob voted for all messages");
+    BOOST_CHECK_EQUAL(success(), addvote(N(bob), {N(alice1), "permlink"}, 10000));
     BOOST_CHECK_EQUAL(success(), addvote(N(bob), {N(alice2), "permlink"}, 10000));
-    produce_blocks();
-    check();
-    BOOST_TEST_MESSAGE("--- bob voted for alice3");
     BOOST_CHECK_EQUAL(success(), addvote(N(bob), {N(alice3), "permlink"}, 10000));
+    BOOST_CHECK_EQUAL(success(), addvote(N(bob), {N(alice4), "permlink"}, 10000));
     produce_blocks();
     check();
 
-    const auto alice_vest = vest.get_balance_raw(N(alice))["vesting"].as<asset>();
+    const auto alice1_vest = vest.get_balance_raw(N(alice1))["vesting"].as<asset>();
     const auto alice2_vest = vest.get_balance_raw(N(alice2))["vesting"].as<asset>();
     const auto alice3_vest = vest.get_balance_raw(N(alice3))["vesting"].as<asset>();
+    const auto alice4_vest = vest.get_balance_raw(N(alice4))["vesting"].as<asset>();
     produce_blocks(golos::seconds_to_blocks(post.window));   // TODO: remove magic number
     BOOST_TEST_MESSAGE("--- rewards");
     check();
     show();
 
-    BOOST_CHECK_GT(vest.get_balance_raw(N(alice))["vesting"].as<asset>() - alice_vest, token.make_asset(0));
+    BOOST_TEST_MESSAGE("--- checking that message without max_payout = 0 has payout");
+    BOOST_CHECK_GT(vest.get_balance_raw(N(alice1))["vesting"].as<asset>() - alice1_vest, token.make_asset(0));
+
+    BOOST_TEST_MESSAGE("--- checking that message with max_payout = 0 has no payout");
     BOOST_CHECK_EQUAL(vest.get_balance_raw(N(alice2))["vesting"].as<asset>() - alice2_vest, token.make_asset(0));
+
+    BOOST_TEST_MESSAGE("--- checking that message with max_payout > prognosis_payout has payout");
     BOOST_CHECK_GT(vest.get_balance_raw(N(alice3))["vesting"].as<asset>() - alice3_vest, token.make_asset(0));
+
+    BOOST_TEST_MESSAGE("--- checking that message with max_payout = 0, but last in pool, has payout");
+    BOOST_CHECK_GT(vest.get_balance_raw(N(alice4))["vesting"].as<asset>() - alice4_vest, token.make_asset(0));
 } FC_LOG_AND_RETHROW()
 
 BOOST_AUTO_TEST_SUITE_END()
