@@ -23,14 +23,15 @@ args = {
 }
 
 
-bios_boot_sequence=('{basedir}/cyberway.contracts/scripts/bios-boot-sequence/bios-boot-sequence.py '
-                     '--cleos "{cleos}" --contracts-dir "{cyberway_contracts_dir}" '
-                     '--public-key {cyber_public_key} --private-key {cyber_private_key} '
-                     '--symbol=CYBER '
-                     '--docker --all {extra_args}').format(**args)
-if subprocess.call(bios_boot_sequence, shell=True):
-    print('bios-boot-sequence.py exited with error')
-    sys.exit(1)
+if os.environ.get('NO_GENESIS', False):
+    bios_boot_sequence=('{basedir}/cyberway.contracts/scripts/bios-boot-sequence/bios-boot-sequence.py '
+                         '--cleos "{cleos}" --contracts-dir "{cyberway_contracts_dir}" '
+                         '--public-key {cyber_public_key} --private-key {cyber_private_key} '
+                         '--symbol=CYBER '
+                         '--docker --all {extra_args}').format(**args)
+    if subprocess.call(bios_boot_sequence, shell=True):
+        print('bios-boot-sequence.py exited with error')
+        sys.exit(1)
 
 golos_boot_sequence=('{basedir}/scripts/golos-boot-sequence/golos-boot-sequence.py '
                      '--cleos "{cleos}" --contracts-dir "{golos_contracts_dir}" ' 
