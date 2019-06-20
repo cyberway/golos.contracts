@@ -119,6 +119,10 @@ void control::on_transfer(name from, name to, asset quantity, string memo) {
         for (const auto& w: top) {
             if (w == winner)
                 continue;
+
+            if (reward <= 0)
+                continue;
+
             top_recipients.push_back({w, asset(reward, token), memo});
             total -= reward;
         }
@@ -128,7 +132,6 @@ void control::on_transfer(name from, name to, asset quantity, string memo) {
                             {_self, top_recipients});
     }
 }
-
 
 void control::attachacc(name user) {
     assert_started();
