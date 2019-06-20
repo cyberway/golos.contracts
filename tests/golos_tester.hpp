@@ -7,6 +7,8 @@
 
 #define UNIT_TEST_ENV
 
+#define MAX_ASSET_AMOUNT (1LL << 62) - 1
+
 // Note: cannot check nested mvo
 #define CHECK_EQUAL_OBJECTS(left, right) { \
     auto l = fc::variant(left); \
@@ -43,6 +45,7 @@ struct permission {
 };
 
 struct contract_error_messages {
+    const string wrong_asset_symbol = amsg("comparison of assets with different symbols is not allowed");
 protected:
     const string amsg(const string& x) const { return base_tester::wasm_assert_msg(x); }
 };
