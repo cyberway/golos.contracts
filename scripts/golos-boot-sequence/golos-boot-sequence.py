@@ -372,7 +372,7 @@ def createCommunity():
 def createWitnessAccounts():
     for i in range(firstWitness, firstWitness + numWitness):
         a = accounts[i]
-        createAccount('cyber', a['name'], a['pub'])
+        createAccount('gls', a['name'], a['pub'])
         openVestingBalance(a['name'])
         buyVesting(a['name'], intToToken(10000000*10000))
         registerWitness('gls.ctrl', a['name'])
@@ -441,7 +441,7 @@ def initCommunity():
 def addUsers():
     for i in range(0, firstWitness-1):
         a = accounts[i]
-        createAccount('cyber', a['name'], a['pub'])
+        createAccount('gls', a['name'], a['pub'])
         openVestingBalance(a['name'])
         buyVesting(a['name'], intToToken(50000))
 

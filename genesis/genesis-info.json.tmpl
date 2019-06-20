@@ -57,46 +57,109 @@
         }
     },
     "accounts": [
+# System accounts
         {"name": "cyber",
-            "update": true,
+            "privileged": true,
+            "permissions": [
+                {"name": "owner",  "keys": []},
+                {"name": "active", "keys": []},
+                {"name": "prods",  "keys": [], "accounts": ["cyber.prods@active"]}
+            ],
             "abi":  {"path": "$CYBERWAY_CONTRACTS/cyber.bios/cyber.bios.abi", "hash":""},
             "code": {"path": "$CYBERWAY_CONTRACTS/cyber.bios/cyber.bios.wasm", "hash":""}
         },
-        {"name": "cyber.domain",
-            "update": true,
-            "abi":  {"path": "$CYBERWAY_CONTRACTS/cyber.domain/cyber.domain.abi", "hash":""},
-            "code": {"path": "$CYBERWAY_CONTRACTS/cyber.domain/cyber.domain.wasm", "hash":""}
-        },
         {"name": "cyber.msig",
-            "update": true,
+            "privileged": true,
+            "permissions": [
+                {"name": "owner",  "keys": [], "accounts": ["cyber@owner"]},
+                {"name": "active", "keys": [], "accounts": ["cyber@active"]},
+                {"name": "prods",  "keys": [], "accounts": ["cyber@prods"]}
+            ],
             "abi":  {"path": "$CYBERWAY_CONTRACTS/cyber.msig/cyber.msig.abi", "hash":""},
             "code": {"path": "$CYBERWAY_CONTRACTS/cyber.msig/cyber.msig.wasm", "hash":""}
         },
+        {"name": "cyber.domain",
+            "privileged": true,
+            "permissions": [
+                {"name": "owner",  "keys": [], "accounts": ["cyber@owner"]},
+                {"name": "active", "keys": [], "accounts": ["cyber@active"]},
+                {"name": "prods",  "keys": [], "accounts": ["cyber@prods"]}
+            ],
+            "abi":  {"path": "$CYBERWAY_CONTRACTS/cyber.domain/cyber.domain.abi", "hash":""},
+            "code": {"path": "$CYBERWAY_CONTRACTS/cyber.domain/cyber.domain.wasm", "hash":""}
+        },
         {"name": "cyber.govern",
-            "update": true,
+            "privileged": true,
+            "permissions": [
+                {"name": "owner",  "keys": [], "accounts": ["cyber@owner"]},
+                {"name": "active", "keys": [], "accounts": ["cyber@active"]},
+                {"name": "prods",  "keys": [], "accounts": ["cyber@prods"]}
+            ],
             "abi":  {"path": "$CYBERWAY_CONTRACTS/cyber.govern/cyber.govern.abi", "hash":""},
             "code": {"path": "$CYBERWAY_CONTRACTS/cyber.govern/cyber.govern.wasm", "hash":""}
         },
         {"name": "cyber.stake",
-            "update": true,
+            "privileged": true,
+            "permissions": [
+                {"name": "owner",  "keys": [], "accounts": ["cyber@owner"]},
+                {"name": "active", "keys": [], "accounts": ["cyber@active"]},
+                {"name": "prods",  "keys": [], "accounts": ["cyber@prods"]}
+            ],
             "abi":  {"path": "$CYBERWAY_CONTRACTS/cyber.stake/cyber.stake.abi", "hash":""},
             "code": {"path": "$CYBERWAY_CONTRACTS/cyber.stake/cyber.stake.wasm", "hash":""}
         },
+        {"name": "cyber.null",
+            "permissions": [
+                {"name": "owner",  "keys": [], "accounts": []},
+                {"name": "active", "keys": [], "accounts": []}
+            ]
+        },
+        {"name": "cyber.prods",
+            "permissions": [
+                {"name": "owner",  "keys": [], "accounts": []},
+                {"name": "active", "keys": [], "accounts": ["cyber@active"]},
+                {"name": "prod.major", "keys": [], "accounts": ["cyber@active"]},
+                {"name": "prod.minor", "keys": [], "accounts": ["cyber@active"]}
+            ]
+        },
         {"name": "cyber.token",
             "permissions": [
-                {"name": "owner", "key": "INITIAL"},
-                {"name": "active", "key": "INITIAL"}
+                {"name": "owner",  "keys": [], "accounts": ["cyber@owner"]},
+                {"name": "active", "keys": [], "accounts": ["cyber@active"]},
+                {"name": "prods",  "keys": [], "accounts": ["cyber@prods"]}
             ],
             "abi":  {"path": "$CYBERWAY_CONTRACTS/cyber.token/cyber.token.abi", "hash":""},
             "code": {"path": "$CYBERWAY_CONTRACTS/cyber.token/cyber.token.wasm", "hash":""}
         },
+        {"name": "cyber.names",
+            "permissions": [
+                {"name": "owner",  "keys": [], "accounts": ["cyber@owner"]},
+                {"name": "active", "keys": [], "accounts": ["cyber@active"]},
+            ],
+        },
         {"name": "cyber.worker",
             "permissions": [
-                {"name": "owner", "key": "INITIAL"},
-                {"name": "active", "key": "INITIAL"}
-            ]
+                {"name": "owner",  "keys": [], "accounts": ["cyber@prods"]},
+                {"name": "active", "keys": [], "accounts": ["cyber@prods"]},
+            ],
+        },
+        {"name": "cyber.appfund",
+            "permissions": [
+                {"name": "owner",  "keys": [], "accounts": ["cyber@prods"]},
+                {"name": "active", "keys": [], "accounts": ["cyber@prods"]},
+            ],
         },
 
+# Technical account to start testnet and tests
+        {
+            "name": "tech", 
+            "permissions": [{"name": "owner", "key": "INITIAL"}, {"name": "active", "key": "INITIAL"}],
+            "sys_balance": "100000.0000 CYBER",
+        },
+
+# Add additional accounts here
+
+# Golos dApp accounts
         {"name": "gls",
             "permissions": [
                 {"name": "owner",      "accounts": ["@witn.smajor"]},
@@ -188,6 +251,12 @@
         }
     ],
     "auth_links": [
+        {"permission": "cyber@prods",        "links": ["cyber:setcode", "cyber:setabi", ":setparams"]},
+        {"permission": "cyber.msig@prods",   "links": ["cyber:setcode", "cyber:setabi"]},
+        {"permission": "cyber.domain@prods", "links": ["cyber:setcode", "cyber:setabi"]},
+        {"permission": "cyber.govern@prods", "links": ["cyber:setcode", "cyber:setabi"]},
+        {"permission": "cyber.stake@prods",  "links": ["cyber:setcode", "cyber:setabi"]},
+        {"permission": "cyber.token@prods",  "links": ["cyber:setcode", "cyber:setabi", ":create"]},
         {
             "permission": "gls@createuser",
             "links": ["cyber:newaccount", "cyber.domain:newusername", "cyber.token:open", "gls.vesting:open"]
