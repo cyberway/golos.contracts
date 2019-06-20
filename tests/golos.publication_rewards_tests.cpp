@@ -410,6 +410,7 @@ public:
                         payout = (p.rules.mainfunc(m.get_rshares_sum()) * p.funds) / pool_rsharesfn_sum;
                         payout *= m.reward_weight;
                     }
+                    payout = std::min(payout, m.max_payout);
 
                     auto curation_payout = itr_m->curators_prcnt * payout;
                     double unclaimed_funds = curation_payout;
@@ -518,10 +519,11 @@ public:
         std::string language = "languagemssg",
         std::vector<std::string> tags = {"tag"},
         std::string json_metadata = "jsonmetadata",
-        uint16_t curators_prcnt = 7100
+        uint16_t curators_prcnt = 7100,
+        optional<asset> max_payout = optional<asset>()
     ) {
         const auto current_time = control->head_block_time().sec_since_epoch();
-        auto ret = post.create_msg(message_id, parent_message_id, beneficiaries, tokenprop, vestpayment, title, body, language, tags, json_metadata, curators_prcnt);
+        auto ret = post.create_msg(message_id, parent_message_id, beneficiaries, tokenprop, vestpayment, title, body, language, tags, json_metadata, curators_prcnt, max_payout);
 //        message_key key{author, permlink};
 
         auto reward_weight = 0.0;
@@ -539,12 +541,16 @@ public:
         }
 
         if (ret == success()) {
+            auto msg_max_payout = static_cast<double>(MAX_ASSET_AMOUNT) / PRECISION_DIV;
+            if (!!max_payout) {
+                msg_max_payout = static_cast<double>(max_payout->get_amount()) / PRECISION_DIV;
+            }
             _state.pools.back().messages.emplace_back(message(
                 message_id,
                 static_cast<double>(tokenprop) / static_cast<double>(cfg::_100percent),
                 static_cast<double>(current_time),
                 beneficiaries, reward_weight,
-                static_cast<double>(curators_prcnt) / static_cast<double>(cfg::_100percent)));
+                static_cast<double>(curators_prcnt) / static_cast<double>(cfg::_100percent), msg_max_payout));
         } else {
             message_id.permlink = std::string();
         }
@@ -1340,6 +1346,77 @@ BOOST_FIXTURE_TEST_CASE(posting_bw_penalty, reward_calcs_tester) try {
 
     produce_blocks(golos::seconds_to_blocks(window));
     check();
+} FC_LOG_AND_RETHROW()
+
+BOOST_FIXTURE_TEST_CASE(message_max_payout_test, reward_calcs_tester) try {
+    BOOST_TEST_MESSAGE("message_max_payout_test");
+    int64_t maxfp = std::numeric_limits<fixp_t>::max();
+    auto bignum = 500000000000;
+    init(bignum, 500000);
+    produce_blocks();
+    BOOST_TEST_MESSAGE("--- setrules");
+    using namespace golos_curation;
+    BOOST_CHECK_EQUAL(success(), setrules({"x", maxfp}, {golos_curation::func_str, maxfp}, {"1", bignum},
+        [](double x){ return x; }, golos_curation::func, [](double x){ return 1.0; }));
+    check();
+
+    BOOST_TEST_MESSAGE("--- add_funds_to_forum");
+    BOOST_CHECK_EQUAL(success(), add_funds_to_forum(50000));
+    check();
+
+    auto create_msg = [&](mssgid message_id, optional<asset> max_payout = optional<asset>()) {
+        return create_message(
+            message_id,
+            {N(), "parentprmlnk"},
+            {},
+            5000,
+            false,
+            "headermssg",
+            "bodymssg",
+            "languagemssg",
+            {{"tag"}},
+            "jsonmetadata",
+            2500,
+            max_payout
+        );
+    };
+
+    BOOST_TEST_MESSAGE("--- create_message without max_payout: alice");
+    BOOST_CHECK_EQUAL(success(), create_msg({N(alice), "permlink"}));
+    check();
+
+    BOOST_TEST_MESSAGE("--- create_message with max_payout = 0: alice2");
+    BOOST_CHECK_EQUAL(success(), create_msg({N(alice2), "permlink"}, token.make_asset(0)));
+    check();
+
+    BOOST_TEST_MESSAGE("--- create_message with max_payout > prognosis payout: alice3");
+    BOOST_CHECK_EQUAL(success(), create_msg({N(alice3), "permlink"}, token.make_asset(1000000)));
+    check();
+
+    BOOST_TEST_MESSAGE("--- bob voted for alice");
+    BOOST_CHECK_EQUAL(success(), addvote(N(bob), {N(alice), "permlink"}, 10000));
+    produce_blocks();
+    check();
+    BOOST_TEST_MESSAGE("--- bob voted for alice2");
+    BOOST_CHECK_EQUAL(success(), addvote(N(bob), {N(alice2), "permlink"}, 10000));
+    produce_blocks();
+    check();
+    BOOST_TEST_MESSAGE("--- bob voted for alice3");
+    BOOST_CHECK_EQUAL(success(), addvote(N(bob), {N(alice3), "permlink"}, 10000));
+    produce_blocks();
+    check();
+
+    const auto alice_vest = vest.get_balance_raw(N(alice))["vesting"].as<asset>();
+    const auto alice2_vest = vest.get_balance_raw(N(alice2))["vesting"].as<asset>();
+    const auto alice3_vest = vest.get_balance_raw(N(alice3))["vesting"].as<asset>();
+    produce_blocks(golos::seconds_to_blocks(post.window));   // TODO: remove magic number
+    BOOST_TEST_MESSAGE("--- rewards");
+    check();
+    show();
+
+    BOOST_CHECK_GT(vest.get_balance_raw(N(alice))["vesting"].as<asset>() - alice_vest, token.make_asset(0));
+    BOOST_CHECK_EQUAL(vest.get_balance_raw(N(alice2))["vesting"].as<asset>() - alice2_vest, token.make_asset(0));
+    BOOST_CHECK_GT(vest.get_balance_raw(N(alice3))["vesting"].as<asset>() - alice3_vest, token.make_asset(0));
 } FC_LOG_AND_RETHROW()
 
 BOOST_AUTO_TEST_SUITE_END()

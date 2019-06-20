@@ -466,16 +466,13 @@ void publication::close_message(structures::mssgid message_id) {
 
     asset mssg_reward;
     auto state = pool->state;
-    eosio_assert(mssg_itr->max_payout.symbol == state.funds.symbol, "LOGIC ERROR! publication::payrewards: mssg_itr->max_payout.symbol != state.funds.symbol");
     int64_t payout = 0;
     if(state.msgs == 1) {
         payout = state.funds.amount; //if we have the only message in the pool, the author receives a reward anyway
-        payout = std::min(payout, mssg_itr->max_payout.amount);
         eosio_assert(state.rshares == mssg_itr->state.netshares, 
                 "LOGIC ERROR! publication::payrewards: pool->rshares != mssg_itr->netshares for last message");
         eosio_assert(state.rsharesfn == sharesfn.data(), 
                 "LOGIC ERROR! publication::payrewards: pool->rsharesfn != sharesfn.data() for last message");
-        state.funds.amount = 0;
         state.rshares = 0;
         state.rsharesfn = 0;
     }
@@ -492,10 +489,6 @@ void publication::close_message(structures::mssgid message_id) {
             elaf_t reward_weight(elai_t(mssg_itr->rewardweight) / elai_t(config::_100percent));
             payout = int_cast(
                 reward_weight * elai_t(elai_t(state.funds.amount) * elaf_t(elap_t(numer) / elap_t(denom))));
-            payout = std::min(payout, mssg_itr->max_payout.amount);
-
-            state.funds.amount -= payout;
-            eosio_assert(state.funds.amount >= 0, "LOGIC ERROR! publication::payrewards: state.funds < 0");
         }
 
         auto rshares = wdfp_t(FP(mssg_itr->state.netshares));
@@ -510,6 +503,12 @@ void publication::close_message(structures::mssgid message_id) {
         state.rshares = new_rshares.data();
         state.rsharesfn = new_rsharesfn.data();
     }
+
+    eosio_assert(mssg_itr->max_payout.symbol == state.funds.symbol, "LOGIC ERROR! publication::payrewards: mssg_itr->max_payout.symbol != state.funds.symbol");
+    payout = std::min(payout, mssg_itr->max_payout.amount);
+
+    state.funds.amount -= payout;
+    eosio_assert(state.funds.amount >= 0, "LOGIC ERROR! publication::payrewards: state.funds < 0");
 
     mssg_reward = asset(payout, state.funds.symbol); 
 

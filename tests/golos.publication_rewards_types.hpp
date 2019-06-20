@@ -206,6 +206,7 @@ struct message {
     std::vector<beneficiary> beneficiaries;
     double reward_weight;
     double curators_prcnt;
+    double max_payout;
 
     double get_rshares_sum() const {
         double ret = 0.0;
@@ -214,8 +215,8 @@ struct message {
         return ret;
     };
 
-    message(mssgid k, double tokenprop_, double created_, const std::vector<beneficiary>& beneficiaries_, double reward_weight_, double curators_prcnt_) :
-        key(k), tokenprop(tokenprop_), created(created_), beneficiaries(beneficiaries_), reward_weight(reward_weight_), curators_prcnt(curators_prcnt_) {};
+    message(mssgid k, double tokenprop_, double created_, const std::vector<beneficiary>& beneficiaries_, double reward_weight_, double curators_prcnt_, double max_payout_) :
+        key(k), tokenprop(tokenprop_), created(created_), beneficiaries(beneficiaries_), reward_weight(reward_weight_), curators_prcnt(curators_prcnt_), max_payout(max_payout_) {};
 };
 
 class cutted_func {

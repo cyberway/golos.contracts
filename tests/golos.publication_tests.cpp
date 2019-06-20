@@ -716,6 +716,12 @@ BOOST_FIXTURE_TEST_CASE(set_max_payout, golos_publication_tester) try {
     BOOST_CHECK_EQUAL(err.same_max_payout_val, post.set_max_payout({N(brucelee), "permlink"}, token.make_asset(2000)));
     BOOST_CHECK_EQUAL(err.max_payout_greater_prev, post.set_max_payout({N(brucelee), "permlink"}, token.make_asset(3000)));
 
+    BOOST_TEST_MESSAGE("--- checking max_payout cannot be changed after message voted");
+    BOOST_CHECK_EQUAL(success(), token.issue(cfg::emission_name, N(jackiechan), token.make_asset(500), "issue tokens jackiechan"));
+    BOOST_CHECK_EQUAL(success(), token.transfer(N(jackiechan), cfg::vesting_name, token.make_asset(100), "buy vesting"));
+    BOOST_CHECK_EQUAL(success(), post.upvote(N(jackiechan), {N(brucelee), "permlink"}, 123));
+    BOOST_CHECK_EQUAL(err.no_max_payout, post.set_max_payout({N(brucelee), "permlink"}, token.make_asset(1000)));
+
     BOOST_TEST_MESSAGE("--- checking max_payout cannot be changed after message closed");
     produce_blocks(seconds_to_blocks(post.window));
     BOOST_CHECK_EQUAL(err.no_message, post.set_max_payout({N(brucelee), "permlink"}, token.make_asset(1000)));
