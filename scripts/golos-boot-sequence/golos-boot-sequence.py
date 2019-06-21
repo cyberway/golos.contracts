@@ -216,14 +216,14 @@ def voteWitness(ctrl, voter, witness):
     retry(args.cleos + ' push action ' + ctrl + ' votewitness ' +
         jsonArg([voter, witness]) + '-p %s'%voter)
 
-def createPost(author, permlink, header, body, curatorsPrcnt, *, beneficiaries=[]):
+def createPost(author, permlink, header, body, curatorsPrcnt, maxPayout, *, beneficiaries=[]):
     retry(args.cleos + 'push action gls.publish createmssg' +
-        jsonArg([author, permlink, "", "", beneficiaries, 0, False, header, body, 'ru', [], '', curatorsPrcnt]) +
+        jsonArg([author, permlink, "", "", beneficiaries, 0, False, header, body, 'ru', [], '', curatorsPrcnt, maxPayout]) +
         '-p %s'%author)
 
-def createComment(author, permlink, pauthor, ppermlink, header, body, curatorsPrcnt, *, beneficiaries=[]):
+def createComment(author, permlink, pauthor, ppermlink, header, body, curatorsPrcnt, maxPayout, *, beneficiaries=[]):
     retry(args.cleos + 'push action gls.publish createmssg' +
-        jsonArg([author, permlink, pauthor, ppermlink, beneficiaries, 0, False, header, body, 'ru', [], '', curatorsPrcnt]) +
+        jsonArg([author, permlink, pauthor, ppermlink, beneficiaries, 0, False, header, body, 'ru', [], '', curatorsPrcnt, maxPayout]) +
         '-p %s'%author)
 
 def upvotePost(voter, author, permlink, weight):

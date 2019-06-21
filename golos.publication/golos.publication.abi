@@ -204,6 +204,10 @@
       {
         "name": "mssg_reward",
         "type": "asset"
+      },
+      {
+        "name": "max_payout",
+        "type": "asset"
       }
     ]
   },
@@ -284,6 +288,10 @@
       {
         "name": "curators_prcnt",
         "type": "uint16?"
+      },
+      {
+        "name": "max_payout",
+        "type": "asset?"
       }
     ]
   },
@@ -782,6 +790,20 @@
     ]
   },
   {
+    "name": "setmaxpayout",
+    "base": "",
+    "fields": [
+        {
+            "name": "message_id",
+            "type": "mssgid"
+        },
+        {
+            "name": "max_payout",
+            "type": "asset"
+        }
+    ]
+  },
+  {
     "name": "post_event",
     "base": "",
     "fields": [
@@ -907,6 +929,10 @@
   {
     "name": "paymssgrwrd",
     "type": "paymssgrwrd"
+  },
+  {
+    "name": "setmaxpayout",
+    "type": "setmaxpayout"
   }
   ],
   "tables": [

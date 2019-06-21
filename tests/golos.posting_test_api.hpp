@@ -68,7 +68,8 @@ struct golos_posting_api: base_contract_api {
         std::string language = "languagemssg",
         std::vector<std::string> tags = {"tag"},
         std::string json_metadata = "jsonmetadata",
-        optional<uint16_t> curators_prcnt = optional<uint16_t>()
+        optional<uint16_t> curators_prcnt = optional<uint16_t>(),
+        optional<asset> max_payout = optional<asset>()
     ) {
         return push(N(createmssg), message_id.author, args()
             ("message_id", message_id)
@@ -82,6 +83,7 @@ struct golos_posting_api: base_contract_api {
             ("tags", tags)
             ("jsonmetadata", json_metadata)
             ("curators_prcnt", curators_prcnt)
+            ("max_payout", max_payout)
         );
     }
 
@@ -157,6 +159,12 @@ struct golos_posting_api: base_contract_api {
         return push(N(setcurprcnt), message_id.author, args()
             ("message_id", message_id)
             ("curators_prcnt", curators_prcnt)
+            );
+    }
+    action_result set_max_payout(mssgid message_id, asset max_payout) {
+        return push(N(setmaxpayout), message_id.author, args()
+            ("message_id", message_id)
+            ("max_payout", max_payout)
             );
     }
     action_result set_params(std::string json_params) {

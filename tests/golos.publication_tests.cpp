@@ -6,6 +6,7 @@
 #include "golos.social_test_api.hpp"
 #include "../golos.publication/types.h"
 #include "contracts.hpp"
+#include <eosio/chain/asset.hpp>
 
 using namespace golos;
 using namespace fixed_point_utils;
@@ -159,6 +160,11 @@ protected:
         const string no_reblog_mssg = amsg("You can't reblog, because this message doesn't exist.");
         const string own_reblog = amsg("You cannot reblog your own content.");
         const string wrong_reblog_body_length = amsg("Body must be set if title is set.");
+
+        const string max_payout_negative = amsg("max_payout must not be negative.");
+        const string max_payout_greater_prev = amsg("Cannot replace max payout with greater one.");
+        const string no_max_payout = amsg("Max payout can be changed only before voting.");
+        const string same_max_payout_val = amsg("Same max payout is already set.");
     } err;
 };
 
@@ -659,6 +665,70 @@ BOOST_FIXTURE_TEST_CASE(set_curators_prcnt, golos_publication_tester) try {
     BOOST_CHECK_EQUAL(success(), post.upvote(N(jackiechan), {N(brucelee), "permlink"}, 123));
     BOOST_CHECK_EQUAL(err.no_cur_percent, post.set_curators_prcnt({N(brucelee), "permlink"}, 7500));
     BOOST_CHECK_EQUAL(post.get_message({N(brucelee), "permlink"})["curators_prcnt"], 7300);
+} FC_LOG_AND_RETHROW()
+
+BOOST_FIXTURE_TEST_CASE(set_max_payout, golos_publication_tester) try {
+    BOOST_TEST_MESSAGE("Test setting max payout of message");
+
+    init();
+
+    auto create_msg = [&](optional<asset> max_payout = optional<asset>(), mssgid message_id = {}){
+        if (message_id == mssgid())
+            message_id = {N(brucelee), "permlink"};
+        return post.create_msg(
+            message_id,
+            {N(), "parentprmlnk"},
+            {},
+            5000,
+            false,
+            "headermssg",
+            "bodymssg",
+            "languagemssg",
+            {{"tag"}},
+            "jsonmetadata",
+            2500,
+            max_payout
+            );
+    };
+
+    BOOST_TEST_MESSAGE("--- checking cannot create msg with negative max_payout");
+    BOOST_CHECK_EQUAL(err.max_payout_negative, create_msg(token.make_asset(-1)));
+
+    BOOST_TEST_MESSAGE("--- checking cannot create msg with wrong-symbol max_payout");
+    BOOST_CHECK_EQUAL(err.wrong_asset_symbol, create_msg(asset(10, symbol(4, "WRONG"))));
+
+    BOOST_TEST_MESSAGE("--- checking default max_payout on creating msg");
+    BOOST_CHECK_EQUAL(success(), create_msg());
+    BOOST_CHECK_EQUAL(post.get_message({N(brucelee), "permlink"})["max_payout"].as<asset>().get_amount(), MAX_ASSET_AMOUNT);
+
+    BOOST_TEST_MESSAGE("--- checking max_payout setted on creating msg");
+    BOOST_CHECK_EQUAL(success(), create_msg(token.make_asset(50000), {N(jackiechan), "permlink"}));
+    BOOST_CHECK_EQUAL(post.get_message({N(jackiechan), "permlink"})["max_payout"].as<asset>(), token.make_asset(50000));
+
+    BOOST_TEST_MESSAGE("--- checking max_payout can be changed");
+    BOOST_CHECK_EQUAL(success(), post.set_max_payout({N(brucelee), "permlink"}, token.make_asset(2000)));
+    BOOST_CHECK_EQUAL(post.get_message({N(brucelee), "permlink"})["max_payout"].as<asset>(), token.make_asset(2000));
+
+    BOOST_TEST_MESSAGE("--- checking max_payout cannot be changed to wrong value");
+    BOOST_CHECK_EQUAL(err.max_payout_negative, post.set_max_payout({N(brucelee), "permlink"}, token.make_asset(-1)));
+    BOOST_CHECK_EQUAL(err.wrong_asset_symbol, post.set_max_payout({N(brucelee), "permlink"}, asset(10, symbol(4, "WRONG"))));
+    produce_block();
+    BOOST_CHECK_EQUAL(err.same_max_payout_val, post.set_max_payout({N(brucelee), "permlink"}, token.make_asset(2000)));
+    BOOST_CHECK_EQUAL(err.max_payout_greater_prev, post.set_max_payout({N(brucelee), "permlink"}, token.make_asset(3000)));
+
+    BOOST_TEST_MESSAGE("--- checking max_payout cannot be changed after message voted");
+    BOOST_CHECK_EQUAL(success(), token.issue(cfg::emission_name, N(jackiechan), token.make_asset(500), "issue tokens jackiechan"));
+    BOOST_CHECK_EQUAL(success(), token.transfer(N(jackiechan), cfg::vesting_name, token.make_asset(100), "buy vesting"));
+    BOOST_CHECK_EQUAL(success(), post.upvote(N(jackiechan), {N(brucelee), "permlink"}, 123));
+    BOOST_CHECK_EQUAL(err.no_max_payout, post.set_max_payout({N(brucelee), "permlink"}, token.make_asset(1000)));
+
+    BOOST_TEST_MESSAGE("--- checking max_payout cannot be changed after message closed");
+    produce_blocks(seconds_to_blocks(post.window));
+    BOOST_CHECK_EQUAL(err.no_message, post.set_max_payout({N(brucelee), "permlink"}, token.make_asset(1000)));
+
+    BOOST_TEST_MESSAGE("--- checking max_payout cannot be set for not-exist message");
+    BOOST_CHECK_EQUAL(err.no_permlink, post.set_max_payout({N(brucelee), "notexist"}, token.make_asset(1000)));
+
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE(reblog_message, golos_publication_tester) try {
