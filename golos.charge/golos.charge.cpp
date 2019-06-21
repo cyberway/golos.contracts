@@ -128,7 +128,7 @@ void charge::setrestorer(symbol_code token_code, uint8_t charge_id, std::string 
 }
 
 void charge::send_charge_event(name user, const balance& state) {
-    eosio::event(_self, "chargestate"_n, std::make_tuple(user, state)).send();
+    eosio::event(_self, "chargestate"_n, std::make_tuple(user, state.charge_symbol, state.token_code, state.charge_id, state.last_update, int_cast(FP(state.value)))).send();
 }
 
 template<typename Lambda>
