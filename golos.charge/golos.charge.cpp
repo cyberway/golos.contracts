@@ -1,5 +1,5 @@
 #include "golos.charge.hpp"
-#include <eosiolib/event.hpp>
+#include <eosio/event.hpp>
 
 namespace golos {
 using namespace eosio;
@@ -8,9 +8,9 @@ using namespace atmsp::storable;
 static constexpr auto max_arg = static_cast<base_t>(std::numeric_limits<fixp_t>::max());
 
 fixp_t charge::consume_charge(name issuer, name user, symbol_code token_code, uint8_t charge_id, int64_t price_arg, int64_t cutoff_arg, int64_t vesting_price) {
-    eosio_assert(cutoff_arg < 0 || price_arg <= cutoff_arg, "price > cutoff");
-    eosio_assert(price_arg <= max_arg, "price > max_input");
-    eosio_assert(cutoff_arg < 0 || cutoff_arg <= max_arg, "cutoff > max_input");
+    eosio::check(cutoff_arg < 0 || price_arg <= cutoff_arg, "price > cutoff");
+    eosio::check(price_arg <= max_arg, "price > max_input");
+    eosio::check(cutoff_arg < 0 || cutoff_arg <= max_arg, "cutoff > max_input");
     fixp_t price = to_fixp(price_arg);
     
     auto charge_symbol = symbol(token_code, charge_id);
@@ -18,21 +18,22 @@ fixp_t charge::consume_charge(name issuer, name user, symbol_code token_code, ui
     balances::const_iterator itr = balances_table.find(charge_symbol.raw());
     auto new_val = (itr != balances_table.end()) ? calc_value(_self, user, token_code, *itr, price) : price;
     if(cutoff_arg > 0 && new_val > to_fixp(cutoff_arg)) {
-        eosio_assert(vesting_price > 0, "not enough power");
+        eosio::check(vesting_price > 0, "not enough power");
         auto user_vesting = golos::vesting::get_account_unlocked_vesting(config::vesting_name, user, token_code);
-        eosio_assert(user_vesting.amount >= vesting_price, "insufficient vesting amount");
+        eosio::check(user_vesting.amount >= vesting_price, "insufficient vesting amount");
         INLINE_ACTION_SENDER(golos::vesting, retire) (config::vesting_name,
             {token::get_issuer(config::token_name, token_code), golos::config::invoice_name},
             {eosio::asset(vesting_price, user_vesting.symbol), user});
         return FP(itr->value);
     }
+    auto now = eosio::current_time_point().time_since_epoch().count();
     if (itr == balances_table.end()) {
         if (new_val > 0)
             balances_table.emplace(issuer, [&]( auto &item ) {
                 item.charge_symbol = charge_symbol.raw();
                 item.token_code = token_code;
                 item.charge_id = charge_id;
-                item.last_update = current_time();
+                item.last_update = now;
                 item.value = new_val.data();
                 send_charge_event(user, item);
             });
@@ -40,13 +41,13 @@ fixp_t charge::consume_charge(name issuer, name user, symbol_code token_code, ui
     }
     if (new_val > 0)
         balances_table.modify(*itr, name(), [&]( auto &item ) {
-            item.last_update = current_time();
+            item.last_update = now;
             item.value = new_val.data();
             send_charge_event(user, item);
         });
     else {
         balance item{*itr};
-        item.last_update = current_time();
+        item.last_update = now;
         item.value = new_val;
         send_charge_event(user, item);
         balances_table.erase(itr);
@@ -84,16 +85,16 @@ void charge::removestored(name user, symbol_code token_code, uint8_t charge_id, 
     storedvals storedvals_table(_self, user.value);
     auto storedvals_index = storedvals_table.get_index<"symbolstamp"_n>();
     auto itr = storedvals_index.find(stored::get_key(token_code, charge_id, stamp_id));
-    eosio_assert(itr != storedvals_index.end(), "itr == storedvals_index.end()");
+    eosio::check(itr != storedvals_index.end(), "itr == storedvals_index.end()");
     storedvals_index.erase(itr);
 }
 
 void charge::setrestorer(symbol_code token_code, uint8_t charge_id, std::string func_str, 
         int64_t max_prev, int64_t max_vesting, int64_t max_elapsed) {
     
-    eosio_assert(max_prev <= max_arg, "max_prev > max_input");
-    eosio_assert(max_vesting <= max_arg, "max_vesting > max_input");
-    eosio_assert(max_elapsed <= max_arg, "max_elapsed > max_input");
+    eosio::check(max_prev <= max_arg, "max_prev > max_input");
+    eosio::check(max_vesting <= max_arg, "max_vesting > max_input");
+    eosio::check(max_elapsed <= max_arg, "max_elapsed > max_input");
     auto issuer = token::get_issuer(config::token_name, token_code);
     require_auth(issuer);
     auto charge_symbol = symbol(token_code, charge_id);

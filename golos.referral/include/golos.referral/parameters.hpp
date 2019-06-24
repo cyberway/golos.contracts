@@ -1,7 +1,7 @@
 #pragma once
 #include <common/parameter.hpp>
-#include <eosiolib/asset.hpp>
-#include <eosiolib/singleton.hpp>
+#include <eosio/asset.hpp>
+#include <eosio/singleton.hpp>
 #include <common/config.hpp>
 #include <common/parameter_ops.hpp>
 
@@ -14,9 +14,9 @@ struct breakout_parametrs : parameter {
    asset max_breakout;
 
    void validate() const override {
-        eosio_assert(min_breakout <= max_breakout, "min_breakout > max_breakout");
-        eosio_assert(min_breakout.amount >= 0, "min_breakout < 0");
-        eosio_assert(max_breakout.amount >= 0, "max_breakout < 0");
+        eosio::check(min_breakout <= max_breakout, "min_breakout > max_breakout");
+        eosio::check(min_breakout.amount >= 0, "min_breakout < 0");
+        eosio::check(max_breakout.amount >= 0, "max_breakout < 0");
    }
 
    static bool compare(const breakout_parametrs& obj, const breakout_parametrs& other) {
@@ -39,7 +39,7 @@ struct percent_parametrs : parameter {
    uint32_t max_percent;
 
    void validate() const override {
-        eosio_assert(max_percent <= 10000, "max_percent > 100.00%");
+        eosio::check(max_percent <= 10000, "max_percent > 100.00%");
    }
 };
 using percent_param = param_wrapper<percent_parametrs,1>;

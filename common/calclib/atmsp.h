@@ -48,34 +48,34 @@ struct machine {
     void padd()const   { T t(_stk.pop()); _stk.set_top(t + _stk.top()); }
     void psub()const   { T t(_stk.pop()); _stk.set_top(_stk.top() - t); }
     void pmul()const   { T t(_stk.pop()); _stk.set_top(t * _stk.top()); }
-    void pdiv()const   { T t(_stk.pop()); eosio_assert((t != static_cast<T>(0)), "atmsp::machine: division by zero"); _stk.set_top(_stk.top() / t); }
+    void pdiv()const   { T t(_stk.pop()); eosio::check((t != static_cast<T>(0)), "atmsp::machine: division by zero"); _stk.set_top(_stk.top() / t); }
     void pchs()const   { _stk.set_top(-_stk.top()); }
 
     void pabs()const   { _stk.set_top(abs(_stk.top())); }
-    void psqrt()const  { T t(_stk.top()); eosio_assert((t >= static_cast<T>(0)), "atmsp::machine: square root of a negative number"); _stk.set_top(sqrt(t)); }
+    void psqrt()const  { T t(_stk.top()); eosio::check((t >= static_cast<T>(0)), "atmsp::machine: square root of a negative number"); _stk.set_top(sqrt(t)); }
 
-    void ppow()const   { eosio_assert(false, (std::string("atmsp::machine: unsupported operator ppow for ") + std::to_string(static_cast<double>(_stk.pop()))).c_str()); }
+    void ppow()const   { eosio::check(false, (std::string("atmsp::machine: unsupported operator ppow for ") + std::to_string(static_cast<double>(_stk.pop()))).c_str()); }
     void ppow2()const  { _stk.set_top(_stk.top()*_stk.top()); }
     void ppow3()const  { _stk.set_top(_stk.top()*_stk.top() * _stk.top()); }
     void ppow4()const  { _stk.set_top((_stk.top() * _stk.top()) * (_stk.top() * _stk.top())); }
 
-    void psin()const   { eosio_assert(false, "atmsp::machine: unsupported operator psin"); }
-    void pcos()const   { eosio_assert(false, "atmsp::machine: unsupported operator pcos"); }
-    void ptan()const   { eosio_assert(false, "atmsp::machine: unsupported operator ptan"); }
+    void psin()const   { eosio::check(false, "atmsp::machine: unsupported operator psin"); }
+    void pcos()const   { eosio::check(false, "atmsp::machine: unsupported operator pcos"); }
+    void ptan()const   { eosio::check(false, "atmsp::machine: unsupported operator ptan"); }
 
-    void psinh()const  { eosio_assert(false, "atmsp::machine: unsupported operator psinh"); }
-    void ptanh()const  { eosio_assert(false, "atmsp::machine: unsupported operator ptanh"); }
-    void pcosh()const  { eosio_assert(false, "atmsp::machine: unsupported operator pcosh"); }
+    void psinh()const  { eosio::check(false, "atmsp::machine: unsupported operator psinh"); }
+    void ptanh()const  { eosio::check(false, "atmsp::machine: unsupported operator ptanh"); }
+    void pcosh()const  { eosio::check(false, "atmsp::machine: unsupported operator pcosh"); }
 
-    void pexp()const   { eosio_assert(false, "atmsp::machine: unsupported operator pexp"); }
-    void plog()const   { eosio_assert(false, "atmsp::machine: unsupported operator plog"); }
+    void pexp()const   { eosio::check(false, "atmsp::machine: unsupported operator pexp"); }
+    void plog()const   { eosio::check(false, "atmsp::machine: unsupported operator plog"); }
     void plog10()const { _stk.set_top( log10( _stk.top() ) ); }
     void plog2()const  { _stk.set_top( log2( _stk.top() ) ); }
 
-    void pasin()const  { eosio_assert(false, "atmsp::machine: unsupported operator pasin"); }
-    void pacos()const  { eosio_assert(false, "atmsp::machine: unsupported operator pacos"); }
-    void patan()const  { eosio_assert(false, "atmsp::machine: unsupported operator patan"); }
-    void patan2()const { eosio_assert(false, "atmsp::machine: unsupported operator patan2"); }
+    void pasin()const  { eosio::check(false, "atmsp::machine: unsupported operator pasin"); }
+    void pacos()const  { eosio::check(false, "atmsp::machine: unsupported operator pacos"); }
+    void patan()const  { eosio::check(false, "atmsp::machine: unsupported operator patan"); }
+    void patan2()const { eosio::check(false, "atmsp::machine: unsupported operator patan2"); }
 
     void pmax()const   { T t(_stk.pop()); if (t > _stk.top()) _stk.set_top(t); }
     void pmin()const   { T t(_stk.pop()); if (t < _stk.top()) _stk.set_top(t); }
@@ -87,8 +87,8 @@ struct machine {
                          _stk.set_top(static_cast<T>(0));
     }
 
-    void pfloor()const { eosio_assert(false, "atmsp::machine: nsupported operator pfloor"); }
-    void pround()const { eosio_assert(false, "atmsp::machine: unsupported operator pround"); }
+    void pfloor()const { eosio::check(false, "atmsp::machine: nsupported operator pfloor"); }
+    void pround()const { eosio::check(false, "atmsp::machine: unsupported operator pround"); }
 
     using basic_operator = void (machine<T>::*)()const;
 
@@ -117,22 +117,22 @@ private:
         void clear() { _sp = 0; }
 
         void push( T const &elem ) {
-            eosio_assert(_sp < (maxSize - 1), "atmsp::machine: stack overflow");
+            eosio::check(_sp < (maxSize - 1), "atmsp::machine: stack overflow");
             _data[(++_sp) - 1] = elem;
         }
 
         T pop() {
-            eosio_assert(_sp > 0, "atmsp::machine::Stack::pop(): empty stack");
+            eosio::check(_sp > 0, "atmsp::machine::Stack::pop(): empty stack");
             return _data[(_sp--) - 1];
         }
 
         T top()const {
-            eosio_assert(_sp > 0, "atmsp::machine::Stack::top(): empty stack");
+            eosio::check(_sp > 0, "atmsp::machine::Stack::top(): empty stack");
             return _data[_sp - 1];
         }
 
         void set_top(T const &elem) {
-            eosio_assert(_sp > 0, "atmsp::machine::Stack::set_top(): empty stack");
+            eosio::check(_sp > 0, "atmsp::machine::Stack::set_top(): empty stack");
             _data[_sp - 1] = elem;
         }
     };
@@ -160,8 +160,8 @@ public:
         return _stk.top();
     }
     void set_args(const std::vector<T>& args, const std::vector<std::pair<T, T> >& domain = {}) {
-        eosio_assert(var.size() >= args.size(), "exprinfo::machine::set_args(): var.size() < args.size()");
-        eosio_assert((domain.size() == 0) || (domain.size() == args.size()), "machine::set_args(): wrong domain");
+        eosio::check(var.size() >= args.size(), "exprinfo::machine::set_args(): var.size() < args.size()");
+        eosio::check((domain.size() == 0) || (domain.size() == args.size()), "machine::set_args(): wrong domain");
         if(domain.size())
             for(size_t i = 0; i < args.size(); i++)
                 var[i] = std::min(std::max(args[i], domain[i].first), domain[i].second);
@@ -208,12 +208,12 @@ class parser {
         std::array<V, maxSize> _data;
 
         const V &operator [] (const size_t idx)const {
-            eosio_assert(idx < _count, "atmsp::parser:list wrong index");
+            eosio::check(idx < _count, "atmsp::parser:list wrong index");
             return _data[idx];
         }
 
         V &operator [] (const size_t idx) {
-            eosio_assert(idx < _count, "atmsp::parser:list wrong index");
+            eosio::check(idx < _count, "atmsp::parser:list wrong index");
             return _data[idx];
         }
 
@@ -222,7 +222,7 @@ class parser {
         size_t size()const { return _count; }
 
         void push(V const &elem) {
-            eosio_assert(_count < maxSize, "atmsp::parser: list overflow");
+            eosio::check(_count < maxSize, "atmsp::parser: list overflow");
             _data[_count++] = elem;
         }
 
@@ -252,7 +252,7 @@ class parser {
 public:
 
     void add_constant(const std::string& name, T value) {
-        eosio_assert(name[0] == '$', "atmsp::parser: wrong constant name");
+        eosio::check(name[0] == '$', "atmsp::parser: wrong constant name");
         _con_list.push(const_t(name, value));
     }
 
@@ -285,7 +285,7 @@ void parser<T>::operator()(machine<T> &bc, const std::string& exps, const std::s
     es.erase(std::remove(es.begin(), es.end(), ' '), es.end());
     vs.erase(std::remove(vs.begin(), vs.end(), ' '), vs.end());
     if (es.empty())
-        eosio_assert(false, "atmsp::parser: string is empty");
+        eosio::check(false, "atmsp::parser: string is empty");
     _cp = es.c_str();
 
     // Split comma separated variables into _var_list
@@ -304,10 +304,10 @@ void parser<T>::operator()(machine<T> &bc, const std::string& exps, const std::s
             opn++;
         else if (es[i] == ')') {
             cls++;
-            eosio_assert(cls <= opn, "atmsp::parser: cls > opn");
+            eosio::check(cls <= opn, "atmsp::parser: cls > opn");
         }
 
-    eosio_assert(opn == cls, "atmsp::parser: cls != opn");
+    eosio::check(opn == cls, "atmsp::parser: cls != opn");
 
     bc.used_mem = {
         .operations = 0,
@@ -373,14 +373,14 @@ template <typename T>
 void parser<T>::factor(machine<T> &bc)const {
     /// Check available memory
     if (bc.used_mem.nums >= SIZE.nums || bc.used_mem.values >= SIZE.values || bc.used_mem.operations >= SIZE.operations)
-        eosio_assert(false, "atmsp::parser: bc.used_mem.nums >= SIZE.nums || bc.used_mem.values >= SIZE.values || bc.used_mem.operations >= SIZE.operations");
+        eosio::check(false, "atmsp::parser: bc.used_mem.nums >= SIZE.nums || bc.used_mem.values >= SIZE.values || bc.used_mem.operations >= SIZE.operations");
 
     /// Handle open parenthesis and unary operators first
     if (*_cp == '(') {
         ++_cp;
         expression(bc);
         if (*_cp++ != ')')
-            eosio_assert(false, "atmsp::parser: unclosed parenthesis");
+            eosio::check(false, "atmsp::parser: unclosed parenthesis");
     }
     else if (*_cp == '+') {
         ++_cp;
@@ -417,7 +417,7 @@ void parser<T>::factor(machine<T> &bc)const {
     else if (*_cp == '$') {
         size_t idx;
         if (!_con_list.find(skip_alpha_num(), idx))
-           eosio_assert(false, "atmsp::parser: unknown const");
+           eosio::check(false, "atmsp::parser: unknown const");
         bc.con[idx] = _con_list[idx].val;
         bc.val[bc.used_mem.values++] = &bc.con[idx];
         bc.fun[bc.used_mem.operations++] = &machine<T>::ppush;
@@ -429,7 +429,7 @@ void parser<T>::factor(machine<T> &bc)const {
         if (_var_list.find(skip_alpha_num(), idx))
             bc.used_mem.vars = std::max(bc.used_mem.vars, idx + 1); //sic
         else
-            eosio_assert(false, "atmsp::parser: unknown var");
+            eosio::check(false, "atmsp::parser: unknown var");
         bc.val[bc.used_mem.values++] = &bc.var[idx];
         bc.fun[bc.used_mem.operations++] = &machine<T>::ppush;
     }
@@ -441,7 +441,7 @@ void parser<T>::factor(machine<T> &bc)const {
         if (FUNC_LIST.find(skip_alpha_num(), idx))
             ++_cp;
         else
-            eosio_assert(false, "atmsp::parser: unknown func");
+            eosio::check(false, "atmsp::parser: unknown func");
 
         // Set operator function and advance cp
         switch (idx) {

@@ -9,7 +9,7 @@ namespace eosio { namespace testing {
 #   include <fc/optional.hpp>
     using fc::optional;
 #else
-#   include <eosiolib/types.h>
+#   include <eosio/eosio.hpp>
     using namespace eosio;
     using std::optional;
 #endif

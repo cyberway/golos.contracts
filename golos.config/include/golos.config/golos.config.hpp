@@ -1,7 +1,7 @@
 #pragma once
 #include "golos.config/parameters.hpp"
 #include <golos.emit/parameters.hpp>
-#include <eosiolib/eosio.hpp>
+#include <eosio/eosio.hpp>
 
 
 namespace golos {

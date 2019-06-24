@@ -11,7 +11,7 @@ namespace eosio { namespace testing {
 #else
 #   include <golos.charge/types.h>
 #   define ABI_TABLE [[eosio::table]]
-#   include <eosiolib/types.h>
+#   include <eosio/eosio.hpp>
     using namespace eosio;
 #endif
 

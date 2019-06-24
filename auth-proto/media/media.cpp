@@ -1,7 +1,7 @@
-#include <eosiolib/eosio.hpp>
-#include <eosiolib/transaction.hpp>
-#include <eosiolib/symbol.hpp>
-#include <eosiolib/asset.hpp>
+#include <eosio/eosio.hpp>
+#include <eosio/transaction.hpp>
+#include <eosio/symbol.hpp>
+#include <eosio/asset.hpp>
 #include <cyber.token/cyber.token.hpp>
 using namespace eosio;
 
@@ -51,7 +51,7 @@ public:
         static const uint32_t delay = 30;
 
         auto reward = rewards.find(permlink);
-        eosio_assert(reward == rewards.end(), "such post reward already exists");
+        eosio::check(reward == rewards.end(), "such post reward already exists");
 
         // Place info about post rewards into database
         bool need_schedule = rewards.begin() == rewards.end();
@@ -83,7 +83,7 @@ public:
         postrewards rewards(_self, author);
         auto reward = rewards.find(permlink);
 
-        eosio_assert(reward != rewards.end(), "No such post reward");
+        eosio::check(reward != rewards.end(), "No such post reward");
         rewards.modify(reward, _self, [&](auto& a) {
             a.votes++;
         });
@@ -141,8 +141,8 @@ public:
         balances table(_self, user);
         auto index = table.get_index<N(bysymbol)>();
         auto item = index.find(value.symbol.name());
-        eosio_assert(item != index.end(), "No balance for user");
-        eosio_assert(item->quantity.amount >= value.amount, "No fund on balance for user");
+        eosio::check(item != index.end(), "No balance for user");
+        eosio::check(item->quantity.amount >= value.amount, "No fund on balance for user");
         index.modify(item, _self, [&](auto& b) {
             b.quantity.amount -= value.amount;
         });
@@ -186,7 +186,7 @@ public:
         symbol_name sym = symbol_type(S(4,SYS)).name();
         asset reward_balance = eosio::token(N(cyber.token)).get_balance(N(geos.reward), sym);
         asset quantity = asset(0, sym);
-        eosio_assert(data->total_votes >= votes, "Inconsistent votes");
+        eosio::check(data->total_votes >= votes, "Inconsistent votes");
         if(data->total_votes != 0)
             quantity = reward_balance * (int64_t)votes / data->total_votes;
         print("  post reward balance: ", reward_balance);
@@ -293,7 +293,7 @@ extern "C" { \
       auto self = receiver; \
       if( action == N(onerror)) { \
          /* onerror is only valid if it is for the "eosio" code account and authorized by "eosio"'s "active permission */ \
-         eosio_assert(code == N(eosio), "onerror action's are only valid from the \"eosio\" system account"); \
+         eosio::check(code == N(eosio), "onerror action's are only valid from the \"eosio\" system account"); \
       } \
       if( code == self || action == N(onerror) ) { \
          TYPE thiscontract( self ); \

@@ -1,8 +1,8 @@
 #pragma once
 #include "golos.emit/parameters.hpp"
-#include <eosiolib/eosio.hpp>
-#include <eosiolib/singleton.hpp>
-#include <eosiolib/asset.hpp>
+#include <eosio/eosio.hpp>
+#include <eosio/singleton.hpp>
+#include <eosio/asset.hpp>
 
 
 namespace golos {

@@ -1,7 +1,7 @@
 #include "golos.config/golos.config.hpp"
 #include "golos.config/config.hpp"
 #include <common/parameter_ops.hpp>
-#include <eosiolib/transaction.hpp>
+#include <eosio/transaction.hpp>
 
 namespace golos {
 
@@ -28,7 +28,7 @@ struct emit_params_setter: set_params_visitor<emit_state> {
 
 void configer::updateparamse(name who, std::vector<emit_param> params) {
     print("updateparams\n");
-    eosio_assert(who != _self, "can only change parameters of account, not contract");
+    eosio::check(who != _self, "can only change parameters of account, not contract");
     print("not self ok\n");
     require_auth(who);
     print("auth ok\n");
@@ -37,7 +37,7 @@ void configer::updateparamse(name who, std::vector<emit_param> params) {
 
     emit_params_singleton acc_params{_self, who.value};
     bool update = acc_params.exists();
-    eosio_assert(update || params.size() == emit_state::params_count,
+    eosio::check(update || params.size() == emit_state::params_count,
         std::string("must provide all "+std::to_string(emit_state::params_count)+" parameters in initial set").c_str());
     auto current = update ? acc_params.get() : emit_state{};
     auto setter = emit_params_setter(current, update);
@@ -135,7 +135,7 @@ void configer::setparams(vector<cfg_param> params) {
     for (const auto& param: params) {
         changed |= std::visit(setter, param);
     }
-    eosio_assert(changed, "at least one parameter must change");    // don't add actions, which do nothing
+    eosio::check(changed, "at least one parameter must change");    // don't add actions, which do nothing
     state.set(setter.state, _self);
 }
 
