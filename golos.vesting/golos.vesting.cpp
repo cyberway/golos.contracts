@@ -334,15 +334,31 @@ void vesting::timeoutconv() {
         int64_t correction = 0; // due inline actions delay, balance used in price calculations needs to be corrected #578
         withdraw_table table(_self, vesting.supply.symbol.code().raw());
         auto idx = table.get_index<"nextpayout"_n>();
-        for (auto obj = idx.cbegin(); obj != idx.cend() && obj->next_payout <= now; ) {
-            bool fail = obj->remaining_payments == 0 || obj->to_withdraw < obj->withdraw_rate;  // must not happen
-            if (fail) {
-                obj = idx.erase(obj);
-                continue;
-            }
-
-            bool last_payment = obj->remaining_payments == 1;
+        bool fail = false, last_payment = false;
+        for (
+            auto obj = idx.cbegin();
+            obj != idx.cend() && obj->next_payout <= now;
+            fail || last_payment ? obj = idx.erase(obj) : ++obj
+        ) {
+            fail = obj->remaining_payments == 0 || obj->to_withdraw < obj->withdraw_rate;  // must not happen
+            if (fail) continue;
+            last_payment = obj->remaining_payments == 1;
             auto to_send = last_payment ? obj->to_withdraw : obj->withdraw_rate;
+            const name to = obj->to;
+            const name from = obj->from;
+            account_table account(_self, from.value);
+            auto balance = account.find(to_send.symbol.code().raw());
+            fail =
+                balance == account.end() ||     // must not happen here, checked earlier (?archived)
+                balance->vesting < to_send ||   // must not happen
+                to_send.amount <= 0;            // must not happen, possible only if min_amount is less than number of payments
+            if (fail) continue;
+
+            // First convert and only then reduce supply (conversion rate changes after subtract)
+            auto converted = vesting_to_token(to_send, vesting, -correction);   // TODO: get_balance can throw #549
+            fail = converted.amount == 0;       // amount is too low, it's impossible to withdraw
+            if (fail) continue;
+
             if (!last_payment) {
                 idx.modify(obj, same_payer, [&](auto& item) {
                     item.next_payout += item.interval_seconds;  // alternative: now+interval_seconds
@@ -350,43 +366,17 @@ void vesting::timeoutconv() {
                     item.remaining_payments--;
                 });
             }
+            sub_balance(from, to_send); // TODO: can be not enough balance if `retire` after start withdraw #729,#549
+            vestings.modify(vesting, same_payer, [&](auto& v) {
+                v.supply -= to_send;
+                send_stat_event(v);
+            });
+            // TODO: 1) payment action #549. 2) check balance existance #549
+            INLINE_ACTION_SENDER(token, transfer)(config::token_name, {_self, config::code_name},
+                {_self, to, converted, memo});
+            correction += converted.amount;    // accumulate
 
-            const name to = obj->to;
-            const name from = obj->from;
-            account_table account(_self, from.value);
-            auto balance = account.find(to_send.symbol.code().raw());
-            fail =
-                balance == account.end() ||     // must not happen here, checked earlier (?archived)
-                balance->vesting < to_send;     // must not happen
-            if (last_payment || fail) {
-                obj = idx.erase(obj);
-                if (fail)
-                    continue;
-            } else {
-                ++obj;
-            }
-
-            if (to_send.amount > 0) {
-                // First convert and only then reduce supply (conversion rate changes after subtract)
-                auto converted = vesting_to_token(to_send, vesting, -correction);   // TODO: get_balance can throw #549
-                if (converted.amount == 0) {
-                    obj = idx.erase(obj);   // amount is too low, it's impossible to withdraw
-                    continue;
-                }
-                sub_balance(from, to_send);
-                vestings.modify(vesting, name(), [&](auto& v) {
-                    v.supply -= to_send;
-                    send_stat_event(v);
-                });
-                // TODO: payment action #549
-                INLINE_ACTION_SENDER(token, transfer)(config::token_name, {_self, config::code_name},
-                    {_self, to, converted, memo});
-                correction += converted.amount;    // accumulate
-            } else {
-                // possible only if minimal allowed withdraw is less than number of payments, skip
-            }
-            max_steps--;
-            if (max_steps <= 0)
+            if (--max_steps <= 0)
                 return;
         }
     }
