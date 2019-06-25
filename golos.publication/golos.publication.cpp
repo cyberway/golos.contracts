@@ -442,21 +442,38 @@ std::pair<int64_t, bool> publication::fill_curator_payouts(
     return std::make_pair(paid_sum, there_is_a_place);
 }
 
-void publication::use_charge(tables::limit_table& lims, structures::limitparams::act_t act, name issuer,
-                            name account, int64_t eff_vesting, symbol_code token_code, bool vestpayment, elaf_t weight) {
+int16_t publication::use_charge(tables::limit_table& lims, structures::limitparams::act_t act, name issuer,
+                            name account, int64_t eff_vesting, symbol_code token_code, bool vestpayment, int16_t weight) {
     auto lim_itr = lims.find(act);
     eosio::check(lim_itr != lims.end(), "publication::use_charge: limit parameters not set");
     eosio::check(eff_vesting >= lim_itr->min_vesting, "insufficient effective vesting amount");
+
+    int16_t k = config::_100percent;
+
+    if (act == structures::limitparams::VOTE) {
+        k = 200;
+        if (lim_itr->price) {
+            k = config::_100percent / lim_itr->price;
+        }
+
+        auto current_power = charge::get_current_value(config::charge_name, account, token_code, lim_itr->charge_id);
+        int16_t charge = config::_100percent - current_power;
+
+        weight = static_cast<int16_t>((((static_cast<int64_t>(abs(weight)) * charge) / config::_100percent)  + k - 1) / k);
+    }
+
     if(lim_itr->price >= 0)
         INLINE_ACTION_SENDER(charge, use) (config::charge_name,
             {issuer, config::invoice_name}, {
                 account,
                 token_code,
                 lim_itr->charge_id,
-                int_cast(elai_t(lim_itr->price) * weight),
+                (lim_itr->price * abs(weight) / config::_100percent * k) / config::_100percent,
                 lim_itr->cutoff,
-                vestpayment ? int_cast(elai_t(lim_itr->vesting_price) * weight) : 0
+                vestpayment ? (lim_itr->vesting_price * abs(weight) / config::_100percent * k) / config::_100percent : 0
             });
+
+    return weight;
 }
 
 void publication::use_postbw_charge(
@@ -721,9 +738,9 @@ fixp_t publication::calc_available_rshares(name voter, int16_t weight, uint64_t 
     tables::limit_table lims(_self, _self.value);
     auto token_code = pool.state.funds.symbol.code();
     int64_t eff_vesting = golos::vesting::get_account_effective_vesting(config::vesting_name, voter, token_code).amount;
-    use_charge(lims, structures::limitparams::VOTE, token::get_issuer(config::token_name, token_code),
-        voter, eff_vesting, token_code, false, abs_w);
-    fixp_t abs_rshares = FP(eff_vesting) * abs_w;
+    auto used_power = use_charge(lims, structures::limitparams::VOTE, token::get_issuer(config::token_name, token_code),
+        voter, eff_vesting, token_code, false, weight);
+    fixp_t abs_rshares = (FP(eff_vesting * used_power) / elai_t(config::_100percent));
     return (weight < 0) ? -abs_rshares : abs_rshares;
 }
 
