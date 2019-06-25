@@ -19,6 +19,13 @@
       ]
     },
     {
+      "name": "vesting_supply",
+      "base": "",
+      "fields": [
+        {"name":"supply",     "type":"asset"}
+      ]
+    },
+    {
       "name": "account",
       "base": "",
       "fields": [
@@ -195,7 +202,7 @@
   ],
   "events": [
     {"name":"balance",  "type":"balance_event"},
-    {"name":"stat",  "type":"asset"}
+    {"name":"stat",  "type":"vesting_supply"}
   ],
   "actions": [
     {"name":"setparams",    "type":"setparams"},
