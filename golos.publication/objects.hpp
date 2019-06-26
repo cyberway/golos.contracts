@@ -1,12 +1,12 @@
 #pragma once
-#include <eosiolib/eosio.hpp>
+#include <eosio/eosio.hpp>
 #include "types.h"
 #include "config.hpp"
 #include <common/calclib/atmsp_storable.h>
-#include <eosiolib/time.hpp>
-#include <eosiolib/asset.hpp>
-#include <eosiolib/singleton.hpp>
-#include <eosiolib/crypto.h>
+#include <eosio/time.hpp>
+#include <eosio/asset.hpp>
+#include <eosio/singleton.hpp>
+#include <eosio/crypto.hpp>
 
 namespace golos { namespace structures {
 
@@ -127,7 +127,7 @@ struct poolstate {
 
     using ratio_t = decltype(elap_t(1) / elap_t(1));
     ratio_t get_ratio() const {
-        eosio_assert(funds.amount >= 0, "poolstate::get_ratio: funds < 0");
+        eosio::check(funds.amount >= 0, "poolstate::get_ratio: funds < 0");
         auto r = WP(rshares);
         if (r < 0) {
             return std::numeric_limits<ratio_t>::max();
@@ -200,7 +200,7 @@ struct limitparams {
         if(arg == "post") return POST;
         if(arg == "comment") return COMM;
         if(arg == "vote") return VOTE;
-        eosio_assert(arg == "post bandwidth", "limitparams::act_from_str: wrong arg");
+        eosio::check(arg == "post bandwidth", "limitparams::act_from_str: wrong arg");
         return POSTBW;
     }
 };

@@ -1,7 +1,7 @@
 #include "golos.emit/golos.emit.hpp"
 #include <common/parameter_ops.hpp>
-#include <eosiolib/transaction.hpp>
-#include <eosiolib/time.hpp>
+#include <eosio/transaction.hpp>
+#include <eosio/time.hpp>
 
 namespace golos {
 
@@ -50,13 +50,13 @@ void emission::start() {
     // TODO: disallow if no initial parameters set
     require_auth(_self);
     auto interval = _cfg.get().interval.value;
-    auto now = current_time();
+    auto now = static_cast<uint64_t>(eosio::current_time_point().time_since_epoch().count());
     state s = {
         .start_time = now,
         .prev_emit = now - seconds(interval).count()   // instant emit. TODO: maybe delay on first start?
     };
     s = _state.get_or_create(_self, s);
-    eosio_assert(!s.active, "already active");
+    eosio::check(!s.active, "already active");
     s.active = true;
 
     uint32_t elapsed = microseconds(now - s.prev_emit).to_seconds();
@@ -67,7 +67,7 @@ void emission::start() {
 void emission::stop() {
     require_auth(_self);
     auto s = _state.get();  // TODO: create own singleton allowing custom assert message
-    eosio_assert(s.active, "already stopped");
+    eosio::check(s.active, "already stopped");
     auto id = s.tx_id;
     s.active = false;
     s.tx_id = 0;
@@ -80,13 +80,13 @@ void emission::stop() {
 void emission::emit() {
     require_auth(_self);
     auto s = _state.get();
-    eosio_assert(s.active, "emit called in inactive state");    // impossible?
-    auto now = current_time();
+    eosio::check(s.active, "emit called in inactive state");    // impossible?
+    auto now = eosio::current_time_point().time_since_epoch().count();
     auto elapsed = now - s.prev_emit;
     auto interval = _cfg.get().interval.value;
     auto emit_interval = seconds(interval).count();
     if (elapsed != emit_interval) {
-        eosio_assert(elapsed > emit_interval, "emit called too early");   // possible only on manual call
+        eosio::check(elapsed > emit_interval, "emit called too early");   // possible only on manual call
         print("warning: emit call delayed. elapsed: ", elapsed);
     }
     // TODO: maybe limit elapsed to avoid instant high value emission
@@ -125,11 +125,11 @@ void emission::emit() {
                 continue;
             }
             auto reward = total * pool.percent / config::_100percent;
-            eosio_assert(reward <= new_tokens, "SYSTEM: not enough tokens to pay emission reward"); // must not happen
+            eosio::check(reward <= new_tokens, "SYSTEM: not enough tokens to pay emission reward"); // must not happen
             transfer(issuer, pool.name, reward);
             new_tokens -= reward;
         }
-        eosio_assert(remainder != name(), "SYSTEM: emission remainder pool is not set"); // must not happen
+        eosio::check(remainder != name(), "SYSTEM: emission remainder pool is not set"); // must not happen
         transfer(issuer, remainder, new_tokens);
     } else {
         print("no emission\n");

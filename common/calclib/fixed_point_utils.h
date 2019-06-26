@@ -3,7 +3,7 @@
 #ifdef UNIT_TEST_ENV
 #define FIXED_POINT_ASSERT(COND,  MESSAGE) if(!(COND)) { throw std::runtime_error((MESSAGE)); }
 #else
-#define FIXED_POINT_ASSERT(COND,  MESSAGE) eosio_assert((COND), (MESSAGE))
+#define FIXED_POINT_ASSERT(COND,  MESSAGE) eosio::check((COND), (MESSAGE))
 #endif
 
 #include "fixed_point.h"

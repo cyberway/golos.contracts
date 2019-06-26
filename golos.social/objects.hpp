@@ -1,8 +1,8 @@
 #pragma once
 
-#include <eosiolib/eosio.hpp>
+#include <eosio/eosio.hpp>
 #include "types.h"
-#include <eosiolib/singleton.hpp>
+#include <eosio/singleton.hpp>
 
 namespace golos {
 

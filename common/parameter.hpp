@@ -1,6 +1,6 @@
 #pragma once
 #include "util.hpp"
-#include <eosiolib/eosio.hpp>
+#include <eosio/eosio.hpp>
 #include <variant>
 
 namespace golos {
@@ -47,7 +47,7 @@ struct param_helper {
     template<typename T>
     static void check_params(const std::vector<T>& params, bool initialized) {
         eosio::print("check_params, size: ", params.size(), "\n");
-        eosio_assert(params.size(), "empty params not allowed");
+        eosio::check(params.size(), "empty params not allowed");
         check_duplicates(params);
         eosio::print("check_params: no dups\n");
         if (initialized) {
@@ -62,7 +62,7 @@ struct param_helper {
     static void check_immutables(const std::vector<T>& params) {
         for (const auto& param: params) {
             std::visit([](const parameter& p) {
-                eosio_assert(!p.immutable(), "can't change immutable parameter");
+                eosio::check(!p.immutable(), "can't change immutable parameter");
             }, param);
         }
     }
@@ -84,7 +84,7 @@ struct param_helper {
         for (const auto& p: params) {
             auto i = p.index();
             if (!first) {
-                eosio_assert(i > prev_idx, i < prev_idx
+                eosio::check(i > prev_idx, i < prev_idx
                     ? "parameters must be ordered by variant index"
                     : "params contain several copies of the same parameter");
             }
@@ -108,7 +108,7 @@ struct param_helper {
     static V set_parameters(std::vector<T> params, S& singleton, name ram_payer) {
         using state_type = decltype(singleton.get());
         auto update = singleton.exists();
-        eosio_assert(update || params.size() == state_type::params_count, "must provide all parameters in initial set");
+        eosio::check(update || params.size() == state_type::params_count, "must provide all parameters in initial set");
         check_params(params, update);
 
         auto s = update ? singleton.get() : state_type{};
@@ -117,7 +117,7 @@ struct param_helper {
         for (const auto& param: params) {
             changed |= std::visit(setter, param);   // why we have no ||= ?
         }
-        eosio_assert(changed, "at least one parameter must change");    // don't add actions, which do nothing
+        eosio::check(changed, "at least one parameter must change");    // don't add actions, which do nothing
         singleton.set(setter.state, ram_payer);
         return setter;
     }
@@ -126,9 +126,9 @@ struct param_helper {
     template<typename T>
     static T get_median(std::vector<T>& params) {
         auto l = params.size();
-        eosio_assert(l > 0, "empty params not allowed");
+        eosio::check(l > 0, "empty params not allowed");
         T r = params[0];
-        eosio_assert(r.can_median(), "parameter can't be used as median");   // must not normally happen
+        eosio::check(r.can_median(), "parameter can't be used as median");   // must not normally happen
         if (l > 1) {
             std::nth_element(params.begin(), params.begin() + l / 2, params.end());
             r = params[l / 2];
@@ -139,12 +139,12 @@ struct param_helper {
     template<typename T>
     static bool have_majority(const std::vector<T>& params, size_t req_count, T& major) {
         auto l = params.size();
-        eosio_assert(l > 0, "empty params not allowed");
-        // eosio_assert(l >= req_count, "req_count is too large to reach");
+        eosio::check(l > 0, "empty params not allowed");
+        // eosio::check(l >= req_count, "req_count is too large to reach");
         if (l < req_count) {
             return false; //req_count is too large to reach
         }
-        eosio_assert(l/2 + 1 <= req_count, "req_count is too small, it must be at least 50%+1");
+        eosio::check(l/2 + 1 <= req_count, "req_count is too small, it must be at least 50%+1");
         std::map<T,int> same;
         int max_count = -1;
         T max_value;
@@ -227,7 +227,7 @@ struct set_params_visitor {
         auto obj = state.*field;
         bool changed = is_changed(obj, value);
         if (no_same) {
-            eosio_assert(changed, "can't set same parameter value");   // TODO: add parameter name to assert message
+            eosio::check(changed, "can't set same parameter value");   // TODO: add parameter name to assert message
         }
         if (changed) {
             state.*field = value;

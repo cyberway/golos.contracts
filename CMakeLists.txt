@@ -4,8 +4,8 @@ if (NOT DEFINED PROJECT_NAME)
     project(golos_dapp_contracts VERSION 0.1.0)
 endif(NOT DEFINED PROJECT_NAME)
 
-set(EOSIO_CDT_VERSION_MIN "1.4")
-set(EOSIO_CDT_VERSION_SOFT_MAX "1.5")
+set(EOSIO_CDT_VERSION_MIN "1.6")
+set(EOSIO_CDT_VERSION_SOFT_MAX "1.7")
 #set(EOSIO_CDT_VERSION_HARD_MAX "")
 
 find_package(eosio.cdt)

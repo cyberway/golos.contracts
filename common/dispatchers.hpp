@@ -1,7 +1,7 @@
 #pragma once
 
 #include "config.hpp"
-#include <eosiolib/dispatcher.hpp>
+#include <eosio/dispatcher.hpp>
 
 template<typename T, typename... Args>
 bool dispatch_with_transfer_helper( eosio::name self, eosio::name code, void (T::*func)(Args...) ) {

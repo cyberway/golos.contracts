@@ -2,11 +2,11 @@
 #include "golos.ctrl/parameters.hpp"
 #include <common/upsert.hpp>
 #include <common/config.hpp>
-#include <eosiolib/time.hpp>
-#include <eosiolib/eosio.hpp>
-#include <eosiolib/asset.hpp>
-#include <eosiolib/singleton.hpp>
-#include <eosiolib/public_key.hpp>
+#include <eosio/time.hpp>
+#include <eosio/eosio.hpp>
+#include <eosio/asset.hpp>
+#include <eosio/singleton.hpp>
+#include <eosio/crypto.hpp>
 #include <vector>
 #include <string>
 
