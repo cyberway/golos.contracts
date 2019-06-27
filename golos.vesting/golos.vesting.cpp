@@ -307,7 +307,8 @@ void vesting::undelegate(name from, name to, asset quantity) {
         send_account_event(to, item);
     });
 
-    eosio::check(balance->received.amount >= delegation_params.min_remainder, "delegated vesting withdrawn");
+    auto remaining = balance->received.amount;
+    eosio::check(!remaining || remaining >= delegation_params.min_remainder, "delegated vesting withdrawn");
 }
 
 void vesting::create(symbol symbol, name notify_acc) {
@@ -383,20 +384,21 @@ void vesting::timeoutconv() {
 }
 
 void vesting::timeoutrdel() {
-    // TODO: this action must never throw because it will break returning of delegations on all accounts #549
     require_auth(_self);
-    return_delegation_table table_delegate_vesting(_self, _self.value);
-    auto index = table_delegate_vesting.get_index<"date"_n>();
+    return_delegation_table tbl(_self, _self.value);
+    auto idx = tbl.get_index<"date"_n>();
     auto till = eosio::current_time_point();
-    for (auto obj = index.cbegin(); obj != index.cend() && obj->date <= till;) {
-        account_table account_recipient(_self, obj->delegator.value);
-        auto balance_recipient = account_recipient.find(obj->quantity.symbol.code().raw());
-        eosio::check(balance_recipient != account_recipient.end(), "This token is not on the sender balance sheet");
-        account_recipient.modify(balance_recipient, name(), [&](auto &item){
+    for (auto obj = idx.cbegin(); obj != idx.cend() && obj->date <= till;) {
+        account_table delegator_balances(_self, obj->delegator.value);
+        auto balance = delegator_balances.find(obj->quantity.symbol.code().raw());
+        // The following checks can only fail on broken system, preserve them to prevent break more (can't resolve automatically)
+        eosio::check(balance != delegator_balances.end(), "timeoutrdel: Vesting balance not found"); // impossible
+        eosio::check(balance->delegated >= obj->quantity, "timeoutrdel: returning > delegated");     // impossible
+        delegator_balances.modify(balance, name(), [&](auto& item){
             item.delegated -= obj->quantity;
             send_account_event(obj->delegator, item);
         });
-        obj = index.erase(obj);
+        obj = idx.erase(obj);
     }
 }
 
