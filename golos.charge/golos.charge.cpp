@@ -12,13 +12,20 @@ fixp_t charge::consume_charge(name issuer, name user, symbol_code token_code, ui
     eosio::check(price_arg <= max_arg, "price > max_input");
     eosio::check(cutoff_arg < 0 || cutoff_arg <= max_arg, "cutoff > max_input");
     fixp_t price = to_fixp(price_arg);
+
+    print("\n cutoff_arg: ", cutoff_arg);
+    print("\n price_arg: ", price_arg);
+    print("\n vesting_price: ", vesting_price);
     
     auto charge_symbol = symbol(token_code, charge_id);
     balances balances_table(_self, user.value);
     balances::const_iterator itr = balances_table.find(charge_symbol.raw());
     auto new_val = (itr != balances_table.end()) ? calc_value(_self, user, token_code, *itr, price) : price;
+
     if(cutoff_arg > 0 && new_val > to_fixp(cutoff_arg)) {
         eosio::check(vesting_price > 0, "not enough power");
+        print("\n\n new_val: ", int_cast(new_val * elai_t(config::_100percent)));
+
         auto user_vesting = golos::vesting::get_account_unlocked_vesting(config::vesting_name, user, token_code);
         eosio::check(user_vesting.amount >= vesting_price, "insufficient vesting amount");
         INLINE_ACTION_SENDER(golos::vesting, retire) (config::vesting_name,
@@ -39,12 +46,13 @@ fixp_t charge::consume_charge(name issuer, name user, symbol_code token_code, ui
             });
         return new_val;
     }
-    if (new_val > 0)
+    if (new_val > 0) {
         balances_table.modify(*itr, name(), [&]( auto &item ) {
             item.last_update = now;
             item.value = new_val.data();
             send_charge_event(user, item);
         });
+    }
     else {
         balance item{*itr};
         item.last_update = now;
@@ -148,6 +156,7 @@ void charge::consume_and_notify(name user, symbol_code token_code, uint8_t charg
 void charge::usenotifygt(name user, symbol_code token_code, uint8_t charge_id, int64_t price_arg, int64_t id, name code, name action_name, int64_t cutoff) {
     auto issuer = token::get_issuer(config::token_name, token_code);
     require_auth(issuer);
+
     consume_and_notify(user, token_code, charge_id, price_arg, id, code, action_name, cutoff, issuer, [](auto value, auto limit) {return value > limit;});
 }
 
