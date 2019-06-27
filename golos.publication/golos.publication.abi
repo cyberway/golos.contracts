@@ -208,6 +208,10 @@
       {
         "name": "max_payout",
         "type": "asset"
+      },
+      {
+        "name": "paid_amount",
+        "type": "int64"
       }
     ]
   },
@@ -406,6 +410,10 @@
       {
         "name": "rshares",
         "type": "base_t"
+      },
+      {
+        "name": "paid_amount",
+        "type": "int64"
       }
     ]
   },
@@ -790,6 +798,52 @@
     ]
   },
   {
+    "name": "deletevotes",
+    "base": "",
+    "fields": [
+        {
+            "name": "message_id",
+            "type": "int64"
+        },
+        {
+            "name": "author",
+            "type": "name"
+        }
+    ]
+  },
+  {
+    "name": "recipient",
+    "base": "",
+    "fields": [
+        {
+            "name": "to",
+            "type": "name"
+        },
+        {
+            "name": "quantity",
+            "type": "asset"
+        },
+        {
+            "name": "memo",
+            "type": "string"
+        }
+    ]
+  },
+  {
+    "name": "payto",
+    "base": "",
+    "fields": [
+        {
+            "name": "recipients",
+            "type": "recipient[]"
+        },
+        {
+            "name": "vesting_mode",
+            "type": "bool"
+        }
+    ]
+  },
+  {
     "name": "setmaxpayout",
     "base": "",
     "fields": [
@@ -930,6 +984,14 @@
   {
     "name": "paymssgrwrd",
     "type": "paymssgrwrd"
+  },
+  {
+    "name": "deletevotes",
+    "type": "deletevotes"
+  },
+  {
+    "name": "payto",
+    "type": "payto"
   },
   {
     "name": "setmaxpayout",

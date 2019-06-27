@@ -37,7 +37,7 @@ struct message_data {
 };
 
 constexpr struct {
-    balance_data balance {0.01, 0.02, 0.001};            // this values are divided to PRECISION_DIV, scale if change
+    balance_data balance {0.0101, 0.02, 0.005};            // this values are divided to PRECISION_DIV, scale if change
     pool_data pool {0.001, 0.015, -0.01, -0.01};  // 0.015 value is divided to PRECISION_DIV (=15 if PRECISION_DIV=1.0)
     message_data message {-0.01, -0.01, -0.01};
 } delta;

@@ -32,6 +32,8 @@ public:
     void set_max_payout(structures::mssgid message_id, asset max_payout);
     void calcrwrdwt(name account, int64_t mssg_id, int64_t post_charge);
     void paymssgrwrd(structures::mssgid message_id);
+    void payto(std::vector<eosio::token::recipient> recipients, bool vesting_mode);
+    void deletevotes(int64_t message_id, name author);
 private:
     const posting_state& params();
     void close_message_timer(structures::mssgid message_id, uint64_t id, uint64_t delay_sec);
@@ -39,12 +41,11 @@ private:
     void fill_depleted_pool(tables::reward_pools& pools, asset quantity,
         tables::reward_pools::const_iterator excluded);
     auto get_pool(tables::reward_pools& pools, uint64_t time);
-    int64_t pay_curators(structures::mssgid message_id, uint64_t msgid, int64_t max_rewards, fixp_t weights_sum,
+    std::pair<int64_t, bool> fill_curator_payouts(std::vector<eosio::token::recipient>& payouts,
+                         structures::mssgid message_id, uint64_t msgid, int64_t max_rewards, fixp_t weights_sum,
                          symbol tokensymbol, std::string memo = "");
-    void payto(name user, asset quantity, enum_t mode, std::string memo = "");
+    void pay_to(std::vector<eosio::token::recipient>&& recipients, bool vesting_mode);
     static void check_acc_vest_balance(name user, symbol tokensymbol);
-    int64_t pay_delegators(int64_t claim, name voter,
-            eosio::symbol tokensymbol, std::vector<structures::delegate_voter> delegate_list, structures::mssgid message_id);
     base_t get_checked_curators_prcnt(std::optional<uint16_t> curators_prcnt);
 
     void send_poolstate_event(const structures::rewardpool& pool);
@@ -68,8 +69,9 @@ private:
     static bool validate_permlink(std::string permlink);
 
     std::string get_memo(const std::string &type, const structures::mssgid &message_id);
-
     const auto& get_message(const tables::message_table& messages, const structures::mssgid& message_id);
+    void send_postreward_trx(uint64_t id, const structures::mssgid& message_id);
+    void send_deletevotes_trx(int64_t message_id, name author);
 };
 
 } // golos

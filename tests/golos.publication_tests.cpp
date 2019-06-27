@@ -484,6 +484,38 @@ BOOST_FIXTURE_TEST_CASE(delete_post_with_vote_test, golos_publication_tester) tr
 //    BOOST_CHECK_EQUAL(err.delete_rshares, post.delete_msg({N(brucelee), "upvote-me"}));    // TODO:
 } FC_LOG_AND_RETHROW()
 
+BOOST_FIXTURE_TEST_CASE(delete_post_with_a_large_number_of_votes_test, golos_publication_tester) try {
+    BOOST_TEST_MESSAGE("Delete post with a large number of votes testing.");
+    vector<account_name> additional_users;
+    auto total_users_num = 357;
+    auto add_users_num = total_users_num - _users.size();
+    for (size_t u = 0; u < add_users_num; u++) {
+        additional_users.push_back(user_name(u));
+    }
+    create_accounts(additional_users);
+    _users.insert(_users.end(), additional_users.begin(), additional_users.end());
+    init();
+    auto i = 0;
+    BOOST_CHECK_EQUAL(success(), post.create_msg({N(chucknorris), "permlink"}));
+    for (auto u : _users) {
+        BOOST_CHECK_EQUAL(success(), post.downvote(u, {N(chucknorris), "permlink"}, 333));
+        if (i++ % 30 == 0) {
+            produce_block();
+        }
+    }
+    produce_block();
+    i = 0;
+    for (auto u : _users) {
+        BOOST_TEST_CHECK(!post.get_vote(N(chucknorris), i++).is_null());
+    }
+    BOOST_CHECK_EQUAL(success(), post.delete_msg({N(chucknorris), "permlink"}));
+    produce_block();
+    i = 0;
+    for (auto u : _users) {
+        BOOST_TEST_CHECK(post.get_vote(N(chucknorris), i++).is_null());
+    }
+} FC_LOG_AND_RETHROW()
+
 BOOST_FIXTURE_TEST_CASE(nesting_level_test, golos_publication_tester) try {
     BOOST_TEST_MESSAGE("nesting level test.");
     init();

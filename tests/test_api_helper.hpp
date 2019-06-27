@@ -12,6 +12,16 @@ inline fc::variant json_str_to_obj(std::string s) {
     return fc::json::from_string(boost::replace_all_copy(s, "'", "\""));
 }
 
+inline account_name user_name(size_t n) {
+    string ret_str("user");
+    while (n) {
+        constexpr auto q = 'z' - 'a' + 1;
+        ret_str += std::string(1, 'a' + n % q);
+        n /= q;
+    }
+    return string_to_name(ret_str.c_str()); 
+}; 
+
 struct base_contract_api {
     golos_tester* _tester;
     name _code;
