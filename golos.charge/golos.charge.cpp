@@ -12,26 +12,23 @@ fixp_t charge::consume_charge(name issuer, name user, symbol_code token_code, ui
     eosio::check(price_arg <= max_arg, "price > max_input");
     eosio::check(cutoff_arg < 0 || cutoff_arg <= max_arg, "cutoff > max_input");
     fixp_t price = to_fixp(price_arg);
-
-    print("\n cutoff_arg: ", cutoff_arg);
-    print("\n price_arg: ", price_arg);
-    print("\n vesting_price: ", vesting_price);
     
     auto charge_symbol = symbol(token_code, charge_id);
     balances balances_table(_self, user.value);
     balances::const_iterator itr = balances_table.find(charge_symbol.raw());
     auto new_val = (itr != balances_table.end()) ? calc_value(_self, user, token_code, *itr, price) : price;
 
-    if(cutoff_arg > 0 && new_val > to_fixp(cutoff_arg)) {
-        eosio::check(vesting_price > 0, "not enough power");
-        print("\n\n new_val: ", int_cast(new_val * elai_t(config::_100percent)));
+    print("\n cutoff_arg: ", cutoff_arg);
+    print("\n\n new_val: ", int_cast(new_val));
 
-        auto user_vesting = golos::vesting::get_account_unlocked_vesting(config::vesting_name, user, token_code);
-        eosio::check(user_vesting.amount >= vesting_price, "insufficient vesting amount");
-        INLINE_ACTION_SENDER(golos::vesting, retire) (config::vesting_name,
-            {token::get_issuer(config::token_name, token_code), golos::config::invoice_name},
-            {eosio::asset(vesting_price, user_vesting.symbol), user});
-        return FP(itr->value);
+    if(cutoff_arg > 0 && new_val > to_fixp(cutoff_arg)) {
+//        eosio_assert(vesting_price > 0, "not enough power");
+//        auto user_vesting = golos::vesting::get_account_unlocked_vesting(config::vesting_name, user, token_code);
+//        eosio_assert(user_vesting.amount >= vesting_price, "insufficient vesting amount");
+//        INLINE_ACTION_SENDER(golos::vesting, retire) (config::vesting_name,
+//            {token::get_issuer(config::token_name, token_code), golos::config::invoice_name},
+//            {eosio::asset(vesting_price, user_vesting.symbol), user});
+//        return FP(itr->value);
     }
     auto now = eosio::current_time_point().time_since_epoch().count();
     if (itr == balances_table.end()) {

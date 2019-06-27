@@ -17,15 +17,9 @@ using namespace eosio;
 
 class charge : public contract {
     fixp_t consume_charge(name issuer, name user, symbol_code token_code, uint8_t charge_id, int64_t price, int64_t cutoff = -1, int64_t vesting_price = -1);
-//    static inline fixp_t to_fixp(int64_t arg) { return fp_cast<fixp_t>(elai_t(arg) / elai_t(config::_100percent)); }
-//    static inline int64_t from_fixp(fixp_t arg) { return fp_cast<int64_t>(elap_t(arg) * elai_t(config::_100percent), false); }
-
     static inline fixp_t to_fixp(int64_t arg)   { return fp_cast<fixp_t>(arg); }
     static inline int64_t from_fixp(fixp_t arg) { return fp_cast<int64_t>( fp_cast<int64_t>(arg) , false ); }
 
-    static inline bool bool_fixp(fixp_t arg1, fixp_t arg2) {
-        return (fp_cast<fixp_t>(elaf_t(arg1) / elai_t(config::_100percent))) > (fp_cast<fixp_t>(elaf_t(arg2) / elai_t(config::_100percent)));
-    }
 public:
     using contract::contract;    
     static inline int64_t get_stored(name code, name user, symbol_code token_code, uint8_t charge_id, uint64_t stamp_id) {
@@ -121,14 +115,12 @@ private:
                 });
             eosio::check(restored >= fixp_t(0), "charge::calc_value restored < 0");
         }
-        
-        print("\n calc_value");
-        print("\n", int_cast( FP(user_balance.value) ));
-        print("\n", int_cast( fp_cast<fixp_t>(elap_t(restored) * elai_t(config::_100percent) )));
-        print("\n", int_cast( price ));
 
-//        return std::max(fp_cast<fixp_t>((elap_t(FP(user_balance.value)) - elap_t(restored)) + elap_t(price)), fixp_t(0));
-//        return std::max((FP(user_balance.value) - fp_cast<fixp_t>(elap_t(restored) * elai_t(config::_100percent))) + price, fixp_t(0));
+        print("\n FP(user_balance.value): ", int_cast(FP(user_balance.value)));
+        print("\n restored: ", int_cast(restored), " ", restored.data());
+        print("\n price: ", int_cast(price));
+
+//        return std::max(FP(user_balance.value) - fp_cast<fixp_t>(elaf_t(restored) * elai_t(config::_100percent)) + price, fixp_t(0));
         return std::max(FP(user_balance.value) - restored + price, fixp_t(0));
     }
 
