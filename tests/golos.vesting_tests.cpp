@@ -389,7 +389,7 @@ BOOST_FIXTURE_TEST_CASE(stop_withdraw, golos_vesting_tester) try {
     CHECK_MATCHING_OBJECT(token.get_account(N(sania)), mvo()("balance", token.asset_str(401)));
 } FC_LOG_AND_RETHROW()
 
-BOOST_FIXTURE_TEST_CASE(delegate_vesting, golos_vesting_tester) try {
+BOOST_FIXTURE_TEST_CASE(delegate, golos_vesting_tester) try {
     BOOST_TEST_MESSAGE("Test delegating vesting shares");
 
     prepare_balances();
@@ -436,7 +436,7 @@ BOOST_FIXTURE_TEST_CASE(delegate_vesting, golos_vesting_tester) try {
 //    // TODO: check battery limitation
 } FC_LOG_AND_RETHROW()
 
-BOOST_FIXTURE_TEST_CASE(undelegate_vesting, golos_vesting_tester) try {
+BOOST_FIXTURE_TEST_CASE(undelegate, golos_vesting_tester) try {
     BOOST_TEST_MESSAGE("Test un-delegating vesting shares");
 
     prepare_balances();
@@ -484,6 +484,14 @@ BOOST_FIXTURE_TEST_CASE(undelegate_vesting, golos_vesting_tester) try {
     produce_block();
     CHECK_MATCHING_OBJECT(vest.get_balance(N(sania)), vest.make_balance(100, amount - min_step));
     CHECK_MATCHING_OBJECT(vest.get_balance(N(pasha)), vest.make_balance(100, 0, amount - min_step));
+
+    BOOST_TEST_MESSAGE("--- check full undelegation");
+    BOOST_CHECK_EQUAL(success(), vest.undelegate(N(sania), N(pasha), vest.make_asset(amount - min_step)));
+    CHECK_MATCHING_OBJECT(vest.get_balance(N(sania)), vest.make_balance(100, amount - min_step));
+    CHECK_MATCHING_OBJECT(vest.get_balance(N(pasha)), vest.make_balance(100, 0, 0));
+    produce_blocks(golos::seconds_to_blocks(delegation_return_time) + 1);
+    CHECK_MATCHING_OBJECT(vest.get_balance(N(sania)), vest.make_balance(100, 0));
+
     // TODO: check delegation and return objects
     // TODO: check step, remainder
     // TODO: check min time, return time
