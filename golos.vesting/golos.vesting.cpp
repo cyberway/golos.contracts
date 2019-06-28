@@ -153,6 +153,8 @@ void vesting::withdraw(name from, name to, asset quantity) {
     eosio::check(vest->available_vesting().amount >= quantity.amount, "Insufficient funds");
     eosio::check(vest->vesting.amount >= min_amount, "Insufficient funds for converting");
 
+    eosio::check(token::balance_exist(config::token_name, to, quantity.symbol.code()), "to account have not opened balance");
+
     withdraw_table table(_self, sym);
     auto record = table.find(from.value);
 

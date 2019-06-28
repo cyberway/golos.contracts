@@ -86,6 +86,7 @@ protected:
         const string unknown_asset      = amsg("unknown asset");
         const string withdraw_le0       = amsg("quantity must be positive");
         const string withdraw_no_to_acc = amsg("to account does not exist");
+        const string no_token_balance   = amsg("to account have not opened balance");
         const string wrong_precision    = amsg("wrong asset precision");
         const string vesting_params     = amsg("not found vesting params");
         const string issuer_not_autority = "missing authority of " + cfg::emission_name.to_string();
@@ -321,6 +322,12 @@ BOOST_FIXTURE_TEST_CASE(withdraw, golos_vesting_tester) try {
     // TODO: check amount that has remainder after dividing to intervals
     // TODO: check change convert, incl. 0
     // TODO: check withdraw to different account
+
+    BOOST_TEST_MESSAGE("--- check that cannot withdraw with closed token balance");
+    produce_block();
+    BOOST_CHECK_EQUAL(success(), token.transfer(N(sania), cfg::vesting_name, token.get_account(N(sania)).get_object()["balance"].as<asset>(), "buy vesting for all remain"));
+    BOOST_CHECK_EQUAL(success(), token.close(N(sania), _token_sym));
+    BOOST_CHECK_EQUAL(err.no_token_balance, vest.withdraw(N(sania), N(sania), vest.make_asset(withdraw_intervals)));
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE(withdraw_convert_rate, golos_vesting_tester) try {
