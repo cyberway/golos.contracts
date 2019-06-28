@@ -18,17 +18,14 @@ fixp_t charge::consume_charge(name issuer, name user, symbol_code token_code, ui
     balances::const_iterator itr = balances_table.find(charge_symbol.raw());
     auto new_val = (itr != balances_table.end()) ? calc_value(_self, user, token_code, *itr, price) : price;
 
-    print("\n cutoff_arg: ", cutoff_arg);
-    print("\n\n new_val: ", int_cast(new_val));
-
     if(cutoff_arg > 0 && new_val > to_fixp(cutoff_arg)) {
-//        eosio_assert(vesting_price > 0, "not enough power");
-//        auto user_vesting = golos::vesting::get_account_unlocked_vesting(config::vesting_name, user, token_code);
-//        eosio_assert(user_vesting.amount >= vesting_price, "insufficient vesting amount");
-//        INLINE_ACTION_SENDER(golos::vesting, retire) (config::vesting_name,
-//            {token::get_issuer(config::token_name, token_code), golos::config::invoice_name},
-//            {eosio::asset(vesting_price, user_vesting.symbol), user});
-//        return FP(itr->value);
+        check(vesting_price > 0, "not enough power");
+        auto user_vesting = golos::vesting::get_account_unlocked_vesting(config::vesting_name, user, token_code);
+        check(user_vesting.amount >= vesting_price, "insufficient vesting amount");
+        INLINE_ACTION_SENDER(golos::vesting, retire) (config::vesting_name,
+            {token::get_issuer(config::token_name, token_code), golos::config::invoice_name},
+            {eosio::asset(vesting_price, user_vesting.symbol), user});
+        return FP(itr->value);
     }
     auto now = eosio::current_time_point().time_since_epoch().count();
     if (itr == balances_table.end()) {
