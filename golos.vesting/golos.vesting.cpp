@@ -220,17 +220,12 @@ void vesting::delegate(name from, name to, asset quantity, uint16_t interest_rat
     account_table account_sender(_self, from.value);
     auto balance_sender = account_sender.find(sname);
     eosio::check(balance_sender != account_sender.end(), "Not found token");
-    auto user_balance = balance_sender->vesting;
+    auto avail_balance = balance_sender->vesting - get_withdrawing_vesting(_self, from, quantity.symbol);
 
-    withdraw_table convert_tbl(_self, sname);
-    auto convert_obj = convert_tbl.find(from.value);
-    if (convert_obj != convert_tbl.end()) {
-        user_balance -= convert_obj->to_withdraw;
-    }
     auto deleg_after = quantity + balance_sender->delegated;
-    eosio::check(user_balance >= deleg_after, "insufficient funds for delegation");
-    int64_t deleg_prop = user_balance.amount ?
-        (static_cast<int128_t>(deleg_after.amount) * config::_100percent) / user_balance.amount : 0;
+    eosio::check(avail_balance >= deleg_after, "insufficient funds for delegation");
+    // avail_balance is guaranteed to be > 0 at this point
+    int64_t deleg_prop = static_cast<int128_t>(deleg_after.amount) * config::_100percent / avail_balance.amount;
     eosio::check(charge::get_current_value(config::charge_name, from, token_code) <= config::_100percent - deleg_prop,
         "can't delegate, not enough power");
 
@@ -343,6 +338,9 @@ void vesting::timeoutconv() {
             obj != idx.cend() && obj->next_payout <= now;
             fail || last_payment ? obj = idx.erase(obj) : ++obj
         ) {
+            if (max_steps-- <= 0)
+                return;
+
             fail = obj->remaining_payments == 0 || obj->to_withdraw < obj->withdraw_rate;  // must not happen
             if (fail) continue;
             last_payment = obj->remaining_payments == 1;
@@ -369,7 +367,7 @@ void vesting::timeoutconv() {
                     item.remaining_payments--;
                 });
             }
-            sub_balance(from, to_send); // TODO: can be not enough balance if `retire` after start withdraw #729,#549
+            sub_balance(from, to_send);
             vestings.modify(vesting, same_payer, [&](auto& v) {
                 v.supply -= to_send;
                 send_stat_event(v);
@@ -378,9 +376,6 @@ void vesting::timeoutconv() {
             INLINE_ACTION_SENDER(token, transfer)(config::token_name, {_self, config::code_name},
                 {_self, to, converted, memo});
             correction += converted.amount;    // accumulate
-
-            if (--max_steps <= 0)
-                return;
         }
     }
 }
@@ -451,7 +446,7 @@ void vesting::sub_balance(name owner, asset value, bool retire_mode) {
     account_table account(_self, owner.value);
     const auto& from = account.get(value.symbol.code().raw(), "no balance object found");
     if (retire_mode)
-        eosio::check(from.unlocked_vesting() >= value, "overdrawn unlocked balance");
+        eosio::check(can_retire_vesting(_self, owner, value), "overdrawn unlocked balance"); // TODO: remove additional db.get #554
     else
         eosio::check(from.available_vesting() >= value, "overdrawn balance");
 

@@ -152,6 +152,21 @@ public:
     static inline asset get_account_unlocked_vesting(name code, name account, symbol_code sym) {
         return get_account(code, account, sym).unlocked_vesting();
     }
+    static inline asset get_withdrawing_vesting(name code, name account, symbol sym) {
+        withdraw_table tbl(code, sym.code().raw());
+        auto obj = tbl.find(account.value);
+        return obj != tbl.end() ? obj->to_withdraw : asset(0, sym);
+    }
+    static inline bool can_retire_vesting(name code, name account, asset value) {
+        auto sym = value.symbol;
+        auto acc = get_account(code, account, sym.code());
+        bool can = acc.unlocked_vesting() >= value;
+        if (can) {
+            auto withdrawing = get_withdrawing_vesting(code, account, sym);
+            can = std::min(acc.available_vesting() - withdrawing, acc.unlocked_limit) >= value;
+        }
+        return can;
+    }
 
     static inline std::vector<delegation> get_account_delegators(name code, name owner, symbol_code sym) {
         std::vector<delegation> result;

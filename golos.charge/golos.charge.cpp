@@ -17,8 +17,9 @@ fixp_t charge::consume_charge(name issuer, name user, symbol_code token_code, ui
     balances balances_table(_self, user.value);
     balances::const_iterator itr = balances_table.find(charge_symbol.raw());
     auto new_val = (itr != balances_table.end()) ? calc_value(_self, user, token_code, *itr, price) : price;
-    if(cutoff_arg > 0 && new_val > to_fixp(cutoff_arg)) {
+    if (cutoff_arg > 0 && new_val > to_fixp(cutoff_arg)) {
         eosio::check(vesting_price > 0, "not enough power");
+        // this check is not really required, it's checked in `retire` (more strictly). but we need to get symbol, so getting balance
         auto user_vesting = golos::vesting::get_account_unlocked_vesting(config::vesting_name, user, token_code);
         eosio::check(user_vesting.amount >= vesting_price, "insufficient vesting amount");
         INLINE_ACTION_SENDER(golos::vesting, retire) (config::vesting_name,
