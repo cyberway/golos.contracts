@@ -616,7 +616,7 @@ void publication::paymssgrwrd(structures::mssgid message_id) {
 
     fill_depleted_pool(pools, asset(unclaimed_rewards, payout.symbol), pools.end());
 
-    send_postreward_event(message_id, payout, asset(ben_payout_sum, payout.symbol), asset(curation_payout, payout.symbol));
+    send_postreward_event(message_id, payout, asset(ben_payout_sum, payout.symbol), asset(curation_payout - unclaimed_rewards, payout.symbol), asset(unclaimed_rewards, payout.symbol));
 }
 
 void publication::close_message_timer(structures::mssgid message_id, uint64_t id, uint64_t delay_sec) {
@@ -949,8 +949,8 @@ void publication::send_rewardweight_event(structures::mssgid message_id, uint16_
     eosio::event(_self, "rewardweight"_n, data).send();
 }
 
-void publication::send_postreward_event(const structures::mssgid& message_id, const asset& author, const asset& benefactor, const asset& curator) {
-    structures::post_reward_event data{message_id, author, benefactor, curator};
+void publication::send_postreward_event(const structures::mssgid& message_id, const asset& author, const asset& benefactor, const asset& curator, const asset& unclaimed) {
+    structures::post_reward_event data{message_id, author, benefactor, curator, unclaimed};
     eosio::event(_self, "postreward"_n, data).send();
 }
 
