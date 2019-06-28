@@ -49,7 +49,7 @@ name get_recipient(const std::string& memo) {
     const size_t pref_size = config::send_prefix.size();
     if (memo_size < pref_size || memo.substr(0, pref_size) != config::send_prefix)
         return name();
-    eosio::check(memo_size > pref_size, "must provide recipient's name");
+    eosio::check(memo_size > pref_size, "must provide recipient's name");   // TODO: test #744
     return name(memo.substr(pref_size, memo_size - pref_size).c_str());
 }
 
@@ -63,7 +63,7 @@ void vesting::on_transfer(name from, name to, asset quantity, std::string memo) 
 
     vesting_table table_vesting(_self, _self.value);    // TODO: use symbol as scope #550
     auto vesting = table_vesting.find(quantity.symbol.code().raw());
-    eosio::check(vesting != table_vesting.end(), "Token not found");
+    eosio::check(vesting != table_vesting.end(), "Token not found");    // TODO: test #744
 
     // balance already increased by quantity value at this point so use -quantity to correct it to get the right price
     asset converted = token_to_vesting(quantity, *vesting, -quantity.amount);
@@ -98,7 +98,7 @@ void vesting::on_bulk_transfer(name from, std::vector<token::recipient> recipien
 
     vesting_table table_vesting(_self, _self.value);    // TODO: use symbol as scope #550
     auto vesting = table_vesting.find(token_symbol.code().raw());
-    eosio::check(vesting != table_vesting.end(), "Token not found");
+    eosio::check(vesting != table_vesting.end(), "Token not found");    // TODO: test #744
 
     asset sum_quantity_recipient(0, vesting->supply.symbol);
     for (auto recipient_obj : recipients) {
@@ -119,7 +119,7 @@ void vesting::on_bulk_transfer(name from, std::vector<token::recipient> recipien
 
 void vesting::retire(asset quantity, name user) {
     require_auth(name(token::get_issuer(config::token_name, quantity.symbol.code())));
-    eosio::check(quantity.is_valid(), "invalid quantity");
+    eosio::check(quantity.is_valid(), "invalid quantity");  // TODO: test #744
     eosio::check(quantity.amount > 0, "must retire positive quantity");
 
     vesting_table table_vesting(_self, _self.value);
@@ -150,8 +150,8 @@ void vesting::withdraw(name from, name to, asset quantity) {
     auto vest = account.find(sym);
     eosio::check(vest != account.end(), "unknown asset");
     eosio::check(vest->vesting.symbol == quantity.symbol, "wrong asset precision");
-    eosio::check(vest->available_vesting().amount >= quantity.amount, "Insufficient funds");
-    eosio::check(vest->vesting.amount >= min_amount, "Insufficient funds for converting");
+    eosio::check(vest->available_vesting().amount >= quantity.amount, "Insufficient funds");    // TODO: test #744
+    eosio::check(vest->vesting.amount >= min_amount, "Insufficient funds for converting");      // TODO: test #744
 
     eosio::check(token::balance_exist(config::token_name, to, quantity.symbol.code()), "to account have not opened balance");
 
@@ -182,18 +182,18 @@ void vesting::stopwithdraw(name owner, symbol sym) {
     require_auth(owner);
     withdraw_table table(_self, sym.code().raw());
     auto record = table.find(owner.value);
-    eosio::check(record != table.end(), "Not found convert record sender");
+    eosio::check(record != table.end(), "Not found convert record sender"); // TODO: test #744
     table.erase(record);
 }
 
 void vesting::unlocklimit(name owner, asset quantity) {
     require_auth(owner);
     auto sym = quantity.symbol;
-    eosio::check(quantity.is_valid(), "invalid quantity");
+    eosio::check(quantity.is_valid(), "invalid quantity");  // TODO: test #744
     eosio::check(quantity.amount >= 0, "the number of tokens should not be less than 0");
     account_table accounts(_self, owner.value);
     const auto& b = accounts.get(sym.code().raw(), "no balance object found");
-    eosio::check(b.unlocked_limit.symbol == sym, "symbol precision mismatch");
+    eosio::check(b.unlocked_limit.symbol == sym, "symbol precision mismatch");  // TODO: test #744
 
     accounts.modify(b, name(), [&](auto& item) {
         item.unlocked_limit = quantity;
@@ -219,7 +219,7 @@ void vesting::delegate(name from, name to, asset quantity, uint16_t interest_rat
     auto sname = token_code.raw();
     account_table account_sender(_self, from.value);
     auto balance_sender = account_sender.find(sname);
-    eosio::check(balance_sender != account_sender.end(), "Not found token");
+    eosio::check(balance_sender != account_sender.end(), "Not found token");    // TODO: test #744
     auto avail_balance = balance_sender->vesting - get_withdrawing_vesting(_self, from, quantity.symbol);
 
     auto deleg_after = quantity + balance_sender->delegated;
@@ -238,7 +238,7 @@ void vesting::delegate(name from, name to, asset quantity, uint16_t interest_rat
     auto index_table = table.get_index<"delegator"_n>();
     auto delegate_record = index_table.find({from, to});
     if (delegate_record != index_table.end()) {
-        eosio::check(delegate_record->interest_rate == interest_rate, "interest_rate does not match");
+        eosio::check(delegate_record->interest_rate == interest_rate, "interest_rate does not match");  // TODO: test #744
         index_table.modify(delegate_record, name(), [&](auto& item) {
             item.quantity += quantity;
         });
@@ -255,7 +255,7 @@ void vesting::delegate(name from, name to, asset quantity, uint16_t interest_rat
 
     account_table account_recipient(_self, to.value);
     auto balance_recipient = account_recipient.find(sname);
-    eosio::check(balance_recipient != account_recipient.end(), "Not found balance token vesting");
+    eosio::check(balance_recipient != account_recipient.end(), "Not found balance token vesting");  // TODO: test #744
     account_recipient.modify(balance_recipient, from, [&](auto& item) {
         item.received += quantity;
         send_account_event(to, item);
@@ -274,10 +274,11 @@ void vesting::undelegate(name from, name to, asset quantity) {
     delegation_table table(_self, quantity.symbol.code().raw());
     auto index_table = table.get_index<"delegator"_n>();
     auto delegate_record = index_table.find({from, to});
-    eosio::check(delegate_record != index_table.end(), "Not enough delegated vesting"); // wrong
+    eosio::check(delegate_record != index_table.end(), "Not enough delegated vesting"); // TODO: #551, #744
 
     eosio::check(quantity.amount >= delegation_params.min_amount, "Insufficient funds for undelegation");
-    eosio::check(delegate_record->min_delegation_time <= eosio::current_time_point(), "Tokens are frozen until the end of the period");
+    eosio::check(delegate_record->min_delegation_time <= eosio::current_time_point(),
+        "Tokens are frozen until the end of the period");
     eosio::check(delegate_record->quantity >= quantity, "There are not enough delegated tools for output");
 
     if (delegate_record->quantity == quantity) {
@@ -298,7 +299,7 @@ void vesting::undelegate(name from, name to, asset quantity) {
 
     account_table account_recipient(_self, to.value);
     auto balance = account_recipient.find(quantity.symbol.code().raw());
-    eosio::check(balance != account_recipient.end(), "This token is not on the recipient balance sheet");
+    eosio::check(balance != account_recipient.end(), "This token is not on the recipient balance sheet");   // TODO: test #744
     account_recipient.modify(balance, from, [&](auto& item) {
         item.received -= quantity;
         send_account_event(to, item);
@@ -313,7 +314,7 @@ void vesting::create(symbol symbol, name notify_acc) {
 
     vesting_table table_vesting(_self, _self.value);
     auto vesting = table_vesting.find(symbol.code().raw());
-    eosio::check(vesting == table_vesting.end(), "Vesting already exists");
+    eosio::check(vesting == table_vesting.end(), "Vesting already exists"); // TODO: test #744
 
     table_vesting.emplace(_self, [&](auto& item){
         item.supply = asset(0, symbol);
@@ -408,7 +409,7 @@ void vesting::open(name owner, symbol symbol, name ram_payer) {
 
     account_table accounts(_self, owner.value);
     auto it = accounts.find(symbol.code().raw());
-    eosio::check(it == accounts.end(), "already exists");
+    eosio::check(it == accounts.end(), "already exists");   // TODO: test #744
     accounts.emplace(ram_payer, [&](auto& a) {
         a.vesting.symbol = symbol;
         a.delegated.symbol = symbol;
@@ -421,10 +422,10 @@ void vesting::close(name owner, symbol symbol) {
     require_auth(owner);
     account_table account(_self, owner.value);
     auto it = account.find(symbol.code().raw());
-    eosio::check(it != account.end(), "Balance row already deleted or never existed. Action won't have any effect");
-    eosio::check(it->vesting.amount == 0, "Cannot close because the balance vesting is not zero");
-    eosio::check(it->delegated.amount == 0, "Cannot close because the balance delegate vesting is not zero");
-    eosio::check(it->received.amount == 0, "Cannot close because the balance received vesting not zero");
+    eosio::check(it != account.end(), "Balance row already deleted or never existed. Action won't have any effect");    // TODO: test #744
+    eosio::check(it->vesting.amount == 0, "Cannot close because the balance vesting is not zero");  // TODO: test #744
+    eosio::check(it->delegated.amount == 0, "Cannot close because the balance delegate vesting is not zero");   // TODO: test #744
+    eosio::check(it->received.amount == 0, "Cannot close because the balance received vesting not zero");   // TODO: test #744
     account.erase(it);
 }
 
@@ -448,7 +449,7 @@ void vesting::sub_balance(name owner, asset value, bool retire_mode) {
     if (retire_mode)
         eosio::check(can_retire_vesting(_self, owner, value), "overdrawn unlocked balance"); // TODO: remove additional db.get #554
     else
-        eosio::check(from.available_vesting() >= value, "overdrawn balance");
+        eosio::check(from.available_vesting() >= value, "overdrawn balance");   // TODO: test #744
 
     account.modify(from, name(), [&](auto& a) {
         a.vesting -= value;

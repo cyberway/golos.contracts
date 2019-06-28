@@ -12,7 +12,7 @@ fixp_t charge::consume_charge(name issuer, name user, symbol_code token_code, ui
     eosio::check(price_arg <= max_arg, "price > max_input");
     eosio::check(cutoff_arg < 0 || cutoff_arg <= max_arg, "cutoff > max_input");
     fixp_t price = to_fixp(price_arg);
-    
+
     auto charge_symbol = symbol(token_code, charge_id);
     balances balances_table(_self, user.value);
     balances::const_iterator itr = balances_table.find(charge_symbol.raw());
@@ -66,7 +66,7 @@ void charge::useandstore(name user, symbol_code token_code, uint8_t charge_id, i
     auto issuer = token::get_issuer(config::token_name, token_code);
     require_auth(issuer);
     auto new_val = consume_charge(issuer, user, token_code, charge_id, price_arg);
-    
+
     storedvals storedvals_table(_self, user.value);
     auto storedvals_index = storedvals_table.get_index<"symbolstamp"_n>();
     auto k = stored::get_key(token_code, charge_id, stamp_id);
@@ -90,9 +90,9 @@ void charge::removestored(name user, symbol_code token_code, uint8_t charge_id, 
     storedvals_index.erase(itr);
 }
 
-void charge::setrestorer(symbol_code token_code, uint8_t charge_id, std::string func_str, 
+void charge::setrestorer(symbol_code token_code, uint8_t charge_id, std::string func_str,
         int64_t max_prev, int64_t max_vesting, int64_t max_elapsed) {
-    
+
     eosio::check(max_prev <= max_arg, "max_prev > max_input");
     eosio::check(max_vesting <= max_arg, "max_vesting > max_input");
     eosio::check(max_elapsed <= max_arg, "max_elapsed > max_input");
@@ -101,14 +101,14 @@ void charge::setrestorer(symbol_code token_code, uint8_t charge_id, std::string 
     auto charge_symbol = symbol(token_code, charge_id);
     restorers restorers_table(_self, _self.value);
     auto itr = restorers_table.find(charge_symbol.raw());
-    
+
     atmsp::parser<fixp_t> pa;
     atmsp::machine<fixp_t> machine;
-    
+
     bytecode func;
     pa(machine, func_str, "p,v,t");//prev value, vesting, time(elapsed seconds)
     func.from_machine(machine);
-    
+
     if (itr != restorers_table.end())
         restorers_table.modify(*itr, issuer, [&]( auto &item ) {
              item.func = func;
