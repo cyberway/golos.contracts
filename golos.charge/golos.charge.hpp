@@ -118,7 +118,7 @@ private:
             eosio::check(restored >= fixp_t(0), "charge::calc_value restored < 0");
         }
 
-        return std::max(FP(user_balance.value) - fp_cast<fixp_t>(elaf_t(restored) * elai_t(config::_100percent)) + price, fixp_t(0));
+        return std::max(FP(user_balance.value) - fp_cast<fixp_t>(elap_t(restored) * elai_t(config::_100percent)) + price, fixp_t(0));
     }
 
 private:
