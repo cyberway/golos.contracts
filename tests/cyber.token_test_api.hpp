@@ -48,11 +48,11 @@ struct cyber_token_api: base_contract_api {
         );
     }
 
-    action_result open(account_name owner, symbol symbol, account_name payer) {
+    action_result open(account_name owner, symbol symbol, account_name payer = {}) {
         return push(N(open), owner, args()
             ("owner", owner)
             ("symbol", symbol)
-            ("ram_payer", payer)
+            ("ram_payer", payer == name{} ? owner : payer)
         );
     }
 
@@ -63,20 +63,37 @@ struct cyber_token_api: base_contract_api {
         );
     }
 
-    action_result transfer(account_name from, account_name to, asset quantity, string memo = "") {
-        return push(N(transfer), from, args()
+    action_result _transfer(action_name action, account_name from, account_name to, asset quantity, string memo) {
+        return push(action, from, args()
             ("from", from)
             ("to", to)
             ("quantity", quantity)
             ("memo", memo)
         );
     }
+    action_result transfer(account_name from, account_name to, asset quantity, string memo = "") {
+        return _transfer(N(transfer), from, to, quantity, memo);
+    }
+    action_result payment(account_name from, account_name to, asset quantity, string memo = "") {
+        return _transfer(N(payment), from, to, quantity, memo);
+    }
 
-    action_result bulk_transfer( account_name from, std::vector<recipient> recipients ) {
-       return push( N(bulktransfer), from, args()
-            ( "from", from)
-            ( "recipients", recipients)
-       );
+    action_result claim(name owner, asset quantity) {
+        return push(N(claim), owner, args()
+            ("owner", owner)
+            ("quantity", quantity));
+    }
+
+    action_result _bulk_transfer(action_name action, account_name from, std::vector<recipient> recipients) {
+        return push(action, from, args()
+            ("from", from)
+            ("recipients", recipients));
+    }
+    action_result bulk_transfer(account_name from, std::vector<recipient> recipients) {
+        return _bulk_transfer(N(bulktransfer), from, recipients);
+    }
+    action_result bulk_payment(account_name from, std::vector<recipient> recipients) {
+        return _bulk_transfer(N(bulkpayment), from, recipients);
     }
 
     //// token tables
@@ -97,6 +114,7 @@ struct cyber_token_api: base_contract_api {
         if (v.is_object() && !raw_asset) {
             auto o = mvo(v);
             o["balance"] = o["balance"].as<asset>().to_string();
+            o["payments"] = o["payments"].as<asset>().to_string();
             v = o;
         }
         return v;
@@ -115,6 +133,12 @@ struct cyber_token_api: base_contract_api {
     }
     string asset_str(double x = 0) {
         return make_asset(x).to_string();
+    }
+
+    variant make_balance(double balance, double payments = 0) {
+        return mvo()
+            ("balance", asset_str(balance))
+            ("payments", asset_str(payments));
     }
 
 };

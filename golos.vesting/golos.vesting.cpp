@@ -138,33 +138,36 @@ void vesting::retire(asset quantity, name user) {
 void vesting::withdraw(name from, name to, asset quantity) {
     eosio::check(quantity.amount > 0, "quantity must be positive");
     require_auth(from);
-    eosio::check(is_account(to), "to account does not exist");
+    eosio::check(is_account(to), "to account does not exist");  // maybe it's enough to check balance existance?
 
     const auto sym = quantity.symbol.code().raw();
     vesting_params_singleton cfg(_self, sym);
     eosio::check(cfg.exists(), "not found vesting params");
-    const auto& withdraw_params = cfg.get().withdraw;
-    const auto& min_amount = cfg.get().min_amount.min_amount;
+    const auto& params = cfg.get();
+    const auto intervals = params.withdraw.intervals;
+    const auto interval_sec = params.withdraw.interval_seconds;
+    const auto rate = quantity / intervals;
+    eosio::check(rate.amount > 0, "withdraw rate is too low");
 
     account_table account(_self, from.value);
     auto vest = account.find(sym);
     eosio::check(vest != account.end(), "unknown asset");
     eosio::check(vest->vesting.symbol == quantity.symbol, "wrong asset precision");
     eosio::check(vest->available_vesting().amount >= quantity.amount, "Insufficient funds");    // TODO: test #744
-    eosio::check(vest->vesting.amount >= min_amount, "Insufficient funds for converting");      // TODO: test #744
+    eosio::check(vest->vesting.amount >= params.min_amount.min_amount, "Insufficient funds for converting"); // TODO: test #744
 
-    eosio::check(token::balance_exist(config::token_name, to, quantity.symbol.code()), "to account have not opened balance");
+    eosio::check(token::balance_exist(config::token_name, to, quantity.symbol.code()),
+        "to account have not opened balance");
 
     withdraw_table table(_self, sym);
     auto record = table.find(from.value);
 
-    const auto intervals = withdraw_params.intervals;
     auto fill_record = [&](auto& item) {
         item.to = to;
         item.remaining_payments = intervals;
-        item.interval_seconds = withdraw_params.interval_seconds;
-        item.next_payout = eosio::current_time_point() + eosio::seconds(withdraw_params.interval_seconds);
-        item.withdraw_rate = quantity / intervals;
+        item.interval_seconds = interval_sec;
+        item.next_payout = eosio::current_time_point() + eosio::seconds(interval_sec);
+        item.withdraw_rate = rate;
         item.to_withdraw = quantity;
     };
 
@@ -348,17 +351,20 @@ void vesting::timeoutconv() {
             auto to_send = last_payment ? obj->to_withdraw : obj->withdraw_rate;
             const name to = obj->to;
             const name from = obj->from;
-            account_table account(_self, from.value);
-            auto balance = account.find(to_send.symbol.code().raw());
+            account_table accounts(_self, from.value);
+            auto balance = accounts.find(to_send.symbol.code().raw());
             fail =
-                balance == account.end() ||     // must not happen here, checked earlier (?archived)
+                balance == accounts.end() ||    // must not happen here, checked earlier (?archived)
                 balance->vesting < to_send ||   // must not happen
-                to_send.amount <= 0;            // must not happen, possible only if min_amount is less than number of payments
+                to_send.amount <= 0;            // must not happen
             if (fail) continue;
 
             // First convert and only then reduce supply (conversion rate changes after subtract)
-            auto converted = vesting_to_token(to_send, vesting, -correction);   // TODO: get_balance can throw #549
+            auto converted = vesting_to_token(to_send, vesting, -correction);   // get_balance can throw (only on broken system, preserve)
             fail = converted.amount == 0;       // amount is too low, it's impossible to withdraw
+            if (fail) continue;
+
+            fail = !token::balance_exist(config::token_name, to, converted.symbol.code());
             if (fail) continue;
 
             if (!last_payment) {
@@ -373,8 +379,7 @@ void vesting::timeoutconv() {
                 v.supply -= to_send;
                 send_stat_event(v);
             });
-            // TODO: 1) payment action #549. 2) check balance existance #549
-            INLINE_ACTION_SENDER(token, transfer)(config::token_name, {_self, config::code_name},
+            INLINE_ACTION_SENDER(token, payment)(config::token_name, {_self, config::code_name},
                 {_self, to, converted, memo});
             correction += converted.amount;    // accumulate
         }

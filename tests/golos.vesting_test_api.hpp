@@ -20,7 +20,7 @@ struct golos_vesting_api: base_contract_api {
         _tester->link_authority(_code, _code, cfg::code_name, N(timeout));
         _tester->link_authority(_code, _code, cfg::code_name, N(timeoutconv));
         _tester->link_authority(_code, _code, cfg::code_name, N(timeoutrdel));
-        _tester->link_authority(_code, token_name, cfg::code_name, N(transfer));
+        _tester->link_authority(_code, token_name, cfg::code_name, N(payment));
     }
 
     void add_changevest_auth_to_issuer(account_name issuer, account_name control) {
@@ -48,11 +48,11 @@ struct golos_vesting_api: base_contract_api {
     action_result open(name owner) {
         return open(owner, _symbol, owner);
     }
-    action_result open(name owner, symbol sym, name ram_payer) {
+    action_result open(name owner, symbol sym, name ram_payer = {}) {
         return push(N(open), ram_payer, args()
             ("owner", owner)
             ("symbol", sym)
-            ("ram_payer", ram_payer)
+            ("ram_payer", ram_payer == name{} ? owner : ram_payer)
         );
     }
 

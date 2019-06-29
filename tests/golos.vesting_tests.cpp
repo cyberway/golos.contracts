@@ -88,7 +88,9 @@ protected:
         const string delegated_withdraw       = amsg("delegated vesting withdrawn");
         const string unknown_asset      = amsg("unknown asset");    // TODO: test #744
         const string withdraw_le0       = amsg("quantity must be positive");
+        const string withdraw_low_rate  = amsg("withdraw rate is too low");
         const string withdraw_no_to_acc = amsg("to account does not exist");
+
         const string no_token_balance   = amsg("to account have not opened balance");
         const string wrong_precision    = amsg("wrong asset precision");
         const string vesting_params     = amsg("not found vesting params");
@@ -96,6 +98,7 @@ protected:
 
         const string withdraw_intervals        = amsg("intervals <= 0");
         const string withdraw_interval_seconds = amsg("interval_seconds <= 0");
+
         const string delegation_min_amount     = amsg("delegation min_amount <= 0");
         const string delegation_min_remainder  = amsg("delegation min_remainder <= 0");
         const string delegation_max_interest   = amsg("delegation max_interest > 10000");
@@ -252,10 +255,13 @@ BOOST_FIXTURE_TEST_CASE(bulk_buy_vesting, golos_vesting_tester) try {
         {cfg::vesting_name, token.make_asset(100), golos::config::send_prefix + name{"vania"}.to_string()}
     }));
 
+    const auto magic1 = 0.05;   // TODO: proper test #744
+    const auto magic2 = 3.568;
+    const auto magic3 = 584.076;
     BOOST_CHECK_EQUAL(success(), token.bulk_transfer(N(sania), {
-        {cfg::vesting_name, token.make_asset(0.050), "buy vesting"},
-        {cfg::vesting_name, token.make_asset(3.568), "buy vesting"},
-        {cfg::vesting_name, token.make_asset(584.076), "buy vesting"}
+        {cfg::vesting_name, token.make_asset(magic1), "buy vesting"},
+        {cfg::vesting_name, token.make_asset(magic2), "buy vesting"},
+        {cfg::vesting_name, token.make_asset(magic3), "buy vesting"}
     }));
 
     BOOST_CHECK_EQUAL(success(), token.bulk_transfer(N(sania), {
@@ -263,9 +269,11 @@ BOOST_FIXTURE_TEST_CASE(bulk_buy_vesting, golos_vesting_tester) try {
         {N(tania), token.make_asset(50), "transfer token"}
     }));
 
-    CHECK_MATCHING_OBJECT(token.get_account(N(sania)), mvo()("balance", token.asset_str(99012.306)));
+    const auto magic4 = 99012.306;   // TODO: proper test #744
+    const auto magic5 = 637.694;
+    CHECK_MATCHING_OBJECT(token.get_account(N(sania)), mvo()("balance", token.asset_str(magic4)));
     CHECK_MATCHING_OBJECT(token.get_account(N(tania)), mvo()("balance", token.asset_str(50)));
-    CHECK_MATCHING_OBJECT(vest.get_balance(N(sania)), vest.make_balance(637.694));
+    CHECK_MATCHING_OBJECT(vest.get_balance(N(sania)), vest.make_balance(magic5));
     CHECK_MATCHING_OBJECT(vest.get_balance(N(pasha)), vest.make_balance(200));
     CHECK_MATCHING_OBJECT(vest.get_balance(N(vania)), vest.make_balance(100));
     CHECK_MATCHING_OBJECT(vest.get_balance(N(tania)), vest.make_balance(0));
@@ -278,7 +286,7 @@ BOOST_FIXTURE_TEST_CASE(withdraw, golos_vesting_tester) try {
     prepare_balances(100500, issue, issue, buy, buy);
     auto tokens = issue - buy;  // price is 1:1
     auto vests = buy;
-    auto tokens2 = tokens;
+    auto payments = 0, payments2 = 0;
     auto vests2 = vests;
     init_params();
 
@@ -296,6 +304,7 @@ BOOST_FIXTURE_TEST_CASE(withdraw, golos_vesting_tester) try {
     };
     BOOST_CHECK_EQUAL(err.withdraw_le0, do_withdraw(vest.make_asset(0), N(sania)));
     BOOST_CHECK_EQUAL(err.withdraw_le0, do_withdraw(vest.make_asset(-1), N(sania)));
+    BOOST_CHECK_EQUAL(err.withdraw_low_rate, custom_withdraw(withdraw_intervals-1, _vesting_precision, _token_name));
     BOOST_CHECK_EQUAL(err.withdraw_no_to_acc, do_withdraw(vest.make_asset(1), N(not.exists)));
     BOOST_CHECK_EQUAL(err.vesting_params, custom_withdraw(1e6, _vesting_precision, "GLS"));
     BOOST_CHECK_EQUAL(err.wrong_precision, custom_withdraw(1e5, _vesting_precision-1, _token_name));
@@ -315,31 +324,31 @@ BOOST_FIXTURE_TEST_CASE(withdraw, golos_vesting_tester) try {
     // so it's result will be available only in next block
     BOOST_CHECK_EQUAL(vest.get_withdraw_obj(N(sania))["remaining_payments"], steps);
     CHECK_MATCHING_OBJECT(vest.get_balance(N(sania)), vest.make_balance(vests));
-    CHECK_MATCHING_OBJECT(token.get_account(N(sania)), mvo()("balance", token.make_asset(tokens)));
+    CHECK_MATCHING_OBJECT(token.get_account(N(sania)), token.make_balance(tokens));
 
     BOOST_TEST_MESSAGE("--- go next block and check that withdrawal happened");
     produce_block();
     BOOST_CHECK_EQUAL(vest.get_withdraw_obj(N(sania))["remaining_payments"], steps - 1);
     vests--;
-    tokens++;
+    payments++;
     CHECK_MATCHING_OBJECT(vest.get_balance(N(sania)), vest.make_balance(vests));
-    CHECK_MATCHING_OBJECT(token.get_account(N(sania)), mvo()("balance", token.make_asset(tokens)));
+    CHECK_MATCHING_OBJECT(token.get_account(N(sania)), token.make_balance(tokens, payments));
 
     BOOST_TEST_MESSAGE("--- skip " + std::to_string(_blocks_in_interval*(steps-1)-1) + " blocks and check balance");
     produce_blocks(_blocks_in_interval * (steps - 1) - 1);  // 1 withdrawal already passed, so -1
     BOOST_CHECK_EQUAL(vest.get_withdraw_obj(N(sania))["remaining_payments"], 1);
     vests -= steps - 2;
-    tokens += steps - 2;
+    payments += steps - 2;
     CHECK_MATCHING_OBJECT(vest.get_balance(N(sania)), vest.make_balance(vests));
-    CHECK_MATCHING_OBJECT(token.get_account(N(sania)), mvo()("balance", token.make_asset(tokens)));
+    CHECK_MATCHING_OBJECT(token.get_account(N(sania)), token.make_balance(tokens, payments));
 
     BOOST_TEST_MESSAGE("--- go next block and check that fully withdrawn");
     produce_block();
     BOOST_CHECK(vest.get_withdraw_obj(N(sania)).is_null());
     vests--;
-    tokens++;
+    payments++;
     CHECK_MATCHING_OBJECT(vest.get_balance(N(sania)), vest.make_balance(vests));
-    CHECK_MATCHING_OBJECT(token.get_account(N(sania)), mvo()("balance", token.make_asset(tokens)));
+    CHECK_MATCHING_OBJECT(token.get_account(N(sania)), token.make_balance(tokens, payments));
 
     BOOST_TEST_MESSAGE("--- check withdraw to different account");
     BOOST_CHECK_EQUAL(success(), vest.withdraw(N(sania), N(pasha), vest.make_asset(withdraw_intervals)));
@@ -348,30 +357,89 @@ BOOST_FIXTURE_TEST_CASE(withdraw, golos_vesting_tester) try {
     BOOST_TEST_MESSAGE("--- skip " + std::to_string(_blocks_in_interval*steps-1) + " blocks and check balance");
     produce_blocks(_blocks_in_interval * steps);
     vests -= steps - 1;
-    tokens2 += steps - 1;
+    payments2 = steps - 1;
     BOOST_CHECK_EQUAL(vest.get_withdraw_obj(N(sania))["remaining_payments"], 1);
     CHECK_MATCHING_OBJECT(vest.get_balance(N(sania)), vest.make_balance(vests));
     CHECK_MATCHING_OBJECT(vest.get_balance(N(pasha)), vest.make_balance(vests2));
-    CHECK_MATCHING_OBJECT(token.get_account(N(sania)), mvo()("balance", token.make_asset(tokens)));
-    CHECK_MATCHING_OBJECT(token.get_account(N(pasha)), mvo()("balance", token.make_asset(tokens2)));
+    CHECK_MATCHING_OBJECT(token.get_account(N(sania)), token.make_balance(tokens, payments));
+    CHECK_MATCHING_OBJECT(token.get_account(N(pasha)), token.make_balance(tokens, payments2));
 
     BOOST_TEST_MESSAGE("--- go next block and check that fully withdrawn");
     produce_block();
     vests--;
-    tokens2++;
+    payments2++;
     BOOST_CHECK(vest.get_withdraw_obj(N(sania)).is_null());
     CHECK_MATCHING_OBJECT(vest.get_balance(N(sania)), vest.make_balance(vests));
     CHECK_MATCHING_OBJECT(vest.get_balance(N(pasha)), vest.make_balance(vests2));
-    CHECK_MATCHING_OBJECT(token.get_account(N(sania)), mvo()("balance", token.make_asset(tokens)));
-    CHECK_MATCHING_OBJECT(token.get_account(N(pasha)), mvo()("balance", token.make_asset(tokens2)));
-
-    // TODO: check fail if not enough funds and other balance issues
+    CHECK_MATCHING_OBJECT(token.get_account(N(sania)), token.make_balance(tokens, payments));
+    CHECK_MATCHING_OBJECT(token.get_account(N(pasha)), token.make_balance(tokens, payments2));
 
     BOOST_TEST_MESSAGE("--- check that cannot withdraw with closed token balance");
     produce_block();
-    BOOST_CHECK_EQUAL(success(), token.transfer(N(sania), cfg::vesting_name, token.get_account(N(sania)).get_object()["balance"].as<asset>(), "buy vesting for all remain"));
+    auto balance = token.get_account(N(sania)).get_object();
+    auto tok = balance["balance"].as<asset>();
+    auto pay = balance["payments"].as<asset>();
+    BOOST_CHECK_EQUAL(success(), token.claim(N(sania), pay));
+    BOOST_CHECK_EQUAL(success(), token.transfer(N(sania), cfg::vesting_name, tok + pay, "buy vesting for all remain"));
     BOOST_CHECK_EQUAL(success(), token.close(N(sania), _token_sym));
     BOOST_CHECK_EQUAL(err.no_token_balance, vest.withdraw(N(sania), N(sania), vest.make_asset(withdraw_intervals)));
+
+    // TODO: check fail if not enough funds and other balance issues #744
+} FC_LOG_AND_RETHROW()
+
+BOOST_FIXTURE_TEST_CASE(withdraw_fail, golos_vesting_tester) try {
+    BOOST_TEST_MESSAGE("Test auto-stop withdraw if wrong conditions met");
+    auto man = N(sania);
+    auto issue = 100, buy = 100;
+    prepare_balances(100500, issue, issue, buy, buy);
+    auto tokens = issue - buy;  // price is 1:1
+    auto vests = buy;
+    init_params();
+    BOOST_CHECK_EQUAL(success(), vest.timeout(_code));
+
+    BOOST_TEST_MESSAGE("-- check stop if token balance closed");
+    BOOST_TEST_CHECK(vest.get_withdraw_obj(man).is_null());
+    BOOST_TEST_MESSAGE("---- start withdraw");
+    BOOST_CHECK_EQUAL(success(), vest.withdraw(man, man, vest.make_asset(vests)));
+    const auto steps = withdraw_intervals;
+
+    BOOST_TEST_MESSAGE("---- check withdraw object existance");
+    BOOST_CHECK_EQUAL(vest.get_withdraw_obj(man)["remaining_payments"], steps);
+    CHECK_MATCHING_OBJECT(vest.get_balance(man), vest.make_balance(vests));
+    CHECK_MATCHING_OBJECT(token.get_account(man), token.make_balance(0, tokens));
+
+    BOOST_TEST_MESSAGE("---- close token balance");
+    BOOST_CHECK_EQUAL(success(), token.close(man, _token_sym));
+    BOOST_TEST_CHECK(token.get_account(man).is_null());
+
+    const int64_t _blocks_in_interval = golos::seconds_to_blocks(withdraw_interval_seconds);
+    BOOST_TEST_MESSAGE("---- wait " + std::to_string(_blocks_in_interval + 1) +
+        " blocks to payout and check that withdraw object deleted (auto-stop)");
+    produce_blocks(_blocks_in_interval + 1);
+    BOOST_TEST_CHECK(vest.get_withdraw_obj(man).is_null());
+
+
+    BOOST_TEST_MESSAGE("-- check stop if converted amount too low");
+    BOOST_CHECK_EQUAL(success(), token.open(man, _token_sym));
+    int factor = 100;
+    BOOST_CHECK_EQUAL(success(), vest.withdraw(man, man, asset(factor - 1, _vesting_sym)));
+    BOOST_TEST_MESSAGE("---- check withdraw object existance");
+    BOOST_CHECK_EQUAL(vest.get_withdraw_obj(man)["remaining_payments"], steps);
+    CHECK_MATCHING_OBJECT(vest.get_balance(man), vest.make_balance(vests));
+    CHECK_MATCHING_OBJECT(token.get_account(man), token.make_balance(0, tokens));
+
+    BOOST_TEST_MESSAGE("---- reduce token supply by 99% so price changes to 1:100");
+    auto vsupply = vests + vests;
+    auto remainder = vsupply / factor;
+    CHECK_MATCHING_OBJECT(token.get_account(_code), mvo()("balance", token.make_asset(vsupply)));
+    BOOST_CHECK_EQUAL(success(), token.transfer(_code, N(vania), token.make_asset(vsupply - remainder), "funds out"));
+    CHECK_MATCHING_OBJECT(token.get_account(_code), mvo()("balance", token.make_asset(remainder)));
+
+    BOOST_TEST_MESSAGE("---- wait " + std::to_string(_blocks_in_interval + 1) +
+        " blocks to payout and check that withdraw object deleted (auto-stop)");
+    produce_blocks(_blocks_in_interval + 1);
+    BOOST_TEST_CHECK(vest.get_withdraw_obj(man).is_null());
+
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE(withdraw_convert_rate, golos_vesting_tester) try {
@@ -393,7 +461,7 @@ BOOST_FIXTURE_TEST_CASE(withdraw_convert_rate, golos_vesting_tester) try {
     BOOST_CHECK_EQUAL(vest.get_withdraw_obj(N(pasha))["remaining_payments"], 1);
     BOOST_CHECK_EQUAL(vest.get_withdraw_obj(N(sania))["remaining_payments"], 1);
     CHECK_MATCHING_OBJECT(vest.get_balance(N(sania)), vest.make_balance(base));
-    CHECK_MATCHING_OBJECT(token.get_account(N(sania)), mvo()("balance", token.asset_str(buy1-base)));
+    CHECK_MATCHING_OBJECT(token.get_account(N(sania)), token.make_balance(0, buy1 - base));
 
     BOOST_TEST_MESSAGE("--- go next block and check that all vesting withdrawn");
     produce_block();
@@ -402,21 +470,20 @@ BOOST_FIXTURE_TEST_CASE(withdraw_convert_rate, golos_vesting_tester) try {
     CHECK_MATCHING_OBJECT(vest.get_balance(N(sania)), vest.make_balance(0));
     CHECK_MATCHING_OBJECT(vest.get_balance(N(pasha)), vest.make_balance(0));
     // Balances can be not precise at this point, but their sum should not change
-    auto balance1 = token.get_account(N(sania), true)["balance"].as<asset>();
-    auto balance2 = token.get_account(N(pasha), true)["balance"].as<asset>();
+    auto balance1 = token.get_account(N(sania), true)["payments"].as<asset>();
+    auto balance2 = token.get_account(N(pasha), true)["payments"].as<asset>();
     BOOST_CHECK_EQUAL(token.make_asset(buy1 + buy2), balance1 + balance2);
     CHECK_MATCHING_OBJECT(vest.get_stats(), mvo()("supply", vest.asset_str(0)));
-    CHECK_MATCHING_OBJECT(token.get_account(cfg::vesting_name), mvo()("balance", token.asset_str(0)));
+    CHECK_MATCHING_OBJECT(token.get_account(cfg::vesting_name), token.make_balance(0));
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE(stop_withdraw, golos_vesting_tester) try {
     BOOST_TEST_MESSAGE("Test canceling convert vesting to token");
 
-    int tokens = 500, vests = 100;
+    int tokens = 100, vests = 100;
     prepare_balances(100500, tokens, tokens, vests, vests);
     tokens -= vests;
     init_params();
-
     BOOST_CHECK_EQUAL(success(), vest.timeout(cfg::vesting_name));
 
     BOOST_TEST_CHECK(vest.get_withdraw_obj(N(sania)).is_null());
@@ -426,13 +493,12 @@ BOOST_FIXTURE_TEST_CASE(stop_withdraw, golos_vesting_tester) try {
 
     BOOST_TEST_MESSAGE("--- check 1st withdrawal");
     const int64_t _blocks_in_interval = golos::seconds_to_blocks(withdraw_interval_seconds);
-
     produce_blocks(_blocks_in_interval + 1);
     BOOST_CHECK_EQUAL(vest.get_withdraw_obj(N(sania))["remaining_payments"], steps - 1);
     vests -= 1;
     tokens += 1;
     CHECK_MATCHING_OBJECT(vest.get_balance(N(sania)), vest.make_balance(vests));
-    CHECK_MATCHING_OBJECT(token.get_account(N(sania)), mvo()("balance", token.make_asset(tokens)));
+    CHECK_MATCHING_OBJECT(token.get_account(N(sania)), token.make_balance(0, tokens));
 
     BOOST_TEST_MESSAGE("--- change withdraw paramters and check it applied after next payment");
     int mult = 2;
@@ -442,7 +508,7 @@ BOOST_FIXTURE_TEST_CASE(stop_withdraw, golos_vesting_tester) try {
     vests -= mult;
     tokens += mult;
     CHECK_MATCHING_OBJECT(vest.get_balance(N(sania)), vest.make_balance(vests));
-    CHECK_MATCHING_OBJECT(token.get_account(N(sania)), mvo()("balance", token.make_asset(tokens)));
+    CHECK_MATCHING_OBJECT(token.get_account(N(sania)), token.make_balance(0, tokens));
 
     BOOST_TEST_MESSAGE("--- wait some time, change withdraw paramters and check that next payout moved");
     int blocks_to_payout = 5;
@@ -462,7 +528,7 @@ BOOST_FIXTURE_TEST_CASE(stop_withdraw, golos_vesting_tester) try {
     vests -= mult;
     tokens += mult;
     CHECK_MATCHING_OBJECT(vest.get_balance(N(sania)), vest.make_balance(vests));
-    CHECK_MATCHING_OBJECT(token.get_account(N(sania)), mvo()("balance", token.make_asset(tokens)));
+    CHECK_MATCHING_OBJECT(token.get_account(N(sania)), token.make_balance(0, tokens));
 
     BOOST_TEST_MESSAGE("--- cancel convert and check convert object deleted");
     BOOST_CHECK_EQUAL(success(), vest.stop_withdraw(N(sania), vest.make_asset(0).get_symbol()));
@@ -472,7 +538,7 @@ BOOST_FIXTURE_TEST_CASE(stop_withdraw, golos_vesting_tester) try {
     produce_blocks(_blocks_in_interval);
     BOOST_TEST_CHECK(vest.get_withdraw_obj(N(sania)).is_null());
     CHECK_MATCHING_OBJECT(vest.get_balance(N(sania)), vest.make_balance(vests));
-    CHECK_MATCHING_OBJECT(token.get_account(N(sania)), mvo()("balance", token.make_asset(tokens)));
+    CHECK_MATCHING_OBJECT(token.get_account(N(sania)), token.make_balance(0, tokens));
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE(delegate, golos_vesting_tester) try {
@@ -586,7 +652,7 @@ BOOST_FIXTURE_TEST_CASE(undelegate, golos_vesting_tester) try {
 BOOST_FIXTURE_TEST_CASE(retire, golos_vesting_tester) try {
     BOOST_TEST_MESSAGE("Test retire vesting shares");
 
-    int supply = 100500, tokens = 500, vests = 100, burn = 5;
+    int supply = 100500, tokens = 500, vests = 100, burn = 4;
     int vests_supply = 2 * vests;
     prepare_balances(supply, tokens, tokens, vests, vests);
     int withdraw_seconds = withdraw_interval_seconds * 2;
