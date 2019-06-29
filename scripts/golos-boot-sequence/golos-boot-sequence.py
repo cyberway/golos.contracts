@@ -51,7 +51,7 @@ def fillGolosAccounts(golosAccounts):
         ('gls.vesting',  True,       'golos.vesting',
             [("owner",       [], ["gls@owner"], []),
              ("active",      [], ["gls@active"], []),
-             ("code",        [], ["gls.vesting@cyber.code"], ["cyber.token:transfer", "gls.vesting:timeout", "gls.vesting:timeoutconv", "gls.vesting:timeoutrdel"]),
+             ("code",        [], ["gls.vesting@cyber.code"], ["cyber.token:transfer", "cyber.token:payment", "gls.vesting:timeout", "gls.vesting:timeoutconv", "gls.vesting:timeoutrdel"]),
             ]),
         ('gls.publish',  True,       'golos.publication',
             [("owner",       [], ["gls@owner"], []),

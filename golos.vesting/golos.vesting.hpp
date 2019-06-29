@@ -22,8 +22,7 @@ public:
 
     [[eosio::action]] void withdraw(name from, name to, asset quantity);
     [[eosio::action]] void stopwithdraw(name owner, symbol type);
-    [[eosio::action]] void delegate(name delegator, name delegatee, asset quantity,
-        uint16_t interest_rate);
+    [[eosio::action]] void delegate(name delegator, name delegatee, asset quantity, uint16_t interest_rate);
     [[eosio::action]] void undelegate(name delegator, name delegatee, asset quantity);
 
     [[eosio::action]] void create(symbol symbol, name notify_acc);
@@ -36,7 +35,6 @@ public:
     [[eosio::action]] void timeoutrdel();
 
     void on_transfer(name from, name to, asset quantity, std::string memo);
-    void do_transfer_vesting(name from, name to, asset quantity, std::string memo);
     void on_bulk_transfer(name from, std::vector<token::recipient> recipients);
 
     // tables
@@ -181,6 +179,7 @@ public:
     }
 
 private:
+    void do_transfer_vesting(name from, name to, asset quantity, std::string memo);
     void notify_balance_change(name owner, asset diff);
     void sub_balance(name owner, asset value, bool retire_mode = false);
     void add_balance(name owner, asset value, name ram_payer);
