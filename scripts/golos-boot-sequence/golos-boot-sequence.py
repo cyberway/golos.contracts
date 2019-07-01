@@ -334,7 +334,6 @@ def createCommunity():
                     'min_amount':5000000,
                     'min_remainder':15000000,
                     'min_time':0,
-                    'max_interest':0,
                     'return_time':120
                 }]
             ]]) + '-p gls')

@@ -205,6 +205,7 @@ void vesting::unlocklimit(name owner, asset quantity) {
 
 void vesting::delegate(name from, name to, asset quantity, uint16_t interest_rate) {
     require_auth(from);
+    require_auth(to);
 
     vesting_params_singleton cfg(_self, quantity.symbol.code().raw());
     eosio::check(cfg.exists(), "not found vesting params");
@@ -216,8 +217,7 @@ void vesting::delegate(name from, name to, asset quantity, uint16_t interest_rat
     eosio::check(from != to, "You can not delegate to yourself");
     eosio::check(quantity.amount > 0, "the number of tokens should not be less than 0");
     eosio::check(quantity.amount >= min_amount, "Insufficient funds for delegation");
-    eosio::check(interest_rate <= delegation_params.max_interest, "Exceeded the percentage of delegated vesting");
-
+    eosio::check(interest_rate <= config::_100percent, "interest_rate cannot be greater than 100% (10000)");
     auto token_code = quantity.symbol.code();
     auto sname = token_code.raw();
     account_table account_sender(_self, from.value);
@@ -268,7 +268,8 @@ void vesting::delegate(name from, name to, asset quantity, uint16_t interest_rat
 }
 
 void vesting::undelegate(name from, name to, asset quantity) {
-    require_auth(from);
+    bool delegator_signed = has_auth(from);
+    eosio::check(delegator_signed || has_auth(to), "missing required authority");
 
     vesting_params_singleton cfg(_self, quantity.symbol.code().raw());
     eosio::check(cfg.exists(), "not found vesting params");
@@ -287,13 +288,13 @@ void vesting::undelegate(name from, name to, asset quantity) {
     if (delegate_record->quantity == quantity) {
         index_table.erase(delegate_record);
     } else {
-        index_table.modify(delegate_record, from, [&](auto& item) {
+        index_table.modify(delegate_record, name(), [&](auto& item) {
             item.quantity -= quantity;
         });
     }
 
     return_delegation_table table_delegate_vesting(_self, _self.value);
-    table_delegate_vesting.emplace(from, [&](auto& item) {
+    table_delegate_vesting.emplace(delegator_signed ? from : to, [&](auto& item) {
         item.id = table_delegate_vesting.available_primary_key();
         item.delegator = from;
         item.quantity = quantity;
@@ -303,7 +304,7 @@ void vesting::undelegate(name from, name to, asset quantity) {
     account_table account_recipient(_self, to.value);
     auto balance = account_recipient.find(quantity.symbol.code().raw());
     eosio::check(balance != account_recipient.end(), "This token is not on the recipient balance sheet");   // TODO: test #744
-    account_recipient.modify(balance, from, [&](auto& item) {
+    account_recipient.modify(balance, name(), [&](auto& item) {
         item.received -= quantity;
         send_account_event(to, item);
     });

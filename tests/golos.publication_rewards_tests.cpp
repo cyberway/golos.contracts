@@ -102,7 +102,7 @@ public:
         create_accounts({_forum_name, _issuer, cfg::vesting_name, cfg::token_name, cfg::control_name, cfg::charge_name, _stranger, cfg::publish_name});
         create_accounts(_users);
         produce_blocks(2);
-
+        install_contract(config::msig_account_name, contracts::msig_wasm(), contracts::msig_abi());
         install_contract(cfg::token_name, contracts::token_wasm(), contracts::token_abi());
         vest.add_changevest_auth_to_issuer(_issuer, cfg::control_name);
         vest.initialize_contract(cfg::token_name);
@@ -1100,12 +1100,11 @@ BOOST_FIXTURE_TEST_CASE(golos_delegators_test, reward_calcs_tester) try {
     const uint64_t delegation_min_amount = 5e6;
     const uint64_t delegation_min_remainder = 5e3;
     const uint32_t delegation_min_time = 0;
-    const uint16_t delegation_max_interest = cfg::_100percent;
     const uint32_t delegation_return_time = 120;
 
     auto vesting_withdraw = vest.withdraw_param(withdraw_intervals, withdraw_interval_seconds);
     auto vesting_amount = vest.amount_param(vesting_min_amount);
-    auto delegation = vest.delegation_param(delegation_min_amount, delegation_min_remainder, delegation_min_time, delegation_max_interest, delegation_return_time);
+    auto delegation = vest.delegation_param(delegation_min_amount, delegation_min_remainder, delegation_min_time, delegation_return_time);
 
     auto params = "[" + vesting_withdraw + "," + vesting_amount + "," + delegation + "]";
     BOOST_CHECK_EQUAL(success(), vest.set_params(_issuer, _token_symbol, params));
@@ -1330,13 +1329,14 @@ BOOST_FIXTURE_TEST_CASE(a_lot_of_delegators_test, reward_calcs_tester) try {
         [](double x){ return x; }, golos_curation::func, [](double x){ return 1.0; }));
     check();
 
-    auto params = "[" + vest.withdraw_param(1, 12) + "," + vest.amount_param(0) + "," + vest.delegation_param(vest_amount, 1, 0, cfg::_100percent, 120) + "]";
+    auto params = "[" + vest.withdraw_param(1, 12) + "," + vest.amount_param(0) + "," + vest.delegation_param(vest_amount, 1, 0, 120) + "]";
     BOOST_CHECK_EQUAL(success(), vest.set_params(_issuer, _token_symbol, params));
 
     BOOST_TEST_MESSAGE("--- add_funds_to_forum");
     BOOST_CHECK_EQUAL(success(), add_funds_to_forum(50000));
     
     for (size_t i = voters_num; i < total_users_num; i++) {
+        produce_block();
         BOOST_CHECK_EQUAL(success(), delegate_vest(_users[i], _users[i % voters_num], asset(vest_amount, vest._symbol), cfg::_100percent));
     }
     check();
