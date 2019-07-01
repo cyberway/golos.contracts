@@ -18,7 +18,7 @@ using namespace eosio;
 class charge : public contract {
     fixp_t consume_charge(name issuer, name user, symbol_code token_code, uint8_t charge_id, int64_t price, int64_t cutoff = -1, int64_t vesting_price = -1);
     static inline fixp_t to_fixp(int64_t arg)   { return fp_cast<fixp_t>(arg); }
-    static inline int64_t from_fixp(fixp_t arg) { return fp_cast<int64_t>( fp_cast<int64_t>(arg) , false ); }
+    static inline int64_t from_fixp(fixp_t arg) { return fp_cast<int64_t>( arg, false ); }
 
 public:
     using contract::contract;    
