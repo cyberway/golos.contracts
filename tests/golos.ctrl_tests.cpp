@@ -109,6 +109,7 @@ public:
         const string no_account         = amsg("user not found");
         const string auth_period0       = amsg("update auth period can't be 0");
         const string assert_erase_wtnss = amsg("not possible to remove witness as there are votes");
+        const string not_valid_ctrl_params = amsg("not valid ctrl params");
     } err;
 
     // prepare
@@ -154,6 +155,7 @@ public:
         };
         for (const auto& p : amounts) {
             BOOST_CHECK_EQUAL(success(), vest.open(p.first, _token, p.first));
+            BOOST_CHECK_EQUAL(success(), token.open(p.first, _token, p.first));
             BOOST_CHECK_EQUAL(success(), token.issue(_issuer, p.first, dasset(p.second), "issue"));
             BOOST_CHECK_EQUAL(success(), token.transfer(p.first, cfg::vesting_name, dasset(p.second), "buy vesting"));
         };
@@ -457,6 +459,54 @@ BOOST_FIXTURE_TEST_CASE(update_auths, golos_ctrl_tester) try {
     top_witnesses = ctrl.get_msig_auths();
     BOOST_CHECK(top_witnesses["witnesses"].as<std::vector<name>>().size() == wtns.size());
 } FC_LOG_AND_RETHROW()
+
+BOOST_FIXTURE_TEST_CASE(payments_top_witness, golos_ctrl_tester) try {
+    prepare_balances();
+    BOOST_CHECK_EQUAL(success(), token.open(cfg::control_name, _token, cfg::control_name));
+    BOOST_CHECK_EQUAL(success(), token.issue(_issuer, _issuer, dasset(10000), "on emission"));
+
+    BOOST_CHECK_EQUAL(err.not_valid_ctrl_params, token.transfer(_issuer, cfg::control_name, dasset(10000), "emission"));
+
+    BOOST_CHECK_EQUAL(success(), token.create(_issuer, asset(100500, symbol(4, "GOLOS"))));
+    BOOST_CHECK_EQUAL(success(), token.issue(_issuer, _issuer, asset(100000, symbol(4, "GOLOS")), "issue"));
+    BOOST_CHECK_EQUAL(success(), token.open(cfg::control_name, symbol(4, "GOLOS"), cfg::control_name));
+
+    BOOST_CHECK_EQUAL(success(), ctrl.set_params(_test_params));
+    produce_block();
+    ctrl.prepare_multisig(BLOG);
+    produce_block();
+
+    BOOST_CHECK_EQUAL(err.not_valid_ctrl_params, token.transfer(_issuer, cfg::control_name, asset(1000, symbol(4, "GOLOS")), "emission"));
+    BOOST_CHECK_EQUAL(success(), token.transfer(_issuer, cfg::control_name, dasset(1000), "emission"));
+    BOOST_CHECK_EQUAL(token.get_account(cfg::control_name)["balance"].as<asset>(), token.make_asset(1000));
+
+    for (int i = 0; i < _n_w; i++)
+        BOOST_CHECK_EQUAL(success(), ctrl.reg_witness(_w[i], "localhost"));
+    produce_block();
+
+    vector<std::pair<name,name>> votes = {
+        {_alice, _w[0]}, {_alice, _w[1]}, {_alice, _w[2]}, {_alice, _w[3]},
+        {_bob, _w[0]}, {_w[0], _w[0]}
+    };
+    for (const auto& v : votes)
+        BOOST_CHECK_EQUAL(success(), ctrl.vote_witness(v.first, v.second));
+    produce_block();
+
+    BOOST_CHECK_EQUAL(success(), token.transfer(_issuer, cfg::control_name, dasset(1000), "emission"));
+    BOOST_CHECK_EQUAL(token.get_account(cfg::control_name)["balance"].as<asset>(), token.make_asset(1000));
+
+    BOOST_CHECK_EQUAL(token.get_account(_w[0])["payments"].as<asset>(), token.make_asset(500));
+    BOOST_CHECK_EQUAL(token.get_account(_w[1])["payments"].as<asset>(), token.make_asset(500));
+    BOOST_CHECK_EQUAL(token.get_account(_w[2])["payments"].as<asset>(), token.make_asset(0));
+    BOOST_CHECK_EQUAL(token.get_account(_w[3])["payments"].as<asset>(), token.make_asset(0));
+    BOOST_CHECK_EQUAL(token.get_account(_w[4])["payments"].as<asset>(), token.make_asset(0));
+
+    // need tapos_block_prefix to choose a winner
+    BOOST_CHECK_EQUAL(success(), token.transfer(_issuer, cfg::control_name, dasset(3.333), "emission"));
+    BOOST_CHECK_EQUAL(token.get_account(_w[0])["payments"].as<asset>(), token.make_asset(501.666));
+    BOOST_CHECK_EQUAL(token.get_account(_w[1])["payments"].as<asset>(), token.make_asset(501.667));
+} FC_LOG_AND_RETHROW()
+
 
 
 BOOST_AUTO_TEST_SUITE_END()

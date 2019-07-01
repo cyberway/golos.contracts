@@ -96,8 +96,7 @@ void control::setparams(vector<ctrl_param> params) {
 }
 
 void control::on_transfer(name from, name to, asset quantity, string memo) {
-    if (!_cfg.exists() || quantity.symbol.code() != props().token.code)
-        return; // distribute only community token
+    eosio::check(_cfg.exists() && quantity.symbol.code() == props().token.code, "not valid ctrl params");
 
     if (to == _self && quantity.amount > 0) {
         // Don't check `from` for now, just distribute to top witnesses
