@@ -853,7 +853,8 @@
         {"name": "message_id", "type": "mssgid"},
         {"name": "author_reward", "type": "asset"},
         {"name": "benefactor_reward", "type": "asset"},
-        {"name": "curator_reward", "type": "asset"}
+        {"name": "curator_reward", "type": "asset"},
+        {"name": "unclaimed_reward", "type": "asset"}
     ]
   }
   ],

@@ -185,6 +185,7 @@ struct post_reward_event {
     asset author_reward;
     asset benefactor_reward;
     asset curator_reward;
+    asset unclaimed_reward;
 };
 
 struct limitparams {
