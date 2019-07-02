@@ -106,9 +106,17 @@ struct golos_vesting_api: base_contract_api {
             ("quantity", quantity) 
             ("interest_rate", 0) 
         );
-    } 
-
+    }
+    
     action_result delegate(name from, name to, asset quantity, uint16_t interest_rate = 0) {
+        return push_msig(N(delegate), {{from, config::active_name}, {to, config::active_name}}, {from, to}, args()
+            ("from", from)
+            ("to", to)
+            ("quantity", quantity)
+            ("interest_rate", interest_rate));
+    }
+
+    action_result msig_delegate(name from, name to, asset quantity, uint16_t interest_rate = 0) {
         name proposal_name = to;
         auto pre_delegated = get_delegated(from, to);
         fc::variants auth;
