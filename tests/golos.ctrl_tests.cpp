@@ -461,11 +461,12 @@ BOOST_FIXTURE_TEST_CASE(update_auths, golos_ctrl_tester) try {
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE(payments_top_witness, golos_ctrl_tester) try {
-    BOOST_TEST_MESSAGE("--- check that payment is being sent top witness");
+    BOOST_TEST_MESSAGE("Check that payment is being sent top witness");
     prepare_balances();
     BOOST_CHECK_EQUAL(success(), token.open(cfg::control_name, _token, cfg::control_name));
     BOOST_CHECK_EQUAL(success(), token.issue(_issuer, _issuer, token.make_asset(10000), "on emission"));
 
+    BOOST_TEST_MESSAGE("--- transfer when control contract not configured (have no singleton");
     BOOST_CHECK_EQUAL(success(), token.transfer(_issuer, cfg::control_name, token.make_asset(1500), "emission"));
 
     BOOST_CHECK_EQUAL(success(), token.create(_issuer, asset(100500, symbol(4, "GOLOS"))));
@@ -477,7 +478,10 @@ BOOST_FIXTURE_TEST_CASE(payments_top_witness, golos_ctrl_tester) try {
     ctrl.prepare_multisig(BLOG);
     produce_block();
 
+    BOOST_TEST_MESSAGE("--- transfer of token, which have different symbol comparing with config");
     BOOST_CHECK_EQUAL(success(), token.transfer(_issuer, cfg::control_name, asset(1000, symbol(4, "GOLOS")), "emission"));
+
+    BOOST_TEST_MESSAGE("--- transfer when top is empty");
     BOOST_CHECK_EQUAL(success(), token.transfer(_issuer, cfg::control_name, token.make_asset(1000), "emission"));
     BOOST_CHECK_EQUAL(token.get_account(cfg::control_name)["balance"].as<asset>(), token.make_asset(2500));
 
@@ -493,6 +497,7 @@ BOOST_FIXTURE_TEST_CASE(payments_top_witness, golos_ctrl_tester) try {
         BOOST_CHECK_EQUAL(success(), ctrl.vote_witness(v.first, v.second));
     produce_block();
 
+    BOOST_TEST_MESSAGE("--- amount divides to number of recipients without remainder");
     BOOST_CHECK_EQUAL(success(), token.transfer(_issuer, cfg::control_name, token.make_asset(1000), "emission"));
     BOOST_CHECK_EQUAL(token.get_account(cfg::control_name)["balance"].as<asset>(), token.make_asset(2500));
 
@@ -503,11 +508,13 @@ BOOST_FIXTURE_TEST_CASE(payments_top_witness, golos_ctrl_tester) try {
     BOOST_CHECK_EQUAL(token.get_account(_w[4])["payments"].as<asset>(), token.make_asset(0));
     produce_block();
 
+    BOOST_TEST_MESSAGE("--- amount divides to number of recipients with remainder, 'winner' gets it");
     BOOST_CHECK_EQUAL(success(), token.transfer(_issuer, cfg::control_name, token.make_asset(3.333), "emission"));
     BOOST_CHECK_EQUAL(token.get_account(_w[0])["payments"].as<asset>(), token.make_asset(501.667));
     BOOST_CHECK_EQUAL(token.get_account(_w[1])["payments"].as<asset>(), token.make_asset(501.666));
     produce_block();
 
+    BOOST_TEST_MESSAGE("--- amount is less then number recipients, so everyone except winner get 0 and skipped");
     BOOST_CHECK_EQUAL(success(), token.transfer(_issuer, cfg::control_name, token.make_asset(0.001), "emission"));
     BOOST_CHECK_EQUAL(token.get_account(_w[0])["payments"].as<asset>(), token.make_asset(501.667));
     BOOST_CHECK_EQUAL(token.get_account(_w[1])["payments"].as<asset>(), token.make_asset(501.667));
