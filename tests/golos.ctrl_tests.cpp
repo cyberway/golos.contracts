@@ -109,7 +109,7 @@ public:
         const string no_account         = amsg("user not found");
         const string auth_period0       = amsg("update auth period can't be 0");
         const string assert_erase_wtnss = amsg("not possible to remove witness as there are votes");
-        const string not_valid_ctrl_params = amsg("not valid ctrl params");
+        const string transfer_to_self   = amsg("cannot transfer to self");
     } err;
 
     // prepare
@@ -473,7 +473,8 @@ BOOST_FIXTURE_TEST_CASE(payments_top_witness, golos_ctrl_tester) try {
     BOOST_CHECK_EQUAL(success(), token.issue(_issuer, _issuer, asset(100000, symbol(4, "GOLOS")), "issue"));
     BOOST_CHECK_EQUAL(success(), token.open(cfg::control_name, symbol(4, "GOLOS"), cfg::control_name));
 
-    BOOST_CHECK_EQUAL(success(), ctrl.set_params(_test_params));
+    auto test_params = ctrl.default_params(BLOG, _token, 3, _max_witness_votes, _update_auth_period);
+    BOOST_CHECK_EQUAL(success(), ctrl.set_params(test_params));
     produce_block();
     ctrl.prepare_multisig(BLOG);
     produce_block();
@@ -498,26 +499,32 @@ BOOST_FIXTURE_TEST_CASE(payments_top_witness, golos_ctrl_tester) try {
     produce_block();
 
     BOOST_TEST_MESSAGE("--- amount divides to number of recipients without remainder");
-    BOOST_CHECK_EQUAL(success(), token.transfer(_issuer, cfg::control_name, token.make_asset(1000), "emission"));
+    BOOST_CHECK_EQUAL(success(), token.transfer(_issuer, cfg::control_name, token.make_asset(900), "emission"));
     BOOST_CHECK_EQUAL(token.get_account(cfg::control_name)["balance"].as<asset>(), token.make_asset(2500));
 
-    BOOST_CHECK_EQUAL(token.get_account(_w[0])["payments"].as<asset>(), token.make_asset(500));
-    BOOST_CHECK_EQUAL(token.get_account(_w[1])["payments"].as<asset>(), token.make_asset(500));
-    BOOST_CHECK_EQUAL(token.get_account(_w[2])["payments"].as<asset>(), token.make_asset(0));
+    BOOST_TEST_MESSAGE("--- transfer when control contract is sender");
+    BOOST_CHECK_EQUAL(err.transfer_to_self, token.transfer(cfg::control_name, cfg::control_name, token.make_asset(900), "emission"));
+    BOOST_CHECK_EQUAL(token.get_account(cfg::control_name)["balance"].as<asset>(), token.make_asset(2500));
+
+    BOOST_CHECK_EQUAL(token.get_account(_w[0])["payments"].as<asset>(), token.make_asset(300));
+    BOOST_CHECK_EQUAL(token.get_account(_w[1])["payments"].as<asset>(), token.make_asset(300));
+    BOOST_CHECK_EQUAL(token.get_account(_w[2])["payments"].as<asset>(), token.make_asset(300));
     BOOST_CHECK_EQUAL(token.get_account(_w[3])["payments"].as<asset>(), token.make_asset(0));
     BOOST_CHECK_EQUAL(token.get_account(_w[4])["payments"].as<asset>(), token.make_asset(0));
     produce_block();
 
     BOOST_TEST_MESSAGE("--- amount divides to number of recipients with remainder, 'winner' gets it");
-    BOOST_CHECK_EQUAL(success(), token.transfer(_issuer, cfg::control_name, token.make_asset(3.333), "emission"));
-    BOOST_CHECK_EQUAL(token.get_account(_w[0])["payments"].as<asset>(), token.make_asset(501.667));
-    BOOST_CHECK_EQUAL(token.get_account(_w[1])["payments"].as<asset>(), token.make_asset(501.666));
+    BOOST_CHECK_EQUAL(success(), token.transfer(_issuer, cfg::control_name, token.make_asset(3.334), "emission"));
+    BOOST_CHECK_EQUAL(token.get_account(_w[0])["payments"].as<asset>(), token.make_asset(301.111));
+    BOOST_CHECK_EQUAL(token.get_account(_w[1])["payments"].as<asset>(), token.make_asset(301.111));
+    BOOST_CHECK_EQUAL(token.get_account(_w[2])["payments"].as<asset>(), token.make_asset(301.112));
     produce_block();
 
     BOOST_TEST_MESSAGE("--- amount is less then number recipients, so everyone except winner get 0 and skipped");
     BOOST_CHECK_EQUAL(success(), token.transfer(_issuer, cfg::control_name, token.make_asset(0.001), "emission"));
-    BOOST_CHECK_EQUAL(token.get_account(_w[0])["payments"].as<asset>(), token.make_asset(501.667));
-    BOOST_CHECK_EQUAL(token.get_account(_w[1])["payments"].as<asset>(), token.make_asset(501.667));
+    BOOST_CHECK_EQUAL(token.get_account(_w[0])["payments"].as<asset>(), token.make_asset(301.111));
+    BOOST_CHECK_EQUAL(token.get_account(_w[1])["payments"].as<asset>(), token.make_asset(301.111));
+    BOOST_CHECK_EQUAL(token.get_account(_w[2])["payments"].as<asset>(), token.make_asset(301.113));
 } FC_LOG_AND_RETHROW()
 
 
