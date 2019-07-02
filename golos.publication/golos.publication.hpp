@@ -32,7 +32,6 @@ public:
     void set_max_payout(structures::mssgid message_id, asset max_payout);
     void calcrwrdwt(name account, int64_t mssg_id, int64_t post_charge);
     void paymssgrwrd(structures::mssgid message_id);
-    void payto(std::vector<eosio::token::recipient> recipients, bool vesting_mode);
     void deletevotes(int64_t message_id, name author);
 private:
     const posting_state& params();
