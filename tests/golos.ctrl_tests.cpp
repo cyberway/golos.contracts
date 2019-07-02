@@ -109,7 +109,6 @@ public:
         const string no_account         = amsg("user not found");
         const string auth_period0       = amsg("update auth period can't be 0");
         const string assert_erase_wtnss = amsg("not possible to remove witness as there are votes");
-        const string transfer_to_self   = amsg("cannot transfer to self");
     } err;
 
     // prepare
@@ -473,7 +472,8 @@ BOOST_FIXTURE_TEST_CASE(payments_top_witness, golos_ctrl_tester) try {
     BOOST_CHECK_EQUAL(success(), token.issue(_issuer, _issuer, asset(100000, symbol(4, "GOLOS")), "issue"));
     BOOST_CHECK_EQUAL(success(), token.open(cfg::control_name, symbol(4, "GOLOS"), cfg::control_name));
 
-    auto test_params = ctrl.default_params(BLOG, _token, 3, _max_witness_votes, _update_auth_period);
+    const auto max_top_witness = 3;
+    auto test_params = ctrl.default_params(BLOG, _token, max_top_witness, _max_witness_votes, _update_auth_period);
     BOOST_CHECK_EQUAL(success(), ctrl.set_params(test_params));
     produce_block();
     ctrl.prepare_multisig(BLOG);
@@ -498,33 +498,52 @@ BOOST_FIXTURE_TEST_CASE(payments_top_witness, golos_ctrl_tester) try {
         BOOST_CHECK_EQUAL(success(), ctrl.vote_witness(v.first, v.second));
     produce_block();
 
+    auto top = witness_vect(max_top_witness);
+    auto check_lambda_payment = [&](double arg) {
+        map<name, asset> map_top;
+        for (auto witness : top)
+            map_top.insert(std::pair<name, asset>( witness, token.get_account(witness)["payments"].as<asset>() ));
+
+        BOOST_CHECK_EQUAL(success(), token.transfer(_issuer, cfg::control_name, token.make_asset(arg), "emission"));
+
+        for (auto witness : top) {
+            auto asset_witness_after_payment = token.get_account(witness)["payments"].as<asset>();
+
+            bool status_winner = true;
+            double remainder = double(int(arg * pow(10, asset_witness_after_payment.decimals())) % max_top_witness) / pow(10, asset_witness_after_payment.decimals());
+            auto payment = (arg - remainder) / max_top_witness;
+            auto asset_witness_before_payment = map_top.at(witness) + token.make_asset(payment);
+
+            if ( asset_witness_after_payment == asset_witness_before_payment )
+                BOOST_CHECK_EQUAL(asset_witness_after_payment, asset_witness_before_payment);
+            else if (( asset_witness_after_payment == asset_witness_before_payment + token.make_asset(remainder) ) && status_winner ) {
+                status_winner = false;
+                BOOST_CHECK_EQUAL(asset_witness_after_payment, asset_witness_before_payment + token.make_asset(remainder));
+            } else
+                BOOST_CHECK_MESSAGE(false, "Error payments top witness");
+        }
+    };
+
     BOOST_TEST_MESSAGE("--- amount divides to number of recipients without remainder");
-    BOOST_CHECK_EQUAL(success(), token.transfer(_issuer, cfg::control_name, token.make_asset(900), "emission"));
+    check_lambda_payment(900);
     BOOST_CHECK_EQUAL(token.get_account(cfg::control_name)["balance"].as<asset>(), token.make_asset(2500));
 
     BOOST_TEST_MESSAGE("--- transfer when control contract is sender");
-    BOOST_CHECK_EQUAL(err.transfer_to_self, token.transfer(cfg::control_name, cfg::control_name, token.make_asset(900), "emission"));
-    BOOST_CHECK_EQUAL(token.get_account(cfg::control_name)["balance"].as<asset>(), token.make_asset(2500));
+    BOOST_CHECK_EQUAL(success(), token.transfer(cfg::control_name, _issuer, token.make_asset(500), ""));
+    BOOST_CHECK_EQUAL(token.get_account(cfg::control_name)["balance"].as<asset>(), token.make_asset(2000));
 
-    BOOST_CHECK_EQUAL(token.get_account(_w[0])["payments"].as<asset>(), token.make_asset(300));
-    BOOST_CHECK_EQUAL(token.get_account(_w[1])["payments"].as<asset>(), token.make_asset(300));
-    BOOST_CHECK_EQUAL(token.get_account(_w[2])["payments"].as<asset>(), token.make_asset(300));
-    BOOST_CHECK_EQUAL(token.get_account(_w[3])["payments"].as<asset>(), token.make_asset(0));
-    BOOST_CHECK_EQUAL(token.get_account(_w[4])["payments"].as<asset>(), token.make_asset(0));
+    for (auto witness : top)
+        BOOST_CHECK_EQUAL(token.get_account(witness)["payments"].as<asset>(), token.make_asset(300));
     produce_block();
 
     BOOST_TEST_MESSAGE("--- amount divides to number of recipients with remainder, 'winner' gets it");
-    BOOST_CHECK_EQUAL(success(), token.transfer(_issuer, cfg::control_name, token.make_asset(3.334), "emission"));
-    BOOST_CHECK_EQUAL(token.get_account(_w[0])["payments"].as<asset>(), token.make_asset(301.111));
-    BOOST_CHECK_EQUAL(token.get_account(_w[1])["payments"].as<asset>(), token.make_asset(301.111));
-    BOOST_CHECK_EQUAL(token.get_account(_w[2])["payments"].as<asset>(), token.make_asset(301.112));
+    check_lambda_payment(3.334);
     produce_block();
 
     BOOST_TEST_MESSAGE("--- amount is less then number recipients, so everyone except winner get 0 and skipped");
-    BOOST_CHECK_EQUAL(success(), token.transfer(_issuer, cfg::control_name, token.make_asset(0.001), "emission"));
-    BOOST_CHECK_EQUAL(token.get_account(_w[0])["payments"].as<asset>(), token.make_asset(301.111));
-    BOOST_CHECK_EQUAL(token.get_account(_w[1])["payments"].as<asset>(), token.make_asset(301.111));
-    BOOST_CHECK_EQUAL(token.get_account(_w[2])["payments"].as<asset>(), token.make_asset(301.113));
+    check_lambda_payment(0.001);
+    produce_block();
+
 } FC_LOG_AND_RETHROW()
 
 
