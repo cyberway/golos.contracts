@@ -466,7 +466,7 @@ BOOST_FIXTURE_TEST_CASE(payments_top_witness, golos_ctrl_tester) try {
     BOOST_CHECK_EQUAL(success(), token.open(cfg::control_name, _token, cfg::control_name));
     BOOST_CHECK_EQUAL(success(), token.issue(_issuer, _issuer, token.make_asset(10000), "on emission"));
 
-    BOOST_CHECK_EQUAL(err.not_valid_ctrl_params, token.transfer(_issuer, cfg::control_name, token.make_asset(10000), "emission"));
+    BOOST_CHECK_EQUAL(success(), token.transfer(_issuer, cfg::control_name, token.make_asset(1500), "emission"));
 
     BOOST_CHECK_EQUAL(success(), token.create(_issuer, asset(100500, symbol(4, "GOLOS"))));
     BOOST_CHECK_EQUAL(success(), token.issue(_issuer, _issuer, asset(100000, symbol(4, "GOLOS")), "issue"));
@@ -477,9 +477,9 @@ BOOST_FIXTURE_TEST_CASE(payments_top_witness, golos_ctrl_tester) try {
     ctrl.prepare_multisig(BLOG);
     produce_block();
 
-    BOOST_CHECK_EQUAL(err.not_valid_ctrl_params, token.transfer(_issuer, cfg::control_name, asset(1000, symbol(4, "GOLOS")), "emission"));
+    BOOST_CHECK_EQUAL(success(), token.transfer(_issuer, cfg::control_name, asset(1000, symbol(4, "GOLOS")), "emission"));
     BOOST_CHECK_EQUAL(success(), token.transfer(_issuer, cfg::control_name, token.make_asset(1000), "emission"));
-    BOOST_CHECK_EQUAL(token.get_account(cfg::control_name)["balance"].as<asset>(), token.make_asset(1000));
+    BOOST_CHECK_EQUAL(token.get_account(cfg::control_name)["balance"].as<asset>(), token.make_asset(2500));
 
     for (int i = 0; i < _n_w; i++)
         BOOST_CHECK_EQUAL(success(), ctrl.reg_witness(_w[i], "localhost"));
@@ -494,17 +494,18 @@ BOOST_FIXTURE_TEST_CASE(payments_top_witness, golos_ctrl_tester) try {
     produce_block();
 
     BOOST_CHECK_EQUAL(success(), token.transfer(_issuer, cfg::control_name, token.make_asset(1000), "emission"));
-    BOOST_CHECK_EQUAL(token.get_account(cfg::control_name)["balance"].as<asset>(), token.make_asset(1000));
+    BOOST_CHECK_EQUAL(token.get_account(cfg::control_name)["balance"].as<asset>(), token.make_asset(2500));
 
     BOOST_CHECK_EQUAL(token.get_account(_w[0])["payments"].as<asset>(), token.make_asset(500));
     BOOST_CHECK_EQUAL(token.get_account(_w[1])["payments"].as<asset>(), token.make_asset(500));
     BOOST_CHECK_EQUAL(token.get_account(_w[2])["payments"].as<asset>(), token.make_asset(0));
     BOOST_CHECK_EQUAL(token.get_account(_w[3])["payments"].as<asset>(), token.make_asset(0));
     BOOST_CHECK_EQUAL(token.get_account(_w[4])["payments"].as<asset>(), token.make_asset(0));
+    produce_block();
 
     BOOST_CHECK_EQUAL(success(), token.transfer(_issuer, cfg::control_name, token.make_asset(3.333), "emission"));
-    BOOST_CHECK_EQUAL(token.get_account(_w[0])["payments"].as<asset>(), token.make_asset(501.666));
-    BOOST_CHECK_EQUAL(token.get_account(_w[1])["payments"].as<asset>(), token.make_asset(501.667));
+    BOOST_CHECK_EQUAL(token.get_account(_w[0])["payments"].as<asset>(), token.make_asset(501.667));
+    BOOST_CHECK_EQUAL(token.get_account(_w[1])["payments"].as<asset>(), token.make_asset(501.666));
     produce_block();
 
     BOOST_CHECK_EQUAL(success(), token.transfer(_issuer, cfg::control_name, token.make_asset(0.001), "emission"));
