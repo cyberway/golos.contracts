@@ -650,7 +650,7 @@ void publication::set_vote(name voter, const structures::mssgid& message_id, int
 
     auto get_calc_sharesfn = [&](auto mainfunc_code, auto netshares, auto mainfunc_maxarg) {
         atmsp::machine<fixp_t> machine;
-        return set_and_run(machine, mainfunc_code, {netshares}, {{fixp_t(0), mainfunc_maxarg}}).data();
+        return set_and_run(machine, mainfunc_code, {netshares}, {{fixp_t(0), mainfunc_maxarg}});
     };
 
     const auto& max_vote_changes_param = params().max_vote_changes_param;
@@ -930,7 +930,7 @@ void publication::send_poststate_event(
         fixp_t sharesfn) 
 {
     structures::post_event data{ author, permlink.value, post.state.netshares, post.state.voteshares,
-        post.state.sumcuratorsw, static_cast<base_t>(sharesfn) };
+        post.state.sumcuratorsw, sharesfn.data() };
     eosio::event(_self, "poststate"_n, data).send();
 }
 
