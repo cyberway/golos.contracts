@@ -195,8 +195,7 @@
           {"name":"min_amount",     "type":"uint64"},
           {"name":"min_remainder",  "type":"uint64"},
           {"name":"return_time",    "type":"uint32"},
-          {"name":"min_time",       "type":"uint32"},
-          {"name":"max_interest",   "type":"uint16"}
+          {"name":"min_time",       "type":"uint32"}
        ]
     }
   ],

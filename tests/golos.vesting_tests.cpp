@@ -35,8 +35,8 @@ public:
         create_accounts({N(sania), N(pasha), N(tania), N(vania), N(notify.acc),
             _code, cfg::token_name, cfg::control_name, cfg::emission_name, cfg::publish_name, cfg::charge_name});
         produce_blocks(2);
-
         install_contract(cfg::token_name, contracts::token_wasm(), contracts::token_abi());
+        install_contract(config::msig_account_name, contracts::msig_wasm(), contracts::msig_abi());
         vest.add_changevest_auth_to_issuer(_issuer, cfg::control_name);
         vest.initialize_contract(cfg::token_name);
         charge.initialize_contract();
@@ -65,8 +65,7 @@ public:
             withdraw_seconds = withdraw_interval_seconds;
         auto vesting_withdraw = vest.withdraw_param(withdraw_intervals, withdraw_seconds);
         auto vesting_amount = vest.amount_param(vesting_min_amount);
-        auto delegation = vest.delegation_param(delegation_min_amount, delegation_min_remainder, delegation_min_time,
-            delegation_max_interest, delegation_return_time);
+        auto delegation = vest.delegation_param(delegation_min_amount, delegation_min_remainder, delegation_min_time, delegation_return_time);
 
         auto params = "[" + vesting_withdraw + "," + vesting_amount + "," + delegation + "]";
         BOOST_CHECK_EQUAL(success(), vest.set_params(_issuer, _vesting_sym, params));
@@ -77,12 +76,8 @@ protected:
     struct errors: contract_error_messages {
         const string key_not_found    = amsg("unable to find key");
         const string not_issuer       = amsg("Only token issuer can create it");    // TODO: test #744
-        const string self_delegate    = amsg("You can not delegate to yourself");
         const string tokens_lt0       = amsg("the number of tokens should not be less than 0");
-        const string interest_to_high = amsg("Exceeded the percentage of delegated vesting");
         const string tokens_frozen    = amsg("Tokens are frozen until the end of the period");
-        const string delegation_no_funds      = amsg("Insufficient funds for delegation");
-        const string delegation_no_funds2     = amsg("insufficient funds for delegation");      // TODO: fix… #551
         const string undelegation_no_funds    = amsg("Insufficient funds for undelegation");
         const string not_enough_delegation    = amsg("There are not enough delegated tools for output");
         const string delegated_withdraw       = amsg("delegated vesting withdrawn");
@@ -101,7 +96,6 @@ protected:
 
         const string delegation_min_amount     = amsg("delegation min_amount <= 0");
         const string delegation_min_remainder  = amsg("delegation min_remainder <= 0");
-        const string delegation_max_interest   = amsg("delegation max_interest > 10000");
         const string delegation_return_time    = amsg("delegation return_time <= 0");
 
         const string retire_le0         = amsg("must retire positive quantity");
@@ -111,10 +105,17 @@ protected:
         const string retire_gt_balance  = amsg("overdrawn unlocked balance");
         const string retire_no_account  = amsg("no balance object found");
 
-        const string cutoff = amsg("can't delegate, not enough power");
         const string not_found_token_vesting = amsg("not found token vesting");
         const string mismatch_of_accuracy = amsg("mismatch of accuracy of vesting");
         const string owner_not_exists = amsg("owner account does not exist");
+        
+        const string unsuccessful_delegation = amsg("unsuccessful delegation");
+        const string self_delegate           = amsg("You can not delegate to yourself");
+        const string interest_to_high        = amsg("interest_rate cannot be greater than 100% (10000)"); 
+        const string delegation_no_funds     = amsg("Insufficient funds for delegation");
+        const string cutoff                  = amsg("can't delegate, not enough power"); 
+        
+        string missing_auth(name arg) { return "missing authority of " + arg.to_string(); };
     } err;
 
     const name _issuer = cfg::emission_name;
@@ -124,7 +125,6 @@ protected:
     const uint64_t delegation_min_amount = 5e6;
     const uint64_t delegation_min_remainder = 15e6;
     const uint32_t delegation_min_time = 0;
-    const uint16_t delegation_max_interest = 0;
     const uint32_t delegation_return_time = 120;
 };
 
@@ -174,7 +174,6 @@ BOOST_FIXTURE_TEST_CASE(set_params, golos_vesting_tester) try {
     BOOST_TEST_CHECK(obj_params["delegation"]["min_amount"] == delegation_min_amount);
     BOOST_TEST_CHECK(obj_params["delegation"]["min_remainder"] == delegation_min_remainder);
     BOOST_TEST_CHECK(obj_params["delegation"]["min_time"] == delegation_min_time);
-    BOOST_TEST_CHECK(obj_params["delegation"]["max_interest"] == delegation_max_interest);
     BOOST_TEST_CHECK(obj_params["delegation"]["return_time"] == delegation_return_time);
 
     auto params = "[" + vest.withdraw_param(0, withdraw_interval_seconds) + "]";
@@ -183,16 +182,13 @@ BOOST_FIXTURE_TEST_CASE(set_params, golos_vesting_tester) try {
     params = "[" + vest.withdraw_param(withdraw_intervals, 0) + "]";
     BOOST_CHECK_EQUAL(err.withdraw_interval_seconds, vest.set_params(_issuer, _vesting_sym, params));
 
-    params = "[" + vest.delegation_param(0, delegation_min_remainder, delegation_min_time, delegation_max_interest, delegation_return_time) + "]";
+    params = "[" + vest.delegation_param(0, delegation_min_remainder, delegation_min_time, delegation_return_time) + "]";
     BOOST_CHECK_EQUAL(err.delegation_min_amount, vest.set_params(_issuer, _vesting_sym, params));
 
-    params = "[" + vest.delegation_param(delegation_min_amount, 0, delegation_min_time, delegation_max_interest, delegation_return_time) + "]";
+    params = "[" + vest.delegation_param(delegation_min_amount, 0, delegation_min_time, delegation_return_time) + "]";
     BOOST_CHECK_EQUAL(err.delegation_min_remainder, vest.set_params(_issuer, _vesting_sym, params));
 
-    params = "[" + vest.delegation_param(delegation_min_amount, delegation_min_remainder, delegation_min_time, 10001, delegation_return_time) + "]";
-    BOOST_CHECK_EQUAL(err.delegation_max_interest, vest.set_params(_issuer, _vesting_sym, params));
-
-    params = "[" + vest.delegation_param(delegation_min_amount, delegation_min_remainder, delegation_min_time, delegation_max_interest, 0) + "]";
+    params = "[" + vest.delegation_param(delegation_min_amount, delegation_min_remainder, delegation_min_time, 0) + "]";
     BOOST_CHECK_EQUAL(err.delegation_return_time, vest.set_params(_issuer, _vesting_sym, params));
 
 
@@ -546,6 +542,7 @@ BOOST_FIXTURE_TEST_CASE(delegate, golos_vesting_tester) try {
 
     prepare_balances();
     init_params();
+    BOOST_CHECK_EQUAL(success(), charge.set_restorer(_issuer, 0, "t", 42, 42, 42));
     const int divider = vest.make_asset(1).get_amount();
     const auto min_fract = 1. / divider;
     const int min_remainder = delegation_min_remainder / divider;
@@ -553,31 +550,35 @@ BOOST_FIXTURE_TEST_CASE(delegate, golos_vesting_tester) try {
     const auto charge_prop = 0.7;
 
     BOOST_TEST_MESSAGE("--- fail when delegate to self");
-    BOOST_CHECK_EQUAL(err.self_delegate, vest.delegate(N(sania), N(sania), amount));
+    BOOST_CHECK_EQUAL(err.unsuccessful_delegation, vest.msig_delegate(N(sania), N(sania), amount));
 
     BOOST_TEST_MESSAGE("--- fail on bad interest rate");
-    BOOST_CHECK_EQUAL(err.interest_to_high, vest.delegate(N(sania), N(pasha), amount, 50*cfg::_1percent)); // TODO: test boundaries #744
+    BOOST_CHECK_EQUAL(err.interest_to_high, vest.delegate(N(sania), N(pasha), amount, 10001)); // TODO: test boundaries #744
 
     BOOST_TEST_MESSAGE("--- fail when delegate 0 or less than min_remainder");
     BOOST_CHECK_EQUAL(err.tokens_lt0, vest.delegate(N(sania), N(pasha), vest.make_asset(0)));
     BOOST_CHECK_EQUAL(err.delegation_no_funds, vest.delegate(N(sania), N(pasha), vest.make_asset(min_fract)));
-    BOOST_CHECK_EQUAL(err.delegated_withdraw, vest.delegate(N(sania), N(pasha), vest.make_asset(min_remainder - min_fract)));   //TODO: error must be same #744
+    BOOST_CHECK_EQUAL(err.delegated_withdraw, vest.delegate(N(sania), N(pasha), vest.make_asset(min_remainder - min_fract)));
 
     BOOST_TEST_MESSAGE("--- insufficient funds assert");
-    BOOST_CHECK_EQUAL(err.delegation_no_funds2, vest.delegate(N(sania), N(pasha), vest.make_asset(10000)));
+    BOOST_CHECK_EQUAL(err.delegation_no_funds, vest.delegate(N(sania), N(pasha), vest.make_asset(10000)));
+    
+    BOOST_TEST_MESSAGE("--- fail when not enough signatures");
+    BOOST_CHECK_EQUAL(err.missing_auth(N(sania)), vest.delegate_unauthorized(N(sania), N(pasha), amount, false));
+    BOOST_CHECK_EQUAL(err.missing_auth(N(pasha)), vest.delegate_unauthorized(N(sania), N(pasha), amount, true));
 
     BOOST_TEST_MESSAGE("--- fail when delegate more than scheduled to withdraw");
-    BOOST_CHECK_EQUAL(success(), vest.delegate(N(sania), N(pasha), amount, 0));
-    BOOST_CHECK_EQUAL(success(), vest.delegate(N(sania), N(tania), amount, 0));
+    BOOST_CHECK_EQUAL(success(), vest.msig_delegate(N(sania), N(pasha), amount, 0));
+    BOOST_CHECK_EQUAL(success(), vest.msig_delegate(N(sania), N(tania), amount, 0));
     BOOST_CHECK_EQUAL(success(), vest.withdraw(N(sania), N(sania), vest.make_asset(100-3*min_remainder)));
-    BOOST_CHECK_EQUAL(err.delegation_no_funds2, vest.delegate(N(sania), N(vania), vest.make_asset(min_remainder+1)));
+    BOOST_CHECK_EQUAL(err.delegation_no_funds, vest.delegate(N(sania), N(vania), vest.make_asset(min_remainder+1)));
     BOOST_TEST_MESSAGE("--- succeed when withdraval counted");
-    BOOST_CHECK_EQUAL(success(), vest.delegate(N(sania), N(vania), amount));
+    BOOST_CHECK_EQUAL(success(), vest.msig_delegate(N(sania), N(vania), amount));
 
     BOOST_TEST_MESSAGE("--- charge limit test");
     BOOST_CHECK_EQUAL(success(), charge.use(_issuer, N(pasha), 0, charge_prop * cfg::_100percent, cfg::_100percent));
     BOOST_CHECK_EQUAL(err.cutoff, vest.delegate(N(pasha), N(vania), vest.make_asset(default_vesting_amount * (1.01 - charge_prop))));
-    BOOST_CHECK_EQUAL(success(), vest.delegate(N(pasha), N(vania), vest.make_asset(default_vesting_amount * (1.0 - charge_prop))));
+    BOOST_CHECK_EQUAL(success(), vest.msig_delegate(N(pasha), N(vania), vest.make_asset(default_vesting_amount * (1.0 - charge_prop))));
 
 //    // BOOST_CHECK_EQUAL(success(), vest.delegate(N(sania), N(issuer), amount));    // TODO: fix: sending to issuer instead of vania fails #744
 //    // TODO: check delegation to account without balance #744
@@ -638,7 +639,7 @@ BOOST_FIXTURE_TEST_CASE(undelegate, golos_vesting_tester) try {
     CHECK_MATCHING_OBJECT(vest.get_balance(N(pasha)), vest.make_balance(100, 0, amount - min_step));
 
     BOOST_TEST_MESSAGE("--- check full undelegation");
-    BOOST_CHECK_EQUAL(success(), vest.undelegate(N(sania), N(pasha), vest.make_asset(amount - min_step)));
+    BOOST_CHECK_EQUAL(success(), vest.undelegate(N(sania), N(pasha), vest.make_asset(amount - min_step), true));
     CHECK_MATCHING_OBJECT(vest.get_balance(N(sania)), vest.make_balance(100, amount - min_step));
     CHECK_MATCHING_OBJECT(vest.get_balance(N(pasha)), vest.make_balance(100, 0, 0));
     produce_blocks(golos::seconds_to_blocks(delegation_return_time) + 1);

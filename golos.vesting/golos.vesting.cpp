@@ -67,7 +67,7 @@ void vesting::on_transfer(name from, name to, asset quantity, std::string memo) 
 
     // balance already increased by quantity value at this point so use -quantity to correct it to get the right price
     asset converted = token_to_vesting(quantity, *vesting, -quantity.amount);
-    table_vesting.modify(vesting, name(), [&](auto& item) {
+    table_vesting.modify(vesting, same_payer, [&](auto& item) {
         item.supply += converted;
         send_stat_event(item);
     });
@@ -110,7 +110,7 @@ void vesting::on_bulk_transfer(name from, std::vector<token::recipient> recipien
         do_transfer_vesting(from, recipient_obj.to, quantity_recipient, recipient_obj.memo);
     }
 
-    table_vesting.modify(vesting, name(), [&](auto& item) {
+    table_vesting.modify(vesting, same_payer, [&](auto& item) {
         item.supply += sum_quantity_recipient;
         send_stat_event(item);
     });
@@ -129,7 +129,7 @@ void vesting::retire(asset quantity, name user) {
     eosio::check(quantity.amount <= vesting->supply.amount, "invalid amount");
 
     sub_balance(user, quantity, true);
-    table_vesting.modify(vesting, name(), [&](auto& item) {
+    table_vesting.modify(vesting, same_payer, [&](auto& item) {
         item.supply -= quantity;
         send_stat_event(item);
     });
@@ -198,13 +198,14 @@ void vesting::unlocklimit(name owner, asset quantity) {
     const auto& b = accounts.get(sym.code().raw(), "no balance object found");
     eosio::check(b.unlocked_limit.symbol == sym, "symbol precision mismatch");  // TODO: test #744
 
-    accounts.modify(b, name(), [&](auto& item) {
+    accounts.modify(b, same_payer, [&](auto& item) {
         item.unlocked_limit = quantity;
     });
 }
 
 void vesting::delegate(name from, name to, asset quantity, uint16_t interest_rate) {
     require_auth(from);
+    require_auth(to);
 
     vesting_params_singleton cfg(_self, quantity.symbol.code().raw());
     eosio::check(cfg.exists(), "not found vesting params");
@@ -216,8 +217,7 @@ void vesting::delegate(name from, name to, asset quantity, uint16_t interest_rat
     eosio::check(from != to, "You can not delegate to yourself");
     eosio::check(quantity.amount > 0, "the number of tokens should not be less than 0");
     eosio::check(quantity.amount >= min_amount, "Insufficient funds for delegation");
-    eosio::check(interest_rate <= delegation_params.max_interest, "Exceeded the percentage of delegated vesting");
-
+    eosio::check(interest_rate <= config::_100percent, "interest_rate cannot be greater than 100% (10000)");
     auto token_code = quantity.symbol.code();
     auto sname = token_code.raw();
     account_table account_sender(_self, from.value);
@@ -226,7 +226,7 @@ void vesting::delegate(name from, name to, asset quantity, uint16_t interest_rat
     auto avail_balance = balance_sender->vesting - get_withdrawing_vesting(_self, from, quantity.symbol);
 
     auto deleg_after = quantity + balance_sender->delegated;
-    eosio::check(avail_balance >= deleg_after, "insufficient funds for delegation");
+    eosio::check(avail_balance >= deleg_after, "Insufficient funds for delegation");
     // avail_balance is guaranteed to be > 0 at this point
     int64_t deleg_prop = static_cast<int128_t>(deleg_after.amount) * config::_100percent / avail_balance.amount;
     eosio::check(charge::get_current_value(config::charge_name, from, token_code) <= config::_100percent - deleg_prop,
@@ -241,8 +241,7 @@ void vesting::delegate(name from, name to, asset quantity, uint16_t interest_rat
     auto index_table = table.get_index<"delegator"_n>();
     auto delegate_record = index_table.find({from, to});
     if (delegate_record != index_table.end()) {
-        eosio::check(delegate_record->interest_rate == interest_rate, "interest_rate does not match");  // TODO: test #744
-        index_table.modify(delegate_record, name(), [&](auto& item) {
+        index_table.modify(delegate_record, same_payer, [&](auto& item) {
             item.quantity += quantity;
         });
     } else {
@@ -268,7 +267,8 @@ void vesting::delegate(name from, name to, asset quantity, uint16_t interest_rat
 }
 
 void vesting::undelegate(name from, name to, asset quantity) {
-    require_auth(from);
+    bool delegator_signed = has_auth(from);
+    eosio::check(delegator_signed || has_auth(to), "missing required authority");
 
     vesting_params_singleton cfg(_self, quantity.symbol.code().raw());
     eosio::check(cfg.exists(), "not found vesting params");
@@ -287,13 +287,13 @@ void vesting::undelegate(name from, name to, asset quantity) {
     if (delegate_record->quantity == quantity) {
         index_table.erase(delegate_record);
     } else {
-        index_table.modify(delegate_record, from, [&](auto& item) {
+        index_table.modify(delegate_record, same_payer, [&](auto& item) {
             item.quantity -= quantity;
         });
     }
 
     return_delegation_table table_delegate_vesting(_self, _self.value);
-    table_delegate_vesting.emplace(from, [&](auto& item) {
+    table_delegate_vesting.emplace(delegator_signed ? from : to, [&](auto& item) {
         item.id = table_delegate_vesting.available_primary_key();
         item.delegator = from;
         item.quantity = quantity;
@@ -303,7 +303,7 @@ void vesting::undelegate(name from, name to, asset quantity) {
     account_table account_recipient(_self, to.value);
     auto balance = account_recipient.find(quantity.symbol.code().raw());
     eosio::check(balance != account_recipient.end(), "This token is not on the recipient balance sheet");   // TODO: test #744
-    account_recipient.modify(balance, from, [&](auto& item) {
+    account_recipient.modify(balance, same_payer, [&](auto& item) {
         item.received -= quantity;
         send_account_event(to, item);
     });
@@ -397,7 +397,7 @@ void vesting::timeoutrdel() {
         // The following checks can only fail on broken system, preserve them to prevent break more (can't resolve automatically)
         eosio::check(balance != delegator_balances.end(), "timeoutrdel: Vesting balance not found"); // impossible
         eosio::check(balance->delegated >= obj->quantity, "timeoutrdel: returning > delegated");     // impossible
-        delegator_balances.modify(balance, name(), [&](auto& item){
+        delegator_balances.modify(balance, same_payer, [&](auto& item){
             item.delegated -= obj->quantity;
             send_account_event(obj->delegator, item);
         });
@@ -456,7 +456,7 @@ void vesting::sub_balance(name owner, asset value, bool retire_mode) {
     else
         eosio::check(from.available_vesting() >= value, "overdrawn balance");   // TODO: test #744
 
-    account.modify(from, name(), [&](auto& a) {
+    account.modify(from, same_payer, [&](auto& a) {
         a.vesting -= value;
         if (retire_mode)
             a.unlocked_limit -= value;
@@ -479,7 +479,7 @@ void vesting::add_balance(name owner, asset value, name ram_payer) {
             send_account_event(owner, a);
         });
     } else {
-        account.modify(to, name(), [&](auto& a) {
+        account.modify(to, same_payer, [&](auto& a) {
             a.vesting += value;
             send_account_event(owner, a);
         });

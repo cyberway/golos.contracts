@@ -56,7 +56,7 @@ def fillGolosAccounts(golosAccounts):
         ('gls.publish',  True,       'golos.publication',
             [("owner",       [], ["gls@owner"], []),
              ("active",      [], ["gls@active"], []),
-             ("code",        [], ["gls.publish@cyber.code"], ["cyber.token:transfer", "cyber.token:payment", "gls.publish:closemssg", "gls.publish:paymssgrwrd", "gls.publish:deletevotes"]),
+             ("code",        [], ["gls.publish@cyber.code"], ["cyber.token:transfer", "cyber.token:payment", "cyber.token:bulktransfer", "cyber.token:bulkpayment", "gls.publish:closemssg", "gls.publish:paymssgrwrd", "gls.publish:deletevotes"]),
              ("calcrwrdwt",  [], ["gls.charge@cyber.code"], ["gls.publish:calcrwrdwt"]),
             ]),
         ('gls.social',   True,       'golos.social',
@@ -334,7 +334,6 @@ def createCommunity():
                     'min_amount':5000000,
                     'min_remainder':15000000,
                     'min_time':0,
-                    'max_interest':0,
                     'return_time':120
                 }]
             ]]) + '-p gls')

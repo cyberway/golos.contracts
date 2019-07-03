@@ -33,16 +33,14 @@ struct vesting_delegation : parameter {
     uint64_t min_remainder;
     uint32_t return_time;
     uint32_t min_time;
-    uint16_t max_interest;  // TODO: should be moved to it's own parameter if we want to change it independently
 
     void validate() const override {
         eosio::check(min_amount > 0, "delegation min_amount <= 0");
         eosio::check(min_remainder > 0, "delegation min_remainder <= 0");
-        eosio::check(max_interest <= 10000, "delegation max_interest > 10000");
         eosio::check(return_time > 0, "delegation return_time <= 0");
     }
 };
-using delegation_param = param_wrapper<vesting_delegation,5>;
+using delegation_param = param_wrapper<vesting_delegation,4>;
 
 using vesting_param = std::variant<vesting_withdraw_param, vesting_min_amount_param, delegation_param>;
 

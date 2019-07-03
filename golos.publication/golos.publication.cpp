@@ -58,8 +58,6 @@ extern "C" {
             execute_action(&publication::paymssgrwrd);
         if (NN(setmaxpayout) == action)
             execute_action(&publication::set_max_payout);
-        if (NN(payto) == action)
-            execute_action(&publication::payto);
         if (NN(deletevotes) == action) 
             execute_action(&publication::deletevotes); 
     }
@@ -337,12 +335,6 @@ void publication::unvote(name voter, structures::mssgid message_id) {
     set_vote(voter, message_id, 0);
 }
 
-void publication::payto(std::vector<eosio::token::recipient> recipients, bool vesting_mode) {
-    require_auth(_self);
-    eosio::check(!recipients.empty(), "the vector of recipients is empty");
-    pay_to(std::move(recipients), vesting_mode);
-}
-
 void publication::pay_to(std::vector<eosio::token::recipient>&& arg, bool vesting_mode) {
     std::vector<eosio::token::recipient> recipients = std::move(arg);
     if (recipients.empty()) {
@@ -418,7 +410,7 @@ std::pair<int64_t, bool> publication::fill_curator_payouts(
             int64_t now_paid = 0;
             size_t to_del = 0;
             for (auto d = v->delegators.rbegin(); (d != v->delegators.rend()) && (payouts.size() < config::target_payments_per_trx); d++) {
-                auto dlg_payout = static_cast<int64_t>(static_cast<uint128_t>(claim) * d->interest_rate / config::_100percent);
+                auto dlg_payout = cyber::safe_pct(claim, d->interest_rate);
                 if (dlg_payout > 0) {
                     payouts.push_back({d->delegator, eosio::asset(dlg_payout, tokensymbol), get_memo("delegator", message_id)});
                     now_paid += dlg_payout;
@@ -682,8 +674,7 @@ void publication::paymssgrwrd(structures::mssgid message_id) {
         }
         
         payout.amount -= ben_payout_sum;
-        elaf_t token_prop(elai_t(mssg_itr->tokenprop) / elai_t(config::_100percent));
-        auto token_payout = int_cast(elai_t(payout.amount) * token_prop);
+        auto token_payout = cyber::safe_pct(mssg_itr->tokenprop, payout.amount);
         eosio::check(payout.amount >= token_payout, "publication::payrewards: wrong token_payout value");
         if (token_payout > 0) {
             pay_to({{message_id.author, eosio::asset(token_payout, payout.symbol), get_memo("author", message_id)}}, false);
@@ -692,18 +683,8 @@ void publication::paymssgrwrd(structures::mssgid message_id) {
             vesting_payouts.push_back({message_id.author, eosio::asset(payout.amount - token_payout, payout.symbol), get_memo("author", message_id)});
         }
         pay_to(std::move(vesting_payouts), true);
-        
-        tables::vote_table vote_table(_self, message_id.author.value);
-        auto votetable_index = vote_table.get_index<"messageid"_n>();
-        auto vote_itr = votetable_index.lower_bound(std::make_tuple(mssg_itr->id, INT64_MAX));
-        
-        for (auto vote_etr = votetable_index.end(); vote_itr != vote_etr;) {
-           auto& vote = *vote_itr;
-           ++vote_itr;
-           if (vote.message_id != mssg_itr->id) break;
-           vote_table.erase(vote);
-        }
 
+        auto remove_id = mssg_itr->id;
         message_table.erase(mssg_itr);
         permlink_table.modify(*permlink_itr, _self, [&](auto&){}); // change payer to contract
         permlink_table.move_to_archive(*permlink_itr);
@@ -711,6 +692,7 @@ void publication::paymssgrwrd(structures::mssgid message_id) {
         fill_depleted_pool(pools, asset(unclaimed_rewards, payout.symbol), pools.end());
 
         send_postreward_event(message_id, payout, asset(ben_payout_sum, payout.symbol), asset(actual_curation_payout, payout.symbol), asset(unclaimed_rewards, payout.symbol));
+        send_deletevotes_trx(remove_id, message_id.author);
     }
     else {
         pay_to(std::move(vesting_payouts), true);

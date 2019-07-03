@@ -84,20 +84,75 @@ struct golos_vesting_api: base_contract_api {
             ("symbol", sym)
         );
     }
-
-    action_result delegate(name from, name to, asset quantity,
-        uint16_t interest_rate = 0
-    ) {
-        return push(N(delegate), from, args()
+    
+    std::vector<variant> get_delegators() {
+        return _tester->get_all_chaindb_rows(_code, _symbol.to_symbol_code().value, N(delegation), false);
+    }
+    
+    int64_t get_delegated(name from, name to) {
+        auto delegators = get_delegators();
+        for (auto& d : delegators) {
+            if (d["delegator"].as<name>() == from && d["delegatee"].as<name>() == to) {
+                return d["quantity"].as<asset>().get_amount();
+            }
+        }
+        return 0;
+    }
+    
+     action_result delegate_unauthorized(name from, name to, asset quantity, bool by_delegatee) {
+        return push(N(delegate), by_delegatee ? from : to, args() 
+            ("from", from) 
+            ("to", to) 
+            ("quantity", quantity) 
+            ("interest_rate", 0) 
+        );
+    }
+    
+    action_result delegate(name from, name to, asset quantity, uint16_t interest_rate = 0) {
+        return push_msig(N(delegate), {{from, config::active_name}, {to, config::active_name}}, {from, to}, args()
             ("from", from)
             ("to", to)
             ("quantity", quantity)
-            ("interest_rate", interest_rate)
-        );
+            ("interest_rate", interest_rate));
     }
 
-    action_result undelegate(name from, name to, asset quantity) {
-        return push(N(undelegate), from, args()
+    action_result msig_delegate(name from, name to, asset quantity, uint16_t interest_rate = 0) {
+        name proposal_name = to;
+        auto pre_delegated = get_delegated(from, to);
+        fc::variants auth;
+        auth.push_back(fc::mutable_variant_object()("actor", from)("permission", name(config::active_name)));
+        auth.push_back(fc::mutable_variant_object()("actor", to)  ("permission", name(config::active_name)));
+        
+        variant pretty_trx = args()("expiration", time_point_sec(std::numeric_limits<uint32_t>::max()))
+        ("actions", fc::variants({
+            fc::mutable_variant_object()("account", _code)("name", "delegate")("authorization", auth)
+                ("data", args()("from", from)("to", to)("quantity", quantity)("interest_rate", interest_rate))}));
+        transaction trx;
+        abi_serializer::from_variant(pretty_trx, trx, _tester->get_resolver(), base_tester::abi_serializer_max_time);
+
+        auto ret = _tester->push_action(config::msig_account_name, N(propose), from, args()
+            ("proposer", from)("proposal_name", proposal_name)("trx", trx)
+            ("requested", std::vector<permission_level>{ {from, config::active_name}, {to, config::active_name} }));
+        if (ret != base_tester::success()) { return ret; }
+        
+        ret = _tester->push_action(config::msig_account_name, N(approve), from, args()
+            ("proposer", from)("proposal_name", proposal_name) ("level", permission_level{ from, config::active_name }));
+        if (ret != base_tester::success()) { return ret; }
+        
+        if (to != from) {
+            ret = _tester->push_action(config::msig_account_name, N(approve), to, args()
+                ("proposer", from)("proposal_name", proposal_name) ("level", permission_level{ to, config::active_name }));
+            if (ret != base_tester::success()) { return ret; }
+        }
+        ret = _tester->push_action(config::msig_account_name, N(exec), to, args()
+            ("proposer", from)("proposal_name", proposal_name)("executer", to));
+        if (ret != base_tester::success()) { return ret; }
+        _tester->produce_block();
+        return get_delegated(from, to) > pre_delegated ? base_tester::success() : base_tester::wasm_assert_msg(string("unsuccessful delegation"));
+    }
+
+    action_result undelegate(name from, name to, asset quantity, bool by_delegatee = false) {
+        return push(N(undelegate), by_delegatee ? to : from, args()
             ("from", from)
             ("to", to)
             ("quantity", quantity)
@@ -160,10 +215,6 @@ struct golos_vesting_api: base_contract_api {
         return get_struct(_symbol.to_symbol_code().value, N(withdrawal), from, "withdraw_record");
     }
 
-    std::vector<variant> get_delegators() {
-        return _tester->get_all_chaindb_rows(_code, _symbol.to_symbol_code().value, N(delegation), false);
-    }
-
     // TODO: delegation
 
     //// helpers
@@ -195,11 +246,10 @@ struct golos_vesting_api: base_contract_api {
         return string("['vesting_amount', {'min_amount':'") + std::to_string(min_amount) + "'}]";
     }
 
-    string delegation_param(uint64_t min_amount, uint64_t min_remainder, uint32_t min_time,
-                      uint16_t max_interest, uint32_t return_time) {
+    string delegation_param(uint64_t min_amount, uint64_t min_remainder, uint32_t min_time, uint32_t return_time) {
         return string("['vesting_delegation', {'min_amount':'") + std::to_string(min_amount) +
                 "','min_remainder':'" + std::to_string(min_remainder) +
-                "','min_time':'" + std::to_string(min_time) + "','max_interest':'" + std::to_string(max_interest) +
+                "','min_time':'" + std::to_string(min_time) +
                 "','return_time':'" + std::to_string(return_time) + "'}]";
     }
 
