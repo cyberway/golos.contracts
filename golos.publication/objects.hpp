@@ -52,6 +52,7 @@ struct message {
     bool closed = false;
     eosio::asset mssg_reward;
     eosio::asset max_payout;
+    int64_t paid_amount = 0;
 
     uint64_t primary_key() const {
         return id;
@@ -96,6 +97,7 @@ struct voteinfo {
     std::vector<delegate_voter> delegators;
     base_t curatorsw;
     base_t rshares;
+    int64_t paid_amount = 0;
 
     uint64_t primary_key() const {
         return id;
