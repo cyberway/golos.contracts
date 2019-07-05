@@ -263,8 +263,8 @@ BOOST_FIXTURE_TEST_CASE(register_update_witness, golos_ctrl_tester) try {
 
     prepare_balances();
     vector<std::tuple<name,name,bool>> votes = {
-        {_alice, _w[1], true}, {_alice, _w[2], true}, {_alice, _w[3], false},
-        {_alice, _w[0], true}, {_bob, _w[0], false}, {_w[0], _w[0], false}
+        {_alice, _w[1], true}, {_alice, _w[2], true}, {_alice, _w[3], true},
+        {_alice, _w[0], true}, {_bob,   _w[0], true}, {_w[0],  _w[0], true}
     };
 
     for (const auto& v : votes) {
@@ -443,19 +443,19 @@ BOOST_FIXTURE_TEST_CASE(update_auths, golos_ctrl_tester) try {
     BOOST_TEST_MESSAGE("--- checking that update auths possible only once");
     BOOST_CHECK_EQUAL(success(), ctrl.reg_witness(_w[0], "localhost"));
     BOOST_CHECK_EQUAL(success(), ctrl.vote_witness(_bob, _w[0]));
-    produce_blocks(golos::seconds_to_blocks(_update_auth_period)-1);
+    produce_blocks(golos::seconds_to_blocks(_update_auth_period));
     BOOST_CHECK_EQUAL(success(), ctrl.reg_witness(_w[1], "localhost"));
     BOOST_CHECK_EQUAL(success(), ctrl.vote_witness(_bob, _w[1]));
     auto top_witnesses = ctrl.get_msig_auths();
     std::vector<name> wtns = {_w[0]};
-    BOOST_CHECK(top_witnesses["witnesses"].as<std::vector<name>>().size() ==  wtns.size());
+    BOOST_CHECK_EQUAL(top_witnesses["witnesses"].as<std::vector<name>>().size(),  wtns.size());
 
     BOOST_TEST_MESSAGE("--- checking that update auths possible again");
     produce_blocks(2);
     BOOST_CHECK_EQUAL(success(), ctrl.vote_witness(_alice, _w[1]));
     wtns.push_back(_w[1]);
     top_witnesses = ctrl.get_msig_auths();
-    BOOST_CHECK(top_witnesses["witnesses"].as<std::vector<name>>().size() == wtns.size());
+    BOOST_CHECK_EQUAL(top_witnesses["witnesses"].as<std::vector<name>>().size(), wtns.size());
 } FC_LOG_AND_RETHROW()
 
 
