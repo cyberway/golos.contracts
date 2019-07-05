@@ -311,6 +311,10 @@ void control::update_auths() {
     if (top_auths.last_update + eosio::seconds(props().update_auth_period.period) > now)
         return;
 
+    auto set_last_update = [&]() {
+        tbl.set({top_auths.witnesses, now}, _self);
+    };
+
     auto top = top_witnesses();
     std::sort(top.begin(), top.end(), [](const auto& it1, const auto& it2) {
         return it1.value < it2.value;
@@ -321,12 +325,17 @@ void control::update_auths() {
         bool result = std::equal(old_top.begin(), old_top.end(), top.begin(), [](const auto& prev, const auto& cur) {
             return prev.value == cur.value;
         });
-        if (result)
+        if (result) {
+            set_last_update();
             return;
+        }
     }
 
-    if (top.size())
+    if (top.size()) {
         tbl.set({top, now}, _self);
+    } else {
+        set_last_update();
+    }
 
     auto max_witn = props().witnesses.max;
     if (top.size() < max_witn) {           // TODO: ?restrict only just after creation and allow later
