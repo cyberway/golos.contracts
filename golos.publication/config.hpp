@@ -8,8 +8,8 @@ constexpr size_t check_monotonic_steps = 10;
 constexpr unsigned paymssgrwrd_expiration_sec = 3*60*60;
 constexpr unsigned deletevotes_expiration_sec = 3*60*60;
 
-constexpr size_t target_payments_per_trx = 40;
-constexpr size_t max_payments_per_trx    = 50;
+constexpr size_t target_payments_per_trx = 20;
+constexpr size_t max_payments_per_trx    = 20;
 constexpr size_t max_deletions_per_trx   = 100;
 
 static_assert(max_payments_per_trx >= target_payments_per_trx, "max_payments_per_trx < target_payments_per_trx");
