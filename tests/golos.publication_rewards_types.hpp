@@ -37,9 +37,9 @@ struct message_data {
 };
 
 constexpr struct {
-    balance_data balance {0.0101, 0.02, 0.005};            // this values are divided to PRECISION_DIV, scale if change
-    pool_data pool {0.001, 0.015, -0.01, -0.01};  // 0.015 value is divided to PRECISION_DIV (=15 if PRECISION_DIV=1.0)
-    message_data message {-0.01, -0.01, -0.01};
+    balance_data balance {0.1, 1, 0.005};            // this values are divided to PRECISION_DIV, scale if change
+    pool_data pool {0.001, 0.1, 0.1, 0.1};  // 0.015 value is divided to PRECISION_DIV (=15 if PRECISION_DIV=1.0)
+    message_data message {0.1, 0.1, -0.2};
 } delta;
 
 constexpr double balance_delta = 0.01;
@@ -199,7 +199,6 @@ struct vote {
     double rshares(int64_t charge = 0) const {
         auto weight_rshares = revote_diff ? revote_weight() : weight;
         auto abs_rshares = revote_diff ? weight_charge(weight_rshares) * revote_vesting / golos::config::_100percent : weight_charge(weight_rshares) * vesting / golos::config::_100percent;
-        auto vesting_t = revote_diff ? revote_vesting : vesting;
         return (weight_rshares < 0) ? -abs_rshares : abs_rshares;
     };
 
