@@ -452,7 +452,7 @@ int16_t publication::use_charge(tables::limit_table& lims, structures::limitpara
 
     if (act == structures::limitparams::VOTE) {
         k = 200;
-        if (lim_itr->price) {
+        if (lim_itr->price > 0) {
             k = config::_100percent / lim_itr->price;
         }
 
@@ -734,13 +734,12 @@ void publication::check_upvote_time(uint64_t cur_time, uint64_t mssg_date) {
 }
 
 fixp_t publication::calc_available_rshares(name voter, int16_t weight, uint64_t cur_time, const structures::rewardpool& pool) {
-    elaf_t abs_w(elai_t(abs(weight)) / elai_t(config::_100percent));
     tables::limit_table lims(_self, _self.value);
     auto token_code = pool.state.funds.symbol.code();
     int64_t eff_vesting = golos::vesting::get_account_effective_vesting(config::vesting_name, voter, token_code).amount;
     auto used_power = use_charge(lims, structures::limitparams::VOTE, token::get_issuer(config::token_name, token_code),
         voter, eff_vesting, token_code, false, weight);
-    fixp_t abs_rshares = (FP(eff_vesting * used_power) / elai_t(config::_100percent));
+    fixp_t abs_rshares = FP(eff_vesting) * elaf_t(elai_t(used_power) / elai_t(config::_100percent));
     return (weight < 0) ? -abs_rshares : abs_rshares;
 }
 

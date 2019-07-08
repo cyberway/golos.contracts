@@ -191,7 +191,6 @@ struct vote {
     double revote_weight() const { return weight + revote_diff; };
 
     double weight_charge (double weight, int64_t charge = 0) const {
-        weight *= golos::config::_100percent;
         double current_power = std::min(static_cast<int>(golos::config::_100percent - charge), golos::config::_100percent);
         int used_charge = ((abs(weight) * current_power) + 200 - 1) / 200;
         return used_charge;
