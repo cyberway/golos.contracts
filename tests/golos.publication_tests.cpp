@@ -614,14 +614,14 @@ BOOST_FIXTURE_TEST_CASE(upvote_near_close, golos_publication_tester) try {
 
     auto permlink = "permlink";
 
-    BOOST_CHECK_EQUAL(success(), token.issue(cfg::emission_name, N(brucelee), token.make_asset(500), "issue tokens brucelee"));
-    BOOST_CHECK_EQUAL(success(), token.issue(cfg::emission_name, N(jackiechan), token.make_asset(500), "issue tokens jackiechan"));
-    BOOST_CHECK_EQUAL(success(), token.issue(cfg::emission_name, N(chucknorris), token.make_asset(500), "issue tokens chucknorris"));
+    BOOST_CHECK_EQUAL(success(), token.issue(cfg::emission_name, N(brucelee), token.make_asset(5000), "issue tokens brucelee"));
+    BOOST_CHECK_EQUAL(success(), token.issue(cfg::emission_name, N(jackiechan), token.make_asset(5000), "issue tokens jackiechan"));
+    BOOST_CHECK_EQUAL(success(), token.issue(cfg::emission_name, N(chucknorris), token.make_asset(5000), "issue tokens chucknorris"));
     produce_block();
 
-    BOOST_CHECK_EQUAL(success(), token.transfer(N(brucelee), cfg::vesting_name, token.make_asset(100), "buy vesting"));
-    BOOST_CHECK_EQUAL(success(), token.transfer(N(jackiechan), cfg::vesting_name, token.make_asset(100), "buy vesting"));
-    BOOST_CHECK_EQUAL(success(), token.transfer(N(chucknorris), cfg::vesting_name, token.make_asset(100), "buy vesting"));
+    BOOST_CHECK_EQUAL(success(), token.transfer(N(brucelee), cfg::vesting_name, token.make_asset(1000), "buy vesting"));
+    BOOST_CHECK_EQUAL(success(), token.transfer(N(jackiechan), cfg::vesting_name, token.make_asset(1000), "buy vesting"));
+    BOOST_CHECK_EQUAL(success(), token.transfer(N(chucknorris), cfg::vesting_name, token.make_asset(1000), "buy vesting"));
     produce_block();
 
     auto vote_brucelee = [&](auto weight){ return post.upvote(N(brucelee), {N(brucelee), permlink}, weight); };
@@ -692,9 +692,9 @@ BOOST_FIXTURE_TEST_CASE(set_curators_prcnt, golos_publication_tester) try {
     BOOST_CHECK_EQUAL(post.get_message({N(brucelee), "permlink"})["curators_prcnt"], 7300);
 
     BOOST_TEST_MESSAGE("--- checking that curators percent can't be changed");
-    BOOST_CHECK_EQUAL(success(), token.issue(cfg::emission_name, N(jackiechan), token.make_asset(500), "issue tokens jackiechan"));
-    BOOST_CHECK_EQUAL(success(), token.transfer(N(jackiechan), cfg::vesting_name, token.make_asset(100), "buy vesting"));
-    BOOST_CHECK_EQUAL(success(), post.upvote(N(jackiechan), {N(brucelee), "permlink"}, 123));
+    BOOST_CHECK_EQUAL(success(), token.issue(cfg::emission_name, N(jackiechan), token.make_asset(50000), "issue tokens jackiechan"));
+    BOOST_CHECK_EQUAL(success(), token.transfer(N(jackiechan), cfg::vesting_name, token.make_asset(10000), "buy vesting"));
+    BOOST_CHECK_EQUAL(success(), post.upvote(N(jackiechan), {N(brucelee), "permlink"}, 10000));
     BOOST_CHECK_EQUAL(err.no_cur_percent, post.set_curators_prcnt({N(brucelee), "permlink"}, 7500));
     BOOST_CHECK_EQUAL(post.get_message({N(brucelee), "permlink"})["curators_prcnt"], 7300);
 } FC_LOG_AND_RETHROW()
@@ -749,9 +749,9 @@ BOOST_FIXTURE_TEST_CASE(set_max_payout, golos_publication_tester) try {
     BOOST_CHECK_EQUAL(err.max_payout_greater_prev, post.set_max_payout({N(brucelee), "permlink"}, token.make_asset(3000)));
 
     BOOST_TEST_MESSAGE("--- checking max_payout cannot be changed after message voted");
-    BOOST_CHECK_EQUAL(success(), token.issue(cfg::emission_name, N(jackiechan), token.make_asset(500), "issue tokens jackiechan"));
-    BOOST_CHECK_EQUAL(success(), token.transfer(N(jackiechan), cfg::vesting_name, token.make_asset(100), "buy vesting"));
-    BOOST_CHECK_EQUAL(success(), post.upvote(N(jackiechan), {N(brucelee), "permlink"}, 123));
+    BOOST_CHECK_EQUAL(success(), token.issue(cfg::emission_name, N(jackiechan), token.make_asset(50000), "issue tokens jackiechan"));
+    BOOST_CHECK_EQUAL(success(), token.transfer(N(jackiechan), cfg::vesting_name, token.make_asset(10000), "buy vesting"));
+    BOOST_CHECK_EQUAL(success(), post.upvote(N(jackiechan), {N(brucelee), "permlink"}, 10000));
     BOOST_CHECK_EQUAL(err.no_max_payout, post.set_max_payout({N(brucelee), "permlink"}, token.make_asset(1000)));
 
     BOOST_TEST_MESSAGE("--- checking max_payout cannot be changed after message closed");

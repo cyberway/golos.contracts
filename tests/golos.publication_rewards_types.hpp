@@ -37,9 +37,9 @@ struct message_data {
 };
 
 constexpr struct {
-    balance_data balance {0.0101, 0.02, 0.005};            // this values are divided to PRECISION_DIV, scale if change
-    pool_data pool {0.001, 0.015, -0.01, -0.01};  // 0.015 value is divided to PRECISION_DIV (=15 if PRECISION_DIV=1.0)
-    message_data message {-0.01, -0.01, -0.01};
+    balance_data balance {0.1, 1, 0.005};            // this values are divided to PRECISION_DIV, scale if change
+    pool_data pool {0.001, 0.1, 0.1, 0.1};  // 0.015 value is divided to PRECISION_DIV (=15 if PRECISION_DIV=1.0)
+    message_data message {0.1, 0.1, -0.2};
 } delta;
 
 constexpr double balance_delta = 0.01;
@@ -189,8 +189,22 @@ struct vote {
     double revote_diff = 0.0;
     double revote_vesting = 0.0;
     double revote_weight() const { return weight + revote_diff; };
-    double rshares() const { return revote_diff ? revote_weight() * revote_vesting : weight * vesting; };
-    double voteshares() const { return weight > 0.0 ? weight * vesting : 0.0; };
+
+    double weight_charge (double weight, int64_t charge = 0) const {
+        double current_power = std::min(static_cast<int>(golos::config::_100percent - charge), golos::config::_100percent);
+        int used_charge = ((abs(weight) * current_power) + 200 - 1) / 200;
+        return used_charge;
+    };
+
+    double rshares(int64_t charge = 0) const {
+        auto weight_rshares = revote_diff ? revote_weight() : weight;
+        auto abs_rshares = revote_diff ? weight_charge(weight_rshares) * revote_vesting / golos::config::_100percent : weight_charge(weight_rshares) * vesting / golos::config::_100percent;
+        return (weight_rshares < 0) ? -abs_rshares : abs_rshares;
+    };
+
+    double voteshares() const {
+        return weight > 0.0 ? weight_charge(weight) * vesting  / golos::config::_100percent : 0.0;
+    };
 };
 
 struct beneficiary {
