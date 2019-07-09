@@ -63,7 +63,8 @@
             "permissions": [
                 {"name": "owner",  "keys": []},
                 {"name": "active", "keys": []},
-                {"name": "prods",  "keys": [], "accounts": ["cyber.prods@active"]}
+# Wait 2 week for prods authority (14*24*60*60 = 1209600)
+                {"name": "prods",  "keys": [], "threshold": 2, "accounts": ["cyber.prods@active"], "waits": ["1209600"]}
             ],
             "abi":  {"path": "$CYBERWAY_CONTRACTS/cyber.bios/cyber.bios.abi", "hash":""},
             "code": {"path": "$CYBERWAY_CONTRACTS/cyber.bios/cyber.bios.wasm", "hash":""}
