@@ -8,7 +8,7 @@ params = {
 cleosCmd = "{cleos_path} --url {testnet_url} ".format(**params)
 
 class args:
-    symbol = "GLS"
+    symbol = "GOLOS"
     token_precision = 3
     vesting_precision = 6
     token = '%d,%s' % (token_precision, symbol)
@@ -92,7 +92,7 @@ def openTokenBalance(account):
     pushAction('cyber.token', 'open', account, [account, args.token, account])
 
 def issueToken(account, amount, memo=""):
-    pushAction('cyber.token', 'issue', 'gls.issuer', [account, amount, memo])
+    pushAction('cyber.token', 'issue', 'gls', [account, amount, memo])
 
 def buyVesting(account, amount):
     issueToken(account, amount)

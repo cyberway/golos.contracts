@@ -61,7 +61,7 @@ struct [[eosio::table]] bytecode {
             auto e = atmsp::machine<fixp_t>::OPERATORS.end();
             auto iter = std::find(b, e, bc.fun[i]);
             if(iter == e)
-                eosio_assert(false, "exprinfo::bytecode::load, operator doesn't exist");
+                eosio::check(false, "exprinfo::bytecode::load, operator doesn't exist");
             operators.push_back(static_cast<index_t>(std::distance(b, iter)));
         }
 
@@ -95,11 +95,11 @@ struct [[eosio::table]] bytecode {
             .cons = consts.size()
         };
 
-        eosio_assert(bc.used_mem.operations <= bc.fun.size(), "exprinfo::bytecode::apply, unsupported operators.size()");
-        eosio_assert(bc.used_mem.values <= bc.val.size(),     "exprinfo::bytecode::apply, unsupported values.size()");
-        eosio_assert(bc.used_mem.nums <= bc.num.size(),       "exprinfo::bytecode::apply, unsupported nums.size()");
-        eosio_assert(bc.used_mem.vars <= bc.var.size(),       "exprinfo::bytecode::apply, unsupported vars.size()");
-        eosio_assert(bc.used_mem.cons <= bc.con.size(),       "exprinfo::bytecode::apply, unsupported consts.size()");
+        eosio::check(bc.used_mem.operations <= bc.fun.size(), "exprinfo::bytecode::apply, unsupported operators.size()");
+        eosio::check(bc.used_mem.values <= bc.val.size(),     "exprinfo::bytecode::apply, unsupported values.size()");
+        eosio::check(bc.used_mem.nums <= bc.num.size(),       "exprinfo::bytecode::apply, unsupported nums.size()");
+        eosio::check(bc.used_mem.vars <= bc.var.size(),       "exprinfo::bytecode::apply, unsupported vars.size()");
+        eosio::check(bc.used_mem.cons <= bc.con.size(),       "exprinfo::bytecode::apply, unsupported consts.size()");
 
         for (size_t i = 0; i < bc.used_mem.operations; i++)
             bc.fun[i] = atmsp::machine<fixp_t>::OPERATORS[static_cast<size_t>(operators[i])];
@@ -115,18 +115,18 @@ struct [[eosio::table]] bytecode {
             size_t idx = static_cast<size_t>(cur.idx);
             switch (cur.kind) {
                 case value::NUM:
-                    eosio_assert(idx <= bc.num.size(), "exprinfo::bytecode::apply, unsupported num index");
+                    eosio::check(idx <= bc.num.size(), "exprinfo::bytecode::apply, unsupported num index");
                     bc.val[i] = &(bc.num[idx]);
                     break;
                 case value::VAR:
-                    eosio_assert(idx <= bc.var.size(), "exprinfo::bytecode::apply, unsupported var index");
+                    eosio::check(idx <= bc.var.size(), "exprinfo::bytecode::apply, unsupported var index");
                     bc.val[i] = &(bc.var[idx]);
                     break;
                 case value::CONST:
-                    eosio_assert(idx <= bc.con.size(), "exprinfo::bytecode::apply, unsupported con index");
+                    eosio::check(idx <= bc.con.size(), "exprinfo::bytecode::apply, unsupported con index");
                     bc.val[i] = &(bc.con[idx]);
                     break;
-                default: eosio_assert(false, "exprinfo::bytecode::apply, unknown kind of value");
+                default: eosio::check(false, "exprinfo::bytecode::apply, unknown kind of value");
             }
         }
     }

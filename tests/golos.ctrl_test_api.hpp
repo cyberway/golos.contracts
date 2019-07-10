@@ -1,8 +1,11 @@
 #pragma once
 #include "test_api_helper.hpp"
+#include "contracts.hpp"
+#include "common/config.hpp"
 
 namespace eosio { namespace testing {
 
+namespace cfg = golos::config;
 
 struct golos_ctrl_api: base_contract_api {
     using base_contract_api::base_contract_api;
@@ -10,6 +13,15 @@ struct golos_ctrl_api: base_contract_api {
     const name _minority_name = N(witn.minor);
     const name _majority_name = N(witn.major);
     const name _supermajority_name = N(witn.smajor);
+
+    void initialize_contract(account_name token) {
+        _tester->install_contract(_code, contracts::ctrl_wasm(), contracts::ctrl_abi());
+
+        _tester->set_authority(_code, cfg::code_name, create_code_authority({_code}), "active");
+        _tester->link_authority(_code, token, cfg::code_name, N(transfer));
+        _tester->link_authority(_code, token, cfg::code_name, N(payment));
+        _tester->link_authority(_code, token, cfg::code_name, N(bulkpayment));
+    }
 
     //// control actions
     action_result set_params(const std::string& json_params) {
@@ -66,6 +78,18 @@ struct golos_ctrl_api: base_contract_api {
 
     action_result unreg_witness(name witness) {
         return push(N(unregwitness), witness, args()
+            ("witness", witness)
+        );
+    }
+
+    action_result start_witness(name witness) {
+        return push(N(startwitness), witness, args()
+            ("witness", witness)
+        );
+    }
+
+    action_result stop_witness(name witness) {
+        return push(N(stopwitness), witness, args()
             ("witness", witness)
         );
     }
@@ -156,14 +180,12 @@ struct golos_ctrl_api: base_contract_api {
         _tester->link_authority(msig, _code, _minority_name, N(detachacc));
 
         // eosio.code
-        auto code_auth = authority(1, {}, {
+        auto code_auth = authority(1, {
+            {_tester->get_public_key(msig, "active"), 1}
+        }, {
             {.permission = {_code, config::eosio_code_name}, .weight = 1}
         });
-        _tester->set_authority(msig, config::owner_name, code_auth, 0);
-        code_auth.keys = {{_tester->get_public_key(msig, "active"), 1}};
-        _tester->set_authority(msig, config::active_name, code_auth, "owner",
-            {permission_level{msig, config::active_name}},
-            {_tester->get_private_key(msig.to_string(), "active")});
+        _tester->set_authority(msig, config::active_name, code_auth, "owner");
     }
 
 };

@@ -17,6 +17,9 @@ using namespace eosio::chain;
 struct balance_data {
     double tokenamount = 0.0;
     double vestamount = 0.0;
+    double paymentsamount = 0.0;
+    bool tokenclosed = false;
+    bool vestclosed = false;
     //vesting delegation isn't covered by these tests
 };
 
@@ -34,16 +37,15 @@ struct message_data {
 };
 
 constexpr struct {
-    balance_data balance {10.0, 20.0};
-    pool_data pool {0.001, 15, -0.01, -0.01};
-    message_data message {-0.01, -0.01, -0.01};
+    balance_data balance {0.1, 1, 0.005};            // this values are divided to PRECISION_DIV, scale if change
+    pool_data pool {0.001, 0.1, 0.1, 0.1};  // 0.015 value is divided to PRECISION_DIV (=15 if PRECISION_DIV=1.0)
+    message_data message {0.1, 0.1, -0.2};
 } delta;
 
 constexpr double balance_delta = 0.01;
 constexpr double funds_delta = 0.01;
 constexpr double pool_rshares_delta = 0.01;
 constexpr double pool_rsharesfn_delta = 0.01;
-
 
 inline double get_prop(int64_t arg) {
     return static_cast<double>(arg) / static_cast<double>(golos::config::_100percent);
@@ -52,14 +54,13 @@ inline double get_prop(int64_t arg) {
 struct mssgid {
     eosio::chain::name author;
     std::string permlink;
-    uint64_t ref_block_num;
 
     auto get_unique_key() const {
-        return std::pair<std::string, uint64_t>(permlink, ref_block_num);
+        return permlink;
     }
 
     bool operator ==(const mssgid& rhs) const {
-        return author == rhs.author && permlink == rhs.permlink && ref_block_num == rhs.ref_block_num;
+        return author == rhs.author && permlink == rhs.permlink;
     }
 };
 
@@ -68,15 +69,16 @@ struct aprox_val_t {
     double val;
     double delta;
     bool operator ==(const aprox_val_t& rhs) const {
+        static constexpr double eps = 1.e-5;
         BOOST_REQUIRE_MESSAGE((rhs.delta >= 0.0 && delta >= 0.0) || (rhs.delta <= 0.0 && delta <= 0.0),
             "aprox_val_t operator ==(): wrong comparison mode");
-        if ((rhs.val > 0.0 && val < 0.0) || (rhs.val < 0.0 && val > 0.0))
+        if ((rhs.val > eps && val < -eps) || (rhs.val < -eps && val > eps))
             return false;
         double d = std::min(double(std::abs(rhs.delta)), std::abs(double(delta)));
         if (delta < 0.0) {
             double a = std::min(std::abs(rhs.val), std::abs(val));
             double b = std::max(std::abs(rhs.val), std::abs(val));
-            return b < 1.e-5 || (a / b) > (1.0 - d);
+            return b < eps || (a / b) > (1.0 - d);
         } else {
             return (val - d) <= rhs.val && rhs.val <= (val + d);
         }
@@ -100,10 +102,10 @@ struct statemap : public std::map<std::string, aprox_val_t> {
         return "balance of " +  acc.to_string() + ": ";
     }
     static std::string get_message_str(const mssgid& msg) {
-        return "message of " + msg.author.to_string() + " #" + msg.permlink + ", " + std::to_string(msg.ref_block_num) + ": ";
+        return "message of " + msg.author.to_string() + " #" + msg.permlink + ": ";
     }
     static std::string get_vote_str(account_name voter, const mssgid& msg) {
-        return "vote of " + voter.to_string() + " for message of " + msg.author.to_string() + " #" + msg.permlink + ", " + std::to_string(msg.ref_block_num) + ": ";
+        return "vote of " + voter.to_string() + " for message of " + msg.author.to_string() + " #" + msg.permlink + ": ";
     }
     void set_pool(uint64_t id, const pool_data& data = {}) {
         auto prefix = get_pool_str(id);
@@ -116,11 +118,17 @@ struct statemap : public std::map<std::string, aprox_val_t> {
         auto prefix = get_balance_str(acc);
         operator[](prefix + "tokenamount") = { data.tokenamount, delta.balance.tokenamount };
         operator[](prefix + "vestamount") = { data.vestamount, delta.balance.vestamount };
+        operator[](prefix + "paymentsamount") = { data.paymentsamount, delta.balance.paymentsamount };
     }
 
     void set_balance_token(account_name acc, double val) {
         auto prefix = get_balance_str(acc);
         operator[](prefix + "tokenamount") = { val, delta.balance.tokenamount };
+    }
+
+    void set_balance_payments(account_name acc, double val) {
+        auto prefix = get_balance_str(acc);
+        operator[](prefix + "paymentsamount") = { val, delta.balance.paymentsamount };
     }
 
     void set_balance_vesting(account_name acc, double val) {
@@ -161,6 +169,17 @@ inline std::ostream& operator<< (std::ostream& os, const statemap& rhs) {
     return os;
 }
 
+struct delegation {
+    account_name delegator;
+    account_name delegatee;
+    uint16_t interest_rate;
+    double amount;
+};
+
+struct delegate_balance {
+    double delegated;
+    double received;
+};
 
 struct vote {
     account_name voter;
@@ -170,17 +189,27 @@ struct vote {
     double revote_diff = 0.0;
     double revote_vesting = 0.0;
     double revote_weight() const { return weight + revote_diff; };
-    double rshares() const { return revote_diff ? revote_weight() * revote_vesting : weight * vesting; };
-    double voteshares() const { return weight > 0.0 ? weight * vesting : 0.0; };
+
+    double weight_charge (double weight, int64_t charge = 0) const {
+        double current_power = std::min(static_cast<int>(golos::config::_100percent - charge), golos::config::_100percent);
+        int used_charge = ((abs(weight) * current_power) + 200 - 1) / 200;
+        return used_charge;
+    };
+
+    double rshares(int64_t charge = 0) const {
+        auto weight_rshares = revote_diff ? revote_weight() : weight;
+        auto abs_rshares = revote_diff ? weight_charge(weight_rshares) * revote_vesting / golos::config::_100percent : weight_charge(weight_rshares) * vesting / golos::config::_100percent;
+        return (weight_rshares < 0) ? -abs_rshares : abs_rshares;
+    };
+
+    double voteshares() const {
+        return weight > 0.0 ? weight_charge(weight) * vesting  / golos::config::_100percent : 0.0;
+    };
 };
 
 struct beneficiary {
     account_name account;
-    int64_t deductprcnt;
-};
-
-struct tags {
-    std::string tag;
+    uint16_t weight;
 };
 
 struct message {
@@ -190,6 +219,8 @@ struct message {
     double created;         // time
     std::vector<beneficiary> beneficiaries;
     double reward_weight;
+    double curators_prcnt;
+    double max_payout;
 
     double get_rshares_sum() const {
         double ret = 0.0;
@@ -198,8 +229,8 @@ struct message {
         return ret;
     };
 
-    message(mssgid k, double tokenprop_, double created_, const std::vector<beneficiary>& beneficiaries_, double reward_weight_) :
-        key(k), tokenprop(tokenprop_), created(created_), beneficiaries(beneficiaries_), reward_weight(reward_weight_) {};
+    message(mssgid k, double tokenprop_, double created_, const std::vector<beneficiary>& beneficiaries_, double reward_weight_, double curators_prcnt_, double max_payout_) :
+        key(k), tokenprop(tokenprop_), created(created_), beneficiaries(beneficiaries_), reward_weight(reward_weight_), curators_prcnt(curators_prcnt_), max_payout(max_payout_) {};
 };
 
 class cutted_func {
@@ -214,17 +245,14 @@ struct rewardrules {
     cutted_func mainfunc;
     cutted_func curationfunc;
     cutted_func timepenalty;
-    double curatorsprop;
     rewardrules(
         cutted_func&& mainfunc_,
         cutted_func&& curationfunc_,
-        cutted_func&& timepenalty_,
-        double curatorsprop_
+        cutted_func&& timepenalty_
     ) :
         mainfunc(std::move(mainfunc_)),
         curationfunc(std::move(curationfunc_)),
-        timepenalty(std::move(timepenalty_)),
-        curatorsprop(curatorsprop_) {};
+        timepenalty(std::move(timepenalty_)) {}
 };
 
 struct chargeinfo {
@@ -238,8 +266,8 @@ struct limits {
     enum kind_t: enum_t {POST, COMM, VOTE, POSTBW, UNDEF};
     std::vector<func_t> restorers; //(funcs of: prev_charge (p), vesting (v), elapsed_seconds (t))
     std::vector<limitedact> limitedacts;
-    std::vector<int64_t> vestingprices;//disabled if < 0
-    std::vector<int64_t> minvestings;
+    std::vector<double> vestingprices;//disabled if < 0
+    std::vector<double> minvestings;
 
     const limitedact& get_limited_act(kind_t kind) const {
         return limitedacts.at(static_cast<size_t>(kind));
@@ -330,7 +358,13 @@ struct limits {
                 return -1.0;
             vesting_ref -= price;
         }
-        return calc_power(limits::POSTBW, charges, cur_time, vesting_ref, 1.0);
+
+        if (kind != limits::COMM) {
+            power =  calc_power(limits::POSTBW, charges, cur_time, vesting_ref, 1.0);
+            return power*power;
+        }
+
+        return 1.0;
     }
 };
 
@@ -369,12 +403,13 @@ struct rewardpool {
 struct state {
     std::map<account_name, balance_data> balances;
     std::vector<rewardpool> pools;
+    std::vector<delegation> delegators;
+    std::map<account_name, delegate_balance> dlg_balances;
     void clear() { balances.clear(); pools.clear(); };
 };
 
 
 }} // eosio::testing
 
-FC_REFLECT(eosio::testing::beneficiary, (account)(deductprcnt))
-FC_REFLECT(eosio::testing::tags, (tag))
-FC_REFLECT(eosio::testing::mssgid, (author)(permlink)(ref_block_num))
+FC_REFLECT(eosio::testing::beneficiary, (account)(weight))
+FC_REFLECT(eosio::testing::mssgid, (author)(permlink))

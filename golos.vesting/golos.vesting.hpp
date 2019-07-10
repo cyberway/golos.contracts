@@ -1,8 +1,8 @@
 #pragma once
 #include "parameters.hpp"
-#include <eosiolib/time.hpp>
-#include <eosiolib/asset.hpp>
-#include <eosiolib/eosio.hpp>
+#include <eosio/time.hpp>
+#include <eosio/asset.hpp>
+#include <eosio/eosio.hpp>
 #include "config.hpp"
 
 namespace golos {
@@ -11,7 +11,6 @@ namespace golos {
 using namespace eosio;
 
 class vesting : public contract {
-
 public:
     using contract::contract;
 
@@ -23,8 +22,7 @@ public:
 
     [[eosio::action]] void withdraw(name from, name to, asset quantity);
     [[eosio::action]] void stopwithdraw(name owner, symbol type);
-    [[eosio::action]] void delegate(name delegator, name delegatee, asset quantity,
-        uint16_t interest_rate, uint8_t payout_strategy);
+    [[eosio::action]] void delegate(name delegator, name delegatee, asset quantity, uint16_t interest_rate);
     [[eosio::action]] void undelegate(name delegator, name delegatee, asset quantity);
 
     [[eosio::action]] void create(symbol symbol, name notify_acc);
@@ -35,9 +33,9 @@ public:
     [[eosio::action]] void timeout();
     [[eosio::action]] void timeoutconv();
     [[eosio::action]] void timeoutrdel();
-    [[eosio::action]] void paydelegator(name account, asset reward, name delegator, uint8_t payout_strategy);
 
     void on_transfer(name from, name to, asset quantity, std::string memo);
+    void on_bulk_transfer(name from, std::vector<token::recipient> recipients);
 
     // tables
     struct [[eosio::table]] vesting_stats {
@@ -78,7 +76,6 @@ public:
         name delegatee;
         asset quantity;
         uint16_t interest_rate;
-        uint8_t payout_strategy;
         time_point_sec min_delegation_time;
 
         auto primary_key() const {
@@ -100,10 +97,11 @@ public:
     struct [[eosio::table]] withdraw_record {
         name from;
         name to;
-        uint8_t number_of_payments; // remaining payments
+        uint32_t interval_seconds;
+        uint8_t remaining_payments; // decreasing counter
         time_point_sec next_payout;
         asset withdraw_rate;        // amount of vesting to convert per one withdraw step
-        asset target_amount;        // total amount of vesting requiested to withdraw
+        asset to_withdraw;          // remaining amount of vesting to withdraw
 
         uint64_t primary_key() const {
             return from.value;
@@ -127,6 +125,10 @@ public:
 
 
     // interface for external contracts
+    static inline bool exists(name code, symbol_code sym) {
+        vesting_table table(code, code.value);
+        return table.find(sym.raw()) != table.end();
+    }
     static inline bool balance_exist(name code, name owner, symbol_code sym) {
         account_table accounts(code, owner.value);          // TODO: maybe combine with `get_account`
         return accounts.find(sym.raw()) != accounts.end();
@@ -148,6 +150,21 @@ public:
     static inline asset get_account_unlocked_vesting(name code, name account, symbol_code sym) {
         return get_account(code, account, sym).unlocked_vesting();
     }
+    static inline asset get_withdrawing_vesting(name code, name account, symbol sym) {
+        withdraw_table tbl(code, sym.code().raw());
+        auto obj = tbl.find(account.value);
+        return obj != tbl.end() ? obj->to_withdraw : asset(0, sym);
+    }
+    static inline bool can_retire_vesting(name code, name account, asset value) {
+        auto sym = value.symbol;
+        auto acc = get_account(code, account, sym.code());
+        bool can = acc.unlocked_vesting() >= value;
+        if (can) {
+            auto withdrawing = get_withdrawing_vesting(code, account, sym);
+            can = std::min(acc.available_vesting() - withdrawing, acc.unlocked_limit) >= value;
+        }
+        return can;
+    }
 
     static inline std::vector<delegation> get_account_delegators(name code, name owner, symbol_code sym) {
         std::vector<delegation> result;
@@ -162,14 +179,15 @@ public:
     }
 
 private:
+    void do_transfer_vesting(name from, name to, asset quantity, std::string memo);
     void notify_balance_change(name owner, asset diff);
     void sub_balance(name owner, asset value, bool retire_mode = false);
     void add_balance(name owner, asset value, name ram_payer);
     void send_account_event(name account, const struct account& balance);
-    void send_vesting_event(const vesting_stats& info);
+    void send_stat_event(const vesting_stats& info);
 
-    const asset convert_to_token(const asset& vesting, const vesting_stats& vinfo) const;
-    const asset convert_to_vesting(const asset& token, const vesting_stats& vinfo) const;
+    const asset vesting_to_token(const asset& vesting, const vesting_stats& vinfo, int64_t correction) const;
+    const asset token_to_vesting(const asset& token, const vesting_stats& vinfo, int64_t correction) const;
 };
 
 } // golos

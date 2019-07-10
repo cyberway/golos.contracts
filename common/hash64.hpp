@@ -1,5 +1,5 @@
 #pragma once
-#include <eosiolib/crypto.hpp>
+#include <eosio/crypto.hpp>
 
 namespace golos {
 

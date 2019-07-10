@@ -16,6 +16,12 @@
     },{
       "new_type_name": "counter_t",
       "type": "uint64"
+    },{
+      "new_type_name": "percent_t",
+      "type": "uint16"
+    },{
+      "new_type_name": "signed_percent_t",
+      "type": "int16"
     }
   ],
   "variants": [{
@@ -26,7 +32,8 @@
       "st_max_beneficiaries",
       "st_max_comment_depth",
       "st_social_acc",
-      "st_referral_acc"
+      "st_referral_acc",
+      "st_curators_prcnt"
     ]
   }],
   "structs": [
@@ -41,10 +48,6 @@
         {
             "name": "permlink",
             "type": "string"
-        },
-        {
-            "name": "ref_block_num",
-            "type": "uint64"
         }
     ]
   },
@@ -121,18 +124,8 @@
         "type": "name"
       },
       {
-        "name": "deductprcnt",
-        "type": "base_t"
-      }
-    ]
-  },
-  {
-    "name": "tags",
-    "base": "",
-    "fields": [
-      {
-        "name": "tag",
-        "type": "string"
+        "name": "weight",
+        "type": "percent_t"
       }
     ]
   },
@@ -145,16 +138,8 @@
         "type": "name"
       },
       {
-        "name": "quantity",
-        "type": "asset"
-      },
-      {
         "name": "interest_rate",
-        "type": "uint16"
-      },
-      {
-        "name": "payout_strategy",
-        "type": "uint8"
+        "type": "percent_t"
       }
     ]
   },
@@ -185,28 +170,16 @@
         "type": "uint64"
       },
       {
-        "name": "permlink",
-        "type": "string"
-      },
-      {
-        "name": "ref_block_num",
-        "type": "uint64"
-      },
-      {
         "name": "date",
         "type": "uint64"
       },
       {
-        "name": "parentacc",
-        "type": "name"
-      },
-      {
-        "name": "parent_id",
+        "name": "pool_date",
         "type": "uint64"
       },
       {
         "name": "tokenprop",
-        "type": "base_t"
+        "type": "percent_t"
       },
       {
         "name": "beneficiaries",
@@ -214,21 +187,63 @@
       },
       {
         "name": "rewardweight",
-        "type": "base_t"
+        "type": "percent_t"
       },
       {
         "name": "state",
         "type": "messagestate"
       },
       {
-        "name": "childcount",
-        "type": "uint64"
+        "name": "curators_prcnt",
+        "type": "percent_t"
       },
       {
-        "name": "level",
-        "type": "uint16"
+        "name": "closed",
+        "type": "bool"
+      },
+      {
+        "name": "mssg_reward",
+        "type": "asset"
+      },
+      {
+        "name": "max_payout",
+        "type": "asset"
+      },
+      {
+        "name": "paid_amount",
+        "type": "int64"
       }
     ]
+  },
+  {
+      "name": "permlink",
+      "base": "",
+      "fields": [
+        {
+          "name": "id",
+          "type": "uint64"
+        },
+        {
+          "name": "parentacc",
+          "type": "name"
+        },
+        {
+          "name": "parent_id",
+          "type": "uint64"
+        },
+        {
+          "name": "value",
+          "type": "string"
+        },
+        {
+          "name": "level",
+          "type": "uint16"
+        },
+        {
+          "name": "childcount",
+          "type": "uint32"
+        }
+      ]
   },
   {
     "name": "createmssg",
@@ -243,16 +258,12 @@
         "type": "mssgid"
       },
       {
-        "name": "parent_recid",
-        "type": "uint64"
-      },
-      {
         "name": "beneficiaries",
         "type": "beneficiary[]"
       },
       {
         "name": "tokenprop",
-        "type": "int64"
+        "type": "percent_t"
       },
       {
         "name": "vestpayment",
@@ -272,11 +283,19 @@
       },
       {
         "name": "tags",
-        "type": "tags[]"
+        "type": "string[]"
       },
       {
         "name": "jsonmetadata",
         "type": "string"
+      },
+      {
+        "name": "curators_prcnt",
+        "type": "uint16?"
+      },
+      {
+        "name": "max_payout",
+        "type": "asset?"
       }
     ]
   },
@@ -302,7 +321,7 @@
       },
       {
         "name": "tags",
-        "type": "tags[]"
+        "type": "string[]"
       },
       {
         "name": "jsonmetadata",
@@ -334,7 +353,7 @@
       },
       {
         "name": "weight",
-        "type": "uint16"
+        "type": "percent_t"
       }
     ]
   },
@@ -370,7 +389,7 @@
       },
       {
         "name": "weight",
-        "type": "int16"
+        "type": "signed_percent_t"
       },
       {
         "name": "time",
@@ -378,7 +397,7 @@
       },
       {
         "name": "count",
-        "type": "int64"
+        "type": "uint8"
       },
       {
         "name": "delegators",
@@ -391,6 +410,10 @@
       {
         "name": "rshares",
         "type": "base_t"
+      },
+      {
+        "name": "paid_amount",
+        "type": "int64"
       }
     ]
   },
@@ -425,12 +448,8 @@
             "type": "funcinfo"
         },
         {
-            "name": "curatorsprop",
-            "type": "base_t"
-        },
-        {
             "name": "maxtokenprop",
-            "type": "base_t"
+            "type": "percent_t"
         }
     ]
   },
@@ -565,12 +584,8 @@
             "type": "funcparams"
         },
         {
-            "name": "curatorsprop",
-            "type": "int64"
-        },
-        {
             "name": "maxtokenprop",
-            "type": "int64"
+            "type": "percent_t"
         },
         {
             "name": "tokensymbol",
@@ -643,6 +658,20 @@
     ]
   },
   {
+    "name": "st_curators_prcnt",
+    "base": "",
+    "fields": [
+      {
+        "name": "min_curators_prcnt",
+        "type": "percent_t"
+      },
+      {
+        "name": "max_curators_prcnt",
+        "type": "percent_t"
+      }
+    ]
+  },
+  {
     "name": "posting_state",
     "base": "",
     "fields": [
@@ -673,6 +702,10 @@
       {
         "name": "referral_acc",
         "type": "st_referral_acc"
+      },
+      {
+        "name": "curators_prcnt",
+        "type": "st_curators_prcnt"
       }
     ]
   },
@@ -697,14 +730,117 @@
         {
             "name": "message_id",
             "type": "mssgid"
+        },
+        {
+            "name": "headermssg",
+            "type": "string"
+        },
+        {
+            "name": "bodymssg",
+            "type": "string"
         }
     ]
   },
   {
-    "name": "create_event",
+    "name": "erasereblog",
     "base": "",
     "fields": [
-        {"name": "record_id", "type": "uint64"}
+        {
+            "name": "rebloger",
+            "type": "name"
+        },
+        {
+            "name": "message_id",
+            "type": "mssgid"
+        }
+    ]
+  },
+  {
+    "name": "setcurprcnt",
+    "base": "",
+    "fields": [
+        {
+            "name": "message_id",
+            "type": "mssgid"
+        },
+        {
+            "name": "curators_prcnt",
+            "type": "percent_t"
+        }
+    ]
+  },
+  {
+    "name": "calcrwrdwt",
+    "base": "",
+    "fields": [
+        {
+            "name": "account",
+            "type": "name"
+        },
+        {
+            "name": "mssg_id",
+            "type": "int64"
+        },
+        {
+            "name": "post_charge",
+            "type": "base_t"
+        }
+    ]
+  },
+  {
+    "name": "paymssgrwrd",
+    "base": "",
+    "fields": [
+        {
+            "name": "message_id",
+            "type": "mssgid"
+        }
+    ]
+  },
+  {
+    "name": "deletevotes",
+    "base": "",
+    "fields": [
+        {
+            "name": "message_id",
+            "type": "int64"
+        },
+        {
+            "name": "author",
+            "type": "name"
+        }
+    ]
+  },
+  {
+    "name": "recipient",
+    "base": "",
+    "fields": [
+        {
+            "name": "to",
+            "type": "name"
+        },
+        {
+            "name": "quantity",
+            "type": "asset"
+        },
+        {
+            "name": "memo",
+            "type": "string"
+        }
+    ]
+  },
+  {
+    "name": "setmaxpayout",
+    "base": "",
+    "fields": [
+        {
+            "name": "message_id",
+            "type": "mssgid"
+        },
+        {
+            "name": "max_payout",
+            "type": "asset"
+        }
     ]
   },
   {
@@ -715,16 +851,8 @@
         {"name": "permlink", "type": "string"},
         {"name": "netshares", "type": "base_t"},
         {"name": "voteshares", "type": "base_t"},
-        {"name": "sumcuratorsw", "type": "base_t"}
-    ]
-  },
-  {
-    "name": "post_close",
-    "base": "",
-    "fields": [
-        {"name": "author", "type": "name"},
-        {"name": "permlink", "type": "string"},
-        {"name": "rewardweight", "type": "base_t"}
+        {"name": "sumcuratorsw", "type": "base_t"},
+        {"name": "sharesfn", "type": "base_t"}
     ]
   },
   {
@@ -734,7 +862,7 @@
         {"name": "voter", "type": "name"},
         {"name": "author", "type": "name"},
         {"name": "permlink", "type": "string"},
-        {"name": "weight", "type": "int16"},
+        {"name": "weight", "type": "signed_percent_t"},
         {"name": "curatorsw", "type": "base_t"},
         {"name": "rshares", "type": "base_t"}
     ]
@@ -746,17 +874,37 @@
         {"name": "created", "type": "uint64"},
         {"name": "msgs", "type": "counter_t"},
         {"name": "funds", "type": "asset"},
-        {"name": "rshares", "type": "wide_t"}
+        {"name": "rshares", "type": "wide_t"},
+        {"name": "rsharesfn", "type": "wide_t"}
+    ]
+  },
+  {
+    "name": "reward_weight_event",
+    "base": "",
+    "fields": [
+        {"name": "message_id", "type": "mssgid"},
+        {"name": "rewardweight", "type": "percent_t"}
+    ]
+  },
+  {
+    "name": "post_reward_event",
+    "base": "",
+    "fields": [
+        {"name": "message_id", "type": "mssgid"},
+        {"name": "author_reward", "type": "asset"},
+        {"name": "benefactor_reward", "type": "asset"},
+        {"name": "curator_reward", "type": "asset"},
+        {"name": "unclaimed_reward", "type": "asset"}
     ]
   }
   ],
   "events": [
     {"name": "poolstate", "type": "pool_event"},
     {"name": "poolerase", "type": "uint64"},
-    {"name": "postcreate","type": "create_event"},
     {"name": "poststate", "type": "post_event"},
-    {"name": "postclose", "type": "post_close"},
-    {"name": "votestate", "type": "vote_event"}
+    {"name": "votestate", "type": "vote_event"},
+    {"name": "rewardweight", "type": "reward_weight_event"},
+    {"name": "postreward", "type": "post_reward_event"}
   ],
   "actions": [
   {
@@ -806,6 +954,30 @@
   {
     "name": "reblog",
     "type": "reblog"
+  },
+  {
+    "name": "erasereblog",
+    "type": "erasereblog"
+  },
+  {
+    "name": "setcurprcnt",
+    "type": "setcurprcnt"
+  },
+  {
+    "name": "calcrwrdwt",
+    "type": "calcrwrdwt"
+  },
+  {
+    "name": "paymssgrwrd",
+    "type": "paymssgrwrd"
+  },
+  {
+    "name": "deletevotes",
+    "type": "deletevotes"
+  },
+  {
+    "name": "setmaxpayout",
+    "type": "setmaxpayout"
   }
   ],
   "tables": [
@@ -819,16 +991,28 @@
           "orders": [
               {"field": "id", "order": "asc"}
           ]
-       },
-       {
-          "name": "bypermlink",
-          "unique": "true",
-          "orders": [
-              {"field": "permlink", "order": "asc"},
-              {"field": "ref_block_num", "order": "asc"}
-          ]
        }
     ]
+  },
+  {
+      "name": "permlink",
+      "type": "permlink",
+      "indexes": [
+         {
+            "name": "primary",
+            "unique": "true",
+            "orders": [
+                {"field": "id", "order": "asc"}
+            ]
+         },
+         {
+            "name": "byvalue",
+            "unique": "true",
+            "orders": [
+                {"field": "value", "order": "asc"}
+            ]
+         }
+      ]
   },
   {
     "name": "vote",
@@ -845,7 +1029,8 @@
           "name": "messageid",
           "unique": "false",
           "orders": [
-              {"field": "message_id", "order": "asc"}
+              {"field": "message_id", "order": "asc"},
+              {"field": "curatorsw", "order": "desc"}
           ]
        },
        {

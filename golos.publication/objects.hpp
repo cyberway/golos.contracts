@@ -1,12 +1,12 @@
 #pragma once
-#include <eosiolib/eosio.hpp>
+#include <eosio/eosio.hpp>
 #include "types.h"
 #include "config.hpp"
 #include <common/calclib/atmsp_storable.h>
-#include <eosiolib/time.hpp>
-#include <eosiolib/asset.hpp>
-#include <eosiolib/singleton.hpp>
-#include <eosiolib/crypto.h>
+#include <eosio/time.hpp>
+#include <eosio/asset.hpp>
+#include <eosio/singleton.hpp>
+#include <eosio/crypto.hpp>
 
 namespace golos { namespace structures {
 
@@ -15,15 +15,7 @@ using namespace eosio;
 using counter_t = uint64_t;
 struct beneficiary {
     name account;
-    int64_t deductprcnt; //elaf_t
-};
-
-struct tag {
-    tag() = default;
-
-    std::string tag_name;
-
-    EOSLIB_SERIALIZE(tag, (tag_name))
+    uint16_t weight;    // percent
 };
 
 struct mssgid {
@@ -31,23 +23,14 @@ struct mssgid {
 
     name author;
     std::string permlink;
-    uint64_t ref_block_num;
 
     bool operator==(const mssgid& value) const {
         return author == value.author &&
-               permlink == value.permlink &&
-               ref_block_num == value.ref_block_num;
+               permlink == value.permlink;
     }
 
-    EOSLIB_SERIALIZE(mssgid, (author)(permlink)(ref_block_num))
+    EOSLIB_SERIALIZE(mssgid, (author)(permlink))
 };
-
-struct archive_info_v1 {
-    mssgid id;
-    uint16_t level;
-};
-
-using archive_record = std::variant<archive_info_v1>;
 
 struct messagestate {
     base_t netshares = 0;
@@ -59,24 +42,39 @@ struct message {
     message() = default;
 
     uint64_t id;
-    std::string permlink;
-    uint64_t ref_block_num;
     uint64_t date;
-    name parentacc;
-    uint64_t parent_id;
-    base_t tokenprop; //elaf_t
+    uint64_t pool_date;
+    uint16_t tokenprop;     // percent
     std::vector<structures::beneficiary> beneficiaries;
-    base_t rewardweight;//elaf_t
+    uint16_t rewardweight;  // percent
     messagestate state;
-    uint64_t childcount;
-    uint16_t level;
+    uint16_t curators_prcnt;
+    bool closed = false;
+    eosio::asset mssg_reward;
+    eosio::asset max_payout;
+    int64_t paid_amount = 0;
 
     uint64_t primary_key() const {
         return id;
     }
-    
-    std::tuple<std::string, uint64_t> secondary_key() const {
-        return {permlink, ref_block_num};
+};
+
+struct permlink {
+    permlink() = default;
+
+    uint64_t id;
+    name parentacc;
+    uint64_t parent_id;
+    std::string value;
+    uint16_t level;
+    uint32_t childcount;
+
+    uint64_t primary_key() const {
+        return id;
+    }
+
+    std::string secondary_key() const {
+        return value;
     }
 };
 
@@ -84,9 +82,7 @@ struct delegate_voter {
     delegate_voter() = default;
 
     name delegator;
-    asset quantity;
     uint16_t interest_rate;
-    uint8_t payout_strategy;
 };
 
 struct voteinfo {
@@ -97,10 +93,11 @@ struct voteinfo {
     name voter;
     int16_t weight;
     uint64_t time;
-    int64_t count;
+    uint8_t count;
     std::vector<delegate_voter> delegators;
     base_t curatorsw;
     base_t rshares;
+    int64_t paid_amount = 0;
 
     uint64_t primary_key() const {
         return id;
@@ -120,8 +117,7 @@ struct rewardrules {
     funcinfo mainfunc;
     funcinfo curationfunc;
     funcinfo timepenalty;
-    base_t curatorsprop; //elaf_t
-    base_t maxtokenprop; //elaf_t
+    uint16_t maxtokenprop;  // percent
     //uint64_t cashout_time; //TODO:
 };
 
@@ -133,8 +129,11 @@ struct poolstate {
 
     using ratio_t = decltype(elap_t(1) / elap_t(1));
     ratio_t get_ratio() const {
-        eosio_assert(funds.amount >= 0, "poolstate::get_ratio: funds < 0");
+        eosio::check(funds.amount >= 0, "poolstate::get_ratio: funds < 0");
         auto r = WP(rshares);
+        if (r < 0) {
+            return std::numeric_limits<ratio_t>::max();
+        }
         auto f = fixp_t(funds.amount);
         narrow_down(f, r);
         return r > 0 ? elap_t(f) / elap_t(r) : std::numeric_limits<ratio_t>::max();
@@ -150,10 +149,6 @@ struct rewardpool {
     EOSLIB_SERIALIZE(rewardpool, (created)(rules)(state))
 };
 
-struct create_event {
-    uint64_t record_id;
-};
-
 struct post_event {
     name author;
     std::string permlink;
@@ -161,12 +156,8 @@ struct post_event {
     base_t netshares = 0;
     base_t voteshares = 0;
     base_t sumcuratorsw = 0;
-};
 
-struct post_close {
-    name author;
-    std::string permlink;
-    base_t rewardweight;
+    base_t sharesfn;
 };
 
 struct vote_event {
@@ -183,6 +174,20 @@ struct pool_event {
     counter_t msgs;
     eosio::asset funds;
     wide_t rshares;
+    wide_t rsharesfn;
+};
+
+struct reward_weight_event {
+    mssgid message_id;
+    uint16_t rewardweight;
+};
+
+struct post_reward_event {
+    mssgid message_id;
+    asset author_reward;
+    asset benefactor_reward;
+    asset curator_reward;
+    asset unclaimed_reward;
 };
 
 struct limitparams {
@@ -198,7 +203,7 @@ struct limitparams {
         if(arg == "post") return POST;
         if(arg == "comment") return COMM;
         if(arg == "vote") return VOTE;
-        eosio_assert(arg == "post bandwidth", "limitparams::act_from_str: wrong arg");
+        eosio::check(arg == "post bandwidth", "limitparams::act_from_str: wrong arg");
         return POSTBW;
     }
 };
@@ -209,13 +214,18 @@ namespace tables {
 
 using namespace eosio;
 
-using id_index = indexed_by<N(id), const_mem_fun<structures::message, uint64_t, &structures::message::primary_key>>;
-using permlink_index = indexed_by<N(bypermlink), const_mem_fun<structures::message, std::tuple<std::string, uint64_t>, &structures::message::secondary_key>>;
-using message_table = multi_index<N(message), structures::message, id_index, permlink_index>;
+using id_index = indexed_by<N(primary), const_mem_fun<structures::message, uint64_t, &structures::message::primary_key>>;
+using message_table = multi_index<N(message), structures::message, id_index>;
+
+using permlink_id_index = indexed_by<N(primary), const_mem_fun<structures::permlink, uint64_t, &structures::permlink::primary_key>>;
+using permlink_value_index = indexed_by<N(byvalue), const_mem_fun<structures::permlink, std::string, &structures::permlink::secondary_key>>;
+using permlink_table = multi_index<N(permlink), structures::permlink, permlink_id_index, permlink_value_index>;
 
 using vote_id_index = indexed_by<N(id), const_mem_fun<structures::voteinfo, uint64_t, &structures::voteinfo::primary_key>>;
-using vote_messageid_index = indexed_by<N(messageid), const_mem_fun<structures::voteinfo, uint64_t, &structures::voteinfo::by_message>>;
-using vote_group_index = indexed_by<N(byvoter), eosio::composite_key<structures::voteinfo, 
+using vote_messageid_index = indexed_by<N(messageid), eosio::composite_key<structures::voteinfo,
+      eosio::member<structures::voteinfo, uint64_t, &structures::voteinfo::message_id>,
+      eosio::member<structures::voteinfo, base_t, &structures::voteinfo::curatorsw>>>;
+using vote_group_index = indexed_by<N(byvoter), eosio::composite_key<structures::voteinfo,
       eosio::member<structures::voteinfo, uint64_t, &structures::voteinfo::message_id>,
       eosio::member<structures::voteinfo, name, &structures::voteinfo::voter>>>;
 using vote_table = multi_index<N(vote), structures::voteinfo, vote_id_index, vote_messageid_index, vote_group_index>;

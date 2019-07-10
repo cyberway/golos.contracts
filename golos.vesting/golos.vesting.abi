@@ -19,6 +19,13 @@
       ]
     },
     {
+      "name": "vesting_supply",
+      "base": "",
+      "fields": [
+        {"name":"supply",     "type":"asset"}
+      ]
+    },
+    {
       "name": "account",
       "base": "",
       "fields": [
@@ -47,7 +54,6 @@
         {"name":"delegatee",            "type":"name"},
         {"name":"quantity",             "type":"asset"},
         {"name":"interest_rate",        "type":"uint16"},
-        {"name":"payout_strategy",      "type":"uint8"},
         {"name":"min_delegation_time",  "type":"time_point_sec"}
       ]
     },
@@ -67,10 +73,11 @@
       "fields": [
         {"name":"owner",              "type":"name"},
         {"name":"to",                 "type":"name"},
-        {"name":"number_of_payments", "type":"uint8"},
+        {"name":"interval_seconds",   "type":"uint32"},
+        {"name":"remaining_payments", "type":"uint8"},
         {"name":"next_payout",        "type":"time_point_sec"},
         {"name":"withdraw_rate",      "type":"asset"},
-        {"name":"target_amount",      "type":"asset"}
+        {"name":"to_withdraw",        "type":"asset"}
       ]
     },
 
@@ -152,21 +159,9 @@
       "name": "delegate",
       "base": "base_transfer",
       "fields": [
-        {"name":"interest_rate",    "type":"uint16"},
-        {"name":"payout_strategy",  "type":"uint8"}
+        {"name":"interest_rate",    "type":"uint16"}
       ]
     },
-    {
-       "name": "paydelegator",
-       "base": "",
-       "fields": [
-          {"name":"voter",            "type":"name"},
-          {"name":"reward",           "type":"asset"},
-          {"name":"delegator",        "type":"name"},
-          {"name":"payout_strategy",  "type":"uint8"}
-       ]
-    }
-
     {
        "name": "vesting_state",
        "base": "",
@@ -182,7 +177,7 @@
        "name": "vesting_withdraw",
        "base": "",
        "fields": [
-          {"name":"intervals",        "type":"uint32"},
+          {"name":"intervals",        "type":"uint8"},
           {"name":"interval_seconds", "type":"uint32"}
        ]
     },
@@ -200,14 +195,13 @@
           {"name":"min_amount",     "type":"uint64"},
           {"name":"min_remainder",  "type":"uint64"},
           {"name":"return_time",    "type":"uint32"},
-          {"name":"min_time",       "type":"uint32"},
-          {"name":"max_interest",   "type":"uint16"}
+          {"name":"min_time",       "type":"uint32"}
        ]
     }
   ],
   "events": [
     {"name":"balance",  "type":"balance_event"},
-    {"name":"vesting",  "type":"asset"}
+    {"name":"stat",  "type":"vesting_supply"}
   ],
   "actions": [
     {"name":"setparams",    "type":"setparams"},
@@ -221,7 +215,6 @@
     {"name":"stopwithdraw", "type":"stop_withdraw"},
     {"name":"delegate",     "type":"delegate"},
     {"name":"undelegate",   "type":"base_transfer"},
-    {"name":"paydelegator", "type":"paydelegator"},
     {"name":"timeoutrdel",  "type":"empty"},
     {"name":"timeoutconv",  "type":"empty"},
     {"name":"timeout",      "type":"empty"}
@@ -233,7 +226,7 @@
       "indexes": [{
           "name": "primary",
           "unique": true,
-          "orders": [{"field": "supply.sym", "order": "asc"}]
+          "orders": [{"field": "supply._sym", "order": "asc"}]
       }]
     },
     {
@@ -242,12 +235,13 @@
       "indexes": [{
           "name": "primary",
           "unique": true,
-          "orders": [{"field": "vesting.sym", "order": "asc"}]
+          "orders": [{"field": "vesting._sym", "order": "asc"}]
       }]
     },
     {
       "name": "delegation",
       "type": "delegation",
+      "scope_type": "symbol_code",
       "indexes": [{
           "name": "primary",
           "unique": true,
@@ -281,6 +275,7 @@
     {
       "name": "withdrawal",
       "type": "withdrawal",
+      "scope_type": "symbol_code",
       "indexes": [{
           "name": "primary",
           "unique": true,
@@ -294,6 +289,7 @@
     {
       "name": "vestparams",
       "type": "vesting_state",
+      "scope_type": "symbol_code",
       "indexes": [{
           "name": "primary",
           "unique": true,

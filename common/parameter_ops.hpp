@@ -1,7 +1,7 @@
 #pragma once
 #include "parameter.hpp"
 #include "parameter_ops_spec.hpp"
-#include <eosiolib/datastream.hpp>
+#include <eosio/datastream.hpp>
 #include <variant>
 
 namespace golos {

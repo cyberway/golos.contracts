@@ -1,6 +1,6 @@
 #pragma once
-#include <eosiolib/eosio.hpp>
-#include <eosiolib/time.hpp>
+#include <eosio/eosio.hpp>
+#include <eosio/time.hpp>
 #include "parameters.hpp"
 
 namespace golos {

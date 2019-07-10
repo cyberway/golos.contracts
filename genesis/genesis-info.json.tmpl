@@ -1,0 +1,484 @@
+{
+    "state_file": "golos.dat",
+    "genesis_json": "genesis.json",
+    "params":{
+        "stake":{
+            "enabled": false,
+            "max_proxies":[30, 10, 3, 1],
+            "frame_length":1800,
+            "payout_step_length":43200,
+            "payout_steps_num":12,
+            "min_own_staked_for_election":0
+        },
+        "posting_rules": {
+            "mainfunc":{
+                "code":{
+                    "varssize":1,
+                    "operators":[0],
+                    "values":[{"kind":1,"idx":0}],
+                    "nums":[],
+                    "consts":[]
+                },
+                "maxarg":"9223372036854771712"
+            },
+            "curationfunc":{
+                "code":{
+                    "varssize":1,
+                    "operators":[0,0,0,0,26,4,0,1,4],
+                    "values":[
+                        {"kind":0,"idx":0},
+                        {"kind":0,"idx":1},
+                        {"kind":1,"idx":0},
+                        {"kind":0,"idx":2},
+                        {"kind":0,"idx":3}],
+                    "nums":["9223372036854771712","16384000000000000",409,4096],
+                    "consts":[]
+                },
+                "maxarg":"9223372036854771712"
+            },
+            "timepenalty":{
+                "code":{
+                    "varssize":1,
+                    "operators":[0,0,4],
+                    "values":[
+                        {"kind":1,"idx":0},
+                        {"kind":0,"idx":0}],
+                    "nums":[7372800],
+                    "consts":[]
+                },
+                "maxarg":7372800
+            },
+            "maxtokenprop":5000
+        },
+# set required hardfork to 21.1.0 for disable producers start in testnet
+        "require_hardfork":{
+            "version":352387072,
+            "time":"2019-06-28T12:00:00.000"
+        }
+    },
+    "accounts": [
+# System accounts
+        {"name": "cyber",
+            "privileged": true,
+            "permissions": [
+                {"name": "owner",  "keys": []},
+                {"name": "active", "keys": []},
+# Wait 2 week for prods authority (14*24*60*60 = 1209600)
+                {"name": "prods",  "keys": [], "threshold": 2, "accounts": ["cyber.prods@active"], "waits": ["1209600"]}
+            ],
+            "abi":  {"path": "$CYBERWAY_CONTRACTS/cyber.bios/cyber.bios.abi", "hash":""},
+            "code": {"path": "$CYBERWAY_CONTRACTS/cyber.bios/cyber.bios.wasm", "hash":""}
+        },
+        {"name": "cyber.msig",
+            "privileged": true,
+            "permissions": [
+                {"name": "owner",  "keys": [], "accounts": ["cyber@owner"]},
+                {"name": "active", "keys": [], "accounts": ["cyber@active"]},
+                {"name": "prods",  "keys": [], "accounts": ["cyber@prods"]}
+            ],
+            "abi":  {"path": "$CYBERWAY_CONTRACTS/cyber.msig/cyber.msig.abi", "hash":""},
+            "code": {"path": "$CYBERWAY_CONTRACTS/cyber.msig/cyber.msig.wasm", "hash":""}
+        },
+        {"name": "cyber.domain",
+            "privileged": true,
+            "permissions": [
+                {"name": "owner",  "keys": [], "accounts": ["cyber@owner"]},
+                {"name": "active", "keys": [], "accounts": ["cyber@active"]},
+                {"name": "prods",  "keys": [], "accounts": ["cyber@prods"]}
+            ],
+            "abi":  {"path": "$CYBERWAY_CONTRACTS/cyber.domain/cyber.domain.abi", "hash":""},
+            "code": {"path": "$CYBERWAY_CONTRACTS/cyber.domain/cyber.domain.wasm", "hash":""}
+        },
+        {"name": "cyber.govern",
+            "privileged": true,
+            "permissions": [
+                {"name": "owner",  "keys": [], "accounts": ["cyber@owner"]},
+                {"name": "active", "keys": [], "accounts": ["cyber@active"]},
+                {"name": "prods",  "keys": [], "accounts": ["cyber@prods"]}
+            ],
+            "abi":  {"path": "$CYBERWAY_CONTRACTS/cyber.govern/cyber.govern.abi", "hash":""},
+            "code": {"path": "$CYBERWAY_CONTRACTS/cyber.govern/cyber.govern.wasm", "hash":""}
+        },
+        {"name": "cyber.stake",
+            "privileged": true,
+            "permissions": [
+                {"name": "owner",  "keys": [], "accounts": ["cyber@owner"]},
+                {"name": "active", "keys": [], "accounts": ["cyber@active"]},
+                {"name": "prods",  "keys": [], "accounts": ["cyber@prods"]}
+            ],
+            "abi":  {"path": "$CYBERWAY_CONTRACTS/cyber.stake/cyber.stake.abi", "hash":""},
+            "code": {"path": "$CYBERWAY_CONTRACTS/cyber.stake/cyber.stake.wasm", "hash":""}
+        },
+        {"name": "cyber.null",
+            "permissions": [
+                {"name": "owner",  "keys": [], "accounts": []},
+                {"name": "active", "keys": [], "accounts": []}
+            ]
+        },
+        {"name": "cyber.prods",
+            "permissions": [
+                {"name": "owner",  "keys": [], "accounts": []},
+                {"name": "active", "keys": [], "accounts": ["cyber@active"]},
+                {"name": "prod.major", "keys": [], "accounts": ["cyber@active"]},
+                {"name": "prod.minor", "keys": [], "accounts": ["cyber@active"]}
+            ]
+        },
+        {"name": "cyber.token",
+            "permissions": [
+                {"name": "owner",  "keys": [], "accounts": ["cyber@owner"]},
+                {"name": "active", "keys": [], "accounts": ["cyber@active"]},
+                {"name": "prods",  "keys": [], "accounts": ["cyber@prods"]}
+            ],
+            "abi":  {"path": "$CYBERWAY_CONTRACTS/cyber.token/cyber.token.abi", "hash":""},
+            "code": {"path": "$CYBERWAY_CONTRACTS/cyber.token/cyber.token.wasm", "hash":""}
+        },
+        {"name": "cyber.names",
+            "permissions": [
+                {"name": "owner",  "keys": [], "accounts": ["cyber@owner"]},
+                {"name": "active", "keys": [], "accounts": ["cyber@active"]},
+            ],
+        },
+        {"name": "cyber.worker",
+            "permissions": [
+                {"name": "owner",  "keys": [], "accounts": ["cyber@prods"]},
+                {"name": "active", "keys": [], "accounts": ["cyber@prods"]},
+            ],
+        },
+        {"name": "cyber.appfund",
+            "permissions": [
+                {"name": "owner",  "keys": [], "accounts": ["cyber@prods"]},
+                {"name": "active", "keys": [], "accounts": ["cyber@prods"]},
+            ],
+        },
+
+# Technical account to start testnet and tests
+        {
+            "name": "tech", 
+            "permissions": [{"name": "owner", "key": "INITIAL"}, {"name": "active", "key": "INITIAL"}],
+            "sys_balance": "100000.0000 CYBER",
+        },
+
+# Add additional accounts here
+
+# Golos dApp accounts
+        {"name": "gls",
+            "permissions": [
+                {"name": "owner",      "accounts": ["@witn.smajor"]},
+                {"name": "active",     "accounts": ["@witn.smajor", "gls.ctrl@cyber.code", "@testing"]},
+                {"name": "testing",    "key": "GLS5a2eDuRETEg7uy8eHbiCqGZM3wnh2pLjiXrFduLWBKVZKCkB62"},
+                {"name": "issue",      "accounts": ["gls.emit@cyber.code", "@testing"]},
+                {"name": "createuser", "accounts": ["@testing"]},
+                {"name": "invoice",    "accounts": ["gls.charge@cyber.code", "gls.publish@cyber.code"]},
+                {"name": "changevest", "accounts": ["gls.vesting@cyber.code"]},
+                {"name": "witn.smajor"},
+                {"name": "witn.major"},
+                {"name": "witn.minor"}
+            ]
+        },
+        {"name": "gls.ctrl",
+            "permissions": [
+                {"name": "owner",      "accounts": ["gls@owner"]},
+                {"name": "active",     "accounts": ["gls@active"]},
+                {"name": "code",       "accounts": ["@cyber.code"]}
+            ],
+            "abi": {"path": "$GOLOS_CONTRACTS/golos.ctrl/golos.ctrl.abi", "hash":""},
+            "code": {"path": "$GOLOS_CONTRACTS/golos.ctrl/golos.ctrl.wasm", "hash":""}
+        },
+        {"name": "gls.emit",
+            "permissions": [
+                {"name": "owner",      "accounts": ["gls@owner"]},
+                {"name": "active",     "accounts": ["gls@active"]},
+                {"name": "code",       "accounts": ["@cyber.code"]}
+            ],
+            "abi": {"path": "$GOLOS_CONTRACTS/golos.emit/golos.emit.abi", "hash":""},
+            "code": {"path": "$GOLOS_CONTRACTS/golos.emit/golos.emit.wasm", "hash":""}
+        },
+        {"name": "gls.vesting",
+            "permissions": [
+                {"name": "owner",      "accounts": ["gls@owner"]},
+                {"name": "active",     "accounts": ["gls@active"]},
+                {"name": "code",       "accounts": ["@cyber.code"]}
+            ],
+            "abi": {"path": "$GOLOS_CONTRACTS/golos.vesting/golos.vesting.abi", "hash":""},
+            "code": {"path": "$GOLOS_CONTRACTS/golos.vesting/golos.vesting.wasm", "hash":""}
+        },
+        {"name": "gls.publish",
+            "permissions": [
+                {"name": "owner",      "accounts": ["gls@owner"]},
+                {"name": "active",     "accounts": ["gls@active"]},
+                {"name": "code",       "accounts": ["@cyber.code"]},
+                {"name": "calcrwrdwt", "accounts": ["gls.charge@cyber.code"]}
+            ],
+            "abi": {"path": "$GOLOS_CONTRACTS/golos.publication/golos.publication.abi", "hash":""},
+            "code": {"path": "$GOLOS_CONTRACTS/golos.publication/golos.publication.wasm", "hash":""}
+        },
+        {"name": "gls.social",
+            "permissions": [
+                {"name": "owner", "accounts": ["gls@owner"]},
+                {"name": "active", "accounts": ["gls@active"]}
+            ],
+            "abi": {"path": "$GOLOS_CONTRACTS/golos.social/golos.social.abi", "hash":""},
+            "code": {"path": "$GOLOS_CONTRACTS/golos.social/golos.social.wasm", "hash":""}
+        },
+        {"name": "gls.charge",
+            "permissions": [
+                {"name": "owner", "accounts": ["gls@owner"]},
+                {"name": "active", "accounts": ["gls@active"]}
+            ],
+            "abi": {"path": "$GOLOS_CONTRACTS/golos.charge/golos.charge.abi", "hash":""},
+            "code": {"path": "$GOLOS_CONTRACTS/golos.charge/golos.charge.wasm", "hash":""}
+        },
+        {"name": "gls.referral",
+            "permissions": [
+                {"name": "owner",      "accounts": ["gls@owner"]},
+                {"name": "active",     "accounts": ["gls@active"]},
+                {"name": "code",       "accounts": ["@cyber.code"]}
+            ],
+            "abi": {"path": "$GOLOS_CONTRACTS/golos.referral/golos.referral.abi", "hash":""},
+            "code": {"path": "$GOLOS_CONTRACTS/golos.referral/golos.referral.wasm", "hash":""}
+        },
+        {"name": "gls.memo",
+            "permissions": [
+                {"name": "owner",  "accounts": ["gls@owner"]},
+                {"name": "active", "accounts": ["gls@active"]}
+            ],
+            "abi": {"path": "$GOLOS_CONTRACTS/golos.memo/golos.memo.abi", "hash":""}
+        },
+        {"name": "gls.worker",
+            "permissions": [
+                {"name": "owner", "accounts": ["gls@owner"]},
+                {"name": "active", "accounts": ["gls@active"]}
+            ]
+        }
+    ],
+    "auth_links": [
+        {"permission": "cyber@prods",        "links": ["cyber:setcode", "cyber:setabi", ":setparams"]},
+        {"permission": "cyber.msig@prods",   "links": ["cyber:setcode", "cyber:setabi"]},
+        {"permission": "cyber.domain@prods", "links": ["cyber:setcode", "cyber:setabi"]},
+        {"permission": "cyber.govern@prods", "links": ["cyber:setcode", "cyber:setabi"]},
+        {"permission": "cyber.stake@prods",  "links": ["cyber:setcode", "cyber:setabi"]},
+        {"permission": "cyber.token@prods",  "links": ["cyber:setcode", "cyber:setabi", ":create"]},
+        {
+            "permission": "gls@createuser",
+            "links": ["cyber:newaccount", "cyber.domain:newusername", "cyber.token:open", "gls.vesting:open"]
+        },{
+            "permission": "gls@issue",
+            "links": ["cyber.token:issue", "cyber.token:transfer"]
+        },{
+            "permission": "gls@invoice",
+            "links": ["gls.charge:use", "gls.charge:usenotifygt", "gls.vesting:retire"]
+        },{
+            "permission": "gls@changevest",
+            "links": ["gls.ctrl:changevest"]
+        },{
+            "permission": "gls.ctrl@code",
+            "links": ["cyber.token:transfer", "cyber.token:payment"]
+        },{
+            "permission": "gls.emit@code",
+            "links": ["gls.emit:emit"]
+        },{
+            "permission": "gls.vesting@code",
+            "links": ["cyber.token:transfer", "cyber.token:payment", "gls.vesting:timeout", "gls.vesting:timeoutconv", "gls.vesting:timeoutrdel"]
+        },{
+            "permission": "gls.publish@code",
+            "links": ["cyber.token:payment", "cyber.token:transfer", "gls.publish:closemssg", "gls.publish:paymssgrwrd", "gls.publish:deletevotes", "cyber.token:bulkpayment", "cyber.token:bulktransfer"]
+        },{
+            "permission": "gls.publish@calcrwrdwt",
+            "links": ["gls.publish:calcrwrdwt"]
+        },{
+            "permission": "gls.referral@code",
+            "links": ["gls.referral:closeoldref", "cyber.token:transfer"]
+        }
+    ],
+    "tables": [
+        {
+            "code": "gls.emit",
+            "table": "emitparams",
+            "abi_type": "emit_state",
+            "rows": [{"scope":"gls.emit", "payer": "gls.emit", "pk": 6097199460613750784, "data": {
+                "id": 6097199460613750784,
+                "infrate": {"start":1500, "stop":95, "narrowing":250000},
+                "pools": {"pools":[
+                    {"name":"gls.ctrl", "percent":0},
+                    {"name":"gls.publish", "percent":6000},
+                    {"name":"gls.vesting", "percent":2400}]},
+                "token": {"symbol":"3,GOLOS"},
+                "interval": {"value":900}
+            }}]
+        },{
+            "code": "gls.vesting",
+            "table": "vestparams",
+            "abi_type": "vesting_state",
+            "rows": [{"scope":"GOLOS", "payer": "gls.vesting", "pk": 15758546561230307328, "data": {
+                "id": 15758546561230307328,
+                "withdraw": {"intervals":13, "interval_seconds":120},
+                "min_amount": {"min_amount":10000},
+                "delegation": {
+                    "min_amount":5000000,
+                    "min_remainder":15000000,
+                    "return_time":120,
+                    "min_time":0}
+            }}]
+        },{
+            "code": "gls.ctrl",
+            "table": "ctrlparams",
+            "abi_type": "ctrl_state",
+            "rows": [{"scope":"gls.ctrl", "payer": "gls.ctrl", "pk": 5075304557665714176, "data": {
+                "id": 5075304557665714176,
+                "token": {"code":"GOLOS"},
+                "multisig": {"name":"gls"},
+                "witnesses": {"max":21},
+                "msig_perms": {"super_majority":0, "majority":0, "minority":0},
+                "witness_votes": {"max":30},
+                "update_auth_period": {"period":300}
+            }}]
+        },{
+            "code": "gls.publish",
+            "table": "pstngparams",
+            "abi_type": "posting_state",
+            "rows": [{"scope":"gls.publish", "payer": "gls.publish", "pk": 12552436324427411456, "data": {
+                "id": 12552436324427411456,
+                "max_vote_changes": {"value":5},
+                "cashout_window": {"window":120, "upvote_lockout":15},
+                "max_beneficiaries": {"value":64},
+                "max_comment_depth": {"value":127},
+                "social_acc": {"value":"gls.social"},
+                "referral_acc": {"value":""},
+                "curators_prcnt": {"min_curators_prcnt":0, "max_curators_prcnt":9000}
+            }}]
+        },{
+            "code": "gls.publish",
+            "table": "limit",
+            "abi_type": "limitparams",
+            "rows": [{
+                "scope": "gls.publish", "payer": "gls.publish", "pk": 0,
+                "data": {
+                    "act": 0,
+                    "charge_id": 1,
+                    "price": 10000,
+                    "cutoff": 10000,
+                    "vesting_price": 0,
+                    "min_vesting": 0
+                }
+            },{
+                "scope": "gls.publish", "payer": "gls.publish", "pk": 1,
+                "data": {
+                    "act": 1,
+                    "charge_id": 2,
+                    "price": 1000,
+                    "cutoff": 10000,
+                    "vesting_price": 0,
+                    "min_vesting": 0
+                }
+            },{
+                "scope": "gls.publish", "payer": "gls.publish", "pk": 2,
+                "data": {
+                    "act": 2,
+                    "charge_id": 0,
+                    "price": 50,
+                    "cutoff": 10000,
+                    "vesting_price": 0,
+                    "min_vesting": 0
+                }
+            },{
+                "scope": "gls.publish", "payer": "gls.publish", "pk": 3,
+                "data": {
+                    "act": 3,
+                    "charge_id": 3,
+                    "price": 10000,
+                    "cutoff": 40000,
+                    "vesting_price": 0,
+                    "min_vesting": 0
+                }
+            }]
+        },{
+            "code": "gls.referral",
+            "table": "refparams",
+            "abi_type": "referral_state",
+            "rows": [{"scope": "gls.referral", "payer": "gls.referral", "pk": 13445306870675800064, "data": {
+                "id": 13445306870675800064,
+                "breakout_params": {"min_breakout":"10000.000 GOLOS", "max_breakout":"100000.000 GOLOS"},
+                "expire_params": {"max_expire":604800},
+                "percent_params": {"max_percent":5000},
+                "delay_params": {"delay_clear_old_ref":84600}
+            }}]
+        },{
+            "code": "gls.charge",
+            "table": "restorers",
+            "abi_type": "restorer",
+            "rows": [
+                {
+                    "scope": "gls.charge", "payer": "gls", "pk": 91600047785729,
+                    "data": {
+                        "charge_symbol" : 91600047785729, "token_code" : "GOLOS", "charge_id" : 1,
+                        "func" : {
+                            "varssize" : 3,
+                            "operators" : [0, 0, 4],
+                            "values" : [{"kind" : 1, "idx" : 2}, {"kind": 0, "idx": 0}],
+                            "nums" : [1228800],
+                            "consts" : [ ]
+                        },
+                        "max_prev" : 922337203685477, "max_vesting" : 922337203685477, "max_elapsed" : 922337203685477
+                    }
+                },{
+                    "scope": "gls.charge", "payer": "gls", "pk": 91600047785730,
+                    "data": {
+                            "charge_symbol" : 91600047785730, "token_code" : "GOLOS", "charge_id" : 2,
+                            "func" : {
+                            "varssize" : 3,
+                        "operators" : [0, 0, 4],
+                        "values" : [{"kind" : 1, "idx" : 2}, {"kind" : 0, "idx" : 0}],
+                        "nums" : [819200],
+                            "consts" : [ ]
+                        },
+                        "max_prev" : 922337203685477, "max_vesting" : 922337203685477, "max_elapsed" : 922337203685477
+                    }
+                },{
+                    "scope": "gls.charge", "payer": "gls", "pk": 91600047785728,
+                    "data": {
+                        "charge_symbol" : 91600047785728, "token_code" : "GOLOS", "charge_id" : 0,
+                        "func" : {
+                            "varssize" : 3,
+                            "operators" : [0, 0, 0, 3, 4],
+                            "values" : [{"kind" : 1, "idx" : 2}, {"kind" : 0, "idx" : 0}, {"kind" : 0, "idx" : 1}],
+                            "nums" : [20480, 353894400],
+                            "consts" : [ ]
+                        },
+                        "max_prev" : 922337203685477, "max_vesting" : 922337203685477, "max_elapsed" : 922337203685477
+                    }
+                },{
+                    "scope": "gls.charge", "payer": "gls", "pk": 91600047785731,
+                    "data": {
+                        "charge_symbol" : 91600047785731, "token_code" : "GOLOS", "charge_id" : 3,
+                        "func" : {
+                            "varssize" : 3,
+                            "operators" : [0, 0, 3, 0, 4],
+                            "values" : [{"kind" : 1, "idx" : 2}, {"kind" : 1, "idx" : 0}, {"kind" : 0, "idx" : 0}],
+                            "nums" : [353894400],
+                            "consts" : [ ]
+                        },
+                        "max_prev" : 922337203685477, "max_vesting" : 922337203685477, "max_elapsed" : 922337203685477
+                    }
+                }
+            ]
+        }
+    ],
+    "golos": {
+        "domain": "golos",
+        "names": {
+            "issuer": "gls",
+            "control": "gls.ctrl",
+            "emission": "gls.emit",
+            "vesting": "gls.vesting",
+            "posting": "gls.publish",
+            "social": "gls.social",
+            "charge": "gls.charge",
+            "memo": "gls.memo"
+        },
+        "recovery": {
+            "wait_days": 30
+        },
+        "max_supply": 10000000000,
+        "sys_max_supply": 10000000000
+    }
+}

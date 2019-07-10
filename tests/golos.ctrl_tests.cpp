@@ -32,9 +32,10 @@ public:
             cfg::vesting_name, cfg::token_name, cfg::workers_name, cfg::emission_name});
         produce_block();
 
-        install_contract(_code, contracts::ctrl_wasm(), contracts::ctrl_abi());
         install_contract(cfg::token_name, contracts::token_wasm(), contracts::token_abi());
-        install_contract(cfg::vesting_name, contracts::vesting_wasm(), contracts::vesting_abi());
+        vest.add_changevest_auth_to_issuer(_issuer, ctrl._code);
+        vest.initialize_contract(cfg::token_name);
+        ctrl.initialize_contract(cfg::token_name);
 
         _test_params = ctrl.default_params(BLOG, _token, _max_witnesses, _max_witness_votes, _update_auth_period);
     }
@@ -95,7 +96,7 @@ public:
 
         const string bad_url            = amsg("url too long");
         const string same_reg_props     = amsg("already updated in the same way");
-        const string already_unreg      = amsg("witness already unregistered");
+        const string not_udpated_flag   = amsg("active flag not updated");
         const string no_witness         = amsg("witness not found");
 
         const string no_more_votes      = amsg("all allowed votes already casted");
@@ -107,6 +108,7 @@ public:
         const string already_detached   = amsg("user already detached");
         const string no_account         = amsg("user not found");
         const string auth_period0       = amsg("update auth period can't be 0");
+        const string assert_erase_wtnss = amsg("not possible to remove witness as there are votes");
     } err;
 
     // prepare
@@ -142,7 +144,8 @@ public:
     }
 
     void prepare_balances() {
-        BOOST_CHECK_EQUAL(success(), token.create(_issuer, dasset(100500), {cfg::vesting_name}));
+        // token.create_invoice_authority(_issuer, {cfg::vesting_name});
+        BOOST_CHECK_EQUAL(success(), token.create(_issuer, dasset(100500)));
         BOOST_CHECK_EQUAL(success(), vest.create_vesting(_issuer));
         BOOST_CHECK_EQUAL(success(), vest.open(cfg::vesting_name, _token, cfg::vesting_name));
         vector<std::pair<uint64_t,double>> amounts = {
@@ -151,6 +154,7 @@ public:
         };
         for (const auto& p : amounts) {
             BOOST_CHECK_EQUAL(success(), vest.open(p.first, _token, p.first));
+            BOOST_CHECK_EQUAL(success(), token.open(p.first, _token, p.first));
             BOOST_CHECK_EQUAL(success(), token.issue(_issuer, p.first, dasset(p.second), "issue"));
             BOOST_CHECK_EQUAL(success(), token.transfer(p.first, cfg::vesting_name, dasset(p.second), "buy vesting"));
         };
@@ -232,12 +236,15 @@ BOOST_FIXTURE_TEST_CASE(register_witness, golos_ctrl_tester) try {
     BOOST_CHECK_EQUAL(success(), ctrl.reg_witness(_w[0], maxurl));
     BOOST_CHECK_EQUAL(err.bad_url, ctrl.reg_witness(_w[0], maxurl+"!"));
 
-    BOOST_TEST_MESSAGE("--- check unreg");
-    BOOST_CHECK_EQUAL(success(), ctrl.unreg_witness(_w[0]));
+    BOOST_TEST_MESSAGE("--- check stop witness");
+    BOOST_CHECK_EQUAL(success(), ctrl.stop_witness(_w[0]));
     produce_block();
 
-    BOOST_CHECK_EQUAL(err.already_unreg, ctrl.unreg_witness(_w[0]));
-    BOOST_CHECK_EQUAL(err.no_witness, ctrl.unreg_witness(_w[1]));
+    BOOST_CHECK_EQUAL(err.not_udpated_flag, ctrl.stop_witness(_w[0]));
+    BOOST_CHECK_EQUAL(err.no_witness, ctrl.stop_witness(_w[1]));
+
+    BOOST_TEST_MESSAGE("--- check unreg");
+    BOOST_CHECK_EQUAL(success(), ctrl.unreg_witness(_w[0]));
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE(register_update_witness, golos_ctrl_tester) try {
@@ -257,8 +264,8 @@ BOOST_FIXTURE_TEST_CASE(register_update_witness, golos_ctrl_tester) try {
 
     prepare_balances();
     vector<std::tuple<name,name,bool>> votes = {
-        {_alice, _w[1], true}, {_alice, _w[2], true}, {_alice, _w[3], false},
-        {_alice, _w[0], true}, {_bob, _w[0], false}, {_w[0], _w[0], false}
+        {_alice, _w[1], true}, {_alice, _w[2], true}, {_alice, _w[3], true},
+        {_alice, _w[0], true}, {_bob,   _w[0], true}, {_w[0],  _w[0], true}
     };
 
     for (const auto& v : votes) {
@@ -318,6 +325,7 @@ BOOST_FIXTURE_TEST_CASE(vote_witness, golos_ctrl_tester) try {
     BOOST_CHECK_EQUAL(success(), ctrl.vote_witness(_alice, _w[2]));
     BOOST_CHECK_EQUAL(success(), ctrl.vote_witness(_alice, _w[3]));
     BOOST_CHECK_EQUAL(err.no_more_votes, ctrl.vote_witness(_alice, _w[4]));
+    BOOST_CHECK_EQUAL(err.assert_erase_wtnss, ctrl.unreg_witness(_w[0]));
     produce_block();
     BOOST_CHECK_EQUAL(success(), ctrl.vote_witness(_bob, _w[0]));
     produce_block();
@@ -436,20 +444,108 @@ BOOST_FIXTURE_TEST_CASE(update_auths, golos_ctrl_tester) try {
     BOOST_TEST_MESSAGE("--- checking that update auths possible only once");
     BOOST_CHECK_EQUAL(success(), ctrl.reg_witness(_w[0], "localhost"));
     BOOST_CHECK_EQUAL(success(), ctrl.vote_witness(_bob, _w[0]));
-    produce_blocks(golos::seconds_to_blocks(_update_auth_period)-1);
+    produce_blocks(golos::seconds_to_blocks(_update_auth_period));
     BOOST_CHECK_EQUAL(success(), ctrl.reg_witness(_w[1], "localhost"));
     BOOST_CHECK_EQUAL(success(), ctrl.vote_witness(_bob, _w[1]));
     auto top_witnesses = ctrl.get_msig_auths();
     std::vector<name> wtns = {_w[0]};
-    BOOST_CHECK(top_witnesses["witnesses"].as<std::vector<name>>().size() ==  wtns.size());
+    BOOST_CHECK_EQUAL(top_witnesses["witnesses"].as<std::vector<name>>().size(),  wtns.size());
 
     BOOST_TEST_MESSAGE("--- checking that update auths possible again");
     produce_blocks(2);
     BOOST_CHECK_EQUAL(success(), ctrl.vote_witness(_alice, _w[1]));
     wtns.push_back(_w[1]);
     top_witnesses = ctrl.get_msig_auths();
-    BOOST_CHECK(top_witnesses["witnesses"].as<std::vector<name>>().size() == wtns.size());
+    BOOST_CHECK_EQUAL(top_witnesses["witnesses"].as<std::vector<name>>().size(), wtns.size());
 } FC_LOG_AND_RETHROW()
+
+BOOST_FIXTURE_TEST_CASE(payments_top_witness, golos_ctrl_tester) try {
+    BOOST_TEST_MESSAGE("Check that payment is being sent top witness");
+    prepare_balances();
+    BOOST_CHECK_EQUAL(success(), token.open(cfg::control_name, _token, cfg::control_name));
+    BOOST_CHECK_EQUAL(success(), token.issue(_issuer, _issuer, token.make_asset(10000), "on emission"));
+
+    BOOST_TEST_MESSAGE("--- transfer when control contract not configured (have no singleton");
+    BOOST_CHECK_EQUAL(success(), token.transfer(_issuer, cfg::control_name, token.make_asset(1500), "emission"));
+
+    BOOST_CHECK_EQUAL(success(), token.create(_issuer, asset(100500, symbol(4, "GOLOS"))));
+    BOOST_CHECK_EQUAL(success(), token.issue(_issuer, _issuer, asset(100000, symbol(4, "GOLOS")), "issue"));
+    BOOST_CHECK_EQUAL(success(), token.open(cfg::control_name, symbol(4, "GOLOS"), cfg::control_name));
+
+    const auto max_top_witness = 3;
+    auto test_params = ctrl.default_params(BLOG, _token, max_top_witness, _max_witness_votes, _update_auth_period);
+    BOOST_CHECK_EQUAL(success(), ctrl.set_params(test_params));
+    produce_block();
+    ctrl.prepare_multisig(BLOG);
+    produce_block();
+
+    BOOST_TEST_MESSAGE("--- transfer of token, which have different symbol comparing with config");
+    BOOST_CHECK_EQUAL(success(), token.transfer(_issuer, cfg::control_name, asset(1000, symbol(4, "GOLOS")), "emission"));
+
+    BOOST_TEST_MESSAGE("--- transfer when top is empty");
+    BOOST_CHECK_EQUAL(success(), token.transfer(_issuer, cfg::control_name, token.make_asset(1000), "emission"));
+    BOOST_CHECK_EQUAL(token.get_account(cfg::control_name)["balance"].as<asset>(), token.make_asset(2500));
+
+    for (int i = 0; i < _n_w; i++)
+        BOOST_CHECK_EQUAL(success(), ctrl.reg_witness(_w[i], "localhost"));
+    produce_block();
+
+    vector<std::pair<name,name>> votes = {
+        {_alice, _w[0]}, {_alice, _w[1]}, {_alice, _w[2]}, {_alice, _w[3]},
+        {_bob, _w[0]}, {_w[0], _w[0]}
+    };
+    for (const auto& v : votes)
+        BOOST_CHECK_EQUAL(success(), ctrl.vote_witness(v.first, v.second));
+    produce_block();
+
+    auto top = witness_vect(max_top_witness);
+    auto check_lambda_payment = [&](double arg) {
+        map<name, asset> map_top;
+        for (auto witness : top)
+            map_top.insert(std::pair<name, asset>( witness, token.get_account(witness)["payments"].as<asset>() ));
+
+        BOOST_CHECK_EQUAL(success(), token.transfer(_issuer, cfg::control_name, token.make_asset(arg), "emission"));
+
+        for (auto witness : top) {
+            auto asset_witness_after_payment = token.get_account(witness)["payments"].as<asset>();
+
+            bool status_winner = true;
+            double remainder = double(int(arg * pow(10, asset_witness_after_payment.decimals())) % max_top_witness) / pow(10, asset_witness_after_payment.decimals());
+            auto payment = (arg - remainder) / max_top_witness;
+            auto asset_witness_before_payment = map_top.at(witness) + token.make_asset(payment);
+
+            if ( asset_witness_after_payment == asset_witness_before_payment )
+                BOOST_CHECK_EQUAL(asset_witness_after_payment, asset_witness_before_payment);
+            else if (( asset_witness_after_payment == asset_witness_before_payment + token.make_asset(remainder) ) && status_winner ) {
+                status_winner = false;
+                BOOST_CHECK_EQUAL(asset_witness_after_payment, asset_witness_before_payment + token.make_asset(remainder));
+            } else
+                BOOST_CHECK_MESSAGE(false, "Error payments top witness");
+        }
+    };
+
+    BOOST_TEST_MESSAGE("--- amount divides to number of recipients without remainder");
+    check_lambda_payment(900);
+    BOOST_CHECK_EQUAL(token.get_account(cfg::control_name)["balance"].as<asset>(), token.make_asset(2500));
+
+    BOOST_TEST_MESSAGE("--- transfer when control contract is sender");
+    BOOST_CHECK_EQUAL(success(), token.transfer(cfg::control_name, _issuer, token.make_asset(500), ""));
+    BOOST_CHECK_EQUAL(token.get_account(cfg::control_name)["balance"].as<asset>(), token.make_asset(2000));
+
+    for (auto witness : top)
+        BOOST_CHECK_EQUAL(token.get_account(witness)["payments"].as<asset>(), token.make_asset(300));
+    produce_block();
+
+    BOOST_TEST_MESSAGE("--- amount divides to number of recipients with remainder, 'winner' gets it");
+    check_lambda_payment(3.334);
+    produce_block();
+
+    BOOST_TEST_MESSAGE("--- amount is less then number recipients, so everyone except winner get 0 and skipped");
+    check_lambda_payment(0.001);
+    produce_block();
+
+} FC_LOG_AND_RETHROW()
+
 
 
 BOOST_AUTO_TEST_SUITE_END()

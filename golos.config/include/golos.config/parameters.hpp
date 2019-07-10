@@ -1,7 +1,7 @@
 #pragma once
 #include <common/parameter.hpp>
 #include <common/config.hpp>
-#include <eosiolib/singleton.hpp>
+#include <eosio/singleton.hpp>
 
 namespace golos {
 
@@ -13,7 +13,7 @@ struct base_threshold: parameter {
 
     void validate() const override {
         // TODO: must check value realted to max_witnesses
-        eosio_assert(value > 0, (std::string(*N) + " can't be 0").c_str());
+        eosio::check(value > 0, (std::string(*N) + " can't be 0").c_str());
     }
 };
 

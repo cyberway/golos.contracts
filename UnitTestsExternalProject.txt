@@ -4,7 +4,7 @@ include(GNUInstallDirs)
 
 if(EOSIO_ROOT STREQUAL "" OR NOT EOSIO_ROOT)
   if(APPLE)
-    set(EOSIO_ROOT "/usr/local/eosio")
+    set(EOSIO_ROOT "~/opt/eosio")
   else()
     set(EOSIO_ROOT "/opt/eosio")
   endif()
@@ -18,8 +18,8 @@ ExternalProject_Add(
   LIST_SEPARATOR | # Use the alternate list separator
   CMAKE_GENERATOR Ninja
   CMAKE_ARGS -DCMAKE_BUILD_TYPE=${TEST_BUILD_TYPE} -Deosio_DIR=${EOSIO_ROOT}/lib/cmake/eosio -DCMAKE_FRAMEWORK_PATH=${TEST_FRAMEWORK_PATH} -DCMAKE_MODULE_PATH=${TEST_MODULE_PATH} -DEOSIO_ROOT=${EOSIO_ROOT} -DLLVM_DIR=${LLVM_DIR}
-  SOURCE_DIR ${CMAKE_SOURCE_DIR}/tests
-  BINARY_DIR ${CMAKE_BINARY_DIR}/tests
+  SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/tests
+  BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/tests
   BUILD_ALWAYS 1
   TEST_COMMAND   ""
   INSTALL_COMMAND ""

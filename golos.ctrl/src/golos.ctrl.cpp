@@ -3,10 +3,9 @@
 #include <golos.vesting/golos.vesting.hpp>
 #include <common/parameter_ops.hpp>
 #include <common/dispatchers.hpp>
-#include <cyber.system/native.hpp>
-#include <cyber.token/cyber.token.hpp>
-#include <eosiolib/transaction.hpp>
-#include <eosiolib/event.hpp>
+#include <cyber.bios/cyber.bios.hpp>
+#include <eosio/transaction.hpp>
+#include <eosio/event.hpp>
 
 namespace golos {
 
@@ -29,7 +28,7 @@ uint16_t msig_permissions::minority_threshold(uint16_t top) const { return calc_
 ////////////////////////////////////////////////////////////////
 /// control
 void control::assert_started() {
-    eosio_assert(_cfg.exists(), "not initialized");
+    eosio::check(_cfg.exists(), "not initialized");
 }
 
 struct ctrl_params_setter: set_params_visitor<ctrl_state> {
@@ -59,12 +58,12 @@ struct ctrl_params_setter: set_params_visitor<ctrl_state> {
         const auto smaj = p.super_majority_threshold(max);
         const auto maj = p.majority_threshold(max);
         const auto min = p.minority_threshold(max);
-        eosio_assert(smaj <= max, "super_majority must not be greater than max_witnesses");
-        eosio_assert(maj <= max, "majority must not be greater than max_witnesses");
-        eosio_assert(min <= max, "minority must not be greater than max_witnesses");
-        eosio_assert(maj <= smaj, "majority must not be greater than super_majority");
-        eosio_assert(min <= smaj, "minority must not be greater than super_majority");
-        eosio_assert(min <= maj, "minority must not be greater than majority");
+        eosio::check(smaj <= max, "super_majority must not be greater than max_witnesses");
+        eosio::check(maj <= max, "majority must not be greater than max_witnesses");
+        eosio::check(min <= max, "minority must not be greater than max_witnesses");
+        eosio::check(maj <= smaj, "majority must not be greater than super_majority");
+        eosio::check(min <= smaj, "minority must not be greater than super_majority");
+        eosio::check(min <= maj, "minority must not be greater than majority");
     }
     bool operator()(const msig_perms_param& p) {
         bool changed = set_param(p, &ctrl_state::msig_perms);
@@ -98,7 +97,7 @@ void control::setparams(vector<ctrl_param> params) {
 
 void control::on_transfer(name from, name to, asset quantity, string memo) {
     if (!_cfg.exists() || quantity.symbol.code() != props().token.code)
-        return; // distribute only community token
+            return; // distribute only community token
 
     if (to == _self && quantity.amount > 0) {
         // Don't check `from` for now, just distribute to top witnesses
@@ -111,33 +110,35 @@ void control::on_transfer(name from, name to, asset quantity, string memo) {
         }
 
         auto token = quantity.symbol;
-        auto transfer = [&](auto from, auto to, auto amount) {
-            if (amount > 0) {
-                INLINE_ACTION_SENDER(eosio::token, payment)(config::token_name, {from, config::active_name},
-                    {from, to, asset(amount, token), memo});
-            }
-        };
         static const auto memo = "emission";
         auto random = tapos_block_prefix();     // trx.ref_block_prefix; can generate hash from timestamp insead
         auto winner = top[random % n];          // witness, who will receive fraction after reward division
         auto reward = total / n;
+
+        vector<eosio::token::recipient> top_recipients;
         for (const auto& w: top) {
             if (w == winner)
                 continue;
-            transfer(_self, w, reward);
+
+            if (reward <= 0)
+                continue;
+
+            top_recipients.push_back({w, asset(reward, token), memo});
             total -= reward;
         }
-        transfer(_self, winner, total);
+        top_recipients.push_back({winner, asset(total, token), memo});
+
+        INLINE_ACTION_SENDER(token, bulkpayment)(config::token_name, {_self, config::code_name},
+                            {_self, top_recipients});
     }
 }
-
 
 void control::attachacc(name user) {
     assert_started();
     require_auth(_self);
     upsert_tbl<bw_user_tbl>(user, [&](bool exists) {
         return [&,exists](bw_user& u) {
-            eosio_assert(!exists || !u.attached, "already attached");   //TODO: maybe it's better to check this earlier (not inside modify())
+            eosio::check(!exists || !u.attached, "already attached");   //TODO: maybe it's better to check this earlier (not inside modify())
             u.name = user;
             u.attached = true;
         };
@@ -149,21 +150,21 @@ void control::detachacc(name user) {
     require_auth(_self);
     bool exist = upsert_tbl<bw_user_tbl>(user, [&](bool) {
         return [&](bw_user& u) {
-            eosio_assert(u.attached, "user already detached");
+            eosio::check(u.attached, "user already detached");
             u.attached = false;         // TODO: maybe delete?
         };
     }, false);
-    eosio_assert(exist, "user not found");
+    eosio::check(exist, "user not found");
 }
 
 void control::regwitness(name witness, string url) {
     assert_started();
-    eosio_assert(url.length() <= config::witness_max_url_size, "url too long");
+    eosio::check(url.length() <= config::witness_max_url_size, "url too long");
     require_auth(witness);
 
     upsert_tbl<witness_tbl>(witness, [&](bool exists) {
         return [&,exists](witness_info& w) {
-            eosio_assert(!exists || w.url != url || !w.active, "already updated in the same way");
+            eosio::check(!exists || w.url != url || !w.active, "already updated in the same way");
             w.name = witness;
             w.url = url;
             w.active = true;
@@ -178,16 +179,25 @@ void control::unregwitness(name witness) {
     assert_started();
     require_auth(witness);
 
-    // TODO: simplify upsert to allow passing just inner lambda
-    bool exists = upsert_tbl<witness_tbl>(witness, [&](bool) {
-        return [&](witness_info& w) {
-            eosio_assert(w.active, "witness already unregistered");
-            w.active = false;
-        };
-    }, false);
-    eosio_assert(exists, "witness not found");
+    witness_tbl witness_table(_self, _self.value);
+    auto it = witness_table.find(witness.value);
+    eosio::check(!it->counter_votes, "not possible to remove witness as there are votes");
+    witness_table.erase(*it);
 
+    //TODO remove votes for witness
     update_auths();
+}
+
+void control::stopwitness(name witness) {
+    assert_started();
+    require_auth(witness);
+    active_witness(witness, false);
+}
+
+void control::startwitness(name witness) {
+    assert_started();
+    require_auth(witness);
+    active_witness(witness, true);
 }
 
 // Note: if not weighted, it's possible to pass all witnesses in vector like in BP actions
@@ -196,7 +206,12 @@ void control::votewitness(name voter, name witness) {
     require_auth(voter);
 
     witness_tbl witness_table(_self, _self.value);
-    eosio_assert(witness_table.find(witness.value) != witness_table.end(), "witness not found");
+    auto witness_it = witness_table.find(witness.value);
+    eosio::check(witness_it != witness_table.end(), "witness not found");
+    eosio::check(witness_it->active, "witness not active");
+    witness_table.modify(witness_it, voter, [&](auto& w) {
+        ++w.counter_votes;
+    });
 
     witness_vote_tbl tbl(_self, _self.value);
     auto itr = tbl.find(voter.value);
@@ -209,8 +224,8 @@ void control::votewitness(name voter, name witness) {
     if (exists) {
         auto& w = itr->witnesses;
         auto el = std::find(w.begin(), w.end(), witness);
-        eosio_assert(el == w.end(), "already voted");
-        eosio_assert(w.size() < props().witness_votes.max, "all allowed votes already casted");
+        eosio::check(el == w.end(), "already voted");
+        eosio::check(w.size() < props().witness_votes.max, "all allowed votes already casted");
         tbl.modify(itr, voter, update);
     } else {
         tbl.emplace(voter, update);
@@ -218,22 +233,25 @@ void control::votewitness(name voter, name witness) {
     apply_vote_weight(voter, witness, true);
 }
 
-
 void control::unvotewitn(name voter, name witness) {
     assert_started();
     require_auth(voter);
 
     witness_tbl witness_table(_self, _self.value);
-    eosio_assert(witness_table.find(witness.value) != witness_table.end(), "witness not found");
+    auto witness_it = witness_table.find(witness.value);
+    eosio::check(witness_it != witness_table.end(), "witness not found");
+    witness_table.modify(witness_it, voter, [&](auto& w) {
+        --w.counter_votes;
+    });
 
     witness_vote_tbl tbl(_self, _self.value);
     auto itr = tbl.find(voter.value);
     bool exists = itr != tbl.end();
-    eosio_assert(exists, "there are no votes");
+    eosio::check(exists, "there are no votes");
 
     auto w = itr->witnesses;
     auto el = std::find(w.begin(), w.end(), witness);
-    eosio_assert(el != w.end(), "there is no vote for this witness");
+    eosio::check(el != w.end(), "there is no vote for this witness");
     w.erase(el);
     tbl.modify(itr, voter, [&](auto& v) {
         v.witnesses = w;
@@ -243,9 +261,9 @@ void control::unvotewitn(name voter, name witness) {
 
 void control::changevest(name who, asset diff) {
     if (!_cfg.exists()) return;       // allow silent exit if changing vests before community created
-    require_auth(config::vesting_name);
-    eosio_assert(diff.amount != 0, "diff is 0. something broken");          // in normal conditions sender must guarantee it
-    eosio_assert(diff.symbol.code() == props().token.code, "wrong symbol. something broken");  // in normal conditions sender must guarantee it
+    require_auth(token::get_issuer(config::token_name, diff.symbol.code()));
+    eosio::check(diff.amount != 0, "diff is 0. something broken");          // in normal conditions sender must guarantee it
+    eosio::check(diff.symbol.code() == props().token.code, "wrong symbol. something broken");  // in normal conditions sender must guarantee it
     change_voter_vests(who, diff.amount);
 }
 
@@ -274,7 +292,7 @@ void control::update_witnesses_weights(vector<name> witnesses, share_type diff) 
     for (const auto& witness : witnesses) {
         auto w = wtbl.find(witness.value);
         if (w != wtbl.end()) {
-            wtbl.modify(w, witness, [&](auto& wi) {
+            wtbl.modify(w, name(), [&](auto& wi) {
                 wi.total_weight += diff;            // TODO: additional checks of overflow? (not possible normally)
                 send_witness_event(wi);
             });
@@ -291,9 +309,13 @@ void control::update_auths() {
     msig_auth_singleton tbl(_self, _self.value);
     const auto& top_auths = tbl.get_or_default();
 
-    auto last_update = top_auths.last_update.utc_seconds;
-    if (last_update && props().update_auth_period.period + last_update > now())
+    auto now = eosio::current_time_point();
+    if (top_auths.last_update + eosio::seconds(props().update_auth_period.period) > now)
         return;
+
+    auto set_last_update = [&]() {
+        tbl.set({top_auths.witnesses, now}, _self);
+    };
 
     auto top = top_witnesses();
     std::sort(top.begin(), top.end(), [](const auto& it1, const auto& it2) {
@@ -305,19 +327,24 @@ void control::update_auths() {
         bool result = std::equal(old_top.begin(), old_top.end(), top.begin(), [](const auto& prev, const auto& cur) {
             return prev.value == cur.value;
         });
-        if (result)
+        if (result) {
+            set_last_update();
             return;
+        }
     }
 
-    if (top.size())
-        tbl.set({top, time_point_sec(now())}, _self);
+    if (top.size()) {
+        tbl.set({top, now}, _self);
+    } else {
+        set_last_update();
+    }
 
     auto max_witn = props().witnesses.max;
     if (top.size() < max_witn) {           // TODO: ?restrict only just after creation and allow later
         print("Not enough witnesses to change auth\n");
         return;
     }
-    eosiosystem::authority auth;
+    cyber::authority auth;
     for (const auto& i : top) {
         auth.accounts.push_back({{i,config::active_name},1});
     }
@@ -333,7 +360,7 @@ void control::update_auths() {
     for (const auto& [perm, thrs]: auths) {
         //permissions must be sorted
         std::sort(auth.accounts.begin(), auth.accounts.end(),
-            [](const eosiosystem::permission_level_weight& l, const eosiosystem::permission_level_weight& r) {
+            [](const cyber::permission_level_weight& l, const cyber::permission_level_weight& r) {
                 return std::tie(l.permission.actor, l.permission.permission) <
                     std::tie(r.permission.actor, r.permission.permission);
             }
@@ -349,7 +376,22 @@ void control::update_auths() {
 }
 
 void control::send_witness_event(const witness_info& wi) {
-    eosio::event(_self, "witnessstate"_n, std::make_tuple(wi.name, wi.total_weight)).send();
+    eosio::event(_self, "witnessstate"_n, std::make_tuple(wi.name, wi.total_weight, wi.active)).send();
+}
+
+void control::active_witness(name witness, bool flag) {
+    // TODO: simplify upsert to allow passing just inner lambda
+    bool exists = upsert_tbl<witness_tbl>(witness, [&](bool) {
+        return [&](witness_info& w) {
+            eosio::check(flag != w.active, "active flag not updated");
+            w.active = flag;
+
+            send_witness_event(w);
+        };
+    }, false);
+    eosio::check(exists, "witness not found");
+
+    update_auths();
 }
 
 vector<witness_info> control::top_witness_info() {
@@ -380,4 +422,5 @@ DISPATCH_WITH_TRANSFER(golos::control, on_transfer,
     (validateprms)(setparams)
     (attachacc)(detachacc)
     (regwitness)(unregwitness)
+    (startwitness)(stopwitness)
     (votewitness)(unvotewitn)(changevest))

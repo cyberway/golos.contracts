@@ -1,11 +1,25 @@
 #pragma once
 #include "test_api_helper.hpp"
+#include "contracts.hpp"
+#include "common/config.hpp"
 
 namespace eosio { namespace testing {
 
+namespace cfg = golos::config;
 
 struct golos_emit_api: base_contract_api {
     using base_contract_api::base_contract_api;
+
+    void initialize_contract(name token, name issuer) {
+        _tester->install_contract(_code, contracts::emit_wasm(), contracts::emit_abi());
+
+        _tester->set_authority(_code, cfg::code_name, create_code_authority({_code}), "active");
+        _tester->link_authority(_code, _code, cfg::code_name, N(emit));
+
+        BOOST_CHECK(_tester->has_code_authority(issuer, cfg::issue_name, _code));
+        _tester->link_authority(issuer, token, cfg::issue_name, N(issue));
+        _tester->link_authority(issuer, token, cfg::issue_name, N(transfer));
+    }
 
     //// emit actions
     action_result emit(account_name signer) {

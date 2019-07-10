@@ -3,7 +3,7 @@
 #ifdef UNIT_TEST_ENV
 #define FIXED_POINT_ASSERT(COND,  MESSAGE) if(!(COND)) { throw std::runtime_error((MESSAGE)); }
 #else
-#define FIXED_POINT_ASSERT(COND,  MESSAGE) eosio_assert((COND), (MESSAGE))
+#define FIXED_POINT_ASSERT(COND,  MESSAGE) eosio::check((COND), (MESSAGE))
 #endif
 
 #include "fixed_point.h"
@@ -16,8 +16,14 @@ namespace fixed_point_utils {
 
 using fixp_t = sg14::fixed_point<base_t, -fixed_point_fractional_digits>;
 using wdfp_t = sg14::fixed_point<wide_t, -fixed_point_fractional_digits>;
+
+// elastic with same number of fractional digits as fixp_t has
 using elap_t = sg14::elastic_fixed_point<fixp_t::integer_digits, fixp_t::fractional_digits, base_t>;
+
+// elastic with all (except 1) digits fractional (for values less than or equal to 1)
 using elaf_t = sg14::fixed_point<sg14::elastic_integer<std::numeric_limits<base_t>::digits, base_t>, -(std::numeric_limits<base_t>::digits - 1)>;
+
+// "integer" elastic with no fractional digits
 using elai_t = sg14::fixed_point<sg14::elastic_integer<std::numeric_limits<base_t>::digits, base_t>, 0>;
 
 constexpr fixp_t FP(base_t a) { return fixp_t::from_data(a); };

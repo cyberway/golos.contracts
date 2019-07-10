@@ -16,20 +16,35 @@ public:
     golos_referral_tester()
         : golos_tester(cfg::referral_name)
         , _sym(3, "GLS")
-        , post( {this, cfg::publish_name, _sym} )
-        , vest({this, cfg::vesting_name, _sym})
-        , referral( {this, cfg::referral_name} )
+        , _sym_vest(6, "GLS")
+        , post({this, cfg::publish_name, _sym})
+        , vest({this, cfg::vesting_name, _sym_vest})
+        , referral({this, _code})
         , token({this, cfg::token_name, _sym})
         , _users{N(sania), N(pasha), N(tania), N(vania), N(issuer)}
     {
-        create_accounts({N(sania), N(pasha), N(tania), N(vania), N(issuer), _code,
-                        cfg::publish_name, cfg::token_name, cfg::emission_name, cfg::vesting_name, cfg::social_name });
+        create_accounts({N(sania), N(pasha), N(tania), N(vania), _code,
+                         cfg::publish_name, cfg::token_name, cfg::issuer_name,
+                         cfg::vesting_name, cfg::social_name, cfg::control_name,
+                         cfg::charge_name});
         produce_blocks(2);
 
-        install_contract(_code, contracts::referral_wasm(), contracts::referral_abi());
         install_contract(cfg::token_name, contracts::token_wasm(), contracts::token_abi());
-        install_contract(cfg::vesting_name, contracts::vesting_wasm(), contracts::vesting_abi());
-        install_contract(cfg::publish_name, contracts::posting_wasm(), contracts::posting_abi());
+        vest.add_changevest_auth_to_issuer(cfg::issuer_name, cfg::control_name);
+        vest.initialize_contract(cfg::token_name);
+        post.initialize_contract(cfg::token_name, cfg::charge_name);
+        referral.initialize_contract(cfg::token_name);
+
+        BOOST_CHECK_EQUAL(success(), token.create(cfg::issuer_name, token.make_asset(10000)));
+        BOOST_CHECK_EQUAL(success(), token.open(cfg::publish_name, _sym, cfg::publish_name));
+
+        produce_blocks();
+
+        BOOST_CHECK_EQUAL(success(), vest.create_vesting(cfg::issuer_name, _sym_vest, cfg::control_name));
+        for (auto& u : _users) {
+            BOOST_CHECK_EQUAL(success(), vest.open(u));
+        }
+        produce_blocks();
     }
 
     void init_params() {
@@ -43,21 +58,12 @@ public:
     }
 
     void init_params_posts() {
-        BOOST_CHECK_EQUAL(success(), token.create(cfg::emission_name, token.make_asset(1)));
-        BOOST_CHECK_EQUAL(success(), token.open(cfg::publish_name, _sym, cfg::publish_name));
-        produce_blocks();
-
         funcparams fn{"0", 1};
-        BOOST_CHECK_EQUAL(success(), post.set_rules(fn ,fn ,fn , 0, 0));
+        BOOST_CHECK_EQUAL(success(), post.set_rules(fn ,fn ,fn , 5000));
         BOOST_CHECK_EQUAL(success(), post.set_limit("post"));
         BOOST_CHECK_EQUAL(success(), post.set_limit("comment"));
         BOOST_CHECK_EQUAL(success(), post.set_limit("vote"));
         BOOST_CHECK_EQUAL(success(), post.set_limit("post bandwidth"));
-        produce_blocks();
-
-        for (auto& u : _users) {
-            BOOST_CHECK_EQUAL(success(), vest.open(u, _sym, u));
-        }
         produce_blocks();
 
         auto vote_changes = post.get_str_vote_changes(post.max_vote_changes);
@@ -66,15 +72,17 @@ public:
         auto comment_depth = post.get_str_comment_depth(post.max_comment_depth);
         auto social_acc = post.get_str_social_acc(cfg::social_name);
         auto referral_acc = post.get_str_referral_acc(cfg::referral_name);
+        auto curators_prcnt = post.get_str_curators_prcnt(post.min_curators_prcnt, post.max_curators_prcnt);
 
         auto params = "[" + vote_changes + "," + cashout_window + "," + beneficiaries + "," + comment_depth +
-                "," + social_acc + "," + referral_acc + "]";
+                "," + social_acc + "," + referral_acc + "," + curators_prcnt + "]";
         BOOST_CHECK_EQUAL(success(), post.set_params(params));
         produce_blocks();
    }
 
 protected:
     symbol _sym;
+    symbol _sym_vest;
     // TODO: make contract error messages more clear
     struct errors: contract_error_messages {
         const string referral_exist = amsg("A referral with the same name already exists");
@@ -91,9 +99,9 @@ protected:
         const string limit_persent     = amsg("max_percent > 100.00%");
 
         const string referral_not_exist      = amsg("A referral with this name doesn't exist.");
-        const string funds_not_equal         = amsg("Amount of funds doesn't equal.");
-        const string limit_percents          = amsg("publication::create_message: prop_sum > 100%");
-        const string referrer_benif          = amsg("Comment already has referrer as a referrer-beneficiary.");
+        const string funds_not_equal   = amsg("Amount of funds doesn't equal.");
+        const string limit_percents    = amsg("weights_sum + referral percent must not be greater than 100% (10000)");
+        const string referrer_benif    = amsg("Comment already has referrer as a referrer-beneficiary.");
     } err;
 
     golos_posting_api post;
@@ -188,9 +196,8 @@ BOOST_FIXTURE_TEST_CASE(transfer_tests, golos_referral_tester) try {
     BOOST_CHECK_EQUAL(referral.get_referral(N(vania))["referral"].as<name>(), N(vania));
 
     BOOST_TEST_MESSAGE("--- issue tokens for users");
-    BOOST_CHECK_EQUAL(success(), token.create(cfg::emission_name, token.make_asset(10000)));
-    BOOST_CHECK_EQUAL(success(), token.issue(cfg::emission_name, N(vania), token.make_asset(300), "issue 300 tokens for vania"));
-    BOOST_CHECK_EQUAL(success(), token.issue(cfg::emission_name, N(tania), token.make_asset(300), "issue 300 tokens for tania"));
+    BOOST_CHECK_EQUAL(success(), token.issue(cfg::issuer_name, N(vania), token.make_asset(300), "issue 300 tokens for vania"));
+    BOOST_CHECK_EQUAL(success(), token.issue(cfg::issuer_name, N(tania), token.make_asset(300), "issue 300 tokens for tania"));
 
     BOOST_TEST_MESSAGE("--- checking for asserts");
     BOOST_CHECK_EQUAL(err.referral_not_exist, token.transfer(N(tania), cfg::referral_name, token.make_asset(breakout), ""));
@@ -235,21 +242,20 @@ BOOST_FIXTURE_TEST_CASE(create_referral_message_tests, golos_referral_tester) tr
     init_params_posts();
 
     const auto expire = 8; // sec
-    const auto ref_block_num = control->head_block_header().block_num();
     const auto current_time = control->head_block_time().sec_since_epoch();
     BOOST_CHECK_EQUAL(success(), referral.create_referral(N(issuer), N(sania), 500, current_time + expire, token.make_asset(50)));
-    BOOST_CHECK_EQUAL(success(), post.create_msg({N(sania), "permlink", ref_block_num}));
+    BOOST_CHECK_EQUAL(success(), post.create_msg({N(sania), "permlink"}));
 
-    auto post_sania = post.get_message({N(sania), "permlink", ref_block_num});
+    auto post_sania = post.get_message({N(sania), "permlink"});
     BOOST_CHECK_EQUAL (post_sania["beneficiaries"].size(), 1);
     BOOST_CHECK_EQUAL( post_sania["beneficiaries"][uint8_t(0)].as<beneficiary>().account, N(issuer) );
 
     BOOST_CHECK_EQUAL(success(), referral.create_referral(N(issuer), N(pasha), 5000, current_time + expire, token.make_asset(50)));
-    BOOST_CHECK_EQUAL(err.limit_percents, post.create_msg({N(pasha), "permlink", ref_block_num}, {N(), "parentprmlnk", 0}, 0, { beneficiary{N(tania), 7000} }));
-    BOOST_CHECK_EQUAL(err.referrer_benif, post.create_msg({N(pasha), "permlink", ref_block_num}, {N(), "parentprmlnk", 0}, 0, { beneficiary{N(issuer), 2000} }));
-    BOOST_CHECK_EQUAL(success(), post.create_msg({N(pasha), "permlink", ref_block_num}, {N(), "parentprmlnk", 0}, 0, { beneficiary{N(tania), 2000} }));
+    BOOST_CHECK_EQUAL(err.limit_percents, post.create_msg({N(pasha), "permlink"}, {N(), "parentprmlnk"}, { beneficiary{N(tania), 7000} }));
+    BOOST_CHECK_EQUAL(err.referrer_benif, post.create_msg({N(pasha), "permlink"}, {N(), "parentprmlnk"}, { beneficiary{N(issuer), 2000} }));
+    BOOST_CHECK_EQUAL(success(), post.create_msg({N(pasha), "permlink"}, {N(), "parentprmlnk"}, { beneficiary{N(tania), 2000} }));
 
-    auto post_pasha = post.get_message({N(pasha), "permlink", ref_block_num});
+    auto post_pasha = post.get_message({N(pasha), "permlink"});
     BOOST_CHECK_EQUAL (post_pasha["beneficiaries"].size(), 2);
 } FC_LOG_AND_RETHROW()
 

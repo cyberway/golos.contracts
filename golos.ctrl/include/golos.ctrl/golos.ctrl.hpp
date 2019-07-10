@@ -2,11 +2,11 @@
 #include "golos.ctrl/parameters.hpp"
 #include <common/upsert.hpp>
 #include <common/config.hpp>
-#include <eosiolib/time.hpp>
-#include <eosiolib/eosio.hpp>
-#include <eosiolib/asset.hpp>
-#include <eosiolib/singleton.hpp>
-#include <eosiolib/public_key.hpp>
+#include <eosio/time.hpp>
+#include <eosio/eosio.hpp>
+#include <eosio/asset.hpp>
+#include <eosio/singleton.hpp>
+#include <eosio/crypto.hpp>
 #include <vector>
 #include <string>
 
@@ -22,6 +22,7 @@ struct [[eosio::table]] witness_info {
     bool active;            // can check key instead or even remove record
 
     uint64_t total_weight;
+    uint64_t counter_votes;
 
     uint64_t primary_key() const {
         return name.value;
@@ -83,6 +84,8 @@ public:
 
     [[eosio::action]] void regwitness(name witness, std::string url);
     [[eosio::action]] void unregwitness(name witness);
+    [[eosio::action]] void stopwitness(name witness);
+    [[eosio::action]] void startwitness(name witness);
     [[eosio::action]] void votewitness(name voter, name witness);
     [[eosio::action]] void unvotewitn(name voter, name witness);
 
@@ -113,6 +116,7 @@ private:
     void update_witnesses_weights(std::vector<name> witnesses, share_type diff);
     void update_auths();
     void send_witness_event(const witness_info& wi);
+    void active_witness(golos::name witness, bool flag);
 };
 
 
