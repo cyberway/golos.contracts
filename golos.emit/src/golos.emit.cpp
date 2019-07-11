@@ -19,6 +19,7 @@ emission::emission(name self, name code, datastream<const char*> ds)
 }
 
 struct emit_params_setter: set_params_visitor<emit_state> {
+    std::optional<bwprovider> new_bwprovider;
     using set_params_visitor::set_params_visitor; // enable constructor
 
     bool operator()(const infrate_params& p) {
@@ -33,6 +34,10 @@ struct emit_params_setter: set_params_visitor<emit_state> {
     bool operator()(const emit_interval_param& p) {
         return set_param(p, &emit_state::interval);
     }
+    bool operator()(const bwprovider_param& p) {
+        new_bwprovider = p;
+        return set_param(p, &emit_state::bwprovider);
+    }
 };
 
 void emission::validateprms(vector<emit_param> params) {
@@ -42,7 +47,13 @@ void emission::validateprms(vector<emit_param> params) {
 
 void emission::setparams(vector<emit_param> params) {
     require_auth(_self);
-    param_helper::set_parameters<emit_params_setter>(params, _cfg, _self);
+    auto setter = param_helper::set_parameters<emit_params_setter>(params, _cfg, _self);
+    if (setter.new_bwprovider) {
+        auto provider = setter.new_bwprovider->provider;
+        if (provider.actor != name()) {
+            dispatch_inline("cyber"_n, "providebw"_n, {provider}, std::make_tuple(provider.actor, _self));
+        }
+    }
 }
 
 
@@ -141,9 +152,13 @@ void emission::emit() {
 
 void emission::schedule_next(state& s, uint32_t delay) {
     auto sender_id = (uint128_t(_cfg.get().token.symbol.raw()) << 64) | s.prev_emit;
+    auto provider = _cfg.get().bwprovider.provider;
 
     transaction trx;
     trx.actions.emplace_back(action{permission_level(_self, config::code_name), _self, "emit"_n, std::tuple<>()});
+    if (provider.actor != name()) {
+        trx.actions.emplace_back(action{provider, "cyber"_n, "providebw"_n, std::make_tuple(provider.actor, _self)});
+    }
     trx.delay_sec = delay;
     trx.send(sender_id, _self);
 

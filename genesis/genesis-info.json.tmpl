@@ -170,6 +170,7 @@
                 {"name": "createuser", "accounts": ["@testing"]},
                 {"name": "invoice",    "accounts": ["gls.charge@cyber.code", "gls.publish@cyber.code"]},
                 {"name": "changevest", "accounts": ["gls.vesting@cyber.code"]},
+                {"name": "providebw",    "accounts": ["gls.emit@cyber.code"]},
                 {"name": "witn.smajor"},
                 {"name": "witn.major"},
                 {"name": "witn.minor"}
@@ -271,6 +272,9 @@
             "permission": "gls@changevest",
             "links": ["gls.ctrl:changevest"]
         },{
+            "permission": "gls@providebw",
+            "links": ["cyber:providebw"]
+        }, {
             "permission": "gls.ctrl@code",
             "links": ["cyber.token:transfer", "cyber.token:payment"]
         },{
@@ -303,7 +307,8 @@
                     {"name":"gls.publish", "percent":6000},
                     {"name":"gls.vesting", "percent":2400}]},
                 "token": {"symbol":"3,GOLOS"},
-                "interval": {"value":900}
+                "interval": {"value":900},
+                "bwprovider": {"actor":"gls","permission":"providebw"}
             }}]
         },{
             "code": "gls.vesting",

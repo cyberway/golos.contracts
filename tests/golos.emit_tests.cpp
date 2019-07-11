@@ -68,9 +68,9 @@ BOOST_FIXTURE_TEST_CASE(start_emission_test, golos_emit_tester) try {
     auto vesting_pool = emit.pool_json(cfg::vesting_name, 2667-267);
     auto witness_pool = emit.pool_json(cfg::control_name, 0);
     auto workers_pool = emit.pool_json(cfg::workers_name, 1000);
-    auto pools = "{'pools':[" + content_pool + "," + witness_pool + "," + vesting_pool + "," + workers_pool + "]}";
+    auto pools = "['reward_pools',{'pools':[" + content_pool + "," + witness_pool + "," + vesting_pool + "," + workers_pool + "]}]";
     auto interval = "['emit_interval',{'value':'" + std::to_string(_interval) + "'}]";
-    auto params = "[" + emit.infrate_json(1500, 95, 250000) + ",['reward_pools'," + pools + "]," + emit.token_symbol_json(_token) + "," + interval + "]";
+    auto params = "[" + emit.infrate_json(1500, 95, 250000) + "," + pools + "," + emit.token_symbol_json(_token) + "," + interval + "," + emit.bwprovider_json(name(),name()) + "]";
     BOOST_CHECK_EQUAL(success(), emit.set_params(params));
 
     BOOST_TEST_MESSAGE("--- start succeed");
@@ -110,13 +110,13 @@ BOOST_FIXTURE_TEST_CASE(set_params, golos_emit_tester) try {
     const string infrate = "{'start':1,'stop':1,'narrowing':0}";
     auto interval = "['emit_interval',{'value':'" + std::to_string(_interval) + "'}]";
     auto interval0 = "['emit_interval',{'value':'" + std::to_string(0) + "'}]";
-    auto params = "[['inflation_rate'," + infrate + "], ['reward_pools'," + pools + "]," + emit.token_symbol_json(_token) + "," + interval0 + "]";
+    auto params = "[['inflation_rate'," + infrate + "], ['reward_pools'," + pools + "]," + emit.token_symbol_json(_token) + "," + interval0 + "," + emit.bwprovider_json(name(), name()) + "]";
     BOOST_CHECK_EQUAL(err.no_pool_account, emit.set_params(params));
     create_accounts({N(test), N(less), N(zero)});
     produce_block();
 
     BOOST_CHECK_EQUAL(err.interval0, emit.set_params(params));
-    params = "[['inflation_rate'," + infrate + "], ['reward_pools'," + pools + "]," + emit.token_symbol_json(_token) + "," + interval + "]";
+    params = "[['inflation_rate'," + infrate + "], ['reward_pools'," + pools + "]," + emit.token_symbol_json(_token) + "," + interval + "," + emit.bwprovider_json(name(), name()) + "]";
     BOOST_CHECK_EQUAL(success(), emit.set_params(params));
     auto t = emit.get_params();
     BOOST_TEST_MESSAGE("--- " + fc::json::to_string(t));

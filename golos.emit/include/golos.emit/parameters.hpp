@@ -81,15 +81,27 @@ struct emit_interval: parameter {
 };
 using emit_interval_param = param_wrapper<emit_interval,1>;
 
-using emit_param = std::variant<infrate_params, reward_pools_param, emit_token_params, emit_interval_param>;
+struct bwprovider: parameter {
+    permission_level provider;
+
+    void validate() const override {
+        eosio::check((provider.actor != name()) == (provider.permission != name()), "actor and permission must be set together");
+        // check that contract can use cyber:providebw done in setparams
+        // (we need know contract account to make this check)
+    }
+};
+using bwprovider_param = param_wrapper<bwprovider,1>;
+
+using emit_param = std::variant<infrate_params, reward_pools_param, emit_token_params, emit_interval_param, bwprovider_param>;
 
 struct [[eosio::table]] emit_state {
     infrate_params infrate;
     reward_pools_param pools;
     emit_token_params token;
     emit_interval_param interval; 
+    bwprovider_param bwprovider;
 
-    static constexpr int params_count = 4;
+    static constexpr int params_count = 5;
 };
 using emit_params_singleton = eosio::singleton<"emitparams"_n, emit_state>;
 
