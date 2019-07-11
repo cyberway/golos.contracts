@@ -3,7 +3,6 @@
 
 namespace golos { namespace config {
 
-static const uint64_t max_expire = 10000;
-static const uint64_t max_percent = 8000;  // 80.00%
+static const uint64_t max_deletions_per_trx = 20;
 
 }} // golos::config

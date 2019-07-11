@@ -1,4 +1,5 @@
 #include "golos.referral/golos.referral.hpp"
+#include "golos.referral/config.hpp"
 #include <common/dispatchers.hpp>
 #include <eosio/transaction.hpp>
 
@@ -40,6 +41,8 @@ void referral::addreferral(name referrer, name referral, uint32_t percent,
                            uint64_t expire, asset breakout) {
     require_auth(referrer);
 
+    closeoldref();
+
     referrals_table referrals(_self, _self.value);
     auto it_referral = referrals.find(referral.value);
     eosio::check(it_referral == referrals.end(), "A referral with the same name already exists");
@@ -71,6 +74,8 @@ void referral::on_transfer(name from, name to, asset quantity, std::string memo)
     if(_self != to)
         return;
 
+    closeoldref();
+
     referrals_table referrals(_self, _self.value);
     auto it_referral = referrals.find(from.value);
     eosio::check(it_referral != referrals.end(), "A referral with this name doesn't exist.");
@@ -83,9 +88,7 @@ void referral::on_transfer(name from, name to, asset quantity, std::string memo)
     referrals.erase(it_referral);
 }
 
-void referral::closeoldref(uint64_t hash) {
-    require_auth(_self);
-
+void referral::closeoldref() {
     referral_params_singleton cfg(_self, _self.value);
     eosio::check(cfg.exists(), "not found parametrs");
 
@@ -93,16 +96,13 @@ void referral::closeoldref(uint64_t hash) {
     const auto now = static_cast<uint64_t>(eosio::current_time_point().sec_since_epoch());
     auto index_expire = referrals.get_index<"expirekey"_n>();
     auto it_index_expire = index_expire.begin();
+    int  i = 0;
     while ( it_index_expire != index_expire.end() ) {
-        if ( it_index_expire->expire < now) {
-            it_index_expire = index_expire.erase(it_index_expire);
-        } else break;
+        if (++i > config::max_deletions_per_trx || it_index_expire->expire >= now) {
+            break;
+        }
+        it_index_expire = index_expire.erase(it_index_expire);
     }
-
-    transaction trx;
-    trx.actions.emplace_back( action(permission_level(_self, config::code_name), _self, "closeoldref"_n, st_hash{now}) );
-    trx.delay_sec = cfg.get().delay_params.delay_clear_old_ref;
-    trx.send(_self.value, _self);
 }
 
 }

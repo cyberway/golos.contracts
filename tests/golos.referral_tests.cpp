@@ -219,21 +219,24 @@ BOOST_FIXTURE_TEST_CASE(close_referral_tests, golos_referral_tester) try {
     const auto expire = 8; // sec
     const auto current_time = control->head_block_time().sec_since_epoch();
     BOOST_CHECK_EQUAL(success(), referral.create_referral(N(issuer), N(sania), 500, current_time + expire, token.make_asset(50)));
-    BOOST_CHECK_EQUAL(success(), referral.close_old_referrals(current_time));
+    BOOST_CHECK_EQUAL(success(), referral.close_old_referrals());
     produce_blocks();
 
     auto v_referrals = referral.get_referrals();
-    BOOST_TEST_CHECK(v_referrals.size() == 1);
-    BOOST_TEST_CHECK(v_referrals.at(0)["referral"].as<name>() == N(sania));
-    BOOST_TEST_CHECK(v_referrals.at(0)["referrer"].as<name>() == N(issuer));
+    BOOST_CHECK_EQUAL(v_referrals.size(), 1);
+    BOOST_CHECK_EQUAL(v_referrals.at(0)["referral"].as<name>(), N(sania));
+    BOOST_CHECK_EQUAL(v_referrals.at(0)["referrer"].as<name>(), N(issuer));
 
     produce_blocks( golos::seconds_to_blocks(delay_clear_old_ref) );
     v_referrals = referral.get_referrals();
-    BOOST_TEST_CHECK(v_referrals.size() == 1);
+    BOOST_CHECK_EQUAL(v_referrals.size(), 1);
     produce_blocks();
 
     v_referrals = referral.get_referrals();
-    BOOST_TEST_CHECK(v_referrals.size() == 0);
+    BOOST_CHECK_EQUAL(v_referrals.size(), 1);
+    BOOST_CHECK_EQUAL(success(), referral.close_old_referrals());
+    v_referrals = referral.get_referrals();
+    BOOST_CHECK_EQUAL(v_referrals.size(), 0);
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE(create_referral_message_tests, golos_referral_tester) try {

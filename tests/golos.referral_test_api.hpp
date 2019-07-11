@@ -30,10 +30,8 @@ struct golos_referral_api: base_contract_api {
          );
      }
 
-     action_result close_old_referrals(uint64_t hash) {
-         return push(N(closeoldref), _code, args()
-             ("hash", hash)
-         );
+     action_result close_old_referrals() {
+         return push(N(closeoldref), _code, args());
      }
 
      action_result set_params(name creator, std::string json_params) {

@@ -71,11 +71,9 @@
            ]
         },
         {
-           "name": "hash",
+           "name": "empty",
            "base": "",
-           "fields": [
-              {"name": "hash", "type": "uint64"}
-           ]
+           "fields": [ ]
         }
     ],
     "actions": [
@@ -93,7 +91,7 @@
         },
         {
             "name": "closeoldref",
-            "type": "hash"
+            "type": "empty"
         }
     ],
     "tables": [
