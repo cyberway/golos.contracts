@@ -17,7 +17,6 @@ struct golos_posting_api: base_contract_api {
         _tester->install_contract(_code, contracts::posting_wasm(), contracts::posting_abi());
 
         _tester->set_authority(_code, cfg::code_name, create_code_authority({_code}), "active");
-        _tester->link_authority(_code, _code, cfg::code_name, N(closemssg));
         _tester->link_authority(_code, _code, cfg::code_name, N(paymssgrwrd));
         _tester->link_authority(_code, _code, cfg::code_name, N(deletevotes));
         _tester->link_authority(_code, token_name, cfg::code_name, N(transfer));
@@ -174,6 +173,12 @@ struct golos_posting_api: base_contract_api {
         return push(N(setparams), _code, args()
             ("params", json_str_to_obj(json_params)));
     }
+    action_result closemssg(account_name signer) {
+        return push(N(closemssg), signer, args());
+    }
+    action_result closemssg() {
+        return closemssg(_code);
+    }
 
 
     action_result init_default_params() {
@@ -228,7 +233,7 @@ struct golos_posting_api: base_contract_api {
     }
 
     variant get_message(account_name acc, uint64_t id) {
-        return _tester->get_chaindb_struct(_code, acc, N(message), id, "message");
+        return _tester->get_chaindb_struct(_code, _code, N(message), id, "message");
     }
 
     variant get_permlink(mssgid message_id) {
@@ -259,7 +264,7 @@ struct golos_posting_api: base_contract_api {
     }
 
     std::vector<variant> get_messages(account_name user) {
-        auto raw_messages = _tester->get_all_chaindb_rows(_code, user, N(message), false);
+        auto raw_messages = _tester->get_all_chaindb_rows(_code, _code, N(message), false);
         auto raw_permlinks = _tester->get_all_chaindb_rows(_code, user, N(permlink), false);
 
         std::map<uint64_t, variant> src_permlinks_map;
@@ -270,13 +275,16 @@ struct golos_posting_api: base_contract_api {
         std::vector<variant> messages;
         messages.reserve(raw_messages.size());
         for (auto& src_mssg:  raw_messages) {
+            auto src_perm = src_permlinks_map.find(src_mssg["id"].as_uint64());
+            if (src_perm == src_permlinks_map.end()) {
+                continue;
+            }
             mvo dst_mssg(src_mssg.get_object());
-            auto& src_perm = src_permlinks_map[src_mssg["id"].as_uint64()];
 
-            for (auto entry: src_perm.get_object()) {
+            for (auto entry: src_perm->second.get_object()) {
                 dst_mssg(entry.key(), entry.value());
             }
-            dst_mssg("permlink", src_perm["value"]);
+            dst_mssg("permlink", src_perm->second["value"]);
             messages.emplace_back(variant(dst_mssg));
         }
 

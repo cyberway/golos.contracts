@@ -41,6 +41,7 @@ struct messagestate {
 struct message {
     message() = default;
 
+    name author;
     uint64_t id;
     uint64_t date;
     uint64_t pool_date;
@@ -50,12 +51,17 @@ struct message {
     messagestate state;
     uint16_t curators_prcnt;
     bool closed = false;
+    uint64_t cashout_time;
     eosio::asset mssg_reward;
     eosio::asset max_payout;
     int64_t paid_amount = 0;
 
     uint64_t primary_key() const {
         return id;
+    }
+
+    uint64_t by_cashout() const {
+        return cashout_time;
     }
 };
 
@@ -215,7 +221,8 @@ namespace tables {
 using namespace eosio;
 
 using id_index = indexed_by<N(primary), const_mem_fun<structures::message, uint64_t, &structures::message::primary_key>>;
-using message_table = multi_index<N(message), structures::message, id_index>;
+using cashout_index = indexed_by<N(bycashout), const_mem_fun<structures::message, uint64_t, &structures::message::by_cashout>>;
+using message_table = multi_index<N(message), structures::message, id_index, cashout_index>;
 
 using permlink_id_index = indexed_by<N(primary), const_mem_fun<structures::permlink, uint64_t, &structures::permlink::primary_key>>;
 using permlink_value_index = indexed_by<N(byvalue), const_mem_fun<structures::permlink, std::string, &structures::permlink::secondary_key>>;

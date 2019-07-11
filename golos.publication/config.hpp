@@ -12,6 +12,8 @@ constexpr size_t target_payments_per_trx = 20;
 constexpr size_t max_payments_per_trx    = 20;
 constexpr size_t max_deletions_per_trx   = 100;
 
+constexpr size_t max_closed_posts_per_action = 20;
+
 static_assert(max_payments_per_trx >= target_payments_per_trx, "max_payments_per_trx < target_payments_per_trx");
 
 namespace limit_restorer_domain {//TODO: it will look better in a rule settings

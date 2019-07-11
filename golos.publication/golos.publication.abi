@@ -108,12 +108,7 @@
   {
     "name": "closemssg",
     "base": "",
-    "fields": [
-      {
-        "name": "message_id",
-        "type": "mssgid"
-      }
-    ]
+    "fields": []
   },
   {
     "name": "beneficiary",
@@ -166,6 +161,10 @@
     "base": "",
     "fields": [
       {
+        "name": "author",
+        "type": "name"
+      },
+      {
         "name": "id",
         "type": "uint64"
       },
@@ -200,6 +199,10 @@
       {
         "name": "closed",
         "type": "bool"
+      },
+      {
+        "name": "cashout_time",
+        "type": "uint64"
       },
       {
         "name": "mssg_reward",
@@ -990,6 +993,13 @@
           "unique": "true",
           "orders": [
               {"field": "id", "order": "asc"}
+          ]
+       },
+       {
+          "name": "bycashout",
+          "unique": "false",
+          "orders": [
+              {"field": "cashout_time", "order": "asc"}
           ]
        }
     ]

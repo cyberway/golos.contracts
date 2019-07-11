@@ -126,6 +126,7 @@ protected:
         const string delete_children       = amsg("You can't delete comment with child comments.");
         const string no_permlink           = amsg("Permlink doesn't exist.");
         const string no_message            = amsg("Message doesn't exist in cashout window.");
+        const string message_closed        = amsg("Message is closed.");
         const string vote_same_weight      = amsg("Vote with the same weight has already existed.");
         const string vote_weight_0         = amsg("weight can't be 0.");
         const string vote_weight_gt100     = amsg("weight can't be more than 100%.");
@@ -334,6 +335,8 @@ BOOST_FIXTURE_TEST_CASE(delete_message, golos_publication_tester) try {
     BOOST_CHECK_EQUAL(post.get_message({N(jackiechan), "child-done"}).is_null(), false);
 
     produce_block();
+    BOOST_CHECK_EQUAL(success(), post.closemssg());
+    produce_block();
     BOOST_CHECK_EQUAL(post.get_message({N(brucelee), "permlink-done"}).is_null(), true);
     BOOST_CHECK_EQUAL(post.get_message({N(jackiechan), "child-done"}).is_null(), true);
 
@@ -388,6 +391,7 @@ BOOST_FIXTURE_TEST_CASE(upvote, golos_publication_tester) try {
     produce_block();
     //BOOST_CHECK_EQUAL(err.upvote_near_close, vote_jackie(cfg::_100percent));          // TODO Fix broken test GolosChain/golos-smart#410
     produce_blocks(seconds_to_blocks(post.upvote_lockout) - 1);
+    BOOST_CHECK_EQUAL(success(), post.closemssg());
     //BOOST_CHECK_EQUAL(err.upvote_near_close, vote_jackie(cfg::_100percent));          // TODO Fix broken test GolosChain/golos-smart#410
 
     BOOST_TEST_MESSAGE("--- succeed vote after cashout");
@@ -432,7 +436,7 @@ BOOST_FIXTURE_TEST_CASE(downvote, golos_publication_tester) try {
 
     BOOST_TEST_MESSAGE("--- succeed vote after cashout");
     produce_blocks(seconds_to_blocks(post.window) - post.max_vote_changes - 1);
-    BOOST_CHECK_EQUAL(err.no_revote, vote_jackie(cfg::_100percent));
+    BOOST_CHECK_EQUAL(success(), post.closemssg());
     produce_block();
     BOOST_CHECK_EQUAL(err.no_message, vote_jackie(cfg::_100percent));
 } FC_LOG_AND_RETHROW()
@@ -549,6 +553,8 @@ BOOST_FIXTURE_TEST_CASE(comments_cashout_time_test, golos_publication_tester) tr
     BOOST_CHECK_EQUAL(post.get_message({N(brucelee), "permlink"}).is_null(), false);
 
     produce_block();
+    BOOST_CHECK_EQUAL(success(), post.closemssg());
+    produce_block();
 
     BOOST_TEST_MESSAGE("--- checking that messages was closed.");
     BOOST_CHECK_EQUAL(post.get_message({N(brucelee), "permlink"}).is_null(), true);
@@ -557,6 +563,8 @@ BOOST_FIXTURE_TEST_CASE(comments_cashout_time_test, golos_publication_tester) tr
     BOOST_TEST_MESSAGE("--- checking that comment wasn't closed.");
     BOOST_CHECK_EQUAL(post.get_message({N(chucknorris), "comment-permlink"}).is_null(), false);
 
+    produce_block();
+    BOOST_CHECK_EQUAL(success(), post.closemssg());
     produce_block();
     BOOST_TEST_MESSAGE("--- checking that comment was closed.");
     BOOST_CHECK_EQUAL(post.get_message({N(chucknorris), "comment-permlink"}).is_null(), true);
@@ -570,6 +578,8 @@ BOOST_FIXTURE_TEST_CASE(comments_cashout_time_test, golos_publication_tester) tr
     BOOST_CHECK_EQUAL(post.get_message({N(jackiechan), "sorry-guys-i-am-late"}).is_null(), false);
 
     BOOST_TEST_MESSAGE("--- checking that closed message comment was closed.");
+    produce_block();
+    BOOST_CHECK_EQUAL(success(), post.closemssg());
     produce_block();
     BOOST_CHECK_EQUAL(post.get_message({N(jackiechan), "sorry-guys-i-am-late"}).is_null(), true);
 
@@ -646,10 +656,7 @@ BOOST_FIXTURE_TEST_CASE(upvote_near_close, golos_publication_tester) try {
 
     produce_blocks(seconds_to_blocks(post.window - post.upvote_lockout) - post.max_vote_changes + 1);
     BOOST_TEST_MESSAGE("--- fail while upvote lockout");
-
-    BOOST_CHECK_EQUAL(err.upvote_near_close, vote_jackie(cfg::_100percent));          // TODO Fix broken test GolosChain/golos-smart#410
-    produce_blocks(seconds_to_blocks(post.upvote_lockout) - 1);
-    BOOST_CHECK_EQUAL(err.upvote_near_close, vote_chucknorris(cfg::_100percent));          // TODO Fix broken test GolosChain/golos-smart#410
+    BOOST_CHECK_EQUAL(err.upvote_near_close, vote_jackie(cfg::_100percent));
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE(set_curators_prcnt, golos_publication_tester) try {
@@ -756,6 +763,8 @@ BOOST_FIXTURE_TEST_CASE(set_max_payout, golos_publication_tester) try {
 
     BOOST_TEST_MESSAGE("--- checking max_payout cannot be changed after message closed");
     produce_blocks(seconds_to_blocks(post.window));
+    BOOST_CHECK_EQUAL(success(), post.closemssg());
+    produce_block();
     BOOST_CHECK_EQUAL(err.no_message, post.set_max_payout({N(brucelee), "permlink"}, token.make_asset(1000)));
 
     BOOST_TEST_MESSAGE("--- checking max_payout cannot be set for not-exist message");
