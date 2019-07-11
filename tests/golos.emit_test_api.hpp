@@ -72,6 +72,9 @@ struct golos_emit_api: base_contract_api {
     string token_symbol_json(symbol symbol) {
         return string("['emit_token',{'symbol':'" + std::to_string(symbol.decimals()) + "," + symbol.name() + "'}]");
     }
+    string bwprovider_json(account_name actor, permission_name permission) {
+        return string("['bwprovider',{'actor':'") + name{actor}.to_string() + "','permission':'" + name{permission}.to_string() + "'}]";
+    }
 
 };
 
