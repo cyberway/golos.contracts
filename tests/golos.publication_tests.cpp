@@ -335,7 +335,7 @@ BOOST_FIXTURE_TEST_CASE(delete_message, golos_publication_tester) try {
     BOOST_CHECK_EQUAL(post.get_message({N(jackiechan), "child-done"}).is_null(), false);
 
     produce_block();
-    BOOST_CHECK_EQUAL(success(), post.closemssg());
+    BOOST_CHECK_EQUAL(success(), post.closemssgs());
     produce_block();
     BOOST_CHECK_EQUAL(post.get_message({N(brucelee), "permlink-done"}).is_null(), true);
     BOOST_CHECK_EQUAL(post.get_message({N(jackiechan), "child-done"}).is_null(), true);
@@ -391,7 +391,7 @@ BOOST_FIXTURE_TEST_CASE(upvote, golos_publication_tester) try {
     produce_block();
     //BOOST_CHECK_EQUAL(err.upvote_near_close, vote_jackie(cfg::_100percent));          // TODO Fix broken test GolosChain/golos-smart#410
     produce_blocks(seconds_to_blocks(post.upvote_lockout) - 1);
-    BOOST_CHECK_EQUAL(success(), post.closemssg());
+    BOOST_CHECK_EQUAL(success(), post.closemssgs());
     //BOOST_CHECK_EQUAL(err.upvote_near_close, vote_jackie(cfg::_100percent));          // TODO Fix broken test GolosChain/golos-smart#410
 
     BOOST_TEST_MESSAGE("--- succeed vote after cashout");
@@ -436,7 +436,7 @@ BOOST_FIXTURE_TEST_CASE(downvote, golos_publication_tester) try {
 
     BOOST_TEST_MESSAGE("--- succeed vote after cashout");
     produce_blocks(seconds_to_blocks(post.window) - post.max_vote_changes - 1);
-    BOOST_CHECK_EQUAL(success(), post.closemssg());
+    BOOST_CHECK_EQUAL(success(), post.closemssgs());
     produce_block();
     BOOST_CHECK_EQUAL(err.no_message, vote_jackie(cfg::_100percent));
 } FC_LOG_AND_RETHROW()
@@ -553,7 +553,7 @@ BOOST_FIXTURE_TEST_CASE(comments_cashout_time_test, golos_publication_tester) tr
     BOOST_CHECK_EQUAL(post.get_message({N(brucelee), "permlink"}).is_null(), false);
 
     produce_block();
-    BOOST_CHECK_EQUAL(success(), post.closemssg());
+    BOOST_CHECK_EQUAL(success(), post.closemssgs());
     produce_block();
 
     BOOST_TEST_MESSAGE("--- checking that messages was closed.");
@@ -564,7 +564,7 @@ BOOST_FIXTURE_TEST_CASE(comments_cashout_time_test, golos_publication_tester) tr
     BOOST_CHECK_EQUAL(post.get_message({N(chucknorris), "comment-permlink"}).is_null(), false);
 
     produce_block();
-    BOOST_CHECK_EQUAL(success(), post.closemssg());
+    BOOST_CHECK_EQUAL(success(), post.closemssgs());
     produce_block();
     BOOST_TEST_MESSAGE("--- checking that comment was closed.");
     BOOST_CHECK_EQUAL(post.get_message({N(chucknorris), "comment-permlink"}).is_null(), true);
@@ -579,9 +579,25 @@ BOOST_FIXTURE_TEST_CASE(comments_cashout_time_test, golos_publication_tester) tr
 
     BOOST_TEST_MESSAGE("--- checking that closed message comment was closed.");
     produce_block();
-    BOOST_CHECK_EQUAL(success(), post.closemssg());
+    BOOST_CHECK_EQUAL(success(), post.closemssgs());
     produce_block();
     BOOST_CHECK_EQUAL(post.get_message({N(jackiechan), "sorry-guys-i-am-late"}).is_null(), true);
+
+} FC_LOG_AND_RETHROW()
+
+BOOST_FIXTURE_TEST_CASE(comments_closing, golos_publication_tester) try {
+    BOOST_TEST_MESSAGE("comments_closing");
+    init();
+    auto need_blocks = seconds_to_blocks(post.window);
+
+    BOOST_TEST_MESSAGE("--- checking that creating message triggers closing");
+    BOOST_CHECK_EQUAL(success(), post.create_msg({N(brucelee), "permlink"}));
+    produce_blocks(need_blocks);
+    BOOST_CHECK_EQUAL(success(), post.create_msg({N(chucknorris), "permlink"}));
+    produce_block();
+    BOOST_CHECK_EQUAL(post.get_message({N(brucelee), "permlink"}).is_null(), true);
+
+    BOOST_TEST_MESSAGE("--- checking that creating message triggers closing");
 
 } FC_LOG_AND_RETHROW()
 
@@ -763,7 +779,7 @@ BOOST_FIXTURE_TEST_CASE(set_max_payout, golos_publication_tester) try {
 
     BOOST_TEST_MESSAGE("--- checking max_payout cannot be changed after message closed");
     produce_blocks(seconds_to_blocks(post.window));
-    BOOST_CHECK_EQUAL(success(), post.closemssg());
+    BOOST_CHECK_EQUAL(success(), post.closemssgs());
     produce_block();
     BOOST_CHECK_EQUAL(err.no_message, post.set_max_payout({N(brucelee), "permlink"}, token.make_asset(1000)));
 

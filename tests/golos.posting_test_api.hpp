@@ -17,6 +17,7 @@ struct golos_posting_api: base_contract_api {
         _tester->install_contract(_code, contracts::posting_wasm(), contracts::posting_abi());
 
         _tester->set_authority(_code, cfg::code_name, create_code_authority({_code}), "active");
+        _tester->link_authority(_code, _code, cfg::code_name, N(closemssgs));
         _tester->link_authority(_code, _code, cfg::code_name, N(paymssgrwrd));
         _tester->link_authority(_code, _code, cfg::code_name, N(deletevotes));
         _tester->link_authority(_code, token_name, cfg::code_name, N(transfer));
@@ -173,11 +174,11 @@ struct golos_posting_api: base_contract_api {
         return push(N(setparams), _code, args()
             ("params", json_str_to_obj(json_params)));
     }
-    action_result closemssg(account_name signer) {
-        return push(N(closemssg), signer, args());
+    action_result closemssgs(account_name signer) {
+        return push(N(closemssgs), signer, args());
     }
-    action_result closemssg() {
-        return closemssg(_code);
+    action_result closemssgs() {
+        return closemssgs(_code);
     }
 
 
@@ -232,7 +233,7 @@ struct golos_posting_api: base_contract_api {
         return _tester->get_chaindb_struct(_code, acc, N(permlink), id, "permlink");
     }
 
-    variant get_message(account_name acc, uint64_t id) {
+    variant get_message(uint64_t id) {
         return _tester->get_chaindb_struct(_code, _code, N(message), id, "message");
     }
 
@@ -250,7 +251,7 @@ struct golos_posting_api: base_contract_api {
     variant get_message(mssgid message_id) {
         auto permlink = get_permlink(message_id);
         if (!permlink.is_null() && permlink.get_object().size()) {
-            return get_message(message_id.author, permlink["id"].as_uint64());
+            return get_message(permlink["id"].as_uint64());
         }
         return variant();
     }

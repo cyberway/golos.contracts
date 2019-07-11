@@ -106,7 +106,7 @@
     ]
   },
   {
-    "name": "closemssg",
+    "name": "closemssgs",
     "base": "",
     "fields": []
   },
@@ -195,10 +195,6 @@
       {
         "name": "curators_prcnt",
         "type": "percent_t"
-      },
-      {
-        "name": "closed",
-        "type": "bool"
       },
       {
         "name": "cashout_time",
@@ -935,8 +931,8 @@
     "type": "unvote"
   },
   {
-    "name": "closemssg",
-    "type": "closemssg"
+    "name": "closemssgs",
+    "type": "closemssgs"
   },
   {
     "name": "createacc",

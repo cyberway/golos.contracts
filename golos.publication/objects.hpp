@@ -50,7 +50,6 @@ struct message {
     uint16_t rewardweight;  // percent
     messagestate state;
     uint16_t curators_prcnt;
-    bool closed = false;
     uint64_t cashout_time;
     eosio::asset mssg_reward;
     eosio::asset max_payout;
@@ -62,6 +61,10 @@ struct message {
 
     uint64_t by_cashout() const {
         return cashout_time;
+    }
+
+    bool closed() const {
+        return cashout_time == microseconds::maximum().count();
     }
 };
 

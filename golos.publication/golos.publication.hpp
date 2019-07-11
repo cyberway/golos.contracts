@@ -24,7 +24,6 @@ public:
     void upvote(name voter, structures::mssgid message_id, uint16_t weight);
     void downvote(name voter, structures::mssgid message_id, uint16_t weight);
     void unvote(name voter, structures::mssgid message_id);
-    void close_message(structures::mssgid message_id);
     void close_messages();
     void set_params(std::vector<posting_params> params);
     void reblog(name rebloger, structures::mssgid message_id, std::string headermssg, std::string bodymssg);
@@ -36,7 +35,6 @@ public:
     void deletevotes(int64_t message_id, name author);
 private:
     const posting_state& params();
-    void close_message_timer(structures::mssgid message_id, uint64_t id, uint64_t delay_sec);
     void set_vote(name voter, const structures::mssgid &message_id, int16_t weight);
     void fill_depleted_pool(tables::reward_pools& pools, asset quantity,
         tables::reward_pools::const_iterator excluded);
@@ -72,6 +70,7 @@ private:
     const auto& get_message(const tables::message_table& messages, const structures::mssgid& message_id);
     void send_postreward_trx(uint64_t id, const structures::mssgid& message_id);
     void send_deletevotes_trx(int64_t message_id, name author);
+    void send_closemssgs_trx();
 };
 
 } // golos

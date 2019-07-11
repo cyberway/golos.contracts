@@ -38,7 +38,7 @@ extern "C" {
             execute_action(&publication::downvote);
         if (NN(unvote) == action)
             execute_action(&publication::unvote);
-        if (NN(closemssg) == action)
+        if (NN(closemssgs) == action)
             execute_action(&publication::close_messages);
         if (NN(setrules) == action)
             execute_action(&publication::set_rules);
@@ -116,7 +116,7 @@ void publication::create_message(
     std::optional<asset> max_payout = std::nullopt
 ) {
     require_auth(message_id.author);
-    close_messages();
+    send_closemssgs_trx();
 
     eosio::check(message_id.permlink.length() && message_id.permlink.length() < config::max_length,
             "Permlink length is empty or more than 256.");
@@ -295,7 +295,7 @@ void publication::delete_message(structures::mssgid message_id) {
     auto mssg_itr = message_table.find(permlink_itr->id);
     if (mssg_itr != message_table.end()) {
         eosio::check(FP(mssg_itr->state.netshares) <= 0, "Cannot delete a comment with net positive votes.");
-        eosio::check((!mssg_itr->closed || (mssg_itr->mssg_reward.amount == 0)), "Cannot delete comment with unpaid payout");
+        eosio::check((!mssg_itr->closed() || (mssg_itr->mssg_reward.amount == 0)), "Cannot delete comment with unpaid payout");
     }
 
     if (permlink_itr->parentacc) {
@@ -512,45 +512,55 @@ void publication::send_deletevotes_trx(int64_t message_id, name author) {
     trx.send((static_cast<uint128_t>(message_id) << 64) | author.value, _self);
 }
 
-void publication::close_message(structures::mssgid message_id) {
-    require_auth(_self);
-    close_messages();
+void publication::send_closemssgs_trx() {
+    auto cur_time = static_cast<uint64_t>(eosio::current_time_point().time_since_epoch().count());
+    transaction trx(eosio::current_time_point() + eosio::seconds(config::closemssgs_expiration_sec));
+    trx.actions.emplace_back(action{permission_level(_self, config::code_name), _self, "closemssgs"_n, ""});
+    trx.delay_sec = 0;
+    trx.send(static_cast<uint128_t>(cur_time) << 64, _self, true);
 }
 
 void publication::close_messages() {
     auto cur_time = static_cast<uint64_t>(eosio::current_time_point().time_since_epoch().count());
 
+    tables::reward_pools pools_table(_self, _self.value);
+    std::map<uint64_t, structures::rewardpool> pools;
+
+    size_t i = 0;
     tables::message_table message_table(_self, _self.value);
     auto message_index = message_table.get_index<"bycashout"_n>();
-    size_t i = 0;
     for (auto mssg_itr = message_index.begin(); mssg_itr != message_index.end(); ++mssg_itr) {
         if (config::max_closed_posts_per_action <= i++) {
-            break;
+            send_closemssgs_trx();
+            return;
         }
         if (mssg_itr->cashout_time > cur_time) {
             break;
         }
 
-        tables::reward_pools pools(_self, _self.value);
-        auto pool = get_pool(pools, mssg_itr->pool_date);
+        auto pool_kv = pools.find(mssg_itr->pool_date);
+        if (pool_kv == pools.end()) {
+            pools[mssg_itr->pool_date] = *get_pool(pools_table, mssg_itr->pool_date);
+        }
+        structures::rewardpool& pool = pools[mssg_itr->pool_date];
 
-        eosio::check(pool->state.msgs != 0, "LOGIC ERROR! publication::payrewards: pool.msgs is equal to zero");
+        eosio::check(pool.state.msgs != 0, "LOGIC ERROR! publication::payrewards: pool.msgs is equal to zero");
         atmsp::machine<fixp_t> machine;
         fixp_t sharesfn = set_and_run(
                 machine, 
-                pool->rules.mainfunc.code, 
+                pool.rules.mainfunc.code, 
                 {FP(mssg_itr->state.netshares)}, 
-                {{fixp_t(0), FP(pool->rules.mainfunc.maxarg)}});
+                {{fixp_t(0), FP(pool.rules.mainfunc.maxarg)}});
 
         asset mssg_reward;
-        auto state = pool->state;
+        auto& state = pool.state;
         int64_t payout = 0;
         if(state.msgs == 1) {
             payout = state.funds.amount; //if we have the only message in the pool, the author receives a reward anyway
             eosio::check(state.rshares == mssg_itr->state.netshares,
-                    "LOGIC ERROR! publication::payrewards: pool->rshares != mssg_itr->netshares for last message");
+                    "LOGIC ERROR! publication::payrewards: pool.rshares != mssg_itr->netshares for last message");
             eosio::check(state.rsharesfn == sharesfn.data(),
-                    "LOGIC ERROR! publication::payrewards: pool->rsharesfn != sharesfn.data() for last message");
+                    "LOGIC ERROR! publication::payrewards: pool.rsharesfn != sharesfn.data() for last message");
             state.funds.amount = 0;
             state.rshares = 0;
             state.rsharesfn = 0;
@@ -592,30 +602,33 @@ void publication::close_messages() {
         mssg_reward = asset(payout, state.funds.symbol); 
 
         message_index.modify(mssg_itr, name(), [&]( auto &item ) {
-                item.closed = true;
                 item.cashout_time = microseconds::maximum().count();
                 item.mssg_reward = mssg_reward;
             });
 
-        bool pool_erased = false;
         state.msgs--;
-        if(state.msgs == 0) {
-            if(pool != --pools.end()) {
-                send_poolerase_event(*pool);
-
-                pools.erase(pool);
-                pool_erased = true;
-            }
-        }
-        if(!pool_erased)
-            pools.modify(pool, _self, [&](auto &item) {
-                item.state = state;
-                send_poolstate_event(item);
-            });
 
         tables::permlink_table permlink_table(_self, mssg_itr->author.value);
         auto permlink_itr = permlink_table.find(mssg_itr->id);
         send_postreward_trx(mssg_itr->id, structures::mssgid{mssg_itr->author, permlink_itr->value});
+    }
+
+    for (auto& pool_kv : pools) {
+        auto pool = pools_table.find(pool_kv.first);
+        bool pool_erased = false;
+        if(pool_kv.second.state.msgs == 0) {
+            if(pool != --pools_table.end()) {
+                send_poolerase_event(*pool);
+
+                pools_table.erase(pool);
+                pool_erased = true;
+            }
+        }
+        if(!pool_erased)
+            pools_table.modify(pool, _self, [&](auto &item) {
+                item.state = pool_kv.second.state;
+                send_poolstate_event(item);
+            });
     }
 }
 
@@ -657,7 +670,7 @@ void publication::paymssgrwrd(structures::mssgid message_id) {
     tables::message_table message_table(_self, _self.value);
     auto mssg_itr = message_table.find(permlink_itr->id);
     eosio::check(mssg_itr != message_table.end(), "Message doesn't exist in cashout window.");
-    eosio::check(mssg_itr->closed, "Message doesn't closed.");
+    eosio::check(mssg_itr->closed(), "Message doesn't closed.");
 
     auto payout = mssg_itr->mssg_reward;
     tables::reward_pools pools(_self, _self.value);
@@ -729,13 +742,6 @@ void publication::paymssgrwrd(structures::mssgid message_id) {
     }
 }
 
-void publication::close_message_timer(structures::mssgid message_id, uint64_t id, uint64_t delay_sec) {
-    transaction trx;
-    trx.actions.emplace_back(action{permission_level(_self, config::code_name), _self, "closemssg"_n, message_id});
-    trx.delay_sec = delay_sec;
-    trx.send((static_cast<uint128_t>(id) << 64) | message_id.author.value, _self);
-}
-
 void publication::check_upvote_time(uint64_t cur_time, uint64_t mssg_date) {
     const auto& cashout_window_param = params().cashout_window_param;
     eosio::check(
@@ -756,7 +762,7 @@ fixp_t publication::calc_available_rshares(name voter, int16_t weight, uint64_t 
 
 void publication::set_vote(name voter, const structures::mssgid& message_id, int16_t weight) {
     require_auth(voter);
-    close_messages();
+    send_closemssgs_trx();
 
     auto get_calc_sharesfn = [&](auto mainfunc_code, auto netshares, auto mainfunc_maxarg) {
         atmsp::machine<fixp_t> machine;
@@ -774,7 +780,7 @@ void publication::set_vote(name voter, const structures::mssgid& message_id, int
     tables::message_table message_table(_self, _self.value);
     auto mssg_itr = message_table.find(permlink_itr->id);
     eosio::check(mssg_itr != message_table.end(), "Message doesn't exist in cashout window.");
-    eosio::check(!mssg_itr->closed, "Message is closed.");
+    eosio::check(!mssg_itr->closed(), "Message is closed.");
 
     tables::reward_pools pools(_self, _self.value);
     auto pool = get_pool(pools, mssg_itr->pool_date);
@@ -947,7 +953,7 @@ void publication::on_transfer(name from, name to, eosio::asset quantity, std::st
     tables::reward_pools pools(_self, _self.value);
     fill_depleted_pool(pools, quantity, pools.end());
 
-    close_messages();
+    send_closemssgs_trx();
 }
 
 void publication::set_limit(

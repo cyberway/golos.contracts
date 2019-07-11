@@ -11,7 +11,7 @@ In addition, this contract contains logic for determining the [payments to autho
 
 ## The list of actions implemented in the golos.publication smart contract
  
-The `golos.publication` smart contract supports the following user actions: [setlimit](#setlimit), [setrules](#setrules), [createmssg](#createmssg), [updatemssg](#updatemssg), [deletemssg](#deletemssg), [upvote](#upvote), [downvote](#downvote), [unvote](#unvote), [closemssg](#closemssg), [reblog](#reblog), [setcurprcnt](#setcurprcnt), [setmaxpayout](#setmaxpayout), [calcrwrdwt](#calcrwrdwt), [paymssgrwrd](#paymssgrwrd) and [setparams](#setparams).
+The `golos.publication` smart contract supports the following user actions: [setlimit](#setlimit), [setrules](#setrules), [createmssg](#createmssg), [updatemssg](#updatemssg), [deletemssg](#deletemssg), [upvote](#upvote), [downvote](#downvote), [unvote](#unvote), [closemssgs](#closemssgs), [reblog](#reblog), [setcurprcnt](#setcurprcnt), [setmaxpayout](#setmaxpayout), [calcrwrdwt](#calcrwrdwt), [paymssgrwrd](#paymssgrwrd) and [setparams](#setparams).
 
 ## setlimit
 
@@ -188,20 +188,17 @@ void unvote(
 To perform the `unvote` action it is required that the transaction should be signed by the account name `voter`.
 
 
-## closemssg
+## closemssgs
 
-The `closemssg` action is internal and unavailable to a user. Used to close a post.  
-The `closemssg` action has the following form:
+The `closemssgs` action is used to close next amount of posts manually by user.  
+The `closemssgs` action has the following form:
 ```
-void close_message(mssgid message_id)
+void close_messages()
 ```
-**Parameter:**  
-  * `message_id` — identifier of the post that is closing. The parameter contains the fields: `author` — author name of the post, `permlink` — unique name of the post within publications of this author.  
+**Parameters:**  
+  * none.  
 
-The `closemssg` action requires fulfillment of conditions:
-  * closing the post should occur after the time `cashout_window:window`;  
-  * transaction should be signed by the account of `golos.publication` smart contract.  
-
+The `closemssgs` action requires no sign.
 
 ## reblog
 The `reblog` action is used to place a post adopted from another author under this smart contract, as well as to add rebloger's own text to the post in the form of note or comment.  

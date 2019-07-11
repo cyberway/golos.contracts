@@ -7,6 +7,7 @@ constexpr int64_t max_cashout_time = 60 * 60 * 24 * 40; //40 days
 constexpr size_t check_monotonic_steps = 10;
 constexpr unsigned paymssgrwrd_expiration_sec = 3*60*60;
 constexpr unsigned deletevotes_expiration_sec = 3*60*60;
+constexpr unsigned closemssgs_expiration_sec  = 3*60*60;
 
 constexpr size_t target_payments_per_trx = 20;
 constexpr size_t max_payments_per_trx    = 20;
