@@ -40,12 +40,13 @@ fixp_t charge::consume_charge(name issuer, name user, symbol_code token_code, ui
             });
         return new_val;
     }
-    if (new_val > 0)
+    if (new_val > 0) {
         balances_table.modify(*itr, name(), [&]( auto &item ) {
             item.last_update = now;
             item.value = new_val.data();
             send_charge_event(user, item);
         });
+    }
     else {
         balance item{*itr};
         item.last_update = now;
@@ -129,7 +130,7 @@ void charge::setrestorer(symbol_code token_code, uint8_t charge_id, std::string 
 }
 
 void charge::send_charge_event(name user, const balance& state) {
-    eosio::event(_self, "chargestate"_n, std::make_tuple(user, state)).send();
+    eosio::event(_self, "chargestate"_n, std::make_tuple(user, state.charge_symbol, state.token_code, state.charge_id, state.last_update, int_cast(FP(state.value)))).send();
 }
 
 template<typename Lambda>
@@ -149,6 +150,7 @@ void charge::consume_and_notify(name user, symbol_code token_code, uint8_t charg
 void charge::usenotifygt(name user, symbol_code token_code, uint8_t charge_id, int64_t price_arg, int64_t id, name code, name action_name, int64_t cutoff) {
     auto issuer = token::get_issuer(config::token_name, token_code);
     require_auth(issuer);
+
     consume_and_notify(user, token_code, charge_id, price_arg, id, code, action_name, cutoff, issuer, [](auto value, auto limit) {return value > limit;});
 }
 
