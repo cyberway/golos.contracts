@@ -532,9 +532,9 @@ void publication::close_messages() {
 
         auto pool_kv = pools.find(mssg_itr->pool_date);
         if (pool_kv == pools.end()) {
-            pools[mssg_itr->pool_date] = *get_pool(pools_table, mssg_itr->pool_date);
+            pool_kv = pools.emplace(mssg_itr->pool_date, *get_pool(pools_table, mssg_itr->pool_date)).first;
         }
-        structures::rewardpool& pool = pools[mssg_itr->pool_date];
+        auto& pool = pool_kv->second;
 
         eosio::check(pool.state.msgs != 0, "LOGIC ERROR! publication::payrewards: pool.msgs is equal to zero");
         atmsp::machine<fixp_t> machine;
