@@ -1,11 +1,12 @@
+import os
 import json
 import subprocess
 
 params = {
-    'cleos_path': "cleos",
-    'testnet_url': "http://cyberway-mongodb.golos.io:8888",
+    'cleos_path': os.environ.get("CLEOS", "cleos"),
+    'nodeos_url': os.environ.get("CYBERWAY_URL", "http://localhost:8888"),
 }
-cleosCmd = "{cleos_path} --url {testnet_url} ".format(**params)
+cleosCmd = "{cleos_path} --url {nodeos_url} ".format(**params)
 
 class args:
     symbol = "GOLOS"
@@ -24,12 +25,23 @@ def jsonArg(a):
     return " '" + json.dumps(a) + "' "
 
 def cleos(arguments):
-    command=cleosCmd + arguments
-    print('golos-boot-sequence.py:', command)
-    if subprocess.call(command, shell=True):
-        print("Command failed: ", command)
-        return False
-    return True
+    cmd = cleosCmd + arguments
+    print("cleos: " + cmd)
+    (exception, traceback) = (None, None)
+    try:
+        return subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT, universal_newlines=True)
+    except subprocess.CalledProcessError as e:
+        import sys
+        (exception, traceback) = (e, sys.exc_info()[2])
+    
+    msg = str(exception) + ' with output:\n' + exception.output
+    raise Exception(msg).with_traceback(traceback)
+
+def pushAction(code, action, actor, args, *, additional='', delay=None, expiration=None, providebw=None):
+    additional += ' --delay-sec %d' % delay if delay else ''
+    additional += ' --expiration %d' % expiration if expiration else ''
+    additional += ' --bandwidth-provider ' + providebw if providebw else ''
+    return json.loads(cleos('push action -j %s %s %s -p %s %s' % (code, action, jsonArg(args), actor, additional)))
 
 def importRootKeys():
     cleos('wallet import --private-key %s' % args.root_private)
@@ -40,9 +52,6 @@ def removeRootKeys():
     cleos('wallet remove_key --password %s %s' % (args.wallet_password, args.root_public))
     cleos('wallet remove_key --password %s %s' % (args.wallet_password, args.golos_public))
     pass
-
-def pushAction(code, action, actor, args):
-    return cleos('push action %s %s %s -p %s' % (code, action, jsonArg(args), actor))
 
 def unlockWallet():
     cleos('wallet unlock --password %s' % args.wallet_password)
@@ -63,8 +72,9 @@ def createAuthority(keys, accounts):
         accountsList.extend([{'weight':1,'permission':{'actor':d[0],'permission':d[1]}}])
     return {'threshold': 1, 'keys': keysList, 'accounts': accountsList, 'waits':[]}
 
-def createAccount(creator, account, key):
-    cleos('create account %s %s %s' % (creator, account, key))
+def createAccount(creator, account, key, *, providebw=None):
+    additional = '--bandwidth-provider %s' % providebw if providebw else ''
+    cleos('create account %s %s %s %s' % (creator, account, key, additional))
 
 def getAccount(account):
     cleos('get account %s' % account)
@@ -85,11 +95,15 @@ def transfer(sender, recipient, amount, memo=""):
 
 # --------------------- GOLOS functions ---------------------------------------
 
-def openVestingBalance(account):
-    pushAction('gls.vesting', 'open', account, [account, args.vesting, account])
+def openVestingBalance(account, payer=None):
+    if payer == None:
+        payer = account
+    pushAction('gls.vesting', 'open', payer, [account, args.vesting, payer])
 
-def openTokenBalance(account):
-    pushAction('cyber.token', 'open', account, [account, args.token, account])
+def openTokenBalance(account, payer=None):
+    if payer == None:
+        payer = account
+    pushAction('cyber.token', 'open', payer, [account, args.token, payer])
 
 def issueToken(account, amount, memo=""):
     pushAction('cyber.token', 'issue', 'gls', [account, amount, memo])
@@ -110,19 +124,29 @@ def registerWitness(witness, url=None):
 def voteWitness(voter, witness):
     pushAction('gls.ctrl', 'votewitness', voter, [voter, witness])
 
-def createPost(author, permlink, category, header, body, *, beneficiaries=[]):
-    pushAction('gls.publish', 'createmssg', author,
-        [author, permlink, "", category, beneficiaries, 0, False, header, body, 'ru', [], ''])
+def createPost(author, permlink, category, header, body, *, beneficiaries=[], providebw=None):
+    pushAction('gls.publish', 'createmssg', author, {
+            'message_id':{'author':author, 'permlink':permlink}, 
+            'parent_id':{'author':"", 'permlink':category}, 
+            'beneficiaries':beneficiaries,
+            'tokenprop':0,
+            'vestpayment':False,
+            'headermssg':header,
+            'bodymssg':body,
+            'languagemssg':'ru',
+            'tags':[],
+            'jsonmetadata':''
+        }, providebw=providebw)
 
 def createComment(author, permlink, pauthor, ppermlink, header, body, *, beneficiaries=[]):
     pushAction('gls.publish', 'createmssg', author,
         [author, permlink, pauthor, ppermlink, beneficiaries, 0, False, header, body, 'ru', [], ''])
 
 def upvotePost(voter, author, permlink, weight):
-    pushAction('gls.publish', 'upvote', voter, [voter, author, permlink, weight])
+    pushAction('gls.publish', 'upvote', voter, {'voter':voter, 'message_id':{'author':author, 'permlink':permlink}, 'weight':weight})
 
 def downvotePost(voter, author, permlink, weight):
-    pushAction('gls.publish', 'downvote', voter, [voter, author, permlink, weight])
+    pushAction('gls.publish', 'downvote', voter, {'voter':voter, 'message_id':{'author':author, 'permlink':permlink}, 'weight':weight})
 
 def unvotePost(voter, author, permlink):
     pushAction('gls.publish', 'unvote', voter, [voter, author, permlink])
