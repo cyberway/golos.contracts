@@ -26,17 +26,6 @@ def create_tags(metadata_tags):
             tags.append(tag_obj)
     return tags
 
-def create_trx(author, id_message):
-    trx = ""
-    try:
-        command = "cleos push action gls.publish closemssg '{\"account\":\""+author+"\", \"permlink\":\""+str(id_message)+"\"}' -p gls.publish -d --return-packed"
-        result = ast.literal_eval(re.sub("^\s+|\n|\r|\s+$", '', subprocess.check_output(command, stderr=subprocess.STDOUT, shell=True).decode("utf-8")))
-        trx = result["packed_trx"]
-    except Exception as e:
-        print(e.args)
-        print(traceback.format_exc())
-    return trx;
-
 class PublishConverter:
     def __init__(self, golos_db, publish_db, cyberway_db, cache_period = 10000):
         self.golos_db = golos_db
@@ -102,30 +91,11 @@ class PublishConverter:
                     "sumcuratorsw": utils.Int64(self.mssgs_curatorsw[(doc["author"], cur_mssg_id)])
                 }
             
-                isClosedMessage = True
                 date_close = datetime.strptime("2106-02-07T06:28:15", '%Y-%m-%dT%H:%M:%S').isoformat()
                 if (doc["cashout_time"].isoformat() != date_close and doc["cashout_time"].isoformat() > datetime.now().isoformat()):
                     rshares_sum += cur_rshares_raw
                     pool["state"]["msgs"] = utils.UInt64(pool["state"]["msgs"].to_decimal()+1)
-                    isClosedMessage = False
                     
-                    delay_trx = {
-                      "trx_id": "",
-                      "sender": "gls.publish",
-                      "sender_id": hex(cur_mssg_id << 64 | utils.string_to_name(doc["author"])),
-                      "payer": "gls.publish",
-                      "delay_until" : doc["cashout_time"], 
-                      "expiration" :  (doc["cashout_time"] + expiretion), 
-                      "published" :   doc["created"], 
-                      "packed_trx" : create_trx(doc["author"], cur_mssg_id), 
-                      "_SERVICE_" : {
-                          "scope" : "",
-                          "rev" : utils.Int64(1),
-                          "payer" : "",
-                          "size" : 50
-                      }
-                    }
-                    self.publish_tables.gtransaction.append(delay_trx)
                 
                 orphan_comment = (len(doc["parent_author"]) > 0) and (not (doc["parent_author"] in self.exists_accs))
 
@@ -140,7 +110,7 @@ class PublishConverter:
                     "rewardweight": utils.Int64(utils.get_prop_raw(doc["reward_weight"])),
                     "state": messagestate,
                     "childcount": utils.UInt64(doc["children"]),
-                    "closed": isClosedMessage,
+                    "cashout_time": utils.UInt64(int(doc["cashout_time"].timestamp()) * 1000000),
                     "level": utils.UInt64(0 if orphan_comment else doc["depth"]), # this value will be incorrect for comment to orphan comment
                                                                     # but we only use level for comments nesting limits, 
                                                                     # so it seems that this is not a problem
