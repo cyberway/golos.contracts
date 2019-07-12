@@ -1111,8 +1111,9 @@ BOOST_FIXTURE_TEST_CASE(golos_delegators_test, reward_calcs_tester) try {
     auto vesting_withdraw = vest.withdraw_param(withdraw_intervals, withdraw_interval_seconds);
     auto vesting_amount = vest.amount_param(vesting_min_amount);
     auto delegation = vest.delegation_param(delegation_min_amount, delegation_min_remainder, delegation_min_time, delegation_return_time);
+    auto bwprovider = vest.bwprovider_param(name(), name());
 
-    auto params = "[" + vesting_withdraw + "," + vesting_amount + "," + delegation + "]";
+    auto params = "[" + vesting_withdraw + "," + vesting_amount + "," + delegation + "," + bwprovider + "]";
     BOOST_CHECK_EQUAL(success(), vest.set_params(_issuer, _token_symbol, params));
 
     const int divider = vest.make_asset(1).get_amount();
@@ -1349,7 +1350,7 @@ BOOST_FIXTURE_TEST_CASE(a_lot_of_delegators_test, reward_calcs_tester) try {
         [](double x){ return x; }, golos_curation::func, [](double x){ return 1.0; }));
     check();
 
-    auto params = "[" + vest.withdraw_param(1, 12) + "," + vest.amount_param(0) + "," + vest.delegation_param(vest_amount, 1, 0, 120) + "]";
+    auto params = "[" + vest.withdraw_param(1, 12) + "," + vest.amount_param(0) + "," + vest.delegation_param(vest_amount, 1, 0, 120) + "," + vest.bwprovider_param(name(), name()) + "]";
     BOOST_CHECK_EQUAL(success(), vest.set_params(_issuer, _token_symbol, params));
 
     BOOST_TEST_MESSAGE("--- add_funds_to_forum");

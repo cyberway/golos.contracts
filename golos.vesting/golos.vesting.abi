@@ -6,7 +6,8 @@
       "types": [
           "vesting_withdraw",
           "vesting_amount",
-          "vesting_delegation"
+          "vesting_delegation",
+          "vesting_bwprovider"
       ]
   }],
   "structs": [
@@ -163,13 +164,21 @@
       ]
     },
     {
+      "name": "timeout",
+      "base": "",
+      "fields": [
+        {"name":"symbol", "type":"symbol"}
+      ]
+    },
+    {
        "name": "vesting_state",
        "base": "",
        "fields": [
           {"name":"id",         "type":"uint64"},
           {"name":"withdraw",   "type":"vesting_withdraw"},
           {"name":"min_amount", "type":"vesting_amount"},
-          {"name":"delegation", "type":"vesting_delegation"}
+          {"name":"delegation", "type":"vesting_delegation"},
+          {"name":"bwprovider", "type":"vesting_bwprovider"}
 
        ]
     },
@@ -197,6 +206,14 @@
           {"name":"return_time",    "type":"uint32"},
           {"name":"min_time",       "type":"uint32"}
        ]
+    },
+    {
+       "name": "vesting_bwprovider",
+       "base": "",
+       "fields": [
+          {"type": "name", "name": "actor"},
+          {"type": "name", "name": "permission"}
+       ]
     }
   ],
   "events": [
@@ -217,7 +234,7 @@
     {"name":"undelegate",   "type":"base_transfer"},
     {"name":"timeoutrdel",  "type":"empty"},
     {"name":"timeoutconv",  "type":"empty"},
-    {"name":"timeout",      "type":"empty"}
+    {"name":"timeout",      "type":"timeout"}
   ],
   "tables": [
     {

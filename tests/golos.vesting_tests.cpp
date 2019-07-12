@@ -66,8 +66,9 @@ public:
         auto vesting_withdraw = vest.withdraw_param(withdraw_intervals, withdraw_seconds);
         auto vesting_amount = vest.amount_param(vesting_min_amount);
         auto delegation = vest.delegation_param(delegation_min_amount, delegation_min_remainder, delegation_min_time, delegation_return_time);
+        auto bwprovider = vest.bwprovider_param(name(), name());
 
-        auto params = "[" + vesting_withdraw + "," + vesting_amount + "," + delegation + "]";
+        auto params = "[" + vesting_withdraw + "," + vesting_amount + "," + delegation  + "," + bwprovider + "]";
         BOOST_CHECK_EQUAL(success(), vest.set_params(_issuer, _vesting_sym, params));
     }
 

@@ -42,14 +42,26 @@ struct vesting_delegation : parameter {
 };
 using delegation_param = param_wrapper<vesting_delegation,4>;
 
-using vesting_param = std::variant<vesting_withdraw_param, vesting_min_amount_param, delegation_param>;
+struct bwprovider: parameter {
+    permission_level provider;
+
+    void validate() const override {
+        eosio::check((provider.actor != name()) == (provider.permission != name()), "actor and permission must be set together");
+        // check that contract can use cyber:providebw done in setparams
+        // (we need know contract account to make this check)
+    }
+};
+using bwprovider_param = param_wrapper<bwprovider,1>;
+
+using vesting_param = std::variant<vesting_withdraw_param, vesting_min_amount_param, delegation_param, bwprovider_param>;
 
 struct [[eosio::table]] vesting_state {
     vesting_withdraw_param withdraw;
     vesting_min_amount_param min_amount;
     delegation_param delegation;
+    bwprovider_param bwprovider;
 
-    static constexpr int params_count = 3;
+    static constexpr int params_count = 4;
 };
 using vesting_params_singleton = eosio::singleton<"vestparams"_n, vesting_state>;
 

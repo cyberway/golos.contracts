@@ -165,8 +165,11 @@ struct golos_vesting_api: base_contract_api {
             ("params", json_str_to_obj(json_params)));
     }
 
-    action_result timeout(name signer) {
-        return push(N(timeout), signer, args());
+    action_result timeout(name signer, symbol sym = symbol(0)) {
+        if (sym == symbol(0)) sym = _symbol;
+        return push(N(timeout), signer, args()
+            ("symbol", sym)
+        );
     }
 
     action_result retire(asset quantity, name user, name issuer) {
@@ -253,6 +256,10 @@ struct golos_vesting_api: base_contract_api {
                 "','return_time':'" + std::to_string(return_time) + "'}]";
     }
 
+    string bwprovider_param(account_name actor, permission_name permission) {
+        return string("['vesting_bwprovider', {'actor':'") + name{actor}.to_string() +
+                "','permission':'" + name{permission}.to_string() + "'}]";
+    }
 };
 
 

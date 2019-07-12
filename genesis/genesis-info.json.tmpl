@@ -169,7 +169,7 @@
                 {"name": "createuser", "accounts": ["@testing"]},
                 {"name": "invoice",    "accounts": ["gls.charge@cyber.code", "gls.publish@cyber.code"]},
                 {"name": "changevest", "accounts": ["gls.vesting@cyber.code"]},
-                {"name": "providebw",    "accounts": ["gls.emit@cyber.code"]},
+                {"name": "providebw",    "accounts": ["gls.emit@cyber.code", "gls.vesting@cyber.code"]},
                 {"name": "witn.smajor"},
                 {"name": "witn.major"},
                 {"name": "witn.minor"}
@@ -321,7 +321,8 @@
                     "min_amount":5000000,
                     "min_remainder":15000000,
                     "return_time":120,
-                    "min_time":0}
+                    "min_time":0},
+                "bwprovider": {"actor":"gls","permission":"providebw"}
             }}]
         },{
             "code": "gls.ctrl",

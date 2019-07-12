@@ -3,6 +3,7 @@
 #include <eosio/time.hpp>
 #include <eosio/asset.hpp>
 #include <eosio/eosio.hpp>
+#include <eosio/transaction.hpp>
 #include "config.hpp"
 
 namespace golos {
@@ -30,7 +31,7 @@ public:
     [[eosio::action]] void open(name owner, symbol symbol, name ram_payer);
     [[eosio::action]] void close(name owner, symbol symbol);
 
-    [[eosio::action]] void timeout();
+    [[eosio::action]] void timeout(symbol symbol);
     [[eosio::action]] void timeoutconv();
     [[eosio::action]] void timeoutrdel();
 
@@ -179,6 +180,7 @@ public:
     }
 
 private:
+    void providebw_for_trx(eosio::transaction& trx, const permission_level& provider);
     void do_transfer_vesting(name from, name to, asset quantity, std::string memo);
     void notify_balance_change(name owner, asset diff);
     void sub_balance(name owner, asset value, bool retire_mode = false);
