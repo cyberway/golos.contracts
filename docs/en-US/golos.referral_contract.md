@@ -68,9 +68,8 @@ The `closeoldref` action is a service internal function and is used to release o
 
 The action has the following form:
 ```cpp
-void referral::closeoldref(uint64_t hash)
+void referral::closeoldref()
 ```
-The `hash` parameter is a service parameter used to place multiple transactions in a single block.  
 
-To perform the `closeoldref` action, the smart contract account authorization is required. The call is made automatically.
+To perform the `closeoldref` action, authorization is not required. The call is made automatically on addreferral() and paying breakout.
 
