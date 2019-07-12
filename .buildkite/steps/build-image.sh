@@ -6,6 +6,8 @@ BRANCHNAME=${BUILDKITE_BRANCH:-master}
 
 if [[ "${IMAGETAG}" == "master" ]]; then
     BUILDTYPE="stable"
+elif [[ "${IMAGETAG}" =~ ^ci-.* ]]; then
+    BUILDTYPE="${IMAGETAG}"
 elif [[ "${IMAGETAG}" == "alfa" ]]; then
     BUILDTYPE="alfa"
 else
