@@ -162,13 +162,13 @@
 # Golos dApp accounts
         {"name": "gls",
             "permissions": [
-                {"name": "owner",      "accounts": ["@witn.smajor"]},
-                {"name": "active",     "accounts": ["@witn.smajor", "gls.ctrl@cyber.code", "@testing"]},
-                {"name": "testing",    "key": "GLS5a2eDuRETEg7uy8eHbiCqGZM3wnh2pLjiXrFduLWBKVZKCkB62"},
-                {"name": "issue",      "accounts": ["gls.emit@cyber.code", "@testing"]},
-                {"name": "createuser", "accounts": ["@testing"]},
-                {"name": "invoice",    "accounts": ["gls.charge@cyber.code", "gls.publish@cyber.code"]},
-                {"name": "changevest", "accounts": ["gls.vesting@cyber.code"]},
+                {"name": "owner",        "accounts": ["@witn.smajor"]},
+                {"name": "active",       "accounts": ["@witn.smajor", "gls.ctrl@cyber.code", "@testing"]},
+                {"name": "testing",      "key": "GLS5a2eDuRETEg7uy8eHbiCqGZM3wnh2pLjiXrFduLWBKVZKCkB62"},
+                {"name": "issue",        "accounts": ["gls.emit@cyber.code", "@testing"]},
+                {"name": "createuser",   "accounts": ["@testing"]},
+                {"name": "invoice",      "accounts": ["gls.charge@cyber.code", "gls.publish@cyber.code"]},
+                {"name": "changevest",   "accounts": ["gls.vesting@cyber.code"]},
                 {"name": "providebw",    "accounts": ["gls.emit@cyber.code", "gls.vesting@cyber.code", "gls.publish@cyber.code"]},
                 {"name": "witn.smajor"},
                 {"name": "witn.major"},
@@ -214,16 +214,16 @@
         },
         {"name": "gls.social",
             "permissions": [
-                {"name": "owner", "accounts": ["gls@owner"]},
-                {"name": "active", "accounts": ["gls@active"]}
+                {"name": "owner",      "accounts": ["gls@owner"]},
+                {"name": "active",     "accounts": ["gls@active"]}
             ],
             "abi": {"path": "$GOLOS_CONTRACTS/golos.social/golos.social.abi", "hash":""},
             "code": {"path": "$GOLOS_CONTRACTS/golos.social/golos.social.wasm", "hash":""}
         },
         {"name": "gls.charge",
             "permissions": [
-                {"name": "owner", "accounts": ["gls@owner"]},
-                {"name": "active", "accounts": ["gls@active"]}
+                {"name": "owner",      "accounts": ["gls@owner"]},
+                {"name": "active",     "accounts": ["gls@active"]}
             ],
             "abi": {"path": "$GOLOS_CONTRACTS/golos.charge/golos.charge.abi", "hash":""},
             "code": {"path": "$GOLOS_CONTRACTS/golos.charge/golos.charge.wasm", "hash":""}
@@ -239,59 +239,39 @@
         },
         {"name": "gls.memo",
             "permissions": [
-                {"name": "owner",  "accounts": ["gls@owner"]},
-                {"name": "active", "accounts": ["gls@active"]}
+                {"name": "owner",      "accounts": ["gls@owner"]},
+                {"name": "active",     "accounts": ["gls@active"]}
             ],
             "abi": {"path": "$GOLOS_CONTRACTS/golos.memo/golos.memo.abi", "hash":""}
         },
         {"name": "gls.worker",
             "permissions": [
-                {"name": "owner", "accounts": ["gls@owner"]},
-                {"name": "active", "accounts": ["gls@active"]}
+                {"name": "owner",      "accounts": ["gls@owner"]},
+                {"name": "active",     "accounts": ["gls@active"]}
             ]
         }
     ],
     "auth_links": [
-        {"permission": "cyber@prods",        "links": ["cyber:setcode", "cyber:setabi", ":setparams"]},
-        {"permission": "cyber.msig@prods",   "links": ["cyber:setcode", "cyber:setabi"]},
-        {"permission": "cyber.domain@prods", "links": ["cyber:setcode", "cyber:setabi"]},
-        {"permission": "cyber.govern@prods", "links": ["cyber:setcode", "cyber:setabi"]},
-        {"permission": "cyber.stake@prods",  "links": ["cyber:setcode", "cyber:setabi"]},
-        {"permission": "cyber.token@prods",  "links": ["cyber:setcode", "cyber:setabi", ":create"]},
-        {
-            "permission": "gls@createuser",
-            "links": ["cyber:newaccount", "cyber.domain:newusername", "cyber.token:open", "gls.vesting:open"]
-        },{
-            "permission": "gls@issue",
-            "links": ["cyber.token:issue", "cyber.token:transfer"]
-        },{
-            "permission": "gls@invoice",
-            "links": ["gls.charge:use", "gls.charge:usenotifygt", "gls.vesting:retire"]
-        },{
-            "permission": "gls@changevest",
-            "links": ["gls.ctrl:changevest"]
-        },{
-            "permission": "gls@providebw",
-            "links": ["cyber:providebw"]
-        }, {
-            "permission": "gls.ctrl@code",
-            "links": ["cyber.token:transfer", "cyber.token:payment", "cyber.token:bulkpayment", "cyber.token:bulktransfer"]
-        },{
-            "permission": "gls.emit@code",
-            "links": ["gls.emit:emit"]
-        },{
-            "permission": "gls.vesting@code",
-            "links": ["cyber.token:transfer", "cyber.token:payment", "gls.vesting:timeout", "gls.vesting:timeoutconv", "gls.vesting:timeoutrdel"]
-        },{
-            "permission": "gls.publish@code",
-            "links": ["cyber.token:payment", "cyber.token:transfer", "gls.publish:closemssgs", "gls.publish:paymssgrwrd", "gls.publish:deletevotes", "cyber.token:bulkpayment", "cyber.token:bulktransfer"]
-        },{
-            "permission": "gls.publish@calcrwrdwt",
-            "links": ["gls.publish:calcrwrdwt"]
-        },{
-            "permission": "gls.referral@code",
-            "links": ["gls.referral:closeoldref", "cyber.token:transfer"]
-        }
+# Block producers permissions
+        {"permission": "cyber@prods",             "links": ["cyber:setcode", "cyber:setabi", ":setparams"]},
+        {"permission": "cyber.msig@prods",        "links": ["cyber:setcode", "cyber:setabi"]},
+        {"permission": "cyber.domain@prods",      "links": ["cyber:setcode", "cyber:setabi"]},
+        {"permission": "cyber.govern@prods",      "links": ["cyber:setcode", "cyber:setabi"]},
+        {"permission": "cyber.stake@prods",       "links": ["cyber:setcode", "cyber:setabi"]},
+        {"permission": "cyber.token@prods",       "links": ["cyber:setcode", "cyber:setabi", ":create"]},
+
+# Golos permissions (for code of smart-contracts)
+        {"permission": "gls@createuser",          "links": ["cyber:newaccount", "cyber.domain:newusername", "cyber.token:open", "gls.vesting:open"]},
+        {"permission": "gls@issue",               "links": ["cyber.token:issue", "cyber.token:transfer"]},
+        {"permission": "gls@invoice",             "links": ["gls.charge:use", "gls.charge:usenotifygt", "gls.vesting:retire"]},
+        {"permission": "gls@changevest",          "links": ["gls.ctrl:changevest"]},
+        {"permission": "gls@providebw",           "links": ["cyber:providebw"]},
+        {"permission": "gls.ctrl@code",           "links": ["cyber.token:transfer", "cyber.token:payment"]},
+        {"permission": "gls.emit@code",           "links": ["gls.emit:emit"]},
+        {"permission": "gls.vesting@code",        "links": ["cyber.token:transfer", "cyber.token:payment", "gls.vesting:timeout", "gls.vesting:timeoutconv", "gls.vesting:timeoutrdel"]},
+        {"permission": "gls.publish@code",        "links": ["cyber.token:payment", "cyber.token:transfer", "gls.publish:closemssgs", "gls.publish:paymssgrwrd", "gls.publish:deletevotes", "cyber.token:bulkpayment", "cyber.token:bulktransfer"]},
+        {"permission": "gls.publish@calcrwrdwt",  "links": ["gls.publish:calcrwrdwt"]},
+        {"permission": "gls.referral@code",       "links": ["gls.referral:closeoldref", "cyber.token:transfer"]},
     ],
     "tables": [
         {
