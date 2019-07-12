@@ -70,7 +70,6 @@ private:
     const auto& get_message(const tables::message_table& messages, const structures::mssgid& message_id);
     void send_postreward_trx(uint64_t id, const structures::mssgid& message_id);
     void send_deletevotes_trx(int64_t message_id, name author);
-    void send_closemssgs_trx();
 };
 
 } // golos

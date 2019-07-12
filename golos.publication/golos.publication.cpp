@@ -116,7 +116,7 @@ void publication::create_message(
     std::optional<asset> max_payout = std::nullopt
 ) {
     require_auth(message_id.author);
-    send_closemssgs_trx();
+    close_messages();
 
     eosio::check(message_id.permlink.length() && message_id.permlink.length() < config::max_length,
             "Permlink length is empty or more than 256.");
@@ -512,14 +512,6 @@ void publication::send_deletevotes_trx(int64_t message_id, name author) {
     trx.send((static_cast<uint128_t>(message_id) << 64) | author.value, _self);
 }
 
-void publication::send_closemssgs_trx() {
-    auto cur_time = static_cast<uint64_t>(eosio::current_time_point().time_since_epoch().count());
-    transaction trx(eosio::current_time_point() + eosio::seconds(config::closemssgs_expiration_sec));
-    trx.actions.emplace_back(action{permission_level(_self, config::code_name), _self, "closemssgs"_n, ""});
-    trx.delay_sec = 0;
-    trx.send(static_cast<uint128_t>(cur_time) << 64, _self, true);
-}
-
 void publication::close_messages() {
     auto cur_time = static_cast<uint64_t>(eosio::current_time_point().time_since_epoch().count());
 
@@ -529,12 +521,12 @@ void publication::close_messages() {
     size_t i = 0;
     tables::message_table message_table(_self, _self.value);
     auto message_index = message_table.get_index<"bycashout"_n>();
-    for (auto mssg_itr = message_index.begin(); mssg_itr != message_index.end(); ++mssg_itr) {
-        if (config::max_closed_posts_per_action <= i++) {
-            send_closemssgs_trx();
-            return;
-        }
-        if (mssg_itr->cashout_time > cur_time) {
+    for (auto mssg_itr = message_index.begin(); mssg_itr != message_index.end() && mssg_itr->cashout_time <= cur_time; ++mssg_itr) {
+        if (i++ >= config::max_closed_posts_per_action) {
+            transaction trx(eosio::current_time_point() + eosio::seconds(config::closemssgs_expiration_sec));
+            trx.actions.emplace_back(action{permission_level(_self, config::code_name), _self, "closemssgs"_n, ""});
+            trx.delay_sec = 0;
+            trx.send(static_cast<uint128_t>(cur_time) << 64, _self, true);
             break;
         }
 
@@ -762,7 +754,7 @@ fixp_t publication::calc_available_rshares(name voter, int16_t weight, uint64_t 
 
 void publication::set_vote(name voter, const structures::mssgid& message_id, int16_t weight) {
     require_auth(voter);
-    send_closemssgs_trx();
+    close_messages();
 
     auto get_calc_sharesfn = [&](auto mainfunc_code, auto netshares, auto mainfunc_maxarg) {
         atmsp::machine<fixp_t> machine;
@@ -953,7 +945,7 @@ void publication::on_transfer(name from, name to, eosio::asset quantity, std::st
     tables::reward_pools pools(_self, _self.value);
     fill_depleted_pool(pools, quantity, pools.end());
 
-    send_closemssgs_trx();
+    close_messages();
 }
 
 void publication::set_limit(

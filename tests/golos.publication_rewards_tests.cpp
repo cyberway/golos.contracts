@@ -1517,4 +1517,80 @@ BOOST_FIXTURE_TEST_CASE(message_max_payout_test, reward_calcs_tester) try {
     BOOST_CHECK_GT(vest.get_balance_raw(N(alice4))["vesting"].as<asset>() - alice4_vest, token.make_asset(0));
 } FC_LOG_AND_RETHROW()
 
+BOOST_FIXTURE_TEST_CASE(message_closing, reward_calcs_tester) try {
+    BOOST_TEST_MESSAGE("message_closing");
+    vector<account_name> additional_users;
+    for (size_t u = 0; u < 100; u++) {
+        additional_users.push_back(user_name(u));
+    }
+    create_accounts(additional_users);
+    _users.insert(_users.end(), additional_users.begin(), additional_users.end());
+
+    int64_t maxfp = std::numeric_limits<fixp_t>::max();
+    auto bignum = 500000000000;
+    init(bignum, 500000);
+    produce_blocks();
+    BOOST_TEST_MESSAGE("--- setrules");
+    using namespace golos_curation;
+    BOOST_CHECK_EQUAL(success(), setrules({"x", maxfp}, {golos_curation::func_str, maxfp}, {"1", bignum},
+        [](double x){ return x; }, golos_curation::func, [](double x){ return 1.0; }));
+    check();
+
+    BOOST_TEST_MESSAGE("--- add_funds_to_forum");
+    BOOST_CHECK_EQUAL(success(), add_funds_to_forum(50000));
+    check();
+
+    auto need_blocks = golos::seconds_to_blocks(post.window);
+
+    BOOST_TEST_MESSAGE("--- checking that creating message triggers closing");
+    BOOST_CHECK_EQUAL(success(), create_message({N(alice1), "permlink"}));
+    BOOST_CHECK_EQUAL(success(), addvote(N(alice2), {N(alice1), "permlink"}, 10000));
+    produce_blocks(need_blocks);
+    BOOST_CHECK_EQUAL(post.get_message({N(alice1), "permlink"}).is_null(), false);
+    BOOST_CHECK_EQUAL(success(), create_message({N(bob1), "permlink"}));
+    produce_block();
+    BOOST_CHECK_EQUAL(post.get_message({N(alice1), "permlink"}).is_null(), true);
+    check();
+    show();
+
+    BOOST_TEST_MESSAGE("--- checking that voting for message triggers closing");
+    produce_blocks(need_blocks-1);
+    BOOST_CHECK_EQUAL(success(), create_message({N(bob1), "permlink2"}));
+    BOOST_CHECK_EQUAL(success(), addvote(N(alice2), {N(bob1), "permlink2"}, 10000));
+    BOOST_CHECK_EQUAL(post.get_message({N(bob1), "permlink"}).is_null(), false);
+    BOOST_CHECK_EQUAL(success(), addvote(N(alice1), {N(bob1), "permlink2"}, 10000));
+    produce_block();
+    BOOST_CHECK_EQUAL(post.get_message({N(bob1), "permlink"}).is_null(), true);
+    check();
+    show();
+
+    BOOST_TEST_MESSAGE("--- checking closing with re-scheduling trx");
+    for (auto u : additional_users) {
+        BOOST_CHECK_EQUAL(success(), create_message({u, "permlink"}));
+    }
+    produce_blocks(need_blocks);
+    for (auto u : additional_users) {
+        BOOST_CHECK_EQUAL(post.get_message({u, "permlink"}).is_null(), false);
+    }
+    BOOST_CHECK_EQUAL(success(), post.closemssgs());
+    produce_block();
+    for (auto u : additional_users) {
+        BOOST_CHECK_EQUAL(post.get_message({u, "permlink"}).is_null(), true);
+    }
+    check();
+    show();
+
+    BOOST_TEST_MESSAGE("--- checking that transfering to posting-contract triggers closing");
+    BOOST_CHECK_EQUAL(success(), create_message({N(bob2), "permlink"}));
+    BOOST_CHECK_EQUAL(success(), addvote(N(alice2), {N(bob2), "permlink"}, 10000));
+    produce_blocks(need_blocks);
+    BOOST_CHECK_EQUAL(post.get_message({N(bob2), "permlink"}).is_null(), false);
+    BOOST_CHECK_EQUAL(success(), add_funds_to_forum(50000));
+    produce_block();
+    BOOST_CHECK_EQUAL(post.get_message({N(bob2), "permlink"}).is_null(), true);
+    check();
+    show();
+
+} FC_LOG_AND_RETHROW()
+
 BOOST_AUTO_TEST_SUITE_END()

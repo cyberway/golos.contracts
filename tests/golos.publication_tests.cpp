@@ -585,22 +585,6 @@ BOOST_FIXTURE_TEST_CASE(comments_cashout_time_test, golos_publication_tester) tr
 
 } FC_LOG_AND_RETHROW()
 
-BOOST_FIXTURE_TEST_CASE(comments_closing, golos_publication_tester) try {
-    BOOST_TEST_MESSAGE("comments_closing");
-    init();
-    auto need_blocks = seconds_to_blocks(post.window);
-
-    BOOST_TEST_MESSAGE("--- checking that creating message triggers closing");
-    BOOST_CHECK_EQUAL(success(), post.create_msg({N(brucelee), "permlink"}));
-    produce_blocks(need_blocks);
-    BOOST_CHECK_EQUAL(success(), post.create_msg({N(chucknorris), "permlink"}));
-    produce_block();
-    BOOST_CHECK_EQUAL(post.get_message({N(brucelee), "permlink"}).is_null(), true);
-
-    BOOST_TEST_MESSAGE("--- checking that creating message triggers closing");
-
-} FC_LOG_AND_RETHROW()
-
 BOOST_FIXTURE_TEST_CASE(data_validation, golos_publication_tester) try {
     BOOST_TEST_MESSAGE("data_validation_test.");
     init();
