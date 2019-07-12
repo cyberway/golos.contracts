@@ -56,7 +56,7 @@ def fillGolosAccounts(golosAccounts):
         ('gls.publish',  True,       'golos.publication',
             [("owner",       [], ["gls@owner"], []),
              ("active",      [], ["gls@active"], []),
-             ("code",        [], ["gls.publish@cyber.code"], ["cyber.token:transfer", "cyber.token:payment", "cyber.token:bulktransfer", "cyber.token:bulkpayment", "gls.publish:closemssg", "gls.publish:paymssgrwrd", "gls.publish:deletevotes"]),
+             ("code",        [], ["gls.publish@cyber.code"], ["cyber.token:transfer", "cyber.token:payment", "cyber.token:bulktransfer", "cyber.token:bulkpayment", "gls.publish:closemssgs", "gls.publish:paymssgrwrd", "gls.publish:deletevotes"]),
              ("calcrwrdwt",  [], ["gls.charge@cyber.code"], ["gls.publish:calcrwrdwt"]),
             ]),
         ('gls.social',   True,       'golos.social',

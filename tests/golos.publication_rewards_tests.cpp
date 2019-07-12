@@ -734,7 +734,6 @@ BOOST_FIXTURE_TEST_CASE(basic_tests, reward_calcs_tester) try {
 
     BOOST_TEST_MESSAGE("--- waiting");
     produce_blocks(golos::seconds_to_blocks(99));   // TODO: remove magic number
-    check();
     BOOST_TEST_MESSAGE("--- create_message: why");
     BOOST_CHECK_EQUAL(success(), create_message({N(why), "why-not"}, {N(), ""}, {{N(alice5), 5000}, {N(bob5), 2500}}));
     check();
@@ -778,6 +777,7 @@ BOOST_FIXTURE_TEST_CASE(timepenalty_test, reward_calcs_tester) try {
     BOOST_TEST_MESSAGE("--- state before post close");
     show();
     BOOST_TEST_MESSAGE("--- close post and check rewards");
+    BOOST_CHECK_EQUAL(success(), post.closemssgs());
     check();
     show();
 } FC_LOG_AND_RETHROW()
@@ -851,6 +851,7 @@ BOOST_FIXTURE_TEST_CASE(limits_test, reward_calcs_tester) try {
 
     BOOST_TEST_MESSAGE("--- waiting");
     produce_blocks(golos::seconds_to_blocks(150));  // TODO: remove magic number
+    BOOST_CHECK_EQUAL(success(), post.closemssgs());
     check();
     produce_blocks(golos::seconds_to_blocks(150));  // TODO: remove magic number
     check();
@@ -1003,7 +1004,8 @@ BOOST_FIXTURE_TEST_CASE(golos_curation_test, reward_calcs_tester) try {
     BOOST_CHECK_EQUAL(success(), addvote(_stranger, {_users[0], "permlink"}, 10000));
     BOOST_TEST_MESSAGE("--- _stranger voted");
     check();
-    produce_blocks(golos::seconds_to_blocks(150));    
+    produce_blocks(golos::seconds_to_blocks(150));
+    BOOST_CHECK_EQUAL(success(), post.closemssgs());
     check();
 } FC_LOG_AND_RETHROW()
 
@@ -1037,6 +1039,8 @@ BOOST_FIXTURE_TEST_CASE(close_token_acc_test, reward_calcs_tester) try {
 
     auto forum_name_balance = token.get_account(_forum_name)["payments"].as<asset>();
     produce_blocks(golos::seconds_to_blocks(post.window));
+    BOOST_CHECK_EQUAL(success(), post.closemssgs());
+    produce_block();
     BOOST_CHECK_GT(token.get_account(_forum_name)["payments"].as<asset>(), forum_name_balance); 
     check();
 } FC_LOG_AND_RETHROW()
@@ -1074,6 +1078,8 @@ BOOST_FIXTURE_TEST_CASE(close_vest_acc_test, reward_calcs_tester) try {
 
     auto forum_name_balance = token.get_account(_forum_name)["payments"].as<asset>();
     produce_blocks(golos::seconds_to_blocks(post.window));
+    BOOST_CHECK_EQUAL(success(), post.closemssgs());
+    produce_block();
     BOOST_CHECK_GT(token.get_account(_forum_name)["payments"].as<asset>(), forum_name_balance); 
     check();
 } FC_LOG_AND_RETHROW()
@@ -1127,6 +1133,8 @@ BOOST_FIXTURE_TEST_CASE(golos_delegators_test, reward_calcs_tester) try {
     auto voter_amount = vest.get_balance_raw(_users[18])["vesting"].as<asset>();
     auto delegator_amount = vest.get_balance_raw(_users[2])["vesting"].as<asset>();
     produce_blocks(golos::seconds_to_blocks(post.window));
+    BOOST_CHECK_EQUAL(success(), post.closemssgs());
+    produce_block();
     BOOST_CHECK_GT(vest.get_balance_raw(_users[18])["vesting"].as<asset>(), voter_amount);
     BOOST_CHECK_GT(vest.get_balance_raw(_users[2])["vesting"].as<asset>(), delegator_amount);
     check();
@@ -1147,6 +1155,8 @@ BOOST_FIXTURE_TEST_CASE(golos_delegators_test, reward_calcs_tester) try {
     voter_amount = vest.get_balance_raw(_users[19])["vesting"].as<asset>();
     delegator_amount = vest.get_balance_raw(_users[3])["vesting"].as<asset>();
     produce_blocks(golos::seconds_to_blocks(post.window));
+    BOOST_CHECK_EQUAL(success(), post.closemssgs());
+    produce_block();
     BOOST_CHECK_GT(vest.get_balance_raw(_users[19])["vesting"].as<asset>(), voter_amount);
     BOOST_CHECK_GT(vest.get_balance_raw(_users[3])["vesting"].as<asset>(), delegator_amount);
     check();
@@ -1167,6 +1177,8 @@ BOOST_FIXTURE_TEST_CASE(golos_delegators_test, reward_calcs_tester) try {
     voter_amount = vest.get_balance_raw(_users[20])["vesting"].as<asset>();
     delegator_amount = vest.get_balance_raw(_users[4])["vesting"].as<asset>();
     produce_blocks(golos::seconds_to_blocks(post.window));
+    BOOST_CHECK_EQUAL(success(), post.closemssgs());
+    produce_block();
     BOOST_CHECK_GT(vest.get_balance_raw(_users[20])["vesting"].as<asset>(), voter_amount);
     BOOST_CHECK_EQUAL(vest.get_balance_raw(_users[4])["vesting"].as<asset>(), delegator_amount);
     check();
@@ -1192,6 +1204,8 @@ BOOST_FIXTURE_TEST_CASE(golos_delegators_test, reward_calcs_tester) try {
     auto delegator2_amount = vest.get_balance_raw(_users[6])["vesting"].as<asset>();
     auto delegator3_amount = vest.get_balance_raw(_users[7])["vesting"].as<asset>();
     produce_blocks(golos::seconds_to_blocks(post.window));
+    BOOST_CHECK_EQUAL(success(), post.closemssgs());
+    produce_block();
     BOOST_CHECK_GT(vest.get_balance_raw(_users[21])["vesting"].as<asset>(), voter_amount);
     BOOST_CHECK_GT(vest.get_balance_raw(_users[5])["vesting"].as<asset>(), delegator1_amount);
     BOOST_CHECK_GT(vest.get_balance_raw(_users[6])["vesting"].as<asset>(), delegator2_amount);
@@ -1218,6 +1232,8 @@ BOOST_FIXTURE_TEST_CASE(golos_delegators_test, reward_calcs_tester) try {
     delegator2_amount = vest.get_balance_raw(_users[9])["vesting"].as<asset>();
     delegator3_amount = vest.get_balance_raw(_users[10])["vesting"].as<asset>();
     produce_blocks(golos::seconds_to_blocks(post.window));
+    BOOST_CHECK_EQUAL(success(), post.closemssgs());
+    produce_block();
     BOOST_CHECK_GT(vest.get_balance_raw(_users[22])["vesting"].as<asset>(), voter_amount);
     BOOST_CHECK_GT(vest.get_balance_raw(_users[8])["vesting"].as<asset>(), delegator1_amount);
     BOOST_CHECK_GT(vest.get_balance_raw(_users[9])["vesting"].as<asset>(), delegator2_amount);
@@ -1245,6 +1261,8 @@ BOOST_FIXTURE_TEST_CASE(golos_delegators_test, reward_calcs_tester) try {
     delegator3_amount = vest.get_balance_raw(_users[13])["vesting"].as<asset>();
     BOOST_CHECK_EQUAL(post.get_vote(_users[0], 0)["delegators"].size(), 1);
     produce_blocks(golos::seconds_to_blocks(post.window));
+    BOOST_CHECK_EQUAL(success(), post.closemssgs());
+    produce_block();
     std::vector<account_name> dlg_vec_db;
     std::vector<account_name> dlg_vec_st{_users[11], _users[12], _users[13]};
     for (auto dlg_obj : vest.get_delegators())
@@ -1298,6 +1316,8 @@ BOOST_FIXTURE_TEST_CASE(golos_delegators_test, reward_calcs_tester) try {
     BOOST_CHECK_EQUAL(vote_dlg.size(), 1);
     BOOST_CHECK_EQUAL(vote_dlg[(size_t)0]["interest_rate"].as<uint16_t>(), cfg::_100percent);
     produce_blocks(golos::seconds_to_blocks(post.window));
+    BOOST_CHECK_EQUAL(success(), post.closemssgs());
+    produce_block();
     
     BOOST_CHECK_EQUAL(voter_amount.get_amount(), 0);
     BOOST_CHECK_EQUAL(vest.get_balance_raw(_users[24])["vesting"].as<asset>(), voter_amount);
@@ -1349,7 +1369,8 @@ BOOST_FIXTURE_TEST_CASE(a_lot_of_delegators_test, reward_calcs_tester) try {
         BOOST_TEST_MESSAGE("--- " << name{_users[i]}.to_string() << " voted; i = " << i);
     }
     BOOST_TEST_MESSAGE("--- all users have voted");
-    produce_blocks(golos::seconds_to_blocks(150));    
+    produce_blocks(golos::seconds_to_blocks(150));
+    BOOST_CHECK_EQUAL(success(), post.closemssgs());
     check();
 } FC_LOG_AND_RETHROW()
 
@@ -1395,7 +1416,7 @@ BOOST_FIXTURE_TEST_CASE(posting_bw_penalty, reward_calcs_tester) try {
         set_charge();
         BOOST_CHECK_EQUAL(success(), create_message({_users[0], "permlink" + std::to_string(i)}));
         charge += cfg::_100percent;
-        BOOST_TEST_CHECK(post.get_message(_users[0], i+1)["rewardweight"].as<uint16_t>(), cfg::_100percent);
+        BOOST_TEST_CHECK(post.get_message(i+1)["rewardweight"].as<uint16_t>(), cfg::_100percent);
         produce_blocks(golos::seconds_to_blocks(five_min));
     }
 
@@ -1403,7 +1424,7 @@ BOOST_FIXTURE_TEST_CASE(posting_bw_penalty, reward_calcs_tester) try {
     set_charge();
     BOOST_CHECK_EQUAL(success(), create_message({_users[0], "permlink5"}));
     charge += cfg::_100percent;
-    auto reward_weight_db = post.get_message(_users[0], 5)["rewardweight"].as<double>();
+    auto reward_weight_db = post.get_message(5)["rewardweight"].as<double>();
     double reward_weight_st = _state.pools.rbegin()->messages.back().reward_weight;
     BOOST_CHECK(reward_weight_db < cfg::_100percent);
     CHECK_EQUAL_WITH_DELTA(reward_weight_db/cfg::_100percent, reward_weight_st, reward_weight_delta);
@@ -1412,6 +1433,7 @@ BOOST_FIXTURE_TEST_CASE(posting_bw_penalty, reward_calcs_tester) try {
     produce_blocks();
 
     produce_blocks(golos::seconds_to_blocks(window));
+    BOOST_CHECK_EQUAL(success(), post.closemssgs());
     check();
 } FC_LOG_AND_RETHROW()
 
@@ -1476,7 +1498,8 @@ BOOST_FIXTURE_TEST_CASE(message_max_payout_test, reward_calcs_tester) try {
     const auto alice2_vest = vest.get_balance_raw(N(alice2))["vesting"].as<asset>();
     const auto alice3_vest = vest.get_balance_raw(N(alice3))["vesting"].as<asset>();
     const auto alice4_vest = vest.get_balance_raw(N(alice4))["vesting"].as<asset>();
-    produce_blocks(golos::seconds_to_blocks(post.window));   // TODO: remove magic number
+    produce_blocks(golos::seconds_to_blocks(post.window));
+    BOOST_CHECK_EQUAL(success(), post.closemssgs());
     BOOST_TEST_MESSAGE("--- rewards");
     check();
     show();
@@ -1492,6 +1515,82 @@ BOOST_FIXTURE_TEST_CASE(message_max_payout_test, reward_calcs_tester) try {
 
     BOOST_TEST_MESSAGE("--- checking that message with max_payout = 0, but last in pool, has payout");
     BOOST_CHECK_GT(vest.get_balance_raw(N(alice4))["vesting"].as<asset>() - alice4_vest, token.make_asset(0));
+} FC_LOG_AND_RETHROW()
+
+BOOST_FIXTURE_TEST_CASE(message_closing, reward_calcs_tester) try {
+    BOOST_TEST_MESSAGE("message_closing");
+    vector<account_name> additional_users;
+    for (size_t u = 0; u < 100; u++) {
+        additional_users.push_back(user_name(u));
+    }
+    create_accounts(additional_users);
+    _users.insert(_users.end(), additional_users.begin(), additional_users.end());
+
+    int64_t maxfp = std::numeric_limits<fixp_t>::max();
+    auto bignum = 500000000000;
+    init(bignum, 500000);
+    produce_blocks();
+    BOOST_TEST_MESSAGE("--- setrules");
+    using namespace golos_curation;
+    BOOST_CHECK_EQUAL(success(), setrules({"x", maxfp}, {golos_curation::func_str, maxfp}, {"1", bignum},
+        [](double x){ return x; }, golos_curation::func, [](double x){ return 1.0; }));
+    check();
+
+    BOOST_TEST_MESSAGE("--- add_funds_to_forum");
+    BOOST_CHECK_EQUAL(success(), add_funds_to_forum(50000));
+    check();
+
+    auto need_blocks = golos::seconds_to_blocks(post.window);
+
+    BOOST_TEST_MESSAGE("--- checking that creating message triggers closing");
+    BOOST_CHECK_EQUAL(success(), create_message({N(alice1), "permlink"}));
+    BOOST_CHECK_EQUAL(success(), addvote(N(alice2), {N(alice1), "permlink"}, 10000));
+    produce_blocks(need_blocks);
+    BOOST_CHECK_EQUAL(post.get_message({N(alice1), "permlink"}).is_null(), false);
+    BOOST_CHECK_EQUAL(success(), create_message({N(bob1), "permlink"}));
+    produce_block();
+    BOOST_CHECK_EQUAL(post.get_message({N(alice1), "permlink"}).is_null(), true);
+    check();
+    show();
+
+    BOOST_TEST_MESSAGE("--- checking that voting for message triggers closing");
+    produce_blocks(need_blocks-1);
+    BOOST_CHECK_EQUAL(success(), create_message({N(bob1), "permlink2"}));
+    BOOST_CHECK_EQUAL(success(), addvote(N(alice2), {N(bob1), "permlink2"}, 10000));
+    BOOST_CHECK_EQUAL(post.get_message({N(bob1), "permlink"}).is_null(), false);
+    BOOST_CHECK_EQUAL(success(), addvote(N(alice1), {N(bob1), "permlink2"}, 10000));
+    produce_block();
+    BOOST_CHECK_EQUAL(post.get_message({N(bob1), "permlink"}).is_null(), true);
+    check();
+    show();
+
+    BOOST_TEST_MESSAGE("--- checking closing with re-scheduling trx");
+    for (auto u : additional_users) {
+        BOOST_CHECK_EQUAL(success(), create_message({u, "permlink"}));
+    }
+    produce_blocks(need_blocks);
+    for (auto u : additional_users) {
+        BOOST_CHECK_EQUAL(post.get_message({u, "permlink"}).is_null(), false);
+    }
+    BOOST_CHECK_EQUAL(success(), post.closemssgs());
+    produce_block();
+    for (auto u : additional_users) {
+        BOOST_CHECK_EQUAL(post.get_message({u, "permlink"}).is_null(), true);
+    }
+    check();
+    show();
+
+    BOOST_TEST_MESSAGE("--- checking that transfering to posting-contract triggers closing");
+    BOOST_CHECK_EQUAL(success(), create_message({N(bob2), "permlink"}));
+    BOOST_CHECK_EQUAL(success(), addvote(N(alice2), {N(bob2), "permlink"}, 10000));
+    produce_blocks(need_blocks);
+    BOOST_CHECK_EQUAL(post.get_message({N(bob2), "permlink"}).is_null(), false);
+    BOOST_CHECK_EQUAL(success(), add_funds_to_forum(50000));
+    produce_block();
+    BOOST_CHECK_EQUAL(post.get_message({N(bob2), "permlink"}).is_null(), true);
+    check();
+    show();
+
 } FC_LOG_AND_RETHROW()
 
 BOOST_AUTO_TEST_SUITE_END()

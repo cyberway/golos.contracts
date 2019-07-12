@@ -5,7 +5,7 @@
 Смарт-контракт `golos.publication` обеспечивает работу с постами, в том числе предоставляет возможность пользователям выполнять следующие действия: публиковать посты, оставлять комментарии, голосовать за посты и закрывать посты, а также обеспечивает выплату вознаграждения авторам постов.  
 
 ## Операции-действия смарт-контракта golos.publication 
-Cмарт-контракт `golos.publication` поддерживает следующие операции-действия: [setlimit](#operaciya-deistvie-setlimit), [setrules](#operaciya-deistvie-setrules), [createmssg](#operaciya-deistvie-createmssg), [updatemssg](#operaciya-deistvie-updatemssg), [deletemssg](#operaciya-deistvie-deletemssg), [downvote](#operaciya-deistvie-downvote), [upvote](#operaciya-deistvie-upvote), [closemssg](#operaciya-deistvie-closemssg), [reblog](#operaciya-deistvie-reblog), [setcurprcnt](#operaciya-deistvie-setcurprcnt), [setmaxpayout](#operaciya-deistvie-setmaxpayout), [calcrwrdwt](#operaciya-deistvie-calcrwrdwt), [paymssgrwrd](#operaciya-deistvie-paymssgrwrd), [setparams](#operaciya-deistvie-setparams).
+Cмарт-контракт `golos.publication` поддерживает следующие операции-действия: [setlimit](#operaciya-deistvie-setlimit), [setrules](#operaciya-deistvie-setrules), [createmssg](#operaciya-deistvie-createmssg), [updatemssg](#operaciya-deistvie-updatemssg), [deletemssg](#operaciya-deistvie-deletemssg), [downvote](#operaciya-deistvie-downvote), [upvote](#operaciya-deistvie-upvote), [closemssgs](#operaciya-deistvie-closemssgs), [reblog](#operaciya-deistvie-reblog), [setcurprcnt](#operaciya-deistvie-setcurprcnt), [setmaxpayout](#operaciya-deistvie-setmaxpayout), [calcrwrdwt](#operaciya-deistvie-calcrwrdwt), [paymssgrwrd](#operaciya-deistvie-paymssgrwrd), [setparams](#operaciya-deistvie-setparams).
 
 ## Операция-действие setlimit
 
@@ -197,19 +197,17 @@ void unvote(
  
 Операция-действие `unvote` требует наличия подписи в транзакции аккаунта `voter`.
 
-## Операция-действие closemssg
+## Операция-действие closemssgs
 
-Операция-действие `closemssg` является внутренней и пользователю недоступна. Используется для закрытия поста.  
-Операция -действие `closemssg` имеет следующий вид:
+Операция-действие `closemssgs` используется для закрытия очередной порции постов, готовых к выплате, вручную пользователем.  
+Операция -действие `closemssgs` имеет следующий вид:
 ```
-void close_message(mssgid message_id)
+void close_messages()
 ```
-Параметр:  
-`message_id` — идентификатор закрывающегося поста. Параметр содержит поля: `author` — автор поста, `permlink` — уникальное имя поста в рамках публикаций данного автора.  
+Параметры:  
+нет.
 
-Операция-действие `closemssg` требует выполнения условий:
-  * закрытие поста должно происходить по истечении времени `cashout_window:window`;  
-  * транзакция должна быть подписана аккаунтом смарт-контракта Golos.publication.  
+Операция-действие `closemssgs` не требует каких-либо подписей.
 
 ## Операция-действие reblog
 
