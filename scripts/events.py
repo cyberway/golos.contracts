@@ -32,10 +32,8 @@ def glsPublish_createmssg(action):
     parent = "%s/%s" % (args['parent_id']['author'], args['parent_id']['permlink']) if args['parent_id']['author'] else args['parent_id']['permlink']
     return "%s/%s (%s)    '%s'" % (args['message_id']['author'], args['message_id']['permlink'], parent, args['headermssg'])
 
-def glsPublish_closemssg(action):
-    args = action['args']
-    print(">>> ", args)
-    return "%s/%s" % (args['message_id']['author'], args['message_id']['permlink'])
+def glsPublish_closemssgs(action):
+    return ""
 
 def glsPublish_upvote(action):
     args = action['args']
@@ -85,7 +83,7 @@ _actions = (
     ('cyber.token',   None,    'issue',    cyberToken_issue),
     ('cyber.token',   None,    'transfer', cyberToken_transfer),
     ('gls.publish',   None,    'createmssg', glsPublish_createmssg),
-    ('gls.publish',   None,    'closemssg',  glsPublish_closemssg),
+    ('gls.publish',   None,    'closemssgs',  glsPublish_closemssgs),
     ('gls.publish',   None,    'upvote',     glsPublish_upvote),
     ('gls.publish',   None,    'downvote',   glsPublish_downvote),
     ('gls.publish',   None,    'unvote',     glsPublish_unvote),
