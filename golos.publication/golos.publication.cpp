@@ -1,5 +1,4 @@
 #include "golos.publication.hpp"
-#include <eosio/transaction.hpp>
 #include <eosio/event.hpp>
 #include <golos.social/golos.social.hpp>
 #include <golos.vesting/golos.vesting.hpp>
@@ -65,6 +64,7 @@ extern "C" {
 }
 
 struct posting_params_setter: set_params_visitor<posting_state> {
+    std::optional<st_bwprovider> new_bwprovider;
     using set_params_visitor::set_params_visitor;
 
     bool operator()(const max_vote_changes_prm& param) {
@@ -92,6 +92,11 @@ struct posting_params_setter: set_params_visitor<posting_state> {
     }
     bool operator()(const curators_prcnt_prm& param) {
         return set_param(param, &posting_state::curators_prcnt_param);
+    }
+
+    bool operator()(const bwprovider_prm& p) {
+        new_bwprovider = p;
+        return set_param(p, &posting_state::bwprovider_param);
     }
 };
 
@@ -498,22 +503,35 @@ void publication::use_postbw_charge(
             });
 }
 
-void publication::send_postreward_trx(uint64_t id, const structures::mssgid& message_id) {
+void publication::providebw_for_trx(transaction& trx, const permission_level& provider) {
+    if (provider.actor != name()) {
+        trx.actions.emplace_back(action{provider, "cyber"_n, "providebw"_n, std::make_tuple(provider.actor, _self)});
+    }
+}
+
+void publication::send_postreward_trx(uint64_t id, const structures::mssgid& message_id, const permission_level& provider) {
     transaction trx(eosio::current_time_point() + eosio::seconds(config::paymssgrwrd_expiration_sec));
     trx.actions.emplace_back(action{permission_level(_self, config::code_name), _self, "paymssgrwrd"_n, message_id});
+    providebw_for_trx(trx, provider);
     trx.delay_sec = 0;
     trx.send((static_cast<uint128_t>(id) << 64) | message_id.author.value, _self);
 }
 
 void publication::send_deletevotes_trx(int64_t message_id, name author) {
+    posting_params_singleton cfg(_self, _self.value);
+    auto provider = cfg.get().bwprovider_param.provider;
     transaction trx(eosio::current_time_point() + eosio::seconds(config::deletevotes_expiration_sec));
     trx.actions.emplace_back(action{permission_level(_self, config::code_name), _self, "deletevotes"_n, std::make_tuple(message_id, author)});
+    providebw_for_trx(trx, provider);
     trx.delay_sec = 0;
     trx.send((static_cast<uint128_t>(message_id) << 64) | author.value, _self);
 }
 
 void publication::close_messages() {
     auto cur_time = static_cast<uint64_t>(eosio::current_time_point().time_since_epoch().count());
+
+    posting_params_singleton cfg(_self, _self.value);
+    auto provider = cfg.get().bwprovider_param.provider;
 
     tables::reward_pools pools_table(_self, _self.value);
     std::map<uint64_t, structures::rewardpool> pools;
@@ -525,6 +543,7 @@ void publication::close_messages() {
         if (i++ >= config::max_closed_posts_per_action) {
             transaction trx(eosio::current_time_point() + eosio::seconds(config::closemssgs_expiration_sec));
             trx.actions.emplace_back(action{permission_level(_self, config::code_name), _self, "closemssgs"_n, ""});
+            providebw_for_trx(trx, provider);
             trx.delay_sec = 0;
             trx.send(static_cast<uint128_t>(cur_time) << 64, _self, true);
             break;
@@ -602,7 +621,7 @@ void publication::close_messages() {
 
         tables::permlink_table permlink_table(_self, mssg_itr->author.value);
         auto permlink_itr = permlink_table.find(mssg_itr->id);
-        send_postreward_trx(mssg_itr->id, structures::mssgid{mssg_itr->author, permlink_itr->value});
+        send_postreward_trx(mssg_itr->id, structures::mssgid{mssg_itr->author, permlink_itr->value}, provider);
     }
 
     for (auto& pool_kv : pools) {
@@ -651,7 +670,6 @@ void publication::deletevotes(int64_t message_id, name author) {
 
 void publication::paymssgrwrd(structures::mssgid message_id) {
     require_auth(_self);
-    
 
     tables::permlink_table permlink_table(_self, message_id.author.value);
     auto permlink_index = permlink_table.get_index<"byvalue"_n>();
@@ -730,7 +748,9 @@ void publication::paymssgrwrd(structures::mssgid message_id) {
     else {
         pay_to(std::move(vesting_payouts), true);
         message_table.modify(mssg_itr, name(), [&]( auto &item ) { item.paid_amount += paid; });
-        send_postreward_trx(mssg_itr->id, message_id);
+        posting_params_singleton cfg(_self, _self.value);
+        auto provider = cfg.get().bwprovider_param.provider;
+        send_postreward_trx(mssg_itr->id, message_id, provider);
     }
 }
 
@@ -1101,7 +1121,13 @@ void publication::set_params(std::vector<posting_params> params) {
     require_auth(_self);
     posting_params_singleton cfg(_self, _self.value);
     param_helper::check_params(params, cfg.exists());
-    param_helper::set_parameters<posting_params_setter>(params, cfg, _self);
+    auto setter = param_helper::set_parameters<posting_params_setter>(params, cfg, _self);
+    if (setter.new_bwprovider) {
+        auto provider = setter.new_bwprovider->provider;
+        if (provider.actor != name()) {
+            dispatch_inline("cyber"_n, "providebw"_n, {provider}, std::make_tuple(provider.actor, _self));
+        }
+    }
 }
 
 void publication::reblog(name rebloger, structures::mssgid message_id, std::string headermssg, std::string bodymssg) {

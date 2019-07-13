@@ -1,6 +1,7 @@
 #pragma once
 #include "objects.hpp"
 #include "parameters.hpp"
+#include <eosio/transaction.hpp>
 
 namespace golos {
 
@@ -68,7 +69,8 @@ private:
 
     std::string get_memo(const std::string &type, const structures::mssgid &message_id);
     const auto& get_message(const tables::message_table& messages, const structures::mssgid& message_id);
-    void send_postreward_trx(uint64_t id, const structures::mssgid& message_id);
+    void providebw_for_trx(eosio::transaction& trx, const permission_level& provider);
+    void send_postreward_trx(uint64_t id, const structures::mssgid& message_id, const permission_level& provider);
     void send_deletevotes_trx(int64_t message_id, name author);
 };
 

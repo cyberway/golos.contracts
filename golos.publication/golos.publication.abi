@@ -33,7 +33,8 @@
       "st_max_comment_depth",
       "st_social_acc",
       "st_referral_acc",
-      "st_curators_prcnt"
+      "st_curators_prcnt",
+      "st_bwprovider"
     ]
   }],
   "structs": [
@@ -671,6 +672,14 @@
     ]
   },
   {
+     "name": "st_bwprovider",
+     "base": "",
+     "fields": [
+        {"type": "name", "name": "actor"},
+        {"type": "name", "name": "permission"}
+     ]
+  },
+  {
     "name": "posting_state",
     "base": "",
     "fields": [
@@ -705,6 +714,10 @@
       {
         "name": "curators_prcnt",
         "type": "st_curators_prcnt"
+      },
+      {
+        "name": "bwprovider",
+        "type": "st_bwprovider"
       }
     ]
   },
