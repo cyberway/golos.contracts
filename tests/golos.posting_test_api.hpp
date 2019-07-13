@@ -190,9 +190,10 @@ struct golos_posting_api: base_contract_api {
         auto social = get_str_social_acc(name());
         auto referral = get_str_referral_acc(name());
         auto curators_prcnt = get_str_curators_prcnt(min_curators_prcnt, max_curators_prcnt);
+        auto bwprovider = get_str_bwprovider(name(), name());
 
         auto params = "[" + vote_changes + "," + cashout_window + "," + beneficiaries + "," + comment_depth +
-            "," + social + "," + referral + "," + curators_prcnt + "]";
+            "," + social + "," + referral + "," + curators_prcnt + "," + bwprovider + "]";
         return set_params(params);
     }
 
@@ -228,6 +229,9 @@ struct golos_posting_api: base_contract_api {
         return string("['st_curators_prcnt', {'min_curators_prcnt':'") + std::to_string(min_curators_prcnt) + "','max_curators_prcnt':'" + std::to_string(max_curators_prcnt) + "'}]";
     }
 
+    string get_str_bwprovider(account_name actor, permission_name permission) {
+        return string("['st_bwprovider', {'actor':'") + name{actor}.to_string() + "','permission':'" + name{permission}.to_string() + "'}]";
+    }
     //// posting tables
     variant get_permlink(account_name acc, uint64_t id) {
         return _tester->get_chaindb_struct(_code, acc, N(permlink), id, "permlink");

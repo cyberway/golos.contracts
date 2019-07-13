@@ -78,9 +78,19 @@ namespace golos {
     };
     using curators_prcnt_prm = param_wrapper<st_curators_prcnt, 2>;
 
+    struct st_bwprovider: parameter {
+        permission_level provider;
+
+        void validate() const override {
+            eosio::check((provider.actor != name()) == (provider.permission != name()), "actor and permission must be set together");
+            // check that contract can use cyber:providebw done in setparams
+            // (we need know contract account to make this check)
+        }
+    };
+    using bwprovider_prm = param_wrapper<st_bwprovider,1>;
 
     using posting_params = std::variant<max_vote_changes_prm, cashout_window_prm, max_beneficiaries_prm,
-          max_comment_depth_prm, social_acc_prm, referral_acc_prm, curators_prcnt_prm>;
+          max_comment_depth_prm, social_acc_prm, referral_acc_prm, curators_prcnt_prm, bwprovider_prm>;
 
     struct [[eosio::table]] posting_state {
         max_vote_changes_prm max_vote_changes_param;
@@ -90,8 +100,9 @@ namespace golos {
         social_acc_prm social_acc_param;
         referral_acc_prm referral_acc_param;
         curators_prcnt_prm curators_prcnt_param;
+        bwprovider_prm bwprovider_param;
 
-        static constexpr int params_count = 7;
+        static constexpr int params_count = 8;
     };
     using posting_params_singleton = eosio::singleton<"pstngparams"_n, posting_state>;
 

@@ -169,7 +169,7 @@
                 {"name": "createuser", "accounts": ["@testing"]},
                 {"name": "invoice",    "accounts": ["gls.charge@cyber.code", "gls.publish@cyber.code"]},
                 {"name": "changevest", "accounts": ["gls.vesting@cyber.code"]},
-                {"name": "providebw",    "accounts": ["gls.emit@cyber.code", "gls.vesting@cyber.code"]},
+                {"name": "providebw",    "accounts": ["gls.emit@cyber.code", "gls.vesting@cyber.code", "gls.publish@cyber.code"]},
                 {"name": "witn.smajor"},
                 {"name": "witn.major"},
                 {"name": "witn.minor"}
@@ -349,7 +349,8 @@
                 "max_comment_depth": {"value":127},
                 "social_acc": {"value":"gls.social"},
                 "referral_acc": {"value":""},
-                "curators_prcnt": {"min_curators_prcnt":0, "max_curators_prcnt":9000}
+                "curators_prcnt": {"min_curators_prcnt":0, "max_curators_prcnt":9000},
+                "bwprovider": {"actor":"gls","permission":"providebw"}
             }}]
         },{
             "code": "gls.publish",
