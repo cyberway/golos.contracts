@@ -11,6 +11,7 @@ namespace golos {
 using namespace eosio;
 
 struct vesting_params_setter: set_params_visitor<vesting_state> {
+    std::optional<bwprovider> new_bwprovider;
     using set_params_visitor::set_params_visitor; // enable constructor
 
     bool operator()(const vesting_withdraw_param& p) {
@@ -23,6 +24,11 @@ struct vesting_params_setter: set_params_visitor<vesting_state> {
 
     bool operator()(const delegation_param& p) {
         return set_param(p, &vesting_state::delegation);
+    }
+
+    bool operator()(const bwprovider_param& p) {
+        new_bwprovider = p;
+        return set_param(p, &vesting_state::bwprovider);
     }
 };
 
@@ -37,7 +43,13 @@ void vesting::setparams(symbol symbol, std::vector<vesting_param> params) {
     require_auth(name(token::get_issuer(config::token_name, symbol.code())));
 
     vesting_params_singleton cfg(_self, symbol.code().raw());
-    param_helper::set_parameters<vesting_params_setter>(params, cfg, name(token::get_issuer(config::token_name, symbol.code())));
+    auto setter = param_helper::set_parameters<vesting_params_setter>(params, cfg, name(token::get_issuer(config::token_name, symbol.code())));
+    if (setter.new_bwprovider) {
+        auto provider = setter.new_bwprovider->provider;
+        if (provider.actor != name()) {
+            dispatch_inline("cyber"_n, "providebw"_n, {provider}, std::make_tuple(provider.actor, _self));
+        }
+    }
 }
 
 name get_recipient(const std::string& memo) {
@@ -533,17 +545,29 @@ const asset vesting::token_to_vesting(const asset& src, const vesting_stats& vin
     return asset(amount, vinfo.supply.symbol);
 }
 
-void vesting::timeout() {
+void vesting::providebw_for_trx(transaction& trx, const permission_level& provider) {
+    if (provider.actor != name()) {
+        trx.actions.emplace_back(action{provider, "cyber"_n, "providebw"_n, std::make_tuple(provider.actor, _self)});
+    }
+}
+
+void vesting::timeout(symbol symbol) {
     require_auth(_self);
+
+    vesting_params_singleton cfg(_self, symbol.code().raw());
+    auto provider = cfg.get().bwprovider.provider;
+
     uint128_t sender_id = _self.value;
     transaction trx;
     trx.delay_sec = config::vesting_delay_tx_timeout;
-    trx.actions.emplace_back(action{permission_level(_self, config::code_name), _self, "timeout"_n, ""});
+    trx.actions.emplace_back(action{permission_level(_self, config::code_name), _self, "timeout"_n, symbol});
+    providebw_for_trx(trx, provider);
     trx.send(sender_id, _self);
 
     transaction trx2;
     trx2.actions.emplace_back(action{permission_level(_self, config::code_name), _self, "timeoutrdel"_n, ""});
     trx2.actions.emplace_back(action{permission_level(_self, config::code_name), _self, "timeoutconv"_n, ""});
+    providebw_for_trx(trx2, provider);
     trx2.send(sender_id + 1, _self, true);
 }
 
