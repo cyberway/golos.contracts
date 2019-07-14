@@ -152,7 +152,8 @@ void publication::create_message(
     tables::reward_pools pools(_self, _self.value);
     auto pool = pools.begin();   // TODO: Reverse iterators doesn't work correctly
     eosio::check(pool != pools.end(), "publication::create_message: [pools] is empty");
-    pool = --pools.end();
+    pool = pools.end();
+    --pool;
     check_acc_vest_balance(message_id.author, pool->state.funds.symbol);
     auto token_code = pool->state.funds.symbol.code();
     auto issuer = token::get_issuer(config::token_name, token_code);
@@ -628,7 +629,9 @@ void publication::close_messages() {
         auto pool = pools_table.find(pool_kv.first);
         bool pool_erased = false;
         if(pool_kv.second.state.msgs == 0) {
-            if(pool != --pools_table.end()) {
+            auto etr = pools_table.end();
+            --etr;
+            if(pool != etr) {
                 send_poolerase_event(*pool);
 
                 pools_table.erase(pool);
