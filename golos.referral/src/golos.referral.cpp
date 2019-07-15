@@ -39,7 +39,7 @@ void referral::setparams(std::vector<referral_params> params) {
 
 void referral::addreferral(name referrer, name referral, uint32_t percent,
                            uint64_t expire, asset breakout) {
-    require_auth(referrer);
+    require_auth(_self);
 
     closeoldref();
 
@@ -61,7 +61,7 @@ void referral::addreferral(name referrer, name referral, uint32_t percent,
     eosio::check(breakout <= cfg.get().breakout_params.max_breakout, "breakout > max_breakout");
     eosio::check(percent  <= cfg.get().percent_params.max_percent, "specified parameter is greater than limit");
  
-    referrals.emplace(referrer, [&]( auto &item ) {
+    referrals.emplace(_self, [&]( auto &item ) {
         item.referral = referral;
         item.referrer = referrer;
         item.percent  = percent;
