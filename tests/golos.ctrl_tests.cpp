@@ -104,9 +104,6 @@ public:
         const string no_votes           = amsg("there are no votes");
         const string no_vote            = amsg("there is no vote for this witness");
 
-        const string already_attached   = amsg("already attached");
-        const string already_detached   = amsg("user already detached");
-        const string no_account         = amsg("user not found");
         const string auth_period0       = amsg("update auth period can't be 0");
         const string assert_erase_wtnss = amsg("not possible to remove witness as there are votes");
     } err;
@@ -176,8 +173,6 @@ BOOST_FIXTURE_TEST_CASE(create_community, golos_ctrl_tester) try {
     BOOST_CHECK_EQUAL(err.no_symbol, ctrl.unreg_witness(_w[0]));
     BOOST_CHECK_EQUAL(err.no_symbol, ctrl.vote_witness(_alice, _w[0]));
     BOOST_CHECK_EQUAL(err.no_symbol, ctrl.unvote_witness(_alice, _w[0]));
-    BOOST_CHECK_EQUAL(err.no_symbol, ctrl.attach_acc(_carol));
-    BOOST_CHECK_EQUAL(err.no_symbol, ctrl.detach_acc(_carol));
 
     BOOST_TEST_MESSAGE("--- test fail when create community with bad parameters");
     BOOST_CHECK_EQUAL(err.no_msig_acc, ctrl.set_params(ctrl.default_params(N(nobody), _token)));
@@ -357,31 +352,6 @@ BOOST_FIXTURE_TEST_CASE(vote_witness, golos_ctrl_tester) try {
     BOOST_CHECK_EQUAL(success(), ctrl.vote_witness(_alice, _w[4]));
     produce_block();
     BOOST_CHECK_EQUAL(err.no_votes, ctrl.unvote_witness(_carol, _w[0]));
-} FC_LOG_AND_RETHROW()
-
-BOOST_FIXTURE_TEST_CASE(attach_detach_account, golos_ctrl_tester) try {
-    BOOST_TEST_MESSAGE("Attach/detach accounts");
-    return; // disabled for now. TODO: fix after start using attach/detach
-    BOOST_TEST_MESSAGE("--- prepare");
-    prepare(step_vote_witnesses);
-
-    BOOST_TEST_MESSAGE("--- check that account not attached");
-    auto attached = ctrl.get_attached(_alice);
-    BOOST_CHECK_EQUAL(true, attached.is_null());
-
-    BOOST_TEST_MESSAGE("--- check success on attach action");
-    auto w = witness_vect(_minor_witn_count);
-    BOOST_CHECK_EQUAL(success(), ctrl.attach_acc(_code, w, _alice));
-    produce_block();
-    auto expect = mvo()("name", "alice")("attached", true);
-    CHECK_MATCHING_OBJECT(ctrl.get_attached(_alice), expect);
-    BOOST_CHECK_EQUAL(err.already_attached, ctrl.attach_acc(_code, w, _alice));
-
-    BOOST_TEST_MESSAGE("--- check detaching");
-    BOOST_CHECK_EQUAL(success(), ctrl.detach_acc(_code, w, _alice));
-    CHECK_MATCHING_OBJECT(ctrl.get_attached(_alice), expect("attached", false));
-    BOOST_CHECK_EQUAL(err.already_detached, ctrl.detach_acc(_code, w, _alice));
-    BOOST_CHECK_EQUAL(err.no_account, ctrl.detach_acc(_code, w, _bob));
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE(set_params, golos_ctrl_tester) try {

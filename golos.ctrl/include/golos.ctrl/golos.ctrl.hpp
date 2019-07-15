@@ -45,17 +45,6 @@ struct [[eosio::table]] witness_voter {
 };
 using witness_vote_tbl = eosio::multi_index<"witnessvote"_n, witness_voter>;
 
-
-struct [[eosio::table]] bw_user {   // ?needed or simple names vector will be enough?
-    name name;
-    bool attached;          // can delete whole record on detach
-
-    uint64_t primary_key() const {
-        return name.value;
-    }
-};
-using bw_user_tbl = eosio::multi_index<"bwuser"_n, bw_user>;
-
 struct [[eosio::table]] msig_auths {
     std::vector<name> witnesses;
     time_point_sec last_update;
@@ -73,14 +62,6 @@ public:
 
     [[eosio::action]] void validateprms(std::vector<ctrl_param>);
     [[eosio::action]] void setparams(std::vector<ctrl_param>);
-
-    [[eosio::action]] void attachacc(name user);
-    [[eosio::action]] void detachacc(name user);
-    static inline bool is_attached(name code, name user) {
-        bw_user_tbl tbl(code, code.value);
-        auto itr = tbl.find(user.value);
-        return itr != tbl.end() && itr->attached;
-    }
 
     [[eosio::action]] void regwitness(name witness, std::string url);
     [[eosio::action]] void unregwitness(name witness);

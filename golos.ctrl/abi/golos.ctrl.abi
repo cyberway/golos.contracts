@@ -14,25 +14,6 @@
     }],
     "structs": [
         {
-            "name": "bw_user",
-            "base": "",
-            "fields": [
-                {"type": "name", "name": "name"},
-                {"type": "bool", "name": "attached"}
-            ]
-        }, {
-            "name": "attachacc",
-            "base": "",
-            "fields": [
-                {"type": "name",   "name": "user"}
-            ]
-        }, {
-            "name": "detachacc",
-            "base": "",
-            "fields": [
-                {"type": "name",   "name": "user"}
-            ]
-        }, {
             "name": "regwitness",
             "base": "",
             "fields": [
@@ -163,12 +144,6 @@
             "name": "validateprms",
             "type": "setparams"
         }, {
-            "name": "attachacc",
-            "type": "attachacc"
-        }, {
-            "name": "detachacc",
-            "type": "detachacc"
-        }, {
             "name": "regwitness",
             "type": "regwitness"
         }, {
@@ -193,14 +168,6 @@
     ],
     "tables": [
         {
-            "name": "bwuser",
-            "type": "bw_user",
-            "indexes" : [{
-                "name": "primary",
-                "unique": true,
-                "orders": [{"field": "name", "order": "asc"}]
-            }]
-        }, {
             "name": "witness",
             "type": "witness_info",
             "indexes" : [{
