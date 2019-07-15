@@ -25,7 +25,7 @@ public:
     void upvote(name voter, structures::mssgid message_id, uint16_t weight);
     void downvote(name voter, structures::mssgid message_id, uint16_t weight);
     void unvote(name voter, structures::mssgid message_id);
-    void close_messages();
+    void close_messages(name payer);
     void set_params(std::vector<posting_params> params);
     void reblog(name rebloger, structures::mssgid message_id, std::string headermssg, std::string bodymssg);
     void erase_reblog(name rebloger, structures::mssgid message_id);
@@ -70,7 +70,7 @@ private:
     std::string get_memo(const std::string &type, const structures::mssgid &message_id);
     const auto& get_message(const tables::message_table& messages, const structures::mssgid& message_id);
     void providebw_for_trx(eosio::transaction& trx, const permission_level& provider);
-    void send_postreward_trx(uint64_t id, const structures::mssgid& message_id, const permission_level& provider);
+    void send_postreward_trx(uint64_t id, const structures::mssgid& message_id, const name payer, const permission_level& provider);
     void send_deletevotes_trx(int64_t message_id, name author);
 };
 

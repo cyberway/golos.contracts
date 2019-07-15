@@ -121,7 +121,7 @@ void publication::create_message(
     std::optional<asset> max_payout = std::nullopt
 ) {
     require_auth(message_id.author);
-    close_messages();
+    close_messages(message_id.author);
 
     eosio::check(message_id.permlink.length() && message_id.permlink.length() < config::max_length,
             "Permlink length is empty or more than 256.");
@@ -510,12 +510,12 @@ void publication::providebw_for_trx(transaction& trx, const permission_level& pr
     }
 }
 
-void publication::send_postreward_trx(uint64_t id, const structures::mssgid& message_id, const permission_level& provider) {
+void publication::send_postreward_trx(uint64_t id, const structures::mssgid& message_id, const name payer, const permission_level& provider) {
     transaction trx(eosio::current_time_point() + eosio::seconds(config::paymssgrwrd_expiration_sec));
     trx.actions.emplace_back(action{permission_level(_self, config::code_name), _self, "paymssgrwrd"_n, message_id});
     providebw_for_trx(trx, provider);
     trx.delay_sec = 0;
-    trx.send((static_cast<uint128_t>(id) << 64) | message_id.author.value, _self);
+    trx.send((static_cast<uint128_t>(id) << 64) | message_id.author.value, payer);
 }
 
 void publication::send_deletevotes_trx(int64_t message_id, name author) {
@@ -526,7 +526,7 @@ void publication::send_deletevotes_trx(int64_t message_id, name author) {
     trx.send((static_cast<uint128_t>(message_id) << 64) | author.value, _self);
 }
 
-void publication::close_messages() {
+void publication::close_messages(name payer) {
     auto cur_time = static_cast<uint64_t>(eosio::current_time_point().time_since_epoch().count());
     auto provider = params().bwprovider_param.provider;
 
@@ -542,7 +542,7 @@ void publication::close_messages() {
             trx.actions.emplace_back(action{permission_level(_self, config::code_name), _self, "closemssgs"_n, ""});
             providebw_for_trx(trx, provider);
             trx.delay_sec = 0;
-            trx.send(static_cast<uint128_t>(cur_time) << 64, _self, true);
+            trx.send(static_cast<uint128_t>(cur_time) << 64, payer, true);
             break;
         }
 
@@ -618,7 +618,7 @@ void publication::close_messages() {
 
         tables::permlink_table permlink_table(_self, mssg_itr->author.value);
         auto permlink_itr = permlink_table.find(mssg_itr->id);
-        send_postreward_trx(mssg_itr->id, structures::mssgid{mssg_itr->author, permlink_itr->value}, provider);
+        send_postreward_trx(mssg_itr->id, structures::mssgid{mssg_itr->author, permlink_itr->value}, payer, provider);
     }
 
     for (auto& pool_kv : pools) {
@@ -747,7 +747,7 @@ void publication::paymssgrwrd(structures::mssgid message_id) {
     else {
         pay_to(std::move(vesting_payouts), true);
         message_table.modify(mssg_itr, eosio::same_payer, [&]( auto &item ) { item.paid_amount += paid; });
-        send_postreward_trx(mssg_itr->id, message_id, params().bwprovider_param.provider);
+        send_postreward_trx(mssg_itr->id, message_id, _self, params().bwprovider_param.provider);
     }
 }
 
@@ -771,7 +771,7 @@ fixp_t publication::calc_available_rshares(name voter, int16_t weight, uint64_t 
 
 void publication::set_vote(name voter, const structures::mssgid& message_id, int16_t weight) {
     require_auth(voter);
-    close_messages();
+    close_messages(voter);
 
     auto get_calc_sharesfn = [&](auto mainfunc_code, auto netshares, auto mainfunc_maxarg) {
         atmsp::machine<fixp_t> machine;
@@ -962,7 +962,7 @@ void publication::on_transfer(name from, name to, eosio::asset quantity, std::st
     tables::reward_pools pools(_self, _self.value);
     fill_depleted_pool(pools, quantity, pools.end());
 
-    close_messages();
+    close_messages(_self);
 }
 
 void publication::set_limit(
