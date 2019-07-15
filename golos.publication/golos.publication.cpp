@@ -519,20 +519,16 @@ void publication::send_postreward_trx(uint64_t id, const structures::mssgid& mes
 }
 
 void publication::send_deletevotes_trx(int64_t message_id, name author) {
-    posting_params_singleton cfg(_self, _self.value);
-    auto provider = cfg.get().bwprovider_param.provider;
     transaction trx(eosio::current_time_point() + eosio::seconds(config::deletevotes_expiration_sec));
     trx.actions.emplace_back(action{permission_level(_self, config::code_name), _self, "deletevotes"_n, std::make_tuple(message_id, author)});
-    providebw_for_trx(trx, provider);
+    providebw_for_trx(trx, params().bwprovider_param.provider);
     trx.delay_sec = 0;
     trx.send((static_cast<uint128_t>(message_id) << 64) | author.value, _self);
 }
 
 void publication::close_messages() {
     auto cur_time = static_cast<uint64_t>(eosio::current_time_point().time_since_epoch().count());
-
-    posting_params_singleton cfg(_self, _self.value);
-    auto provider = cfg.get().bwprovider_param.provider;
+    auto provider = params().bwprovider_param.provider;
 
     tables::reward_pools pools_table(_self, _self.value);
     std::map<uint64_t, structures::rewardpool> pools;
@@ -751,9 +747,7 @@ void publication::paymssgrwrd(structures::mssgid message_id) {
     else {
         pay_to(std::move(vesting_payouts), true);
         message_table.modify(mssg_itr, name(), [&]( auto &item ) { item.paid_amount += paid; });
-        posting_params_singleton cfg(_self, _self.value);
-        auto provider = cfg.get().bwprovider_param.provider;
-        send_postreward_trx(mssg_itr->id, message_id, provider);
+        send_postreward_trx(mssg_itr->id, message_id, params().bwprovider_param.provider);
     }
 }
 
