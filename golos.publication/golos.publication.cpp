@@ -515,7 +515,7 @@ void publication::send_postreward_trx(uint64_t id, const structures::mssgid& mes
     trx.actions.emplace_back(action{permission_level(_self, config::code_name), _self, "paymssgrwrd"_n, message_id});
     providebw_for_trx(trx, provider);
     trx.delay_sec = 0;
-    trx.send((static_cast<uint128_t>(id) << 64) | message_id.author.value, payer == name() ? _self : payer);
+    trx.send((static_cast<uint128_t>(id) << 64) | message_id.author.value, payer);
 }
 
 void publication::send_deletevotes_trx(int64_t message_id, name author) {
