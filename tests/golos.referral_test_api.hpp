@@ -21,7 +21,7 @@ struct golos_referral_api: base_contract_api {
 
     //// referral actions
      action_result create_referral(name referrer, name referral, uint32_t percent, uint64_t expire, asset breakout) {
-         return push(N(addreferral), referrer, args()
+         return push(N(addreferral), _code, args()
              ("referrer", referrer)
              ("referral", referral)
              ("percent", percent)
