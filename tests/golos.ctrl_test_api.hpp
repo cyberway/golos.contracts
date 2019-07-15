@@ -40,35 +40,6 @@ struct golos_ctrl_api: base_contract_api {
         );
     }
 
-    action_result attach_acc_ex(name owner, const std::vector<name>& signers, name user) {
-        return push_msig(N(attachacc), {{owner, _minority_name}}, signers, args()
-            ("user", user)
-        );
-    }
-    action_result detach_acc_ex(name owner, const std::vector<name>& signers, name user) {
-        return push_msig(N(detachacc), {{owner, _minority_name}}, signers, args()
-            ("user", user)
-        );
-    }
-
-    action_result attach_acc(name owner, const std::vector<name>& signers, name user) {
-        return attach_acc_ex(owner, signers, user);
-    }
-    action_result detach_acc(name owner, const std::vector<name>& signers, name user) {
-        return detach_acc_ex(owner, signers, user);
-    }
-
-    action_result attach_acc(name user) {
-        return push(N(attachacc), _code, args()
-            ("user", user)
-        );
-    }
-    action_result detach_acc(name user) {
-        return push(N(detachacc), _code, args()
-            ("user", user)
-        );
-    }
-
     action_result reg_witness(name witness, string url) {
         return push(N(regwitness), witness, args()
             ("witness", witness)
@@ -111,11 +82,6 @@ struct golos_ctrl_api: base_contract_api {
         return push(N(changevest), who, args()
             ("who", who)
             ("diff", diff));
-    }
-
-    //// control tables
-    variant get_attached(name user) const {
-        return get_struct(_code, N(bwuser), user, "bw_user");
     }
 
     variant get_params() const {
@@ -175,9 +141,6 @@ struct golos_ctrl_api: base_contract_api {
         });
         _tester->set_authority(msig, _majority_name, auth, "active");
         _tester->set_authority(msig, _minority_name, auth, "active");
-        // link witn.minor to allow attachacc/detachacc
-        _tester->link_authority(msig, _code, _minority_name, N(attachacc));
-        _tester->link_authority(msig, _code, _minority_name, N(detachacc));
 
         // eosio.code
         auto code_auth = authority(1, {

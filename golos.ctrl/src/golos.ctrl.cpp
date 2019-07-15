@@ -133,30 +133,6 @@ void control::on_transfer(name from, name to, asset quantity, string memo) {
     }
 }
 
-void control::attachacc(name user) {
-    assert_started();
-    require_auth(_self);
-    upsert_tbl<bw_user_tbl>(user, [&](bool exists) {
-        return [&,exists](bw_user& u) {
-            eosio::check(!exists || !u.attached, "already attached");   //TODO: maybe it's better to check this earlier (not inside modify())
-            u.name = user;
-            u.attached = true;
-        };
-    });
-}
-
-void control::detachacc(name user) {
-    assert_started();
-    require_auth(_self);
-    bool exist = upsert_tbl<bw_user_tbl>(user, [&](bool) {
-        return [&](bw_user& u) {
-            eosio::check(u.attached, "user already detached");
-            u.attached = false;         // TODO: maybe delete?
-        };
-    }, false);
-    eosio::check(exist, "user not found");
-}
-
 void control::regwitness(name witness, string url) {
     assert_started();
     eosio::check(url.length() <= config::witness_max_url_size, "url too long");
@@ -420,7 +396,6 @@ vector<name> control::top_witnesses() {
 
 DISPATCH_WITH_TRANSFER(golos::control, on_transfer,
     (validateprms)(setparams)
-    (attachacc)(detachacc)
     (regwitness)(unregwitness)
     (startwitness)(stopwitness)
     (votewitness)(unvotewitn)(changevest))
