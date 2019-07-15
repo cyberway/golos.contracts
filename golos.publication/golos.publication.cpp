@@ -221,7 +221,7 @@ void publication::create_message(
     eosio::check(cur_time >= pool->created, "publication::create_message: cur_time < pool.created");
     eosio::check(pool->state.msgs < std::numeric_limits<structures::counter_t>::max(),
             "publication::create_message: pool->msgs == max_counter_val");
-    pools.modify(*pool, _self, [&](auto &item){ item.state.msgs++; });
+    pools.modify(*pool, eosio::same_payer, [&](auto &item){ item.state.msgs++; });
 
     auto permlink_index = permlink_table.get_index<"byvalue"_n>();
     auto permlink_itr = permlink_index.find(message_id.permlink);
@@ -235,7 +235,7 @@ void publication::create_message(
         auto parent_itr = parent_index.find(parent_id.permlink);
         eosio::check((parent_itr != parent_index.end()), "Parent message doesn't exist");
 
-        parent_table.modify(*parent_itr, name(), [&](auto& item) {
+        parent_table.modify(*parent_itr, eosio::same_payer, [&](auto& item) {
             ++item.childcount;
         });
 
@@ -309,7 +309,7 @@ void publication::delete_message(structures::mssgid message_id) {
         auto parent_itr = parent_table.find(permlink_itr->parent_id);
         eosio::check(parent_itr != parent_table.end(), "Parent permlink doesn't exist.");
 
-        parent_table.modify(*parent_itr, name(), [&](auto& item) {
+        parent_table.modify(*parent_itr, eosio::same_payer, [&](auto& item) {
             --item.childcount;
         });
     }
@@ -438,7 +438,7 @@ std::pair<int64_t, bool> publication::fill_curator_payouts(
             }
             else {
                 there_is_a_place = false;
-                idx.modify(v, name(), [&](auto &item) {
+                idx.modify(v, eosio::same_payer, [&](auto &item) {
                     item.delegators.resize(item.delegators.size() - to_del);
                     item.paid_amount += now_paid;
                 });
@@ -609,7 +609,7 @@ void publication::close_messages() {
 
         mssg_reward = asset(payout, state.funds.symbol); 
 
-        message_index.modify(mssg_itr, name(), [&]( auto &item ) {
+        message_index.modify(mssg_itr, eosio::same_payer, [&]( auto &item ) {
                 item.cashout_time = microseconds::maximum().count();
                 item.mssg_reward = mssg_reward;
             });
@@ -635,7 +635,7 @@ void publication::close_messages() {
             }
         }
         if(!pool_erased)
-            pools_table.modify(pool, _self, [&](auto &item) {
+            pools_table.modify(pool, eosio::same_payer, [&](auto &item) {
                 item.state = pool_kv.second.state;
                 send_poolstate_event(item);
             });
@@ -746,7 +746,7 @@ void publication::paymssgrwrd(structures::mssgid message_id) {
     }
     else {
         pay_to(std::move(vesting_payouts), true);
-        message_table.modify(mssg_itr, name(), [&]( auto &item ) { item.paid_amount += paid; });
+        message_table.modify(mssg_itr, eosio::same_payer, [&]( auto &item ) { item.paid_amount += paid; });
         send_postreward_trx(mssg_itr->id, message_id, params().bwprovider_param.provider);
     }
 }
@@ -812,35 +812,35 @@ void publication::set_vote(name voter, const structures::mssgid& message_id, int
         fixp_t new_mssg_rshares = add_cut(FP(mssg_itr->state.netshares) - FP(vote_itr->rshares), rshares);
         auto rsharesfn_delta = get_delta(machine, FP(mssg_itr->state.netshares), new_mssg_rshares, pool->rules.mainfunc);
 
-        pools.modify(*pool, _self, [&](auto &item) {
+        pools.modify(*pool, eosio::same_payer, [&](auto &item) {
             item.state.rshares = ((WP(item.state.rshares) - wdfp_t(FP(vote_itr->rshares))) + wdfp_t(rshares)).data();
             item.state.rsharesfn = (WP(item.state.rsharesfn) + wdfp_t(rsharesfn_delta)).data();
-            send_poolstate_event(item);
         });
+        send_poolstate_event(*pool);
 
-        message_table.modify(mssg_itr, name(), [&]( auto &item ) {
+        message_table.modify(mssg_itr, eosio::same_payer, [&]( auto &item ) {
             item.state.netshares = new_mssg_rshares.data();
             item.state.sumcuratorsw = (FP(item.state.sumcuratorsw) - FP(vote_itr->curatorsw)).data();
-            send_poststate_event(
-                message_id.author,
-                *permlink_itr,
-                item,
-                get_calc_sharesfn(
-                    pool->rules.mainfunc.code,
-                    FP(new_mssg_rshares.data()),
-                    FP(pool->rules.mainfunc.maxarg)
-                )
-            );
         });
+        send_poststate_event(
+            message_id.author,
+            *permlink_itr,
+            *mssg_itr,
+            get_calc_sharesfn(
+                pool->rules.mainfunc.code,
+                FP(new_mssg_rshares.data()),
+                FP(pool->rules.mainfunc.maxarg)
+            )
+        );
 
-        votetable_index.modify(vote_itr, voter, [&]( auto &item ) {
+        votetable_index.modify(vote_itr, eosio::same_payer, [&]( auto &item ) {
             item.weight = weight;
             item.time = cur_time;
             item.curatorsw = fixp_t(0).data();
             item.rshares = rshares.data();
             ++item.count;
-            send_votestate_event(voter, item, message_id.author, *permlink_itr);
         });
+        send_votestate_event(voter, *vote_itr, message_id.author, *permlink_itr);
 
         return;
     }
@@ -859,11 +859,11 @@ void publication::set_vote(name voter, const structures::mssgid& message_id, int
 
     auto rsharesfn_delta = get_delta(machine, FP(mssg_itr->state.netshares), FP(msg_new_state.netshares), pool->rules.mainfunc);
 
-    pools.modify(*pool, _self, [&](auto &item) {
+    pools.modify(*pool, eosio::same_payer, [&](auto &item) {
          item.state.rshares = (WP(item.state.rshares) + wdfp_t(rshares)).data();
          item.state.rsharesfn = (WP(item.state.rsharesfn) + wdfp_t(rsharesfn_delta)).data();
-         send_poolstate_event(item);
     });
+    send_poolstate_event(*pool);
     eosio::check(WP(pool->state.rsharesfn) >= 0, "pool state rsharesfn overflow");
 
     auto sumcuratorsw_delta = get_delta(
@@ -872,19 +872,19 @@ void publication::set_vote(name voter, const structures::mssgid& message_id, int
             FP(msg_new_state.voteshares), 
             pool->rules.curationfunc);
     msg_new_state.sumcuratorsw = (FP(mssg_itr->state.sumcuratorsw) + sumcuratorsw_delta).data();
-    message_table.modify(mssg_itr, _self, [&](auto &item) {
+    message_table.modify(mssg_itr, eosio::same_payer, [&](auto &item) {
         item.state = msg_new_state;
-        send_poststate_event(
-            message_id.author,
-            *permlink_itr,
-            item,
-            get_calc_sharesfn(
-                pool->rules.mainfunc.code,
-                FP(msg_new_state.netshares),
-                FP(pool->rules.mainfunc.maxarg)
-            )
-        );
     });
+    send_poststate_event(
+        message_id.author,
+        *permlink_itr,
+        *mssg_itr,
+        get_calc_sharesfn(
+            pool->rules.mainfunc.code,
+            FP(msg_new_state.netshares),
+            FP(pool->rules.mainfunc.maxarg)
+        )
+    );
 
     auto time_delta = static_cast<int64_t>((cur_time - mssg_itr->date) / seconds(1).count());
     elap_t curatorsw_factor =
@@ -947,7 +947,7 @@ void publication::fill_depleted_pool(
         }
     //sic. we don't need assert here
     if(choice != pools.end())
-        pools.modify(*choice, _self, [&](auto &item){
+        pools.modify(*choice, eosio::same_payer, [&](auto &item){
             item.state.funds += quantity;
             send_poolstate_event(item);
         });
@@ -1199,7 +1199,7 @@ void publication::set_curators_prcnt(structures::mssgid message_id, uint16_t cur
             mssg.curators_prcnt != curators_prcnt,
             "Same curators percent value is already set."); // TODO: tests #617
 
-    message_table.modify(mssg, name(), [&](auto& item) {
+    message_table.modify(mssg, eosio::same_payer, [&](auto& item) {
         item.curators_prcnt = curators_prcnt;
     });
 }
@@ -1216,7 +1216,7 @@ void publication::set_max_payout(structures::mssgid message_id, asset max_payout
     eosio::check(max_payout >= asset(0, mssg.max_payout.symbol), "max_payout must not be negative.");
     eosio::check(max_payout < mssg.max_payout, "Cannot replace max payout with greater one.");
 
-    message_table.modify(mssg, name(), [&](auto& item) {
+    message_table.modify(mssg, eosio::same_payer, [&](auto& item) {
         item.max_payout = max_payout;
     });
 }
@@ -1234,7 +1234,7 @@ void publication::calcrwrdwt(name account, int64_t mssg_id, int64_t post_charge)
         tables::message_table message_table(_self, _self.value);
         auto message_itr = message_table.find(mssg_id);
         eosio::check(message_itr != message_table.end(), "Message doesn't exist in cashout window.");
-        message_table.modify(message_itr, name(), [&]( auto &item ) {
+        message_table.modify(message_itr, eosio::same_payer, [&]( auto &item ) {
             item.rewardweight = reward_weight;
         });
 
