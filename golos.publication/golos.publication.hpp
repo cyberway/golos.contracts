@@ -25,7 +25,7 @@ public:
     void upvote(name voter, structures::mssgid message_id, uint16_t weight);
     void downvote(name voter, structures::mssgid message_id, uint16_t weight);
     void unvote(name voter, structures::mssgid message_id);
-    void close_messages(name payer = name());
+    void close_messages(name payer);
     void set_params(std::vector<posting_params> params);
     void reblog(name rebloger, structures::mssgid message_id, std::string headermssg, std::string bodymssg);
     void erase_reblog(name rebloger, structures::mssgid message_id);
