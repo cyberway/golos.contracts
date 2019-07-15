@@ -34,6 +34,11 @@ private:
     state_singleton _state;
     emit_params_singleton _cfg;
 
+    const emit_state& cfg() {
+        static const emit_state cfg = _cfg.get();
+        return cfg;
+    }
+
     void schedule_next(state& s, uint32_t delay);
 };
 

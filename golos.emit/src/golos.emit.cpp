@@ -60,7 +60,7 @@ void emission::setparams(vector<emit_param> params) {
 void emission::start() {
     // TODO: disallow if no initial parameters set
     require_auth(_self);
-    auto interval = _cfg.get().interval.value;
+    auto interval = cfg().interval.value;
     auto now = static_cast<uint64_t>(eosio::current_time_point().time_since_epoch().count());
     state s = {
         .start_time = now,
@@ -94,7 +94,7 @@ void emission::emit() {
     eosio::check(s.active, "emit called in inactive state");    // impossible?
     auto now = eosio::current_time_point().time_since_epoch().count();
     auto elapsed = now - s.prev_emit;
-    auto interval = _cfg.get().interval.value;
+    auto& interval = cfg().interval.value;
     auto emit_interval = seconds(interval).count();
     if (elapsed != emit_interval) {
         eosio::check(elapsed > emit_interval, "emit called too early");   // possible only on manual call
@@ -102,9 +102,9 @@ void emission::emit() {
     }
     // TODO: maybe limit elapsed to avoid instant high value emission
 
-    auto token = _cfg.get().token;
-    auto pools = _cfg.get().pools.pools;
-    auto infrate = _cfg.get().infrate;
+    auto& token = cfg().token;
+    auto& pools = cfg().pools.pools;
+    auto& infrate = cfg().infrate;
     auto narrowed = microseconds(now - s.start_time).to_seconds() / infrate.narrowing;
     auto inf_rate = std::max(int64_t(infrate.start) - narrowed, int64_t(infrate.stop));
 
@@ -151,13 +151,17 @@ void emission::emit() {
 }
 
 void emission::schedule_next(state& s, uint32_t delay) {
-    auto sender_id = (uint128_t(_cfg.get().token.symbol.raw()) << 64) | s.prev_emit;
-    auto provider = _cfg.get().bwprovider.provider;
+    auto sender_id = (uint128_t(cfg().token.symbol.raw()) << 64) | s.prev_emit;
+    auto& provider = cfg().bwprovider.provider;
+    auto& pools = cfg().pools.pools;
 
     transaction trx;
     trx.actions.emplace_back(action{permission_level(_self, config::code_name), _self, "emit"_n, std::tuple<>()});
     if (provider.actor != name()) {
         trx.actions.emplace_back(action{provider, "cyber"_n, "providebw"_n, std::make_tuple(provider.actor, _self)});
+        for (const auto& pool: pools) {
+            trx.actions.emplace_back(action{provider, "cyber"_n, "providebw"_n, std::make_tuple(provider.actor, pool)});
+        }
     }
     trx.delay_sec = delay;
     trx.send(sender_id, _self);

@@ -75,8 +75,9 @@ public:
 
 private:
     ctrl_params_singleton _cfg;
-    ctrl_state props() {
-        return _cfg.get();
+    const ctrl_state& props() {
+        static const ctrl_state cfg = _cfg.get();
+        return cfg;
     }
     void assert_started();
 

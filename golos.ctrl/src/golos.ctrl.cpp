@@ -185,7 +185,7 @@ void control::votewitness(name voter, name witness) {
     auto witness_it = witness_table.find(witness.value);
     eosio::check(witness_it != witness_table.end(), "witness not found");
     eosio::check(witness_it->active, "witness not active");
-    witness_table.modify(witness_it, voter, [&](auto& w) {
+    witness_table.modify(witness_it, eosio::same_payer, [&](auto& w) {
         ++w.counter_votes;
     });
 
@@ -202,7 +202,7 @@ void control::votewitness(name voter, name witness) {
         auto el = std::find(w.begin(), w.end(), witness);
         eosio::check(el == w.end(), "already voted");
         eosio::check(w.size() < props().witness_votes.max, "all allowed votes already casted");
-        tbl.modify(itr, voter, update);
+        tbl.modify(itr, eosio::same_payer, update);
     } else {
         tbl.emplace(voter, update);
     }
@@ -216,7 +216,7 @@ void control::unvotewitn(name voter, name witness) {
     witness_tbl witness_table(_self, _self.value);
     auto witness_it = witness_table.find(witness.value);
     eosio::check(witness_it != witness_table.end(), "witness not found");
-    witness_table.modify(witness_it, voter, [&](auto& w) {
+    witness_table.modify(witness_it, eosio::same_payer, [&](auto& w) {
         --w.counter_votes;
     });
 
@@ -229,7 +229,7 @@ void control::unvotewitn(name voter, name witness) {
     auto el = std::find(w.begin(), w.end(), witness);
     eosio::check(el != w.end(), "there is no vote for this witness");
     w.erase(el);
-    tbl.modify(itr, voter, [&](auto& v) {
+    tbl.modify(itr, eosio::same_payer, [&](auto& v) {
         v.witnesses = w;
     });
     apply_vote_weight(voter, witness, false);
@@ -268,10 +268,10 @@ void control::update_witnesses_weights(vector<name> witnesses, share_type diff) 
     for (const auto& witness : witnesses) {
         auto w = wtbl.find(witness.value);
         if (w != wtbl.end()) {
-            wtbl.modify(w, name(), [&](auto& wi) {
+            wtbl.modify(w, eosio::same_payer, [&](auto& wi) {
                 wi.total_weight += diff;            // TODO: additional checks of overflow? (not possible normally)
-                send_witness_event(wi);
             });
+            send_witness_event(*w);
         } else {
             // just skip unregistered witnesses (incl. non existing accs) for now
             print("apply_vote_weight: witness not found\n");
@@ -315,7 +315,7 @@ void control::update_auths() {
         set_last_update();
     }
 
-    auto max_witn = props().witnesses.max;
+    auto& max_witn = props().witnesses.max;
     if (top.size() < max_witn) {           // TODO: ?restrict only just after creation and allow later
         print("Not enough witnesses to change auth\n");
         return;
@@ -325,14 +325,14 @@ void control::update_auths() {
         auth.accounts.push_back({{i,config::active_name},1});
     }
 
-    auto thrs = props().msig_perms;
+    auto& thrs = props().msig_perms;
     vector<std::pair<name,uint16_t>> auths = {
         {config::minority_name, thrs.minority_threshold(max_witn)},
         {config::majority_name, thrs.majority_threshold(max_witn)},
         {config::super_majority_name, thrs.super_majority_threshold(max_witn)}
     };
 
-    const auto owner = props().multisig.name;
+    const auto& owner = props().multisig.name;
     for (const auto& [perm, thrs]: auths) {
         //permissions must be sorted
         std::sort(auth.accounts.begin(), auth.accounts.end(),
