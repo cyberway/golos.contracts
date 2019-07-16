@@ -539,7 +539,7 @@ void publication::close_messages(name payer) {
     for (auto mssg_itr = message_index.begin(); mssg_itr != message_index.end() && mssg_itr->cashout_time <= cur_time; ++mssg_itr) {
         if (i++ >= config::max_closed_posts_per_action) {
             transaction trx(eosio::current_time_point() + eosio::seconds(config::closemssgs_expiration_sec));
-            trx.actions.emplace_back(action{permission_level(_self, config::code_name), _self, "closemssgs"_n, ""});
+            trx.actions.emplace_back(action{permission_level(_self, config::code_name), _self, "closemssgs"_n, std::make_tuple(_self)});
             providebw_for_trx(trx, provider);
             trx.delay_sec = 0;
             trx.send(static_cast<uint128_t>(cur_time) << 64, payer, true);
