@@ -109,7 +109,12 @@
   {
     "name": "closemssgs",
     "base": "",
-    "fields": []
+    "fields": [
+      {
+        "name": "payer",
+        "type": "name"
+      }
+    ]
   },
   {
     "name": "beneficiary",
