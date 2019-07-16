@@ -339,7 +339,6 @@ void vesting::create(symbol symbol, name notify_acc) {
 }
 
 void vesting::timeoutconv() {
-    require_auth(_self);
     int max_steps = 16;           // TODO: configurable #707
     const auto memo = "withdraw";
     const auto now = eosio::current_time_point();
@@ -399,7 +398,6 @@ void vesting::timeoutconv() {
 }
 
 void vesting::timeoutrdel() {
-    require_auth(_self);
     return_delegation_table tbl(_self, _self.value);
     auto idx = tbl.get_index<"date"_n>();
     auto till = eosio::current_time_point();
@@ -552,8 +550,6 @@ void vesting::providebw_for_trx(transaction& trx, const permission_level& provid
 }
 
 void vesting::timeout(symbol symbol) {
-    require_auth(_self);
-
     vesting_params_singleton cfg(_self, symbol.code().raw());
     auto provider = cfg.get().bwprovider.provider;
 
