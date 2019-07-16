@@ -668,8 +668,6 @@ void publication::deletevotes(int64_t message_id, name author) {
 }
 
 void publication::paymssgrwrd(structures::mssgid message_id) {
-    require_auth(_self);
-
     tables::permlink_table permlink_table(_self, message_id.author.value);
     auto permlink_index = permlink_table.get_index<"byvalue"_n>();
     auto permlink_itr = permlink_index.find(message_id.permlink);

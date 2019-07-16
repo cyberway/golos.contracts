@@ -89,7 +89,6 @@ void emission::stop() {
 }
 
 void emission::emit() {
-    require_auth(_self);
     auto s = _state.get();
     eosio::check(s.active, "emit called in inactive state");    // impossible?
     auto now = eosio::current_time_point().time_since_epoch().count();
