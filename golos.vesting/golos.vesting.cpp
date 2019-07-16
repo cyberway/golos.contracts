@@ -252,7 +252,8 @@ void vesting::delegate(name from, name to, asset quantity, uint16_t interest_rat
     delegation_table table(_self, sname);
     auto index_table = table.get_index<"delegator"_n>();
     auto delegate_record = index_table.find({from, to});
-    if (delegate_record != index_table.end()) {
+    auto exists = delegate_record != index_table.end();
+    if (exists) {
         index_table.modify(delegate_record, same_payer, [&](auto& item) {
             item.quantity += quantity;
         });
@@ -270,8 +271,12 @@ void vesting::delegate(name from, name to, asset quantity, uint16_t interest_rat
     account_table account_recipient(_self, to.value);
     auto balance_recipient = account_recipient.find(sname);
     eosio::check(balance_recipient != account_recipient.end(), "Not found balance token vesting");  // TODO: test #744
+    eosio::check(balance_recipient->delegators < delegation_params.max_delegators, "Recipient reached maximum of delegators");
     account_recipient.modify(balance_recipient, from, [&](auto& item) {
         item.received += quantity;
+        if (!exists) {
+            item.delegators++;
+        }
         send_account_event(to, item);
     });
 
@@ -296,7 +301,8 @@ void vesting::undelegate(name from, name to, asset quantity) {
         "Tokens are frozen until the end of the period");
     eosio::check(delegate_record->quantity >= quantity, "There are not enough delegated tools for output");
 
-    if (delegate_record->quantity == quantity) {
+    auto erasing = delegate_record->quantity == quantity;
+    if (erasing) {
         index_table.erase(delegate_record);
     } else {
         index_table.modify(delegate_record, same_payer, [&](auto& item) {
@@ -317,6 +323,9 @@ void vesting::undelegate(name from, name to, asset quantity) {
     eosio::check(balance != account_recipient.end(), "This token is not on the recipient balance sheet");   // TODO: test #744
     account_recipient.modify(balance, same_payer, [&](auto& item) {
         item.received -= quantity;
+        if (erasing) {
+            item.delegators--;
+        }
         send_account_event(to, item);
     });
 

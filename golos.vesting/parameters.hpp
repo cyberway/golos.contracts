@@ -33,6 +33,7 @@ struct vesting_delegation : parameter {
     uint64_t min_remainder;
     uint32_t return_time;
     uint32_t min_time;
+    uint32_t max_delegators;
 
     void validate() const override {
         eosio::check(min_amount > 0, "delegation min_amount <= 0");
@@ -40,7 +41,7 @@ struct vesting_delegation : parameter {
         eosio::check(return_time > 0, "delegation return_time <= 0");
     }
 };
-using delegation_param = param_wrapper<vesting_delegation,4>;
+using delegation_param = param_wrapper<vesting_delegation,5>;
 
 struct bwprovider: parameter {
     permission_level provider;
