@@ -249,11 +249,12 @@ struct golos_vesting_api: base_contract_api {
         return string("['vesting_amount', {'min_amount':'") + std::to_string(min_amount) + "'}]";
     }
 
-    string delegation_param(uint64_t min_amount, uint64_t min_remainder, uint32_t min_time, uint32_t return_time) {
+    string delegation_param(uint64_t min_amount, uint64_t min_remainder, uint32_t min_time, uint32_t return_time, uint32_t max_delegators) {
         return string("['vesting_delegation', {'min_amount':'") + std::to_string(min_amount) +
                 "','min_remainder':'" + std::to_string(min_remainder) +
                 "','min_time':'" + std::to_string(min_time) +
-                "','return_time':'" + std::to_string(return_time) + "'}]";
+                "','return_time':'" + std::to_string(return_time) +
+                "','max_delegators':'" + std::to_string(max_delegators) + "'}]";
     }
 
     string bwprovider_param(account_name actor, permission_name permission) {

@@ -53,6 +53,7 @@ public:
         asset delegated;        // TODO: this (incl. 2 fields below) can be share_type to reduce memory usage #554
         asset received;
         asset unlocked_limit;
+        uint32_t delegators = 0;
 
         uint64_t primary_key() const {
             return vesting.symbol.code().raw();

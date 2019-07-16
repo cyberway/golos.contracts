@@ -64,12 +64,14 @@ struct vesting_delegation : parameter {
     uint64_t min_remainder;
     uint32_t return_time;
     uint32_t min_time;
+    uint32_t max_delegators;
 }
 ```
   * `min_amount` — the minimum allowable amount of vesting for delegation / return delegated. Specifying the number of vesting below this value is not allowed.  
   * `min_remainder` — minimum balance delegated. It is not allowed to delegate less than this value. As a result of the return of the delegated, the balance must be at least this value, or it must be zero.  
   * `return_time` — the time it takes to return the delegated funds (in seconds). The time is counted from the moment of withdrawing funds from the account to which they have been delegated, until the moment they are receipted on the delegators’ balance.  
   * `min_time` — minimum delegation time (in seconds). The withdrawal of delegated funds is possible not earlier than this value.  
+  * `max_delegators` — maximum count of delegations per one receiver.  
   
 ### Actions used in golos.vesting smart-contract
 The `golos.vesting` smart contract contains the following actions: [setparams](#setparams), [validateprms](#validateprms), [create](#create), [retire](#retire), [unlocklimit](#unlocklimit), [withdraw](#withdraw), [stopwithdraw](#stopwithdraw), [delegate](#delegate), [undelegate](#undelegate), [timeoutrdel](#timeoutrdel-timeoutconv-and-timeout), [timeoutconv](#timeoutrdel-timeoutconv-and-timeout), [timeout](#timeoutrdel-timeoutconv-and-timeout), [open](#open), [close](#close) and [paydelegator](#paydelegator).
