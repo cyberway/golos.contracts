@@ -957,10 +957,10 @@ void publication::on_transfer(name from, name to, eosio::asset quantity, std::st
     if(_self != to)
         return;
 
-    close_messages(_self);
-
     tables::reward_pools pools(_self, _self.value);
     fill_depleted_pool(pools, quantity, pools.end());
+
+    close_messages(_self);
 }
 
 void publication::set_limit(
