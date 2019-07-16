@@ -734,8 +734,6 @@ void publication::paymssgrwrd(structures::mssgid message_id) {
 
         auto remove_id = mssg_itr->id;
         message_table.erase(mssg_itr);
-        permlink_table.modify(*permlink_itr, _self, [&](auto&){}); // change payer to contract
-        permlink_table.move_to_archive(*permlink_itr);
 
         fill_depleted_pool(pools, asset(unclaimed_rewards, payout.symbol), pools.end());
 
