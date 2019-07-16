@@ -174,8 +174,8 @@ struct golos_posting_api: base_contract_api {
         return push(N(setparams), _code, args()
             ("params", json_str_to_obj(json_params)));
     }
-    action_result closemssgs(account_name signer) {
-        return push(N(closemssgs), signer, args());
+    action_result closemssgs(account_name payer) {
+        return push(N(closemssgs), payer, args()("payer", payer));
     }
     action_result closemssgs() {
         return closemssgs(_code);
