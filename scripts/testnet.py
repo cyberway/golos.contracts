@@ -56,7 +56,11 @@ def pushAction(code, action, actor, args, *, additional='', delay=None, expirati
         additional += ''.join(' --bandwidth-provider ' + provider for provider in providebw)
     else:
         additional += ' --bandwidth-provider ' + providebw if providebw else ''
-    action = 'push action -j %s %s %s -p %s %s' % (code, action, jsonArg(args), actor, additional)
+    if type(actor) == type([]):
+        additional += ''.join(' -p ' + a for a in actor)
+    else:
+        additional += ' -p ' + actor
+    action = 'push action -j %s %s %s %s' % (code, action, jsonArg(args), additional)
     return json.loads(cleos(action, keys=keys))
 
 def importRootKeys():
@@ -110,8 +114,8 @@ def updateAuth(account, permission, parent, keys, accounts):
 def linkAuth(account, code, action, permission):
     cleos('set action permission %s %s %s %s -p %s'%(account, code, action, permission, account))
 
-def transfer(sender, recipient, amount, memo=""):
-    pushAction('cyber.token', 'transfer', sender, [sender, recipient, amount, memo])
+def transfer(sender, recipient, amount, memo="", *, providebw=None, keys=None):
+    pushAction('cyber.token', 'transfer', sender, [sender, recipient, amount, memo], providebw=providebw, keys=keys)
 
 # --------------------- GOLOS functions ---------------------------------------
 
@@ -125,8 +129,8 @@ def openTokenBalance(account, payer=None, *, providebw=None, keys=None):
         payer = account
     pushAction('cyber.token', 'open', payer, [account, args.token, payer], providebw=providebw, keys=keys)
 
-def issueToken(account, amount, memo=""):
-    pushAction('cyber.token', 'issue', 'gls', [account, amount, memo])
+def issueToken(account, amount, memo="", *, providebw=None, keys=None):
+    pushAction('cyber.token', 'issue', 'gls', [account, amount, memo], providebw=providebw, keys=keys)
 
 def buyVesting(account, amount):
     issueToken(account, amount)
