@@ -97,6 +97,14 @@
         {"name":"quantity", "type":"asset"}
       ]
     },
+    {
+      "name": "procwaiting",
+      "base": "",
+      "fields": [
+        {"name":"symbol", "type":"symbol"},
+        {"name":"payer",  "type":"name"}
+      ]
+    },
 
     {
        "name": "setparams",
@@ -165,13 +173,6 @@
       ]
     },
     {
-      "name": "timeout",
-      "base": "",
-      "fields": [
-        {"name":"symbol", "type":"symbol"}
-      ]
-    },
-    {
        "name": "vesting_state",
        "base": "",
        "fields": [
@@ -234,9 +235,7 @@
     {"name":"stopwithdraw", "type":"stop_withdraw"},
     {"name":"delegate",     "type":"delegate"},
     {"name":"undelegate",   "type":"base_transfer"},
-    {"name":"timeoutrdel",  "type":"empty"},
-    {"name":"timeoutconv",  "type":"empty"},
-    {"name":"timeout",      "type":"timeout"}
+    {"name":"procwaiting",  "type":"procwaiting"}
   ],
   "tables": [
     {

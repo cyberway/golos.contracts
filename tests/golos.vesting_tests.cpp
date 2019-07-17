@@ -304,8 +304,6 @@ BOOST_FIXTURE_TEST_CASE(withdraw, golos_vesting_tester) try {
     auto vests2 = vests;
     init_params();
 
-    BOOST_CHECK_EQUAL(success(), vest.timeout(_code));
-
     BOOST_TEST_MESSAGE("--- check that no convert object exists before start converting");
     BOOST_TEST_CHECK(vest.get_withdraw_obj(N(sania)).is_null());
 
@@ -334,14 +332,12 @@ BOOST_FIXTURE_TEST_CASE(withdraw, golos_vesting_tester) try {
     const int64_t _blocks_in_interval = golos::seconds_to_blocks(withdraw_interval_seconds);
     BOOST_TEST_MESSAGE("--- skip " + std::to_string(_blocks_in_interval) + " blocks and check same balance");
     produce_blocks(_blocks_in_interval);
-    // note: deferred tx will be executed at current block, but after normal txs,
-    // so it's result will be available only in next block
     BOOST_CHECK_EQUAL(vest.get_withdraw_obj(N(sania))["remaining_payments"], steps);
     CHECK_MATCHING_OBJECT(vest.get_balance(N(sania)), vest.make_balance(vests));
     CHECK_MATCHING_OBJECT(token.get_account(N(sania)), token.make_balance(tokens));
 
-    BOOST_TEST_MESSAGE("--- go next block and check that withdrawal happened");
-    produce_block();
+    BOOST_TEST_MESSAGE("--- call withdrawing and check that withdrawal happened");
+    BOOST_CHECK_EQUAL(success(), vest.procwaiting(_vesting_sym));
     BOOST_CHECK_EQUAL(vest.get_withdraw_obj(N(sania))["remaining_payments"], steps - 1);
     vests--;
     payments++;
@@ -349,15 +345,19 @@ BOOST_FIXTURE_TEST_CASE(withdraw, golos_vesting_tester) try {
     CHECK_MATCHING_OBJECT(token.get_account(N(sania)), token.make_balance(tokens, payments));
 
     BOOST_TEST_MESSAGE("--- skip " + std::to_string(_blocks_in_interval*(steps-1)-1) + " blocks and check balance");
-    produce_blocks(_blocks_in_interval * (steps - 1) - 1);  // 1 withdrawal already passed, so -1
+    for (int i = 0; i < (steps - 1) - 1; ++i) {
+        produce_blocks(_blocks_in_interval);
+        BOOST_CHECK_EQUAL(success(), vest.procwaiting(_vesting_sym));
+    }
     BOOST_CHECK_EQUAL(vest.get_withdraw_obj(N(sania))["remaining_payments"], 1);
     vests -= steps - 2;
     payments += steps - 2;
     CHECK_MATCHING_OBJECT(vest.get_balance(N(sania)), vest.make_balance(vests));
     CHECK_MATCHING_OBJECT(token.get_account(N(sania)), token.make_balance(tokens, payments));
 
-    BOOST_TEST_MESSAGE("--- go next block and check that fully withdrawn");
-    produce_block();
+    BOOST_TEST_MESSAGE("--- call withdrawing and check that fully withdrawn");
+    produce_blocks(_blocks_in_interval);
+    BOOST_CHECK_EQUAL(success(), vest.procwaiting(_vesting_sym));
     BOOST_CHECK(vest.get_withdraw_obj(N(sania)).is_null());
     vests--;
     payments++;
@@ -369,7 +369,10 @@ BOOST_FIXTURE_TEST_CASE(withdraw, golos_vesting_tester) try {
     BOOST_CHECK(vest.get_withdraw_obj(N(pasha)).is_null());
 
     BOOST_TEST_MESSAGE("--- skip " + std::to_string(_blocks_in_interval*steps-1) + " blocks and check balance");
-    produce_blocks(_blocks_in_interval * steps);
+    for (int i = 0; i < steps - 1; ++i) {
+        produce_blocks(_blocks_in_interval);
+        BOOST_CHECK_EQUAL(success(), vest.procwaiting(_vesting_sym));
+    }
     vests -= steps - 1;
     payments2 = steps - 1;
     BOOST_CHECK_EQUAL(vest.get_withdraw_obj(N(sania))["remaining_payments"], 1);
@@ -378,8 +381,9 @@ BOOST_FIXTURE_TEST_CASE(withdraw, golos_vesting_tester) try {
     CHECK_MATCHING_OBJECT(token.get_account(N(sania)), token.make_balance(tokens, payments));
     CHECK_MATCHING_OBJECT(token.get_account(N(pasha)), token.make_balance(tokens, payments2));
 
-    BOOST_TEST_MESSAGE("--- go next block and check that fully withdrawn");
-    produce_block();
+    BOOST_TEST_MESSAGE("--- call withdrawing and check that fully withdrawn");
+    produce_blocks(_blocks_in_interval);
+    BOOST_CHECK_EQUAL(success(), vest.procwaiting(_vesting_sym));
     vests--;
     payments2++;
     BOOST_CHECK(vest.get_withdraw_obj(N(sania)).is_null());
@@ -409,7 +413,6 @@ BOOST_FIXTURE_TEST_CASE(withdraw_fail, golos_vesting_tester) try {
     auto tokens = issue - buy;  // price is 1:1
     auto vests = buy;
     init_params();
-    BOOST_CHECK_EQUAL(success(), vest.timeout(_code));
 
     BOOST_TEST_MESSAGE("-- check stop if token balance closed");
     BOOST_TEST_CHECK(vest.get_withdraw_obj(man).is_null());
@@ -430,6 +433,7 @@ BOOST_FIXTURE_TEST_CASE(withdraw_fail, golos_vesting_tester) try {
     BOOST_TEST_MESSAGE("---- wait " + std::to_string(_blocks_in_interval + 1) +
         " blocks to payout and check that withdraw object deleted (auto-stop)");
     produce_blocks(_blocks_in_interval + 1);
+    BOOST_CHECK_EQUAL(success(), vest.procwaiting(_vesting_sym));
     BOOST_TEST_CHECK(vest.get_withdraw_obj(man).is_null());
 
 
@@ -452,6 +456,7 @@ BOOST_FIXTURE_TEST_CASE(withdraw_fail, golos_vesting_tester) try {
     BOOST_TEST_MESSAGE("---- wait " + std::to_string(_blocks_in_interval + 1) +
         " blocks to payout and check that withdraw object deleted (auto-stop)");
     produce_blocks(_blocks_in_interval + 1);
+    BOOST_CHECK_EQUAL(success(), vest.procwaiting(_vesting_sym));
     BOOST_TEST_CHECK(vest.get_withdraw_obj(man).is_null());
 
 } FC_LOG_AND_RETHROW()
@@ -464,21 +469,24 @@ BOOST_FIXTURE_TEST_CASE(withdraw_convert_rate, golos_vesting_tester) try {
     prepare_balances(100500, buy1, buy2, buy1, buy2);   // puts buy1+buy2 to vesting
     init_params();
 
-    BOOST_CHECK_EQUAL(success(), vest.timeout(_code));
     BOOST_CHECK(vest.get_withdraw_obj(N(sania)).is_null());
     BOOST_CHECK_EQUAL(success(), vest.withdraw(N(sania), N(sania), vest.make_asset(buy1)));
     BOOST_CHECK_EQUAL(success(), vest.withdraw(N(pasha), N(pasha), vest.make_asset(buy2)));
 
-    const int64_t blocks_to_wait = golos::seconds_to_blocks(withdraw_intervals * withdraw_interval_seconds);
-    BOOST_TEST_MESSAGE("--- skip " + std::to_string(blocks_to_wait) + " blocks and check balances");
-    produce_blocks(blocks_to_wait);
+    BOOST_TEST_MESSAGE("--- do all payouts excluding one and check balances");
+    const int64_t _blocks_in_interval = golos::seconds_to_blocks(withdraw_interval_seconds);
+    for (int i = 0; i < withdraw_intervals - 1; ++i) {
+        produce_blocks(_blocks_in_interval);
+        BOOST_CHECK_EQUAL(success(), vest.procwaiting(_vesting_sym));
+    }
     BOOST_CHECK_EQUAL(vest.get_withdraw_obj(N(pasha))["remaining_payments"], 1);
     BOOST_CHECK_EQUAL(vest.get_withdraw_obj(N(sania))["remaining_payments"], 1);
     CHECK_MATCHING_OBJECT(vest.get_balance(N(sania)), vest.make_balance(base));
     CHECK_MATCHING_OBJECT(token.get_account(N(sania)), token.make_balance(0, buy1 - base));
 
-    BOOST_TEST_MESSAGE("--- go next block and check that all vesting withdrawn");
-    produce_block();
+    BOOST_TEST_MESSAGE("--- call last withdraw and check that all vesting withdrawn");
+    produce_blocks(_blocks_in_interval);
+    BOOST_CHECK_EQUAL(success(), vest.procwaiting(_vesting_sym));
     BOOST_CHECK(vest.get_withdraw_obj(N(sania)).is_null());
     BOOST_CHECK(vest.get_withdraw_obj(N(pasha)).is_null());
     CHECK_MATCHING_OBJECT(vest.get_balance(N(sania)), vest.make_balance(0));
@@ -498,7 +506,6 @@ BOOST_FIXTURE_TEST_CASE(stop_withdraw, golos_vesting_tester) try {
     prepare_balances(100500, tokens, tokens, vests, vests);
     tokens -= vests;
     init_params();
-    BOOST_CHECK_EQUAL(success(), vest.timeout(cfg::vesting_name));
 
     BOOST_TEST_CHECK(vest.get_withdraw_obj(N(sania)).is_null());
     BOOST_CHECK_EQUAL(success(), vest.withdraw(N(sania), N(sania), vest.make_asset(withdraw_intervals)));
@@ -508,6 +515,7 @@ BOOST_FIXTURE_TEST_CASE(stop_withdraw, golos_vesting_tester) try {
     BOOST_TEST_MESSAGE("--- check 1st withdrawal");
     const int64_t _blocks_in_interval = golos::seconds_to_blocks(withdraw_interval_seconds);
     produce_blocks(_blocks_in_interval + 1);
+    BOOST_CHECK_EQUAL(success(), vest.procwaiting(_vesting_sym));
     BOOST_CHECK_EQUAL(vest.get_withdraw_obj(N(sania))["remaining_payments"], steps - 1);
     vests -= 1;
     tokens += 1;
@@ -518,6 +526,7 @@ BOOST_FIXTURE_TEST_CASE(stop_withdraw, golos_vesting_tester) try {
     int mult = 2;
     BOOST_CHECK_EQUAL(success(), vest.withdraw(N(sania), N(sania), vest.make_asset(withdraw_intervals * mult)));
     produce_blocks(_blocks_in_interval + 1);
+    BOOST_CHECK_EQUAL(success(), vest.procwaiting(_vesting_sym));
     BOOST_CHECK_EQUAL(vest.get_withdraw_obj(N(sania))["remaining_payments"], steps - 1);
     vests -= mult;
     tokens += mult;
@@ -530,6 +539,7 @@ BOOST_FIXTURE_TEST_CASE(stop_withdraw, golos_vesting_tester) try {
     produce_blocks(_blocks_in_interval - blocks_to_payout);
     BOOST_CHECK_EQUAL(success(), vest.withdraw(N(sania), N(sania), vest.make_asset(withdraw_intervals * mult)));
     produce_blocks(blocks_to_payout + 1);
+    BOOST_CHECK_EQUAL(success(), vest.procwaiting(_vesting_sym));
     BOOST_CHECK_EQUAL(vest.get_withdraw_obj(N(sania))["remaining_payments"], steps);
 
     BOOST_TEST_MESSAGE("--- need to wait whole interval to reach payout time. go to block just before withdraw");
@@ -538,6 +548,7 @@ BOOST_FIXTURE_TEST_CASE(stop_withdraw, golos_vesting_tester) try {
 
     BOOST_TEST_MESSAGE("--- wait 1 more block for withdraw and check payout");
     produce_block();
+    BOOST_CHECK_EQUAL(success(), vest.procwaiting(_vesting_sym));
     BOOST_CHECK_EQUAL(vest.get_withdraw_obj(N(sania))["remaining_payments"], steps-1);
     vests -= mult;
     tokens += mult;
@@ -550,6 +561,7 @@ BOOST_FIXTURE_TEST_CASE(stop_withdraw, golos_vesting_tester) try {
 
     BOOST_TEST_MESSAGE("--- go to next withdrawal time and check it not happens");
     produce_blocks(_blocks_in_interval);
+    BOOST_CHECK_EQUAL(success(), vest.procwaiting(_vesting_sym));
     BOOST_TEST_CHECK(vest.get_withdraw_obj(N(sania)).is_null());
     CHECK_MATCHING_OBJECT(vest.get_balance(N(sania)), vest.make_balance(vests));
     CHECK_MATCHING_OBJECT(token.get_account(N(sania)), token.make_balance(0, tokens));
@@ -657,13 +669,12 @@ BOOST_FIXTURE_TEST_CASE(undelegate, golos_vesting_tester) try {
     CHECK_MATCHING_OBJECT(vest.get_balance(N(pasha)), vest.make_balance(100, 0, amount - min_step));
 
     BOOST_TEST_MESSAGE("--- wait delegation return block and check that balance is the same");
-    BOOST_CHECK_EQUAL(success(), vest.timeout(cfg::vesting_name));
     produce_blocks(golos::seconds_to_blocks(delegation_return_time - delegation_min_time));      // Note: it's return + 1 block here, check, why delayed
     CHECK_MATCHING_OBJECT(vest.get_balance(N(sania)), vest.make_balance(100, amount));
     CHECK_MATCHING_OBJECT(vest.get_balance(N(pasha)), vest.make_balance(100, 0, amount - min_step));
 
-    BOOST_TEST_MESSAGE("--- go next block and check return");
-    produce_block();
+    BOOST_TEST_MESSAGE("--- call return and check delegations returned");
+    BOOST_CHECK_EQUAL(success(), vest.procwaiting(_vesting_sym));
     CHECK_MATCHING_OBJECT(vest.get_balance(N(sania)), vest.make_balance(100, amount - min_step));
     CHECK_MATCHING_OBJECT(vest.get_balance(N(pasha)), vest.make_balance(100, 0, amount - min_step));
 
@@ -672,6 +683,7 @@ BOOST_FIXTURE_TEST_CASE(undelegate, golos_vesting_tester) try {
     CHECK_MATCHING_OBJECT(vest.get_balance(N(sania)), vest.make_balance(100, amount - min_step));
     CHECK_MATCHING_OBJECT(vest.get_balance(N(pasha)), vest.make_balance(100, 0, 0));
     produce_blocks(golos::seconds_to_blocks(delegation_return_time) + 1);
+    BOOST_CHECK_EQUAL(success(), vest.procwaiting(_vesting_sym));
     CHECK_MATCHING_OBJECT(vest.get_balance(N(sania)), vest.make_balance(100, 0));
 
     // TODO: check delegation and return objects #744
@@ -687,7 +699,6 @@ BOOST_FIXTURE_TEST_CASE(retire, golos_vesting_tester) try {
     prepare_balances(supply, tokens, tokens, vests, vests);
     int withdraw_seconds = withdraw_interval_seconds * 2;
     init_params(withdraw_seconds); // need to separate withdraw and undelegation to test properly
-    BOOST_CHECK_EQUAL(success(), vest.timeout(_code));
 
     const int64_t blocks_in_interval = golos::seconds_to_blocks(withdraw_seconds);
     int steps = withdraw_intervals;
@@ -745,6 +756,7 @@ BOOST_FIXTURE_TEST_CASE(retire, golos_vesting_tester) try {
     BOOST_CHECK_EQUAL(err.retire_gt_balance, retire(1));
     auto blocks_to_return = golos::seconds_to_blocks(delegation_return_time);
     produce_blocks(blocks_to_return + 1);
+    BOOST_CHECK_EQUAL(success(), vest.procwaiting(_vesting_sym));
     CHECK_MATCHING_OBJECT(vest.get_balance(man), vest.make_balance(vests, 0, 0, unlocked));
     BOOST_CHECK_EQUAL(err.retire_gt_balance, retire(delegate + 1));
     BOOST_CHECK_EQUAL(success(), retire(1));
@@ -755,6 +767,7 @@ BOOST_FIXTURE_TEST_CASE(retire, golos_vesting_tester) try {
 
     BOOST_TEST_MESSAGE("--- check that limit reduces after withdraw payout (vesting balance reduces too)");
     produce_blocks(blocks_in_interval - blocks_to_return);
+    BOOST_CHECK_EQUAL(success(), vest.procwaiting(_vesting_sym));
     vests -= withdraw_per_step;
     CHECK_MATCHING_OBJECT(vest.get_balance(man), vest.make_balance(vests, 0, 0, unlocked));
     BOOST_CHECK_EQUAL(err.retire_gt_balance, retire(delegate/2 + 1));
@@ -763,6 +776,33 @@ BOOST_FIXTURE_TEST_CASE(retire, golos_vesting_tester) try {
     vests -= delegate/2;
     unlocked -= delegate/2;
     CHECK_MATCHING_OBJECT(vest.get_balance(man), vest.make_balance(vests, 0, 0, unlocked));
+} FC_LOG_AND_RETHROW()
+
+BOOST_FIXTURE_TEST_CASE(procwaiting_test, golos_vesting_tester) try {
+    BOOST_TEST_MESSAGE("Extended test for procwaiting");
+
+    prepare_balances();
+    init_params();
+
+    BOOST_TEST_MESSAGE("--- checking re-scheduling works");
+    auto additional_users = add_accounts_with_vests(20);
+    for (auto& u: additional_users) {
+        BOOST_CHECK_EQUAL(success(), vest.withdraw(u, u, vest.make_asset(100)));
+    }
+    const int64_t _blocks_in_interval = golos::seconds_to_blocks(withdraw_interval_seconds);
+    produce_blocks(_blocks_in_interval);
+    BOOST_CHECK_EQUAL(success(), vest.procwaiting(_vesting_sym, _code));
+    int withdrawn = 0;
+    for (auto& u: additional_users) {
+        if (vest.get_withdraw_obj(u)["remaining_payments"] < withdraw_intervals) {
+            withdrawn++;
+        }
+    }
+    BOOST_CHECK_EQUAL(withdrawn, 16); // 16 is step
+    produce_blocks(golos::seconds_to_blocks(120) + 1); // 120 is delay_sec
+    for (auto& u: additional_users) {
+        BOOST_CHECK_LT(vest.get_withdraw_obj(u)["remaining_payments"], withdraw_intervals);
+    }
 } FC_LOG_AND_RETHROW()
 
 BOOST_AUTO_TEST_SUITE_END()
