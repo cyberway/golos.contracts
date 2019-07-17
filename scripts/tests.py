@@ -7,6 +7,7 @@ import json
 import os
 import re
 import random
+import time
 
 golosIoKey='5JUKEmKs7sMX5fxv5PnHnShnUm4mmizfyBtWc8kgWnDocH9R6fr'
 testingKey='5JdhhMMJdb1KEyCatAynRLruxVvi7mWPywiSjpLYqKqgsT4qjsN'
@@ -384,6 +385,72 @@ class TestGolosIo(unittest.TestCase):
         testnet.pushAction('gls.referral', 'closeoldref', user, [],
                 providebw=user+'/tech@active',
                 keys=[private, techKey])
+
+    def test_delegateUndelegateVesting(self):
+        (private1, public1) = createKey()
+        user1 = createRandomAccount(public1)
+        testnet.openVestingBalance(user1, 'tech')
+
+        (private2, public2) = createKey()
+        user2 = createRandomAccount(public2)
+        testnet.openVestingBalance(user2, 'tech')
+
+        amount = '100.000 GOLOS'
+        testnet.issueToken(user1, amount, keys=[testingKey])
+        testnet.transfer(user1, 'gls.vesting', amount, providebw=user1+'/gls@providebw', keys=[golosIoKey, private1])
+
+        user1Vesting = json.loads(testnet.cleos('get table gls.vesting %s accounts' % user1))['rows'][0]
+        vestAmount = user1Vesting['vesting'].split(' ', 2)
+        self.assertGreater(float(vestAmount[0]), 100111.000000)
+        self.assertEqual(vestAmount[1], 'GOLOS')
+
+        vestAmount = '100111.000000 GOLOS'
+        testnet.pushAction('gls.vesting', 'delegate', [user1, user2],
+            {'from':user1, 'to':user2, 'quantity':vestAmount, 'memo':'', 'interest_rate':1000},
+            providebw=[user1+'/gls@providebw', user2+'/gls@providebw'],
+            keys=[golosIoKey, private1, private2])
+
+        user1Vesting = json.loads(testnet.cleos('get table gls.vesting %s accounts' % user1))['rows'][0]
+        user2Vesting = json.loads(testnet.cleos('get table gls.vesting %s accounts' % user2))['rows'][0]
+        self.assertEqual(user1Vesting['delegated'], '100111.000000 GOLOS')
+        self.assertEqual(user2Vesting['received'],  '100111.000000 GOLOS')
+
+        time.sleep(0)    # get from params `delegation.min_time`
+
+        testnet.pushAction('gls.vesting', 'undelegate', user1,
+            {'from':user1, 'to':user2, 'quantity':'100000.000000 GOLOS', 'memo':''},
+            providebw=user1+'/gls@providebw',
+            keys=[golosIoKey, private1])
+
+        user1Vesting = json.loads(testnet.cleos('get table gls.vesting %s accounts' % user1))['rows'][0]
+        user2Vesting = json.loads(testnet.cleos('get table gls.vesting %s accounts' % user2))['rows'][0]
+        self.assertEqual(user1Vesting['delegated'], '100111.000000 GOLOS')
+        self.assertEqual(user2Vesting['received'],  '100111.000000 GOLOS')
+
+        time.sleep(120)  # get from params `delegation.return_time`
+
+        user1Vesting = json.loads(testnet.cleos('get table gls.vesting %s accounts' % user1))['rows'][0]
+        user2Vesting = json.loads(testnet.cleos('get table gls.vesting %s accounts' % user2))['rows'][0]
+        self.assertEqual(user1Vesting['delegated'], '111.000000 GOLOS')
+        self.assertEqual(user2Vesting['received'],  '111.000000 GOLOS')
+
+        testnet.pushAction('gls.vesting', 'undelegate', user1,
+            {'from':user1, 'to':user2, 'quantity':'111.000000 GOLOS', 'memo':''},
+            providebw=user1+'/gls@providebw',
+            keys=[golosIoKey, private1])
+
+        user1Vesting = json.loads(testnet.cleos('get table gls.vesting %s accounts' % user1))['rows'][0]
+        user2Vesting = json.loads(testnet.cleos('get table gls.vesting %s accounts' % user2))['rows'][0]
+        self.assertEqual(user1Vesting['delegated'], '100111.000000 GOLOS')
+        self.assertEqual(user2Vesting['received'],  '100111.000000 GOLOS')
+
+        time.sleep(120)  # get from params `delegation.return_time`
+
+        user1Vesting = json.loads(testnet.cleos('get table gls.vesting %s accounts' % user1))['rows'][0]
+        user2Vesting = json.loads(testnet.cleos('get table gls.vesting %s accounts' % user2))['rows'][0]
+
+        self.assertEqual(user1Vesting['delegated'], '0.000000 GOLOS')
+        self.assertEqual(user2Vesting['received'],  '0.000000 GOLOS')
 
 
 
