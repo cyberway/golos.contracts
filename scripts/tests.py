@@ -221,6 +221,28 @@ class TestTransit(unittest.TestCase):
         for (name, account) in account_list:
             self.assertEqual(account, resolve(name+'@golos'))
 
+        gls = getAccount('gls')
+        permissions = {}
+        for perm in gls['permissions']:
+            permissions[perm['perm_name']] = perm
+        self.assertEqual(permissions['golos.io'], {
+            'perm_name': 'golos.io', 'parent': 'active',
+            'required_auth': {'threshold': 1, 'keys': [], 'accounts': [
+                {'permission': {'actor': 'qwm3tgmbeog5', 'permission': 'golos.io'}, 'weight': 1}
+            ], 'waits': []}
+        })
+
+        golosio = getAccount('golosio@golos')
+        permissions = {}
+        for perm in golosio['permissions']:
+            permissions[perm['perm_name']] = perm
+        self.assertEqual(permissions['golos.io'], {
+            'perm_name': 'golos.io', 'parent': 'active',
+            'required_auth': {'threshold': 1, 'keys': [
+                {'key': 'GLS7KqcmMzmVURzrPvpjfq8ZJSS7Dno82xQ7rpHVYxhz5JnZ9RxY9', 'weight': 1}
+            ], 'accounts': [], 'waits': []}
+        })
+
 
 class TestFreeUser(unittest.TestCase):
     @classmethod
