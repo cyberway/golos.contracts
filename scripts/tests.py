@@ -13,6 +13,13 @@ golosIoKey='5JUKEmKs7sMX5fxv5PnHnShnUm4mmizfyBtWc8kgWnDocH9R6fr'
 testingKey='5JdhhMMJdb1KEyCatAynRLruxVvi7mWPywiSjpLYqKqgsT4qjsN'
 techKey   ='5KQwrPbwdL6PhXujxW37FSSQZ1JiwsST4cqQzDeyXtP79zkvFD3'
 
+def wait(timeout):
+    while timeout > 0:
+        w = 3 if timeout > 3 else timeout
+        print('\r                    \rWait %d sec' % timeout, flush=True, end='')
+        timeout -= w
+        time.sleep(w)
+
 def randomUsername():
     letters = 'abcdefghijklmnopqrstuvwxyz0123456789'
     return ''.join(random.choice(letters) for i in range(16))
@@ -415,7 +422,7 @@ class TestGolosIo(unittest.TestCase):
         self.assertEqual(user1Vesting['delegated'], '100111.000000 GOLOS')
         self.assertEqual(user2Vesting['received'],  '100111.000000 GOLOS')
 
-        time.sleep(0)    # get from params `delegation.min_time`
+        wait(0)    # get from params `delegation.min_time`
 
         testnet.pushAction('gls.vesting', 'undelegate', user1,
             {'from':user1, 'to':user2, 'quantity':'100000.000000 GOLOS', 'memo':''},
@@ -425,9 +432,9 @@ class TestGolosIo(unittest.TestCase):
         user1Vesting = json.loads(testnet.cleos('get table gls.vesting %s accounts' % user1))['rows'][0]
         user2Vesting = json.loads(testnet.cleos('get table gls.vesting %s accounts' % user2))['rows'][0]
         self.assertEqual(user1Vesting['delegated'], '100111.000000 GOLOS')
-        self.assertEqual(user2Vesting['received'],  '100111.000000 GOLOS')
+        self.assertEqual(user2Vesting['received'],  '111.000000 GOLOS')
 
-        time.sleep(120)  # get from params `delegation.return_time`
+        wait(120+3)  # get from params `delegation.return_time`
 
         user1Vesting = json.loads(testnet.cleos('get table gls.vesting %s accounts' % user1))['rows'][0]
         user2Vesting = json.loads(testnet.cleos('get table gls.vesting %s accounts' % user2))['rows'][0]
@@ -441,10 +448,10 @@ class TestGolosIo(unittest.TestCase):
 
         user1Vesting = json.loads(testnet.cleos('get table gls.vesting %s accounts' % user1))['rows'][0]
         user2Vesting = json.loads(testnet.cleos('get table gls.vesting %s accounts' % user2))['rows'][0]
-        self.assertEqual(user1Vesting['delegated'], '100111.000000 GOLOS')
-        self.assertEqual(user2Vesting['received'],  '100111.000000 GOLOS')
+        self.assertEqual(user1Vesting['delegated'], '111.000000 GOLOS')
+        self.assertEqual(user2Vesting['received'],  '0.000000 GOLOS')
 
-        time.sleep(120)  # get from params `delegation.return_time`
+        wait(120+3)  # get from params `delegation.return_time`
 
         user1Vesting = json.loads(testnet.cleos('get table gls.vesting %s accounts' % user1))['rows'][0]
         user2Vesting = json.loads(testnet.cleos('get table gls.vesting %s accounts' % user2))['rows'][0]
