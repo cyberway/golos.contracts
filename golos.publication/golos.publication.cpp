@@ -584,7 +584,6 @@ void publication::close_messages() {
             auto rsharesfn = wdfp_t(sharesfn);
             auto new_rsharesfn = WP(state.rsharesfn) - rsharesfn;
 
-            eosio::check(new_rshares >= 0, "LOGIC ERROR! publication::payrewards: new_rshares < 0");
             eosio::check(new_rsharesfn >= 0, "LOGIC ERROR! publication::payrewards: new_rsharesfn < 0");
 
             state.rshares = new_rshares.data();
