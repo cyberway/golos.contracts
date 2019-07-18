@@ -17,9 +17,7 @@ struct golos_vesting_api: base_contract_api {
     void initialize_contract(name token_name) {
         _tester->install_contract(cfg::vesting_name, contracts::vesting_wasm(), contracts::vesting_abi());
         _tester->set_authority(_code, cfg::code_name, create_code_authority({_code}), "active");
-        _tester->link_authority(_code, _code, cfg::code_name, N(timeout));
-        _tester->link_authority(_code, _code, cfg::code_name, N(timeoutconv));
-        _tester->link_authority(_code, _code, cfg::code_name, N(timeoutrdel));
+        _tester->link_authority(_code, _code, cfg::code_name, N(procwaiting));
         _tester->link_authority(_code, token_name, cfg::code_name, N(payment));
     }
 
@@ -165,18 +163,21 @@ struct golos_vesting_api: base_contract_api {
             ("params", json_str_to_obj(json_params)));
     }
 
-    action_result timeout(name signer, symbol sym = symbol(0)) {
-        if (sym == symbol(0)) sym = _symbol;
-        return push(N(timeout), signer, args()
-            ("symbol", sym)
-        );
-    }
-
     action_result retire(asset quantity, name user, name issuer) {
         return push(N(retire), issuer, args()
             ("quantity", quantity)
             ("user", user)
         );
+    }
+
+    action_result procwaiting(symbol sym, account_name payer) {
+        return push(N(procwaiting), payer, args()
+            ("symbol", sym)
+            ("payer", payer)
+        );
+    }
+    action_result procwaiting(symbol sym) {
+        return procwaiting(sym, _code);
     }
 
     //// vesting tables

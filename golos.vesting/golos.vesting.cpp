@@ -70,8 +70,10 @@ void vesting::on_transfer(name from, name to, asset quantity, std::string memo) 
         return;
 
     auto recipient = get_recipient(memo);
-    if (token::get_issuer(config::token_name, quantity.symbol.code()) == from && recipient == name())
-        return;     // just increase token supply
+    if (token::get_issuer(config::token_name, quantity.symbol.code()) == from && recipient == name()) {
+        procwaiting(quantity.symbol, _self);
+        return;
+    }
 
     vesting_table table_vesting(_self, _self.value);    // TODO: use symbol as scope #550
     auto vesting = table_vesting.find(quantity.symbol.code().raw());
@@ -88,8 +90,10 @@ void vesting::on_transfer(name from, name to, asset quantity, std::string memo) 
 
 void vesting::do_transfer_vesting(name from, name to, asset quantity, std::string memo) {
     auto recipient = get_recipient(memo);
-    if (token::get_issuer(config::token_name, quantity.symbol.code()) == from && recipient == name())
-        return;     // just increase token supply
+    if (token::get_issuer(config::token_name, quantity.symbol.code()) == from && recipient == name()) {
+        procwaiting(quantity.symbol, _self);
+        return;
+    }
 
     add_balance(recipient != name() ? recipient : from, quantity, has_auth(to) ? to : from);
 }
@@ -195,6 +199,7 @@ void vesting::withdraw(name from, name to, asset quantity) {
 
 void vesting::stopwithdraw(name owner, symbol sym) {
     require_auth(owner);
+
     withdraw_table table(_self, sym.code().raw());
     auto record = table.find(owner.value);
     eosio::check(record != table.end(), "Not found convert record sender"); // TODO: test #744
@@ -347,10 +352,9 @@ void vesting::create(symbol symbol, name notify_acc) {
     });
 }
 
-void vesting::timeoutconv() {
+bool vesting::process_withdraws(eosio::time_point now, symbol symbol, name payer) {
     int max_steps = 16;           // TODO: configurable #707
     const auto memo = "withdraw";
-    const auto now = eosio::current_time_point();
     vesting_table vestings(_self, _self.value);
     for (const auto& vesting : vestings) {
         int64_t correction = 0; // due inline actions delay, balance used in price calculations needs to be corrected #578
@@ -362,8 +366,9 @@ void vesting::timeoutconv() {
             obj != idx.cend() && obj->next_payout <= now;
             fail || last_payment ? obj = idx.erase(obj) : ++obj
         ) {
-            if (max_steps-- <= 0)
-                return;
+            if (max_steps-- <= 0) {
+            	return true;
+            }
 
             fail = obj->remaining_payments == 0 || obj->to_withdraw < obj->withdraw_rate;  // must not happen
             if (fail) continue;
@@ -404,23 +409,43 @@ void vesting::timeoutconv() {
             correction += converted.amount;    // accumulate
         }
     }
+    return false;
 }
 
-void vesting::timeoutrdel() {
+bool vesting::return_delegations(eosio::time_point till, symbol symbol, name payer) {
+    int max_steps = 16;
     return_delegation_table tbl(_self, _self.value);
     auto idx = tbl.get_index<"date"_n>();
-    auto till = eosio::current_time_point();
     for (auto obj = idx.cbegin(); obj != idx.cend() && obj->date <= till;) {
+        if (max_steps-- <= 0) {
+            return true;
+        }
+
         account_table delegator_balances(_self, obj->delegator.value);
         auto balance = delegator_balances.find(obj->quantity.symbol.code().raw());
         // The following checks can only fail on broken system, preserve them to prevent break more (can't resolve automatically)
-        eosio::check(balance != delegator_balances.end(), "timeoutrdel: Vesting balance not found"); // impossible
-        eosio::check(balance->delegated >= obj->quantity, "timeoutrdel: returning > delegated");     // impossible
+        eosio::check(balance != delegator_balances.end(), "returndeleg: Vesting balance not found"); // impossible
+        eosio::check(balance->delegated >= obj->quantity, "returndeleg: returning > delegated");     // impossible
         delegator_balances.modify(balance, same_payer, [&](auto& item){
             item.delegated -= obj->quantity;
             send_account_event(obj->delegator, item);
         });
         obj = idx.erase(obj);
+    }
+    return false;
+}
+
+void vesting::procwaiting(symbol symbol, name payer) {
+    auto now = eosio::current_time_point();
+    bool remain_withdraws = process_withdraws(now, symbol, payer);
+    bool remain_returns = return_delegations(now, symbol, payer);
+    if (remain_withdraws || remain_returns) {
+        vesting_params_singleton cfg(_self, symbol.code().raw());
+        transaction trx(now + eosio::seconds(3*60*60));
+        trx.actions.emplace_back(action{permission_level(_self, config::code_name), _self, "procwaiting"_n, std::make_tuple(symbol, _self)});
+        providebw_for_trx(trx, cfg.get().bwprovider.provider);
+        trx.delay_sec = 120;
+        trx.send(static_cast<uint128_t>(now.time_since_epoch().count()) << 64, payer, true);
     }
 }
 
@@ -558,26 +583,8 @@ void vesting::providebw_for_trx(transaction& trx, const permission_level& provid
     }
 }
 
-void vesting::timeout(symbol symbol) {
-    vesting_params_singleton cfg(_self, symbol.code().raw());
-    auto provider = cfg.get().bwprovider.provider;
-
-    uint128_t sender_id = _self.value;
-    transaction trx;
-    trx.delay_sec = config::vesting_delay_tx_timeout;
-    trx.actions.emplace_back(action{permission_level(_self, config::code_name), _self, "timeout"_n, symbol});
-    providebw_for_trx(trx, provider);
-    trx.send(sender_id, _self);
-
-    transaction trx2;
-    trx2.actions.emplace_back(action{permission_level(_self, config::code_name), _self, "timeoutrdel"_n, ""});
-    trx2.actions.emplace_back(action{permission_level(_self, config::code_name), _self, "timeoutconv"_n, ""});
-    providebw_for_trx(trx2, provider);
-    trx2.send(sender_id + 1, _self, true);
-}
-
 } // golos
 
 DISPATCH_WITH_BULK_TRANSFER(golos::vesting, on_transfer, on_bulk_transfer, (validateprms)(setparams)
         (retire)(unlocklimit)(withdraw)(stopwithdraw)(delegate)(undelegate)(create)
-        (open)(close)(timeout)(timeoutconv)(timeoutrdel))
+        (open)(close)(procwaiting))

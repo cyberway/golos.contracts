@@ -31,9 +31,7 @@ public:
     [[eosio::action]] void open(name owner, symbol symbol, name ram_payer);
     [[eosio::action]] void close(name owner, symbol symbol);
 
-    [[eosio::action]] void timeout(symbol symbol);
-    [[eosio::action]] void timeoutconv();
-    [[eosio::action]] void timeoutrdel();
+    [[eosio::action]] void procwaiting(symbol symbol, name payer);
 
     void on_transfer(name from, name to, asset quantity, std::string memo);
     void on_bulk_transfer(name from, std::vector<token::recipient> recipients);
@@ -182,6 +180,8 @@ public:
 
 private:
     void providebw_for_trx(eosio::transaction& trx, const permission_level& provider);
+    bool process_withdraws(eosio::time_point now, symbol symbol, name payer);
+    bool return_delegations(eosio::time_point till, symbol symbol, name payer);
     void do_transfer_vesting(name from, name to, asset quantity, std::string memo);
     void notify_balance_change(name owner, asset diff);
     void sub_balance(name owner, asset value, bool retire_mode = false);

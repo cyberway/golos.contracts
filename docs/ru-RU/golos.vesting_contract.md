@@ -75,7 +75,7 @@ struct vesting_delegation : parameter {
 
 
 ## Операции-действия, применяемые в смарт-контракте golos.vesting
-В смарт-контракте `golos.vesting` реализованы следующие операции-действия: [setparams](#operaciya-deistvie-setparams), [validateprms](#operaciya-deistvie-validateprms), [create](#operaciya-deistvie-create), [retire](#operaciya-deistvie-retire), [unlocklimit](#operaciya-deistvie-unlocklimit), [withdraw](#operaciya-deistvie-withdraw), [stopwithdraw](#operaciya-deistvie-stopwithdraw), [delegate](#operaciya-deistvie-delegate), [undelegate](#operaciya-deistvie-undelegate), [timeoutrdel](#operacii-deistviya-timeoutrdel-timeoutconv-i-timeout), [timeoutconv](#operacii-deistviya-timeoutrdel-timeoutconv-i-timeout), [timeout](#operacii-deistviya-timeoutrdel-timeoutconv-i-timeout), [open](#operaciya-deistvie-open), [close](#operaciya-deistvie-close), [paydelegator](#operaciya-deistvie-paydelegator).
+В смарт-контракте `golos.vesting` реализованы следующие операции-действия: [setparams](#operaciya-deistvie-setparams), [validateprms](#operaciya-deistvie-validateprms), [create](#operaciya-deistvie-create), [retire](#operaciya-deistvie-retire), [unlocklimit](#operaciya-deistvie-unlocklimit), [withdraw](#operaciya-deistvie-withdraw), [stopwithdraw](#operaciya-deistvie-stopwithdraw), [delegate](#operaciya-deistvie-delegate), [undelegate](#operaciya-deistvie-undelegate), [timeoutrdel](#operacii-deistviya-timeoutrdel-timeoutconv-i-timeout), [timeoutconv](#operacii-deistviya-timeoutrdel-timeoutconv-i-timeout), [timeout](#operacii-deistviya-timeoutrdel-timeoutconv-i-timeout), [open](#operaciya-deistvie-open), [close](#operaciya-deistvie-close).
 
 ## Операция-действие setparams
 Операция-действие `setparams` используется для настройки параметров смарт-контракта вестинга. Операция-действие имеет следующий вид:  
@@ -298,17 +298,19 @@ void vesting::close(
 Транзакция должна быть подписана аккаунтом `owner`.  
 Для выполнения операции-действия требуется, чтобы баланс всего вестинга, в том числе делегированного, был нулевым.
 
-## Операция-действие paydelegator
-Операция-действие `paydelegator` является системной, вызывается смарт-контрактом публикации (posting). Смарт-контракт постинг не может вносить изменения в таблицы смарт-контракта вестинг. Поэтому при закрытии поста смарт-контракт постинг вызывает `paydelegator` и через него проводит выплаты делегаторам. Операция-действие `paydelegator` имеет вид:
+
+## Операция-действие procwaiting
+Операция-действие `procwaiting` используется для ускорения вывода средств, предназначенных для вывода, и отмены делегирований, предназначенных для отмены. Операция-действие имеет вид:
 ```cpp
-void vesting::paydelegator(
-    name voter,
-    asset reward,
-    name delegator
+void vesting::procwaiting(
+    symbol symbol,
+    name payer
 )
 ```
+ 
 Параметры:  
-`voter` — имя аккаунта отправителя (куратора), чьи кураторские привели к выплате делегаторам;  
-`reward` — размер вознаграждения;  
-`delegator` — имя аккаунта, получателя вознаграждения;  
+`symbol` — параметр, однозначно определяющий вид вестинга.  
+`payer` — имя аккаунта, оплачивающего bandwidth.
+ 
+Транзакция не требует подписей.
 

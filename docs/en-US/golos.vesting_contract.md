@@ -74,7 +74,7 @@ struct vesting_delegation : parameter {
   * `max_delegators` — maximum count of delegations per one receiver.  
   
 ### Actions used in golos.vesting smart-contract
-The `golos.vesting` smart contract contains the following actions: [setparams](#setparams), [validateprms](#validateprms), [create](#create), [retire](#retire), [unlocklimit](#unlocklimit), [withdraw](#withdraw), [stopwithdraw](#stopwithdraw), [delegate](#delegate), [undelegate](#undelegate), [timeoutrdel](#timeoutrdel-timeoutconv-and-timeout), [timeoutconv](#timeoutrdel-timeoutconv-and-timeout), [timeout](#timeoutrdel-timeoutconv-and-timeout), [open](#open), [close](#close) and [paydelegator](#paydelegator).
+The `golos.vesting` smart contract contains the following actions: [setparams](#setparams), [validateprms](#validateprms), [create](#create), [retire](#retire), [unlocklimit](#unlocklimit), [withdraw](#withdraw), [stopwithdraw](#stopwithdraw), [delegate](#delegate), [undelegate](#undelegate), [timeoutrdel](#timeoutrdel-timeoutconv-and-timeout), [timeoutconv](#timeoutrdel-timeoutconv-and-timeout), [timeout](#timeoutrdel-timeoutconv-and-timeout), [open](#open), [close](#close) and [procwaiting](#procwaiting).  
 
 ## setparams
 The `setparams` action is used to configure the `golos.vesting` smart contract. The signature of this action is:  
@@ -276,7 +276,7 @@ void vesting::open(
 Transaction must be signed by `ram_payer` account.
 
 ## close
-The `close` action is used for memory brush up occupied by a record. The signature of this action is:
+The `close` action is used to clean up memory occupied by a record. The signature of this action is:
 ```cpp
 void vesting::close(
     name owner,
@@ -291,20 +291,17 @@ Transaction must be signed by the `owner` account.
 
 To perform the action, it is required that the balance of all vesting, including the delegated one, equals to zero.
 
-## paydelegator
-The `paydelegator` system action is called by `golos.publication` smart contract. The publication smart contract cannot imply any changes to the tables of the `golos.vesting` smart contract. Therefore, when closing a post, the publication smart contract calls the `paydelegator` and through it makes payments to the witnesses.  
-
-The signature of this action is:
+## procwaiting
+The `procwaiting` action is used to speed up withdrawing of vestings and returning of delegations. The signature of this action is:
 ```cpp
-void vesting::paydelegator(
-    name voter,
-    asset reward,
-    name delegator,
-    uint8_t payout_strategy
+void vesting::procwaiting(
+    name owner,
+    symbol symbol
 )
 ```
 **Parameters:**  
-  * `voter` — curator name whose curatorial fees were paid to delegates.
-  * `reward` — reward amount.
-  * `delegator` — account name, recipient of the reward.
-  * `payout_strategy` — identifier of delegation strategy. Accepts one of two values — «0» or «1». («0» — reward in tokens; «1» — reward in vesting).
+  * `symbol` — parameter that uniquely identifies the vesting type.
+  * `payer` — account who pays for bandwidth.  
+  
+Transaction does not requires any sign.  
+
