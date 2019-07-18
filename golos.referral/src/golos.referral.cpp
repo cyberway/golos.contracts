@@ -15,12 +15,12 @@ struct referral_params_setter: set_params_visitor<referral_state> {
     }
 
     bool operator()(const expire_param& p) {
-       return set_param(p, &referral_state::expire_params);
-   }
+        return set_param(p, &referral_state::expire_params);
+    }
 
     bool operator()(const percent_param& p) {
-       return set_param(p, &referral_state::percent_params);
-   }
+        return set_param(p, &referral_state::percent_params);
+    }
 };
 
 void referral::validateprms(std::vector<referral_params> params) {
@@ -54,8 +54,8 @@ void referral::addreferral(name referrer, name referral, uint16_t percent, uint6
     eosio::check(breakout >= cfg.get().breakout_params.min_breakout, "breakout < min_breakout");
     eosio::check(breakout <= cfg.get().breakout_params.max_breakout, "breakout > max_breakout");
     eosio::check(percent  <= cfg.get().percent_params.max_percent, "specified parameter is greater than limit");
- 
-    referrals.emplace(_self, [&]( auto &item ) {
+
+    referrals.emplace(_self, [&](auto &item) {
         item.referral = referral;
         item.referrer = referrer;
         item.percent  = percent;
@@ -65,7 +65,7 @@ void referral::addreferral(name referrer, name referral, uint16_t percent, uint6
 }
 
 void referral::on_transfer(name from, name to, asset quantity, std::string memo) {
-    if(_self != to)
+    if (_self != to)
         return;
 
     closeoldref();
@@ -74,7 +74,7 @@ void referral::on_transfer(name from, name to, asset quantity, std::string memo)
     auto it_referral = referrals.find(from.value);
     eosio::check(it_referral != referrals.end(), "A referral with this name doesn't exist.");
     eosio::check(it_referral->breakout.amount == quantity.amount, "Amount of funds doesn't equal.");
-    
+
     INLINE_ACTION_SENDER(token, transfer)
         (config::token_name, {_self, config::code_name},
         {_self, it_referral->referrer, quantity, ""});

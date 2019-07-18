@@ -78,7 +78,7 @@ public:
                 "," + social_acc + "," + referral_acc + "," + curators_prcnt + "," + bwprovider + "]";
         BOOST_CHECK_EQUAL(success(), post.set_params(params));
         produce_blocks();
-   }
+    }
 
 protected:
     symbol _sym;
@@ -118,40 +118,41 @@ protected:
 
 BOOST_AUTO_TEST_SUITE(golos_referral_tests)
 
- BOOST_FIXTURE_TEST_CASE(set_params, golos_referral_tester) try {
-     BOOST_TEST_MESSAGE("Test vesting parameters");
-     BOOST_TEST_MESSAGE("--- prepare");
-     produce_blocks();
+BOOST_FIXTURE_TEST_CASE(set_params, golos_referral_tester) try {
+    BOOST_TEST_MESSAGE("Test vesting parameters");
+    BOOST_TEST_MESSAGE("--- prepare");
+    produce_blocks();
 
-     BOOST_TEST_MESSAGE("--- check that global params not exist");
-     BOOST_TEST_CHECK(referral.get_params().is_null());
+    BOOST_TEST_MESSAGE("--- check that global params not exist");
+    BOOST_TEST_CHECK(referral.get_params().is_null());
 
-     init_params();
-     produce_blocks();
+    init_params();
+    produce_blocks();
 
-     auto obj_params = referral.get_params();
-     BOOST_TEST_MESSAGE("--- " + fc::json::to_string(obj_params));
-     BOOST_TEST_CHECK(obj_params["breakout_params"]["min_breakout"].as<asset>() == min_breakout);
-     BOOST_TEST_CHECK(obj_params["breakout_params"]["max_breakout"].as<asset>() == max_breakout);
-     BOOST_TEST_CHECK(obj_params["expire_params"]["max_expire"].as<uint64_t>() == max_expire);
+    auto obj_params = referral.get_params();
+    BOOST_TEST_MESSAGE("--- " + fc::json::to_string(obj_params));
+    BOOST_TEST_CHECK(obj_params["breakout_params"]["min_breakout"].as<asset>() == min_breakout);
+    BOOST_TEST_CHECK(obj_params["breakout_params"]["max_breakout"].as<asset>() == max_breakout);
+    BOOST_TEST_CHECK(obj_params["expire_params"]["max_expire"].as<uint64_t>() == max_expire);
     BOOST_TEST_CHECK(obj_params["percent_params"]["max_percent"].as<uint16_t>() == max_percent);
 
-     auto params = "[" + referral.breakout_parametrs(max_breakout, min_breakout) + "]";
-     BOOST_CHECK_EQUAL(err.min_more_than_max, referral.set_params(cfg::referral_name, params));
+    auto params = "[" + referral.breakout_parametrs(max_breakout, min_breakout) + "]";
+    BOOST_CHECK_EQUAL(err.min_more_than_max, referral.set_params(cfg::referral_name, params));
 
-     params = "[" + referral.breakout_parametrs(token.make_asset(-1), max_breakout) + "]";
-     BOOST_CHECK_EQUAL(err.negative_minimum, referral.set_params(cfg::referral_name, params));
+    params = "[" + referral.breakout_parametrs(token.make_asset(-1), max_breakout) + "]";
+    BOOST_CHECK_EQUAL(err.negative_minimum, referral.set_params(cfg::referral_name, params));
 
-     params = "[" + referral.percent_parametrs(10001) + "]";
+    params = "[" + referral.percent_parametrs(10001) + "]";
     BOOST_CHECK_EQUAL(err.limit_percent, referral.set_params(cfg::referral_name, params));
 
- } FC_LOG_AND_RETHROW()
+} FC_LOG_AND_RETHROW()
 
- BOOST_FIXTURE_TEST_CASE(create_referral_tests, golos_referral_tester) try {
-     BOOST_TEST_MESSAGE("Test creating referral");
+BOOST_FIXTURE_TEST_CASE(create_referral_tests, golos_referral_tester) try {
+    BOOST_TEST_MESSAGE("Test creating referral");
 
-     init_params();
-     produce_blocks();
+    init_params();
+    produce_blocks();
+
     const auto current_time = control->head_block_time().sec_since_epoch();
 
     BOOST_TEST_MESSAGE("-- fail on bad params");
@@ -160,29 +161,30 @@ BOOST_AUTO_TEST_SUITE(golos_referral_tests)
     BOOST_CHECK_EQUAL(err.min_expire, referral.create_referral(N(issuer), N(sania), 500, 0, token.make_asset(10)));
     BOOST_CHECK_EQUAL(err.max_expire, referral.create_referral(N(issuer), N(sania), 500, 999999999999, token.make_asset(10)));
 
-     auto expire = 8; // sec
-     BOOST_CHECK_EQUAL(err.min_breakout, referral.create_referral(N(issuer), N(sania), 500, current_time + expire, token.make_asset(0)));
-     BOOST_CHECK_EQUAL(err.max_breakout, referral.create_referral(N(issuer), N(sania), 500, current_time + expire, token.make_asset(110)));
+    auto expire = 8; // sec
+    BOOST_CHECK_EQUAL(err.min_breakout, referral.create_referral(N(issuer), N(sania), 500, current_time + expire, token.make_asset(0)));
+    BOOST_CHECK_EQUAL(err.max_breakout, referral.create_referral(N(issuer), N(sania), 500, current_time + expire, token.make_asset(110)));
 
-     BOOST_CHECK_EQUAL(err.persent, referral.create_referral(N(issuer), N(sania), 9500, current_time + expire, token.make_asset(50)));
+    BOOST_CHECK_EQUAL(err.persent, referral.create_referral(N(issuer), N(sania), 9500, current_time + expire, token.make_asset(50)));
 
-     BOOST_CHECK_EQUAL(success(), referral.create_referral(N(issuer), N(sania), 500, current_time + expire, token.make_asset(50)));
+    BOOST_CHECK_EQUAL(success(), referral.create_referral(N(issuer), N(sania), 500, current_time + expire, token.make_asset(50)));
+
     BOOST_TEST_MESSAGE("-- fail on re-creating referral");
+    produce_blocks();
+    BOOST_CHECK_EQUAL(err.referral_exist, referral.create_referral(N(issuer), N(sania), 500, current_time + expire, token.make_asset(50)));
 
-     produce_blocks();
-     BOOST_CHECK_EQUAL(err.referral_exist, referral.create_referral(N(issuer), N(sania), 500, current_time + expire, token.make_asset(50)));
     BOOST_TEST_MESSAGE("-- success with fixed breakout");
     auto params = "[" + referral.breakout_parametrs(max_breakout, max_breakout) + "]";
     BOOST_CHECK_EQUAL(success(), referral.set_params(cfg::referral_name, params));
     BOOST_CHECK_EQUAL(success(),
         referral.create_referral(N(issuer), N(pasha), max_percent, current_time + expire, max_breakout));
 
- } FC_LOG_AND_RETHROW()
+} FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE(transfer_tests, golos_referral_tester) try {
     BOOST_TEST_MESSAGE("Transfer testing");
-    
-    init_params(); 
+
+    init_params();
     const auto expire = 8;
     const auto breakout = 100;
 
@@ -213,7 +215,7 @@ BOOST_FIXTURE_TEST_CASE(transfer_tests, golos_referral_tester) try {
     BOOST_TEST_MESSAGE("--- checking that record about referral was removed");
     BOOST_CHECK(!referral.get_referral(N(vania)));
 } FC_LOG_AND_RETHROW()
-  
+
 BOOST_FIXTURE_TEST_CASE(close_referral_tests, golos_referral_tester) try {
     BOOST_TEST_MESSAGE("Test close referral");
 
@@ -249,8 +251,8 @@ BOOST_FIXTURE_TEST_CASE(create_referral_message_tests, golos_referral_tester) tr
     BOOST_CHECK_EQUAL(success(), post.create_msg({N(sania), "permlink"}));
 
     auto post_sania = post.get_message({N(sania), "permlink"});
-    BOOST_CHECK_EQUAL (post_sania["beneficiaries"].size(), 1);
-    BOOST_CHECK_EQUAL( post_sania["beneficiaries"][uint8_t(0)].as<beneficiary>().account, N(issuer) );
+    BOOST_CHECK_EQUAL(post_sania["beneficiaries"].size(), 1);
+    BOOST_CHECK_EQUAL(post_sania["beneficiaries"][uint8_t(0)].as<beneficiary>().account, N(issuer));
 
     BOOST_CHECK_EQUAL(success(), referral.create_referral(N(issuer), N(pasha), 5000, current_time + expire, token.make_asset(50)));
     BOOST_CHECK_EQUAL(err.limit_percents, post.create_msg({N(pasha), "permlink"}, {N(), "parentprmlnk"}, { beneficiary{N(tania), 7000} }));
@@ -258,7 +260,7 @@ BOOST_FIXTURE_TEST_CASE(create_referral_message_tests, golos_referral_tester) tr
     BOOST_CHECK_EQUAL(success(), post.create_msg({N(pasha), "permlink"}, {N(), "parentprmlnk"}, { beneficiary{N(tania), 2000} }));
 
     auto post_pasha = post.get_message({N(pasha), "permlink"});
-    BOOST_CHECK_EQUAL (post_pasha["beneficiaries"].size(), 2);
+    BOOST_CHECK_EQUAL(post_pasha["beneficiaries"].size(), 2);
 } FC_LOG_AND_RETHROW()
 
 BOOST_AUTO_TEST_SUITE_END()
