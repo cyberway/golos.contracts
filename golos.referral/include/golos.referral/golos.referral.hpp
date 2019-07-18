@@ -18,7 +18,7 @@ public:
     void setparams(std::vector<referral_params> params);
 
     [[eosio::action]]
-    void addreferral(name referrer, name referral, uint32_t percent, uint64_t expire, asset breakout);
+    void addreferral(name referrer, name referral, uint16_t percent, uint64_t expire, asset breakout);
 
     [[eosio::action]]
     void closeoldref();
@@ -29,7 +29,7 @@ private:
     struct obj_referral {
         name referrer;
         name referral;
-        uint32_t percent;
+        uint16_t percent;
         uint64_t expire;
         asset breakout;
 
@@ -47,16 +47,15 @@ private:
                             eosio::indexed_by< "expirekey"_n, eosio::const_mem_fun<obj_referral, uint64_t, &obj_referral::expire_key> > >;
 
 public:
-    static inline obj_referral account_referrer( name contract_name, name referral ) {
-        referrals_table referrals( contract_name, contract_name.value );
-        auto itr = referrals.find( referral.value );
+    static inline obj_referral account_referrer(name contract_name, name referral) {
+        referrals_table referrals(contract_name, contract_name.value);
+        auto itr = referrals.find(referral.value);
         if (itr != referrals.end()) {
             const auto now = static_cast<uint64_t>(eosio::current_time_point().sec_since_epoch());
             if (itr->expire >= now) {
                 return *itr;
             }
         }
-
         return obj_referral();
     }
 

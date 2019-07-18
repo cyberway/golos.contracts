@@ -20,15 +20,15 @@ struct golos_referral_api: base_contract_api {
     }
 
     //// referral actions
-     action_result create_referral(name referrer, name referral, uint32_t percent, uint64_t expire, asset breakout) {
-         return push(N(addreferral), _code, args()
-             ("referrer", referrer)
-             ("referral", referral)
-             ("percent", percent)
-             ("expire", expire)
-             ("breakout", breakout)
-         );
-     }
+    action_result create_referral(name referrer, name referral, uint16_t percent, uint64_t expire, asset breakout) {
+        return push(N(addreferral), _code, args()
+            ("referrer", referrer)
+            ("referral", referral)
+            ("percent", percent)
+            ("expire", expire)
+            ("breakout", breakout)
+        );
+    }
 
      action_result close_old_referrals() {
          return push(N(closeoldref), _code, args());
@@ -59,13 +59,10 @@ struct golos_referral_api: base_contract_api {
          return string("['expire_parametrs', {'max_expire':'") + std::to_string(max_expire) + "'}]";
      }
 
-     string percent_parametrs(uint32_t max_percent) {
-         return string("['percent_parametrs', {'max_percent':'") + std::to_string(max_percent) + "'}]";
-     }
 
-     string delay_parametrs(uint32_t delay_clear_old_ref) {
-         return string("['delay_parametrs', {'delay_clear_old_ref':'") + std::to_string(delay_clear_old_ref) + "'}]";
-     }
+    string percent_parametrs(uint16_t max_percent) {
+        return string("['percent_parametrs', {'max_percent':'") + std::to_string(max_percent) + "'}]";
+    }
 };
 
 

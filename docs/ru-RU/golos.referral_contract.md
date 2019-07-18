@@ -13,8 +13,7 @@ referral_param, types:[
         asset max_breakout
     },
     expire_parametrs (uint64_t max_expire),
-    percent_parametrs (uint32_t max_percent),
-    delay_parametrs (uint32_t delay_clear_old_ref)
+    percent_parametrs (uint16_t max_percent)
 ]
 ```
 Параметры:  
@@ -24,7 +23,6 @@ referral_param, types:[
 
 `expire_parametrs` — максимально допустимое время действия реферальной программы;  
 `percent_parametrs` — максимально допустимый процент отчисления рефереру в течение действия реферальной программы;  
-`delay_parametrs` — период времени (в секундах), через который запускается действие по удалению устаревших записей из таблицы.  
 
 ## Операции-действия, применяемые в смарт-контракте golos.referreal
 В смарт-контракте `golos.referral` реализованы следующие операции-действия: [setparams](#operaciya-deistvie-setparams), [validateprms](#operaciya-deistvie-validateprms), [addreferral](#operaciya-deistvie-addreferral), [closeoldref](#operaciya-deistvie-closeoldref).  
@@ -34,7 +32,7 @@ referral_param, types:[
 ```cpp
 void referral::setparams(std::vector<referral_params> params)
 ```
-Параметр `params` — значение в виде структуры. Настраиваемые параметры: `breakout_parametrs`, `expire_parametrs`, `percent_parametrs`, `delay_parametrs`. 
+Параметр `params` — значение в виде структуры. Настраиваемые параметры: `breakout_parametrs`, `expire_parametrs`, `percent_parametrs`.
 
 ## Операция-действие validateprms
 Операция-действие `validateprms` вызывается смарт-контрактом и используется для проверки параметров на валидность, контролирует наличие в них ошибок. 
@@ -49,7 +47,7 @@ void referral::validateprms(std::vector<referral_params> params)
 void referral::addreferral(
     name referrer,
     name referral,
-    uint32_t percent,
+    uint16_t percent,
     uint64_t expire,
     asset breakout
 )

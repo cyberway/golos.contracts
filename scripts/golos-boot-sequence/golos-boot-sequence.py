@@ -369,10 +369,9 @@ def createCommunity():
             ]]) + '-p gls.ctrl')
 
         retry(args.cleos + 'push action gls.referral setparams ' + jsonArg([[
-            ['breakout_parametrs', {'min_breakout': intToToken(10000), 'max_breakout': intToToken(100000)}],
-            ['expire_parametrs', {'max_expire': 7*24*3600}],  # sec
-            ['percent_parametrs', {'max_percent': 5000}],     # 50.00%
-            ['delay_parametrs', {'delay_clear_old_ref': 1*24*3600}] # sec
+            ['breakout_parametrs', {'min_breakout': "0.001 %s" % args.symbol, 'max_breakout': intToToken(100)}],
+            ['percent_parametrs', {'max_percent': 1000}],     # 10.00%
+            ['expire_parametrs', {'max_expire': 6*30*24*3600}]  # sec
         ]]) + '-p gls.referral')
 
 def createWitnessAccounts():

@@ -12,8 +12,7 @@ referral_param, types:[
         asset max_breakout
     },
     expire_parametrs (uint64_t max_expire),
-    percent_parametrs (uint32_t max_percent),
-    delay_parametrs (uint32_t delay_clear_old_ref)
+    percent_parametrs (uint16_t max_percent)
 ]
 ```
 
@@ -23,8 +22,7 @@ referral_param, types:[
     * `max_breakout` — the maximum allowable number of tokens required for the redemption of the referral account and, accordingly, the termination of the referral program.
   * `expire_parametrs `— the maximum allowable time of the referral program.
   * `percent_parametrs` — maximum allowable percentage of deduction to the referrer during the duration of the referral program.
-  * `delay_parametrs` — period of time (mentioned in seconds) after which the action to delete obsolete entries from the table is launched.
-
+  
 
 ## Actions used in golos.referral smart contract
 
@@ -35,7 +33,7 @@ The `setparams` action is used to set (configure) the parameters of a smart cont
 ```cpp
 void referral::setparams(std::vector<referral_params> params)
 ``` 
- The parameter `params`is a value in the form of a structure which contains the fields: `breakout_parametrs`, `expire_parametrs`, `percent_parametrs`, `delay_parametrs`.  
+ The parameter `params`is a value in the form of a structure which contains the fields: `breakout_parametrs`, `expire_parametrs`, `percent_parametrs`.
 
 
 ## validateprms
@@ -51,7 +49,7 @@ This action comes in the following the form:
 void referral::addreferral(
     name referrer,
     name referral,
-    uint32_t percent,
+    uint16_t percent,
     uint64_t expire,
     asset breakout
 )
