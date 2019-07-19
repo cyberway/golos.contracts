@@ -1,5 +1,5 @@
 #pragma once
-#include <eosiolib/datastream.hpp>
+#include <eosio/datastream.hpp>
 
 namespace golos {
 

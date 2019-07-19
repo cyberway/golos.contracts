@@ -1,8 +1,8 @@
 #pragma once
 #include "golos.emit/parameters.hpp"
-#include <eosiolib/eosio.hpp>
-#include <eosiolib/singleton.hpp>
-#include <eosiolib/asset.hpp>
+#include <eosio/eosio.hpp>
+#include <eosio/singleton.hpp>
+#include <eosio/asset.hpp>
 
 
 namespace golos {
@@ -33,6 +33,11 @@ private:
     void recalculate_state(std::vector<emit_param>);
     state_singleton _state;
     emit_params_singleton _cfg;
+
+    const emit_state& cfg() {
+        static const emit_state cfg = _cfg.get();
+        return cfg;
+    }
 
     void schedule_next(state& s, uint32_t delay);
 };

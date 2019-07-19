@@ -1,5 +1,5 @@
 #pragma once
-#include <eosiolib/singleton.hpp>
+#include <eosio/singleton.hpp>
 #include <common/parameter.hpp>
 #include <common/parameter_ops.hpp>
 #include <common/config.hpp>
@@ -18,8 +18,8 @@ namespace golos {
         uint32_t upvote_lockout;
 
         void validate() const override {
-            eosio_assert(window > 0, "Cashout window must be greater than 0.");
-            eosio_assert(window > upvote_lockout, "Cashout window can't be less than upvote lockout.");
+            eosio::check(window > 0, "Cashout window must be greater than 0.");
+            eosio::check(window > upvote_lockout, "Cashout window can't be less than upvote lockout.");
         }
     };
     using cashout_window_prm = param_wrapper<st_cashout_window, 2>;
@@ -33,7 +33,7 @@ namespace golos {
         uint16_t max_comment_depth;
 
         void validate() const override {
-            eosio_assert(max_comment_depth > 0, "Max comment depth must be greater than 0.");
+            eosio::check(max_comment_depth > 0, "Max comment depth must be greater than 0.");
         }
     };
     using max_comment_depth_prm = param_wrapper<st_max_comment_depth, 1>;
@@ -43,7 +43,7 @@ namespace golos {
 
         void validate() const override {
             if (account != name()) {
-                eosio_assert(is_account(account), "Social account doesn't exist.");
+                eosio::check(is_account(account), "Social account doesn't exist.");
             }
         }
     };
@@ -54,7 +54,7 @@ namespace golos {
 
         void validate() const override {
             if (account != name()) {
-                eosio_assert(is_account(account), "Referral account doesn't exist.");
+                eosio::check(is_account(account), "Referral account doesn't exist.");
             }
         }
     };
@@ -65,11 +65,11 @@ namespace golos {
         uint16_t max_curators_prcnt;
 
         void validate() const override {
-            eosio_assert(min_curators_prcnt <= config::_100percent,
+            eosio::check(min_curators_prcnt <= config::_100percent,
                     "Min curators percent must be between 0% and 100% (0-10000).");
-            eosio_assert(min_curators_prcnt <= max_curators_prcnt,
+            eosio::check(min_curators_prcnt <= max_curators_prcnt,
                     "Min curators percent must be less than max curators percent or equal.");
-            eosio_assert(max_curators_prcnt <= config::_100percent, "Max curators percent must be less than 100 or equal.");
+            eosio::check(max_curators_prcnt <= config::_100percent, "Max curators percent must be less than 100 or equal.");
         }
         void validate_value(uint16_t x) const {
             eosio::check(x >= min_curators_prcnt, "Curators percent is less than min curators percent.");
@@ -78,9 +78,19 @@ namespace golos {
     };
     using curators_prcnt_prm = param_wrapper<st_curators_prcnt, 2>;
 
+    struct st_bwprovider: parameter {
+        permission_level provider;
+
+        void validate() const override {
+            eosio::check((provider.actor != name()) == (provider.permission != name()), "actor and permission must be set together");
+            // check that contract can use cyber:providebw done in setparams
+            // (we need know contract account to make this check)
+        }
+    };
+    using bwprovider_prm = param_wrapper<st_bwprovider,1>;
 
     using posting_params = std::variant<max_vote_changes_prm, cashout_window_prm, max_beneficiaries_prm,
-          max_comment_depth_prm, social_acc_prm, referral_acc_prm, curators_prcnt_prm>;
+          max_comment_depth_prm, social_acc_prm, referral_acc_prm, curators_prcnt_prm, bwprovider_prm>;
 
     struct [[eosio::table]] posting_state {
         max_vote_changes_prm max_vote_changes_param;
@@ -90,8 +100,9 @@ namespace golos {
         social_acc_prm social_acc_param;
         referral_acc_prm referral_acc_param;
         curators_prcnt_prm curators_prcnt_param;
+        bwprovider_prm bwprovider_param;
 
-        static constexpr int params_count = 7;
+        static constexpr int params_count = 8;
     };
     using posting_params_singleton = eosio::singleton<"pstngparams"_n, posting_state>;
 

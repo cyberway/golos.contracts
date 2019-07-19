@@ -1,6 +1,6 @@
 #pragma once
-#include <eosiolib/eosio.hpp>
-#include <eosiolib/time.hpp>
+#include <eosio/eosio.hpp>
+#include <eosio/time.hpp>
 #include "parameters.hpp"
 
 namespace golos {
@@ -18,10 +18,10 @@ public:
     void setparams(std::vector<referral_params> params);
 
     [[eosio::action]]
-    void addreferral(name referrer, name referral, uint32_t percent, uint64_t expire, asset breakout);
+    void addreferral(name referrer, name referral, uint16_t percent, uint64_t expire, asset breakout);
 
     [[eosio::action]]
-    void closeoldref(uint64_t hash);
+    void closeoldref();
 
     void on_transfer(name from, name to, asset quantity, std::string memo);
 
@@ -29,7 +29,7 @@ private:
     struct obj_referral {
         name referrer;
         name referral;
-        uint32_t percent;
+        uint16_t percent;
         uint64_t expire;
         asset breakout;
 
@@ -46,18 +46,17 @@ private:
                             eosio::indexed_by< "referrerkey"_n, eosio::const_mem_fun<obj_referral, uint64_t, &obj_referral::referrer_key> >,
                             eosio::indexed_by< "expirekey"_n, eosio::const_mem_fun<obj_referral, uint64_t, &obj_referral::expire_key> > >;
 
-    struct st_hash {
-        uint64_t hash;
-    };
-
 public:
-    static inline obj_referral account_referrer( name contract_name, name referral ) {
-        referrals_table referrals( contract_name, contract_name.value );
-        auto iterator_referral = referrals.find( referral.value );
-        if (iterator_referral != referrals.end())
-            return *iterator_referral;
-
-         return obj_referral();
+    static inline obj_referral account_referrer(name contract_name, name referral) {
+        referrals_table referrals(contract_name, contract_name.value);
+        auto itr = referrals.find(referral.value);
+        if (itr != referrals.end()) {
+            const auto now = static_cast<uint64_t>(eosio::current_time_point().sec_since_epoch());
+            if (itr->expire >= now) {
+                return *itr;
+            }
+        }
+        return obj_referral();
     }
 
 };

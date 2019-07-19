@@ -9,7 +9,7 @@ namespace eosio { namespace testing {
 #   include <fc/optional.hpp>
     using fc::optional;
 #else
-#   include <eosiolib/types.h>
+#   include <eosio/eosio.hpp>
     using namespace eosio;
     using std::optional;
 #endif
@@ -27,6 +27,8 @@ struct accountmeta {
     optional<std::string> instagram;
     optional<std::string> telegram;
     optional<std::string> vk;
+    optional<std::string> whatsapp;
+    optional<std::string> wechat;
     optional<std::string> website;
 
     optional<std::string> first_name;
@@ -57,7 +59,7 @@ struct accountmeta {
 
 #ifndef UNIT_TEST_ENV
     EOSLIB_SERIALIZE(accountmeta,
-        (type)(app)(email)(phone)(facebook)(instagram)(telegram)(vk)(website)
+        (type)(app)(email)(phone)(facebook)(instagram)(telegram)(vk)(whatsapp)(wechat)(website)
         (first_name)(last_name)(name)(birth_date)(gender)(location)(city)(about)(occupation)(i_can)(looking_for)
         (business_category)(background_image)(cover_image)(profile_image)(user_image)(ico_address)(target_date)
         (target_plan)(target_point_a)(target_point_b))
@@ -67,7 +69,7 @@ struct accountmeta {
 #ifdef UNIT_TEST_ENV
 }} // eosio::testing
 FC_REFLECT(eosio::testing::accountmeta,
-    (type)(app)(email)(phone)(facebook)(instagram)(telegram)(vk)(website)
+    (type)(app)(email)(phone)(facebook)(instagram)(telegram)(vk)(whatsapp)(wechat)(website)
     (first_name)(last_name)(name)(birth_date)(gender)(location)(city)(about)(occupation)(i_can)(looking_for)
     (business_category)(background_image)(cover_image)(profile_image)(user_image)(ico_address)(target_date)
     (target_plan)(target_point_a)(target_point_b))

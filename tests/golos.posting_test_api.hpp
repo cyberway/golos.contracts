@@ -1,15 +1,37 @@
 #pragma once
 #include "test_api_helper.hpp"
 #include "golos.publication_rewards_types.hpp"
+#include <contracts.hpp>
 
 namespace eosio { namespace testing {
 
+namespace cfg = golos::config;
 
 struct golos_posting_api: base_contract_api {
     golos_posting_api(golos_tester* tester, name code, symbol sym)
     :   base_contract_api(tester, code)
     ,   _symbol(sym) {}
     symbol _symbol;
+
+    void initialize_contract(name token_name, name charge_name) {
+        _tester->install_contract(_code, contracts::posting_wasm(), contracts::posting_abi());
+
+        _tester->set_authority(_code, cfg::code_name, create_code_authority({_code}), "active");
+        _tester->link_authority(_code, _code, cfg::code_name, N(closemssgs));
+        _tester->link_authority(_code, _code, cfg::code_name, N(paymssgrwrd));
+        _tester->link_authority(_code, _code, cfg::code_name, N(deletevotes));
+        _tester->link_authority(_code, token_name, cfg::code_name, N(transfer));
+        _tester->link_authority(_code, token_name, cfg::code_name, N(payment));
+
+        name action = "calcrwrdwt"_n;
+        auto auth = authority(1, {}, {
+            {.permission = {charge_name, config::eosio_code_name}, .weight = 1}
+        });
+        _tester->set_authority(_code, action, auth, "active");
+        _tester->link_authority(_code, _code, action, action);
+        _tester->link_authority(_code, token_name, cfg::code_name, N(bulktransfer));
+        _tester->link_authority(_code, token_name, cfg::code_name, N(bulkpayment));
+    }
 
     //// posting actions
     action_result set_rules(
@@ -49,7 +71,8 @@ struct golos_posting_api: base_contract_api {
         std::string language = "languagemssg",
         std::vector<std::string> tags = {"tag"},
         std::string json_metadata = "jsonmetadata",
-        optional<uint16_t> curators_prcnt = optional<uint16_t>()
+        optional<uint16_t> curators_prcnt = optional<uint16_t>(),
+        optional<asset> max_payout = optional<asset>()
     ) {
         return push(N(createmssg), message_id.author, args()
             ("message_id", message_id)
@@ -63,6 +86,7 @@ struct golos_posting_api: base_contract_api {
             ("tags", tags)
             ("jsonmetadata", json_metadata)
             ("curators_prcnt", curators_prcnt)
+            ("max_payout", max_payout)
         );
     }
 
@@ -77,6 +101,16 @@ struct golos_posting_api: base_contract_api {
             ("message_id", message_id)
             ("headermssg", title)
             ("bodymssg", body)
+        );
+    }
+
+    action_result erase_reblog_msg(
+        account_name rebloger,
+        mssgid message_id
+    ) {
+        return push(N(erasereblog), rebloger, args()
+            ("rebloger", rebloger)
+            ("message_id", message_id)
         );
     }
 
@@ -130,9 +164,21 @@ struct golos_posting_api: base_contract_api {
             ("curators_prcnt", curators_prcnt)
             );
     }
+    action_result set_max_payout(mssgid message_id, asset max_payout) {
+        return push(N(setmaxpayout), message_id.author, args()
+            ("message_id", message_id)
+            ("max_payout", max_payout)
+            );
+    }
     action_result set_params(std::string json_params) {
         return push(N(setparams), _code, args()
             ("params", json_str_to_obj(json_params)));
+    }
+    action_result closemssgs(account_name payer) {
+        return push(N(closemssgs), payer, args()("payer", payer));
+    }
+    action_result closemssgs() {
+        return closemssgs(_code);
     }
 
 
@@ -144,9 +190,10 @@ struct golos_posting_api: base_contract_api {
         auto social = get_str_social_acc(name());
         auto referral = get_str_referral_acc(name());
         auto curators_prcnt = get_str_curators_prcnt(min_curators_prcnt, max_curators_prcnt);
+        auto bwprovider = get_str_bwprovider(name(), name());
 
         auto params = "[" + vote_changes + "," + cashout_window + "," + beneficiaries + "," + comment_depth +
-            "," + social + "," + referral + "," + curators_prcnt + "]";
+            "," + social + "," + referral + "," + curators_prcnt + "," + bwprovider + "]";
         return set_params(params);
     }
 
@@ -182,13 +229,16 @@ struct golos_posting_api: base_contract_api {
         return string("['st_curators_prcnt', {'min_curators_prcnt':'") + std::to_string(min_curators_prcnt) + "','max_curators_prcnt':'" + std::to_string(max_curators_prcnt) + "'}]";
     }
 
+    string get_str_bwprovider(account_name actor, permission_name permission) {
+        return string("['st_bwprovider', {'actor':'") + name{actor}.to_string() + "','permission':'" + name{permission}.to_string() + "'}]";
+    }
     //// posting tables
     variant get_permlink(account_name acc, uint64_t id) {
         return _tester->get_chaindb_struct(_code, acc, N(permlink), id, "permlink");
     }
 
-    variant get_message(account_name acc, uint64_t id) {
-        return _tester->get_chaindb_struct(_code, acc, N(message), id, "message");
+    variant get_message(uint64_t id) {
+        return _tester->get_chaindb_struct(_code, _code, N(message), id, "message");
     }
 
     variant get_permlink(mssgid message_id) {
@@ -205,7 +255,7 @@ struct golos_posting_api: base_contract_api {
     variant get_message(mssgid message_id) {
         auto permlink = get_permlink(message_id);
         if (!permlink.is_null() && permlink.get_object().size()) {
-            return get_message(message_id.author, permlink["id"].as_uint64());
+            return get_message(permlink["id"].as_uint64());
         }
         return variant();
     }
@@ -219,7 +269,7 @@ struct golos_posting_api: base_contract_api {
     }
 
     std::vector<variant> get_messages(account_name user) {
-        auto raw_messages = _tester->get_all_chaindb_rows(_code, user, N(message), false);
+        auto raw_messages = _tester->get_all_chaindb_rows(_code, _code, N(message), false);
         auto raw_permlinks = _tester->get_all_chaindb_rows(_code, user, N(permlink), false);
 
         std::map<uint64_t, variant> src_permlinks_map;
@@ -230,13 +280,16 @@ struct golos_posting_api: base_contract_api {
         std::vector<variant> messages;
         messages.reserve(raw_messages.size());
         for (auto& src_mssg:  raw_messages) {
+            auto src_perm = src_permlinks_map.find(src_mssg["id"].as_uint64());
+            if (src_perm == src_permlinks_map.end()) {
+                continue;
+            }
             mvo dst_mssg(src_mssg.get_object());
-            auto& src_perm = src_permlinks_map[src_mssg["id"].as_uint64()];
 
-            for (auto entry: src_perm.get_object()) {
+            for (auto entry: src_perm->second.get_object()) {
                 dst_mssg(entry.key(), entry.value());
             }
-            dst_mssg("permlink", src_perm["value"]);
+            dst_mssg("permlink", src_perm->second["value"]);
             messages.emplace_back(variant(dst_mssg));
         }
 

@@ -29,33 +29,32 @@ protected:
 public:
 
     golos_social_tester()
-        : golos_tester("golos.soc"_n)
-        , post({this, _code, _token_sym})
+        : golos_tester(cfg::social_name)
+        , post({this, cfg::publish_name, _token_sym})
         , vest({this, cfg::vesting_name, _vesting_sym})
         , token({this, cfg::token_name, _token_sym})
-        , social({this, cfg::social_name, _token_sym})
-        , _users{_code, "dave"_n, "erin"_n} {
+        , social({this, _code, _token_sym})
+        , _users{"dave"_n, "erin"_n} {
 
         produce_block();
         create_accounts(_users);
-        create_accounts({"issuer"_n, cfg::control_name, cfg::token_name, cfg::vesting_name, cfg::social_name});
+        create_accounts({cfg::issuer_name, cfg::control_name, cfg::token_name, 
+                cfg::vesting_name, cfg::social_name, cfg::publish_name, cfg::charge_name});
         produce_block();
 
-        set_authority(cfg::social_name, "active", authority(1,
-            { {get_public_key(cfg::social_name, "active"), 1} },
-            { {{"golos.soc"_n, cfg::code_name}, 1} }),
-            "owner");
-
-        install_contract(_code, contracts::posting_wasm(), contracts::posting_abi());
-        install_contract(cfg::vesting_name, contracts::vesting_wasm(), contracts::vesting_abi());
         install_contract(cfg::token_name, contracts::token_wasm(), contracts::token_abi());
-        install_contract(cfg::social_name, contracts::social_wasm(), contracts::social_abi());
+        vest.add_changevest_auth_to_issuer(cfg::issuer_name, cfg::control_name);
+        vest.initialize_contract(cfg::token_name);
+        post.initialize_contract(cfg::token_name, cfg::charge_name);
+        social.initialize_contract();
+
+        produce_block();
     }
 
     void init(int64_t issuer_funds, int64_t user_vesting_funds) {
-        BOOST_CHECK_EQUAL(success(), token.create("issuer"_n, token.make_asset(issuer_funds), {_code}));
-        BOOST_CHECK_EQUAL(success(), token.open(_code, _token_sym, _code));
-        BOOST_CHECK_EQUAL(success(), vest.create_vesting("issuer"_n));
+        BOOST_CHECK_EQUAL(success(), token.create(cfg::issuer_name, token.make_asset(issuer_funds)));
+        BOOST_CHECK_EQUAL(success(), token.open(cfg::publish_name, _token_sym, cfg::publish_name));
+        BOOST_CHECK_EQUAL(success(), vest.create_vesting(cfg::issuer_name));
 
         funcparams fn{"0", 1};
         BOOST_CHECK_EQUAL(success(), post.set_rules(fn, fn, fn, 5000));
@@ -72,7 +71,7 @@ public:
         for (auto& u : _users) {
             BOOST_CHECK_EQUAL(success(), vest.open(u, _vesting_sym, u));
             produce_block();
-            BOOST_CHECK_EQUAL(success(), token.issue("issuer"_n, u, token.make_asset(user_vesting_funds), "add funds to erin"));
+            BOOST_CHECK_EQUAL(success(), token.issue(cfg::issuer_name, u, token.make_asset(user_vesting_funds), "add funds to erin"));
             produce_block();
             BOOST_CHECK_EQUAL(success(), token.transfer(u, cfg::vesting_name, token.make_asset(user_vesting_funds), "buy vesting for erin"));
             produce_block();

@@ -1,7 +1,7 @@
 #pragma once
 #include <common/parameter.hpp>
 #include <common/config.hpp>
-#include <eosiolib/singleton.hpp>
+#include <eosio/singleton.hpp>
 
 namespace golos { namespace param {
 
@@ -12,7 +12,7 @@ struct token: immutable_parameter {
     symbol_code code;
 
     void validate() const override {
-        eosio_assert(code.is_valid(), "invalid token");
+        eosio::check(code.is_valid(), "invalid token");
     }
 };
 
@@ -20,7 +20,7 @@ struct multisig: parameter {
     name name;
 
     void validate() const override {
-        eosio_assert(is_account(name), "multisig account doesn't exists");
+        eosio::check(is_account(name), "multisig account doesn't exists");
     }
 };
 
@@ -29,7 +29,7 @@ struct witness_votes: immutable_parameter {
     uint16_t max = 30;   // max witness votes
 
     void validate() const override {
-        eosio_assert(max > 0, "max witness votes can't be 0");
+        eosio::check(max > 0, "max witness votes can't be 0");
     }
 };
 
@@ -37,7 +37,7 @@ struct witnesses: parameter {
     uint16_t max = 21;   // max witnesses
 
     void validate() const override {
-        eosio_assert(max > 0, "max witnesses can't be 0");
+        eosio::check(max > 0, "max witnesses can't be 0");
     }
 };
 
@@ -48,9 +48,9 @@ struct msig_permissions: parameter {
 
     void validate() const override {
         // NOTE: can't compare with max_witnesses here (incl. auto-calculated values), do it in visitor
-        eosio_assert(!super_majority || !majority || super_majority >= majority, "super_majority must not be less than majority");
-        eosio_assert(!super_majority || !minority || super_majority >= minority, "super_majority must not be less than minority");
-        eosio_assert(!majority || !minority || majority >= minority, "majority must not be less than minority");
+        eosio::check(!super_majority || !majority || super_majority >= majority, "super_majority must not be less than majority");
+        eosio::check(!super_majority || !minority || super_majority >= minority, "super_majority must not be less than minority");
+        eosio::check(!majority || !minority || majority >= minority, "majority must not be less than minority");
     }
 
     uint16_t super_majority_threshold(uint16_t top) const;
@@ -62,7 +62,7 @@ struct update_auth_period: parameter {
     uint32_t period = 30*60;
 
     void validate() const override {
-        eosio_assert(period > 0, "update auth period can't be 0");
+        eosio::check(period > 0, "update auth period can't be 0");
     }
 };
 

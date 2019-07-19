@@ -6,7 +6,8 @@
       "types": [
           "vesting_withdraw",
           "vesting_amount",
-          "vesting_delegation"
+          "vesting_delegation",
+          "vesting_bwprovider"
       ]
   }],
   "structs": [
@@ -19,13 +20,21 @@
       ]
     },
     {
+      "name": "vesting_supply",
+      "base": "",
+      "fields": [
+        {"name":"supply",     "type":"asset"}
+      ]
+    },
+    {
       "name": "account",
       "base": "",
       "fields": [
         {"name":"vesting",        "type":"asset"},
         {"name":"delegated",      "type":"asset"},
         {"name":"received",       "type":"asset"},
-        {"name":"unlocked_limit", "type":"asset"}
+        {"name":"unlocked_limit", "type":"asset"},
+        {"name":"delegators",     "type":"uint32"}
       ]
     },
     {
@@ -47,7 +56,6 @@
         {"name":"delegatee",            "type":"name"},
         {"name":"quantity",             "type":"asset"},
         {"name":"interest_rate",        "type":"uint16"},
-        {"name":"payout_strategy",      "type":"uint8"},
         {"name":"min_delegation_time",  "type":"time_point_sec"}
       ]
     },
@@ -87,6 +95,14 @@
         {"name":"from",     "type":"name"},
         {"name":"to",       "type":"name"},
         {"name":"quantity", "type":"asset"}
+      ]
+    },
+    {
+      "name": "procwaiting",
+      "base": "",
+      "fields": [
+        {"name":"symbol", "type":"symbol"},
+        {"name":"payer",  "type":"name"}
       ]
     },
 
@@ -153,19 +169,8 @@
       "name": "delegate",
       "base": "base_transfer",
       "fields": [
-        {"name":"interest_rate",    "type":"uint16"},
-        {"name":"payout_strategy",  "type":"uint8"}
+        {"name":"interest_rate",    "type":"uint16"}
       ]
-    },
-    {
-       "name": "paydelegator",
-       "base": "",
-       "fields": [
-          {"name":"voter",            "type":"name"},
-          {"name":"reward",           "type":"asset"},
-          {"name":"delegator",        "type":"name"},
-          {"name":"payout_strategy",  "type":"uint8"}
-       ]
     },
     {
        "name": "vesting_state",
@@ -174,7 +179,8 @@
           {"name":"id",         "type":"uint64"},
           {"name":"withdraw",   "type":"vesting_withdraw"},
           {"name":"min_amount", "type":"vesting_amount"},
-          {"name":"delegation", "type":"vesting_delegation"}
+          {"name":"delegation", "type":"vesting_delegation"},
+          {"name":"bwprovider", "type":"vesting_bwprovider"}
 
        ]
     },
@@ -201,13 +207,21 @@
           {"name":"min_remainder",  "type":"uint64"},
           {"name":"return_time",    "type":"uint32"},
           {"name":"min_time",       "type":"uint32"},
-          {"name":"max_interest",   "type":"uint16"}
+          {"name":"max_delegators", "type":"uint32"}
+       ]
+    },
+    {
+       "name": "vesting_bwprovider",
+       "base": "",
+       "fields": [
+          {"type": "name", "name": "actor"},
+          {"type": "name", "name": "permission"}
        ]
     }
   ],
   "events": [
     {"name":"balance",  "type":"balance_event"},
-    {"name":"stat",  "type":"asset"}
+    {"name":"stat",  "type":"vesting_supply"}
   ],
   "actions": [
     {"name":"setparams",    "type":"setparams"},
@@ -221,10 +235,7 @@
     {"name":"stopwithdraw", "type":"stop_withdraw"},
     {"name":"delegate",     "type":"delegate"},
     {"name":"undelegate",   "type":"base_transfer"},
-    {"name":"paydelegator", "type":"paydelegator"},
-    {"name":"timeoutrdel",  "type":"empty"},
-    {"name":"timeoutconv",  "type":"empty"},
-    {"name":"timeout",      "type":"empty"}
+    {"name":"procwaiting",  "type":"procwaiting"}
   ],
   "tables": [
     {

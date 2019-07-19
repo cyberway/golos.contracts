@@ -12,16 +12,16 @@ void deposit::transfer( account_name from,
                         asset        quantity,
                         string       memo )
 {
-    //eosio_assert( from != to, "cannot transfer to self" );
+    //eosio::check( from != to, "cannot transfer to self" );
     require_auth( _self );
-    //eosio_assert( is_account( to ), "to account does not exist");
+    //eosio::check( is_account( to ), "to account does not exist");
 
     //require_recipient( from );
     //require_recipient( to );
 
-    //eosio_assert( quantity.is_valid(), "invalid quantity" );
-    //eosio_assert( quantity.amount > 0, "must transfer positive quantity" );
-    //eosio_assert( memo.size() <= 256, "memo has more than 256 bytes" );
+    //eosio::check( quantity.is_valid(), "invalid quantity" );
+    //eosio::check( quantity.amount > 0, "must transfer positive quantity" );
+    //eosio::check( memo.size() <= 256, "memo has more than 256 bytes" );
 
     action(
         permission_level{_self, N(trx)},
@@ -47,8 +47,8 @@ void deposit::sub_balance( account_name owner, asset value ) {
     balance_table table(_self, owner);
     auto iter = table.find(value.symbol.name());
 
-    eosio_assert(iter != table.end(), "no balance object found");
-    eosio_assert(iter->quantity >= value, "overdrawn balance");
+    eosio::check(iter != table.end(), "no balance object found");
+    eosio::check(iter->quantity >= value, "overdrawn balance");
 
     if(iter->quantity == value) {
         table.erase(iter);
@@ -83,7 +83,7 @@ extern "C" { \
       auto self = receiver; \
       if( action == N(onerror)) { \
          /* onerror is only valid if it is for the "eosio" code account and authorized by "eosio"'s "active permission */ \
-         eosio_assert(code == N(eosio), "onerror action's are only valid from the \"eosio\" system account"); \
+         eosio::check(code == N(eosio), "onerror action's are only valid from the \"eosio\" system account"); \
       } \
       if( code == self || action == N(onerror) ) { \
          TYPE thiscontract( self ); \

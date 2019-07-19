@@ -1,8 +1,9 @@
 #pragma once
 #include "parameters.hpp"
-#include <eosiolib/time.hpp>
-#include <eosiolib/asset.hpp>
-#include <eosiolib/eosio.hpp>
+#include <eosio/time.hpp>
+#include <eosio/asset.hpp>
+#include <eosio/eosio.hpp>
+#include <eosio/transaction.hpp>
 #include "config.hpp"
 
 namespace golos {
@@ -22,8 +23,7 @@ public:
 
     [[eosio::action]] void withdraw(name from, name to, asset quantity);
     [[eosio::action]] void stopwithdraw(name owner, symbol type);
-    [[eosio::action]] void delegate(name delegator, name delegatee, asset quantity,
-        uint16_t interest_rate, uint8_t payout_strategy);
+    [[eosio::action]] void delegate(name delegator, name delegatee, asset quantity, uint16_t interest_rate);
     [[eosio::action]] void undelegate(name delegator, name delegatee, asset quantity);
 
     [[eosio::action]] void create(symbol symbol, name notify_acc);
@@ -31,13 +31,9 @@ public:
     [[eosio::action]] void open(name owner, symbol symbol, name ram_payer);
     [[eosio::action]] void close(name owner, symbol symbol);
 
-    [[eosio::action]] void timeout();
-    [[eosio::action]] void timeoutconv();
-    [[eosio::action]] void timeoutrdel();
-    [[eosio::action]] void paydelegator(name account, asset reward, name delegator, uint8_t payout_strategy);
+    [[eosio::action]] void procwaiting(symbol symbol, name payer);
 
     void on_transfer(name from, name to, asset quantity, std::string memo);
-    void do_transfer_vesting(name from, name to, asset quantity, std::string memo);
     void on_bulk_transfer(name from, std::vector<token::recipient> recipients);
 
     // tables
@@ -55,6 +51,7 @@ public:
         asset delegated;        // TODO: this (incl. 2 fields below) can be share_type to reduce memory usage #554
         asset received;
         asset unlocked_limit;
+        uint32_t delegators = 0;
 
         uint64_t primary_key() const {
             return vesting.symbol.code().raw();
@@ -79,7 +76,6 @@ public:
         name delegatee;
         asset quantity;
         uint16_t interest_rate;
-        uint8_t payout_strategy;
         time_point_sec min_delegation_time;
 
         auto primary_key() const {
@@ -154,6 +150,21 @@ public:
     static inline asset get_account_unlocked_vesting(name code, name account, symbol_code sym) {
         return get_account(code, account, sym).unlocked_vesting();
     }
+    static inline asset get_withdrawing_vesting(name code, name account, symbol sym) {
+        withdraw_table tbl(code, sym.code().raw());
+        auto obj = tbl.find(account.value);
+        return obj != tbl.end() ? obj->to_withdraw : asset(0, sym);
+    }
+    static inline bool can_retire_vesting(name code, name account, asset value) {
+        auto sym = value.symbol;
+        auto acc = get_account(code, account, sym.code());
+        bool can = acc.unlocked_vesting() >= value;
+        if (can) {
+            auto withdrawing = get_withdrawing_vesting(code, account, sym);
+            can = std::min(acc.available_vesting() - withdrawing, acc.unlocked_limit) >= value;
+        }
+        return can;
+    }
 
     static inline std::vector<delegation> get_account_delegators(name code, name owner, symbol_code sym) {
         std::vector<delegation> result;
@@ -168,6 +179,10 @@ public:
     }
 
 private:
+    void providebw_for_trx(eosio::transaction& trx, const permission_level& provider);
+    bool process_withdraws(eosio::time_point now, symbol symbol, name payer);
+    bool return_delegations(eosio::time_point till, symbol symbol, name payer);
+    void do_transfer_vesting(name from, name to, asset quantity, std::string memo);
     void notify_balance_change(name owner, asset diff);
     void sub_balance(name owner, asset value, bool retire_mode = false);
     void add_balance(name owner, asset value, name ram_payer);

@@ -6,6 +6,7 @@
 #include "golos.social_test_api.hpp"
 #include "../golos.publication/types.h"
 #include "contracts.hpp"
+#include <eosio/chain/asset.hpp>
 
 using namespace golos;
 using namespace fixed_point_utils;
@@ -41,10 +42,11 @@ public:
         create_accounts({cfg::charge_name, cfg::token_name, cfg::vesting_name, cfg::emission_name, cfg::control_name, N(dan.larimer)});
         produce_block();
 
-        install_contract(_code, contracts::posting_wasm(), contracts::posting_abi());
-        install_contract(cfg::vesting_name, contracts::vesting_wasm(), contracts::vesting_abi());
-        install_contract(cfg::charge_name, contracts::charge_wasm(), contracts::charge_abi());
         install_contract(cfg::token_name, contracts::token_wasm(), contracts::token_abi());
+        vest.add_changevest_auth_to_issuer(cfg::emission_name, cfg::control_name);
+        vest.initialize_contract(cfg::token_name);
+        charge.initialize_contract();
+        post.initialize_contract(cfg::token_name, cfg::charge_name);
     }
 
     void init() {
@@ -66,7 +68,7 @@ public:
     }
 
     void prepare_balances() {
-        BOOST_CHECK_EQUAL(success(), token.create(cfg::emission_name, token.make_asset(1e5), {_code}));
+        BOOST_CHECK_EQUAL(success(), token.create(cfg::emission_name, token.make_asset(1e5)));
         produce_block();
 
         BOOST_CHECK_EQUAL(success(), vest.create_vesting(cfg::emission_name));
@@ -118,12 +120,13 @@ protected:
 
     struct errors: contract_error_messages {
         const string msg_exists            = amsg("This message already exists.");
-        const string unregistered_user_    = amsg("unregistered user: ");
+        const string no_vest_balance       = amsg("vesting balance doesn't exist for ");
         const string no_content            = amsg("Content doesn't exist.");
 
         const string delete_children       = amsg("You can't delete comment with child comments.");
         const string no_permlink           = amsg("Permlink doesn't exist.");
         const string no_message            = amsg("Message doesn't exist in cashout window.");
+        const string message_closed        = amsg("Message is closed.");
         const string vote_same_weight      = amsg("Vote with the same weight has already existed.");
         const string vote_weight_0         = amsg("weight can't be 0.");
         const string vote_weight_gt100     = amsg("weight can't be more than 100%.");
@@ -158,6 +161,11 @@ protected:
         const string no_reblog_mssg = amsg("You can't reblog, because this message doesn't exist.");
         const string own_reblog = amsg("You cannot reblog your own content.");
         const string wrong_reblog_body_length = amsg("Body must be set if title is set.");
+
+        const string max_payout_negative = amsg("max_payout must not be negative.");
+        const string max_payout_greater_prev = amsg("Cannot replace max payout with greater one.");
+        const string no_max_payout = amsg("Max payout can be changed only before voting.");
+        const string same_max_payout_val = amsg("Same max payout is already set.");
     } err;
 };
 
@@ -275,7 +283,7 @@ BOOST_FIXTURE_TEST_CASE(create_message, golos_publication_tester) try {
 
     BOOST_CHECK_EQUAL(success(), post.create_msg({N(jackiechan), "permlink3"}, {N(brucelee), "permlink"}));
 
-    BOOST_CHECK_EQUAL(err.unregistered_user_ + "dan.larimer", post.create_msg({N(dan.larimer), "hi"}));
+    BOOST_CHECK_EQUAL(err.no_vest_balance + "dan.larimer", post.create_msg({N(dan.larimer), "hi"}));
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE(update_message, golos_publication_tester) try {
@@ -326,6 +334,8 @@ BOOST_FIXTURE_TEST_CASE(delete_message, golos_publication_tester) try {
     BOOST_CHECK_EQUAL(post.get_message({N(brucelee), "permlink-done"}).is_null(), false);
     BOOST_CHECK_EQUAL(post.get_message({N(jackiechan), "child-done"}).is_null(), false);
 
+    produce_block();
+    BOOST_CHECK_EQUAL(success(), post.closemssgs());
     produce_block();
     BOOST_CHECK_EQUAL(post.get_message({N(brucelee), "permlink-done"}).is_null(), true);
     BOOST_CHECK_EQUAL(post.get_message({N(jackiechan), "child-done"}).is_null(), true);
@@ -381,6 +391,7 @@ BOOST_FIXTURE_TEST_CASE(upvote, golos_publication_tester) try {
     produce_block();
     //BOOST_CHECK_EQUAL(err.upvote_near_close, vote_jackie(cfg::_100percent));          // TODO Fix broken test GolosChain/golos-smart#410
     produce_blocks(seconds_to_blocks(post.upvote_lockout) - 1);
+    BOOST_CHECK_EQUAL(success(), post.closemssgs());
     //BOOST_CHECK_EQUAL(err.upvote_near_close, vote_jackie(cfg::_100percent));          // TODO Fix broken test GolosChain/golos-smart#410
 
     BOOST_TEST_MESSAGE("--- succeed vote after cashout");
@@ -425,7 +436,7 @@ BOOST_FIXTURE_TEST_CASE(downvote, golos_publication_tester) try {
 
     BOOST_TEST_MESSAGE("--- succeed vote after cashout");
     produce_blocks(seconds_to_blocks(post.window) - post.max_vote_changes - 1);
-    BOOST_CHECK_EQUAL(err.no_revote, vote_jackie(cfg::_100percent));
+    BOOST_CHECK_EQUAL(success(), post.closemssgs());
     produce_block();
     BOOST_CHECK_EQUAL(err.no_message, vote_jackie(cfg::_100percent));
 } FC_LOG_AND_RETHROW()
@@ -477,6 +488,38 @@ BOOST_FIXTURE_TEST_CASE(delete_post_with_vote_test, golos_publication_tester) tr
 //    BOOST_CHECK_EQUAL(err.delete_rshares, post.delete_msg({N(brucelee), "upvote-me"}));    // TODO:
 } FC_LOG_AND_RETHROW()
 
+BOOST_FIXTURE_TEST_CASE(delete_post_with_a_large_number_of_votes_test, golos_publication_tester) try {
+    BOOST_TEST_MESSAGE("Delete post with a large number of votes testing.");
+    vector<account_name> additional_users;
+    auto total_users_num = 357;
+    auto add_users_num = total_users_num - _users.size();
+    for (size_t u = 0; u < add_users_num; u++) {
+        additional_users.push_back(user_name(u));
+    }
+    create_accounts(additional_users);
+    _users.insert(_users.end(), additional_users.begin(), additional_users.end());
+    init();
+    auto i = 0;
+    BOOST_CHECK_EQUAL(success(), post.create_msg({N(chucknorris), "permlink"}));
+    for (auto u : _users) {
+        BOOST_CHECK_EQUAL(success(), post.downvote(u, {N(chucknorris), "permlink"}, 333));
+        if (i++ % 30 == 0) {
+            produce_block();
+        }
+    }
+    produce_block();
+    i = 0;
+    for (auto u : _users) {
+        BOOST_TEST_CHECK(!post.get_vote(N(chucknorris), i++).is_null());
+    }
+    BOOST_CHECK_EQUAL(success(), post.delete_msg({N(chucknorris), "permlink"}));
+    produce_block();
+    i = 0;
+    for (auto u : _users) {
+        BOOST_TEST_CHECK(post.get_vote(N(chucknorris), i++).is_null());
+    }
+} FC_LOG_AND_RETHROW()
+
 BOOST_FIXTURE_TEST_CASE(nesting_level_test, golos_publication_tester) try {
     BOOST_TEST_MESSAGE("nesting level test.");
     init();
@@ -510,6 +553,8 @@ BOOST_FIXTURE_TEST_CASE(comments_cashout_time_test, golos_publication_tester) tr
     BOOST_CHECK_EQUAL(post.get_message({N(brucelee), "permlink"}).is_null(), false);
 
     produce_block();
+    BOOST_CHECK_EQUAL(success(), post.closemssgs());
+    produce_block();
 
     BOOST_TEST_MESSAGE("--- checking that messages was closed.");
     BOOST_CHECK_EQUAL(post.get_message({N(brucelee), "permlink"}).is_null(), true);
@@ -518,6 +563,8 @@ BOOST_FIXTURE_TEST_CASE(comments_cashout_time_test, golos_publication_tester) tr
     BOOST_TEST_MESSAGE("--- checking that comment wasn't closed.");
     BOOST_CHECK_EQUAL(post.get_message({N(chucknorris), "comment-permlink"}).is_null(), false);
 
+    produce_block();
+    BOOST_CHECK_EQUAL(success(), post.closemssgs());
     produce_block();
     BOOST_TEST_MESSAGE("--- checking that comment was closed.");
     BOOST_CHECK_EQUAL(post.get_message({N(chucknorris), "comment-permlink"}).is_null(), true);
@@ -531,6 +578,8 @@ BOOST_FIXTURE_TEST_CASE(comments_cashout_time_test, golos_publication_tester) tr
     BOOST_CHECK_EQUAL(post.get_message({N(jackiechan), "sorry-guys-i-am-late"}).is_null(), false);
 
     BOOST_TEST_MESSAGE("--- checking that closed message comment was closed.");
+    produce_block();
+    BOOST_CHECK_EQUAL(success(), post.closemssgs());
     produce_block();
     BOOST_CHECK_EQUAL(post.get_message({N(jackiechan), "sorry-guys-i-am-late"}).is_null(), true);
 
@@ -575,14 +624,14 @@ BOOST_FIXTURE_TEST_CASE(upvote_near_close, golos_publication_tester) try {
 
     auto permlink = "permlink";
 
-    BOOST_CHECK_EQUAL(success(), token.issue(cfg::emission_name, N(brucelee), token.make_asset(500), "issue tokens brucelee"));
-    BOOST_CHECK_EQUAL(success(), token.issue(cfg::emission_name, N(jackiechan), token.make_asset(500), "issue tokens jackiechan"));
-    BOOST_CHECK_EQUAL(success(), token.issue(cfg::emission_name, N(chucknorris), token.make_asset(500), "issue tokens chucknorris"));
+    BOOST_CHECK_EQUAL(success(), token.issue(cfg::emission_name, N(brucelee), token.make_asset(5000), "issue tokens brucelee"));
+    BOOST_CHECK_EQUAL(success(), token.issue(cfg::emission_name, N(jackiechan), token.make_asset(5000), "issue tokens jackiechan"));
+    BOOST_CHECK_EQUAL(success(), token.issue(cfg::emission_name, N(chucknorris), token.make_asset(5000), "issue tokens chucknorris"));
     produce_block();
 
-    BOOST_CHECK_EQUAL(success(), token.transfer(N(brucelee), cfg::vesting_name, token.make_asset(100), "buy vesting"));
-    BOOST_CHECK_EQUAL(success(), token.transfer(N(jackiechan), cfg::vesting_name, token.make_asset(100), "buy vesting"));
-    BOOST_CHECK_EQUAL(success(), token.transfer(N(chucknorris), cfg::vesting_name, token.make_asset(100), "buy vesting"));
+    BOOST_CHECK_EQUAL(success(), token.transfer(N(brucelee), cfg::vesting_name, token.make_asset(1000), "buy vesting"));
+    BOOST_CHECK_EQUAL(success(), token.transfer(N(jackiechan), cfg::vesting_name, token.make_asset(1000), "buy vesting"));
+    BOOST_CHECK_EQUAL(success(), token.transfer(N(chucknorris), cfg::vesting_name, token.make_asset(1000), "buy vesting"));
     produce_block();
 
     auto vote_brucelee = [&](auto weight){ return post.upvote(N(brucelee), {N(brucelee), permlink}, weight); };
@@ -607,10 +656,7 @@ BOOST_FIXTURE_TEST_CASE(upvote_near_close, golos_publication_tester) try {
 
     produce_blocks(seconds_to_blocks(post.window - post.upvote_lockout) - post.max_vote_changes + 1);
     BOOST_TEST_MESSAGE("--- fail while upvote lockout");
-
-    BOOST_CHECK_EQUAL(err.upvote_near_close, vote_jackie(cfg::_100percent));          // TODO Fix broken test GolosChain/golos-smart#410
-    produce_blocks(seconds_to_blocks(post.upvote_lockout) - 1);
-    BOOST_CHECK_EQUAL(err.upvote_near_close, vote_chucknorris(cfg::_100percent));          // TODO Fix broken test GolosChain/golos-smart#410
+    BOOST_CHECK_EQUAL(err.upvote_near_close, vote_jackie(cfg::_100percent));
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE(set_curators_prcnt, golos_publication_tester) try {
@@ -653,11 +699,77 @@ BOOST_FIXTURE_TEST_CASE(set_curators_prcnt, golos_publication_tester) try {
     BOOST_CHECK_EQUAL(post.get_message({N(brucelee), "permlink"})["curators_prcnt"], 7300);
 
     BOOST_TEST_MESSAGE("--- checking that curators percent can't be changed");
-    BOOST_CHECK_EQUAL(success(), token.issue(cfg::emission_name, N(jackiechan), token.make_asset(500), "issue tokens jackiechan"));
-    BOOST_CHECK_EQUAL(success(), token.transfer(N(jackiechan), cfg::vesting_name, token.make_asset(100), "buy vesting"));
-    BOOST_CHECK_EQUAL(success(), post.upvote(N(jackiechan), {N(brucelee), "permlink"}, 123));
+    BOOST_CHECK_EQUAL(success(), token.issue(cfg::emission_name, N(jackiechan), token.make_asset(50000), "issue tokens jackiechan"));
+    BOOST_CHECK_EQUAL(success(), token.transfer(N(jackiechan), cfg::vesting_name, token.make_asset(10000), "buy vesting"));
+    BOOST_CHECK_EQUAL(success(), post.upvote(N(jackiechan), {N(brucelee), "permlink"}, 10000));
     BOOST_CHECK_EQUAL(err.no_cur_percent, post.set_curators_prcnt({N(brucelee), "permlink"}, 7500));
     BOOST_CHECK_EQUAL(post.get_message({N(brucelee), "permlink"})["curators_prcnt"], 7300);
+} FC_LOG_AND_RETHROW()
+
+BOOST_FIXTURE_TEST_CASE(set_max_payout, golos_publication_tester) try {
+    BOOST_TEST_MESSAGE("Test setting max payout of message");
+
+    init();
+
+    auto create_msg = [&](optional<asset> max_payout = optional<asset>(), mssgid message_id = {}){
+        if (message_id == mssgid())
+            message_id = {N(brucelee), "permlink"};
+        return post.create_msg(
+            message_id,
+            {N(), "parentprmlnk"},
+            {},
+            5000,
+            false,
+            "headermssg",
+            "bodymssg",
+            "languagemssg",
+            {{"tag"}},
+            "jsonmetadata",
+            2500,
+            max_payout
+            );
+    };
+
+    BOOST_TEST_MESSAGE("--- checking cannot create msg with negative max_payout");
+    BOOST_CHECK_EQUAL(err.max_payout_negative, create_msg(token.make_asset(-1)));
+
+    BOOST_TEST_MESSAGE("--- checking cannot create msg with wrong-symbol max_payout");
+    BOOST_CHECK_EQUAL(err.wrong_asset_symbol, create_msg(asset(10, symbol(4, "WRONG"))));
+
+    BOOST_TEST_MESSAGE("--- checking default max_payout on creating msg");
+    BOOST_CHECK_EQUAL(success(), create_msg());
+    BOOST_CHECK_EQUAL(post.get_message({N(brucelee), "permlink"})["max_payout"].as<asset>().get_amount(), MAX_ASSET_AMOUNT);
+
+    BOOST_TEST_MESSAGE("--- checking max_payout setted on creating msg");
+    BOOST_CHECK_EQUAL(success(), create_msg(token.make_asset(50000), {N(jackiechan), "permlink"}));
+    BOOST_CHECK_EQUAL(post.get_message({N(jackiechan), "permlink"})["max_payout"].as<asset>(), token.make_asset(50000));
+
+    BOOST_TEST_MESSAGE("--- checking max_payout can be changed");
+    BOOST_CHECK_EQUAL(success(), post.set_max_payout({N(brucelee), "permlink"}, token.make_asset(2000)));
+    BOOST_CHECK_EQUAL(post.get_message({N(brucelee), "permlink"})["max_payout"].as<asset>(), token.make_asset(2000));
+
+    BOOST_TEST_MESSAGE("--- checking max_payout cannot be changed to wrong value");
+    BOOST_CHECK_EQUAL(err.max_payout_negative, post.set_max_payout({N(brucelee), "permlink"}, token.make_asset(-1)));
+    BOOST_CHECK_EQUAL(err.wrong_asset_symbol, post.set_max_payout({N(brucelee), "permlink"}, asset(10, symbol(4, "WRONG"))));
+    produce_block();
+    BOOST_CHECK_EQUAL(err.same_max_payout_val, post.set_max_payout({N(brucelee), "permlink"}, token.make_asset(2000)));
+    BOOST_CHECK_EQUAL(err.max_payout_greater_prev, post.set_max_payout({N(brucelee), "permlink"}, token.make_asset(3000)));
+
+    BOOST_TEST_MESSAGE("--- checking max_payout cannot be changed after message voted");
+    BOOST_CHECK_EQUAL(success(), token.issue(cfg::emission_name, N(jackiechan), token.make_asset(50000), "issue tokens jackiechan"));
+    BOOST_CHECK_EQUAL(success(), token.transfer(N(jackiechan), cfg::vesting_name, token.make_asset(10000), "buy vesting"));
+    BOOST_CHECK_EQUAL(success(), post.upvote(N(jackiechan), {N(brucelee), "permlink"}, 10000));
+    BOOST_CHECK_EQUAL(err.no_max_payout, post.set_max_payout({N(brucelee), "permlink"}, token.make_asset(1000)));
+
+    BOOST_TEST_MESSAGE("--- checking max_payout cannot be changed after message closed");
+    produce_blocks(seconds_to_blocks(post.window));
+    BOOST_CHECK_EQUAL(success(), post.closemssgs());
+    produce_block();
+    BOOST_CHECK_EQUAL(err.no_message, post.set_max_payout({N(brucelee), "permlink"}, token.make_asset(1000)));
+
+    BOOST_TEST_MESSAGE("--- checking max_payout cannot be set for not-exist message");
+    BOOST_CHECK_EQUAL(err.no_permlink, post.set_max_payout({N(brucelee), "notexist"}, token.make_asset(1000)));
+
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE(reblog_message, golos_publication_tester) try {
@@ -707,6 +819,10 @@ BOOST_FIXTURE_TEST_CASE(reblog_message, golos_publication_tester) try {
                                                  {N(brucelee), "permlink"},
                                                  "",
                                                  "bodymssg"));
+
+    BOOST_TEST_MESSAGE("--- checking message for erase reblog.");
+    BOOST_CHECK_EQUAL(success(), post.erase_reblog_msg(N(chucknorris),
+                                                 {N(brucelee), "permlink"}));
 } FC_LOG_AND_RETHROW()
 
 BOOST_AUTO_TEST_SUITE_END()

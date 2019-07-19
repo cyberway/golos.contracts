@@ -1,7 +1,7 @@
 #include "golos.emit/golos.emit.hpp"
 #include <common/parameter_ops.hpp>
-#include <eosiolib/transaction.hpp>
-#include <eosiolib/time.hpp>
+#include <eosio/transaction.hpp>
+#include <eosio/time.hpp>
 
 namespace golos {
 
@@ -19,6 +19,7 @@ emission::emission(name self, name code, datastream<const char*> ds)
 }
 
 struct emit_params_setter: set_params_visitor<emit_state> {
+    std::optional<bwprovider> new_bwprovider;
     using set_params_visitor::set_params_visitor; // enable constructor
 
     bool operator()(const infrate_params& p) {
@@ -33,6 +34,10 @@ struct emit_params_setter: set_params_visitor<emit_state> {
     bool operator()(const emit_interval_param& p) {
         return set_param(p, &emit_state::interval);
     }
+    bool operator()(const bwprovider_param& p) {
+        new_bwprovider = p;
+        return set_param(p, &emit_state::bwprovider);
+    }
 };
 
 void emission::validateprms(vector<emit_param> params) {
@@ -42,21 +47,27 @@ void emission::validateprms(vector<emit_param> params) {
 
 void emission::setparams(vector<emit_param> params) {
     require_auth(_self);
-    param_helper::set_parameters<emit_params_setter>(params, _cfg, _self);
+    auto setter = param_helper::set_parameters<emit_params_setter>(params, _cfg, _self);
+    if (setter.new_bwprovider) {
+        auto provider = setter.new_bwprovider->provider;
+        if (provider.actor != name()) {
+            dispatch_inline("cyber"_n, "providebw"_n, {provider}, std::make_tuple(provider.actor, _self));
+        }
+    }
 }
 
 
 void emission::start() {
     // TODO: disallow if no initial parameters set
     require_auth(_self);
-    auto interval = _cfg.get().interval.value;
-    auto now = current_time();
+    auto interval = cfg().interval.value;
+    auto now = static_cast<uint64_t>(eosio::current_time_point().time_since_epoch().count());
     state s = {
         .start_time = now,
         .prev_emit = now - seconds(interval).count()   // instant emit. TODO: maybe delay on first start?
     };
     s = _state.get_or_create(_self, s);
-    eosio_assert(!s.active, "already active");
+    eosio::check(!s.active, "already active");
     s.active = true;
 
     uint32_t elapsed = microseconds(now - s.prev_emit).to_seconds();
@@ -67,7 +78,7 @@ void emission::start() {
 void emission::stop() {
     require_auth(_self);
     auto s = _state.get();  // TODO: create own singleton allowing custom assert message
-    eosio_assert(s.active, "already stopped");
+    eosio::check(s.active, "already stopped");
     auto id = s.tx_id;
     s.active = false;
     s.tx_id = 0;
@@ -78,22 +89,21 @@ void emission::stop() {
 }
 
 void emission::emit() {
-    require_auth(_self);
     auto s = _state.get();
-    eosio_assert(s.active, "emit called in inactive state");    // impossible?
-    auto now = current_time();
+    eosio::check(s.active, "emit called in inactive state");    // impossible?
+    auto now = eosio::current_time_point().time_since_epoch().count();
     auto elapsed = now - s.prev_emit;
-    auto interval = _cfg.get().interval.value;
+    auto& interval = cfg().interval.value;
     auto emit_interval = seconds(interval).count();
     if (elapsed != emit_interval) {
-        eosio_assert(elapsed > emit_interval, "emit called too early");   // possible only on manual call
+        eosio::check(elapsed > emit_interval, "emit called too early");   // possible only on manual call
         print("warning: emit call delayed. elapsed: ", elapsed);
     }
     // TODO: maybe limit elapsed to avoid instant high value emission
 
-    auto token = _cfg.get().token;
-    auto pools = _cfg.get().pools.pools;
-    auto infrate = _cfg.get().infrate;
+    auto& token = cfg().token;
+    auto& pools = cfg().pools.pools;
+    auto& infrate = cfg().infrate;
     auto narrowed = microseconds(now - s.start_time).to_seconds() / infrate.narrowing;
     auto inf_rate = std::max(int64_t(infrate.start) - narrowed, int64_t(infrate.stop));
 
@@ -106,15 +116,14 @@ void emission::emit() {
     if (new_tokens > 0) {
         const auto issue_memo = "emission"; // TODO: make configurable?
         const auto trans_memo = "emission";
-        auto from = _self;
         INLINE_ACTION_SENDER(token, issue)(config::token_name,
-            {{issuer, config::active_name}},
-            {_self, asset(new_tokens, token.symbol), issue_memo});
+            {{issuer, config::issue_name}},
+            {issuer, asset(new_tokens, token.symbol), issue_memo});
 
         auto transfer = [&](auto from, auto to, auto amount) {
             if (amount > 0) {
                 auto memo = to == config::vesting_name ? "" : trans_memo;   // vesting contract requires empty memo to add to supply
-                INLINE_ACTION_SENDER(token, transfer)(config::token_name, {from, config::active_name},
+                INLINE_ACTION_SENDER(token, transfer)(config::token_name, {from, config::issue_name},
                     {from, to, asset(amount, token.symbol), memo});
             }
         };
@@ -126,12 +135,12 @@ void emission::emit() {
                 continue;
             }
             auto reward = total * pool.percent / config::_100percent;
-            eosio_assert(reward <= new_tokens, "SYSTEM: not enough tokens to pay emission reward"); // must not happen
-            transfer(from, pool.name, reward);
+            eosio::check(reward <= new_tokens, "SYSTEM: not enough tokens to pay emission reward"); // must not happen
+            transfer(issuer, pool.name, reward);
             new_tokens -= reward;
         }
-        eosio_assert(remainder != name(), "SYSTEM: emission remainder pool is not set"); // must not happen
-        transfer(from, remainder, new_tokens);
+        eosio::check(remainder != name(), "SYSTEM: emission remainder pool is not set"); // must not happen
+        transfer(issuer, remainder, new_tokens);
     } else {
         print("no emission\n");
     }
@@ -141,10 +150,18 @@ void emission::emit() {
 }
 
 void emission::schedule_next(state& s, uint32_t delay) {
-    auto sender_id = (uint128_t(_cfg.get().token.symbol.raw()) << 64) | s.prev_emit;
+    auto sender_id = (uint128_t(cfg().token.symbol.raw()) << 64) | s.prev_emit;
+    auto& provider = cfg().bwprovider.provider;
+    auto& pools = cfg().pools.pools;
 
     transaction trx;
-    trx.actions.emplace_back(action{permission_level(_self, config::active_name), _self, "emit"_n, std::tuple<>()});
+    trx.actions.emplace_back(action{permission_level(_self, config::code_name), _self, "emit"_n, std::tuple<>()});
+    if (provider.actor != name()) {
+        trx.actions.emplace_back(action{provider, "cyber"_n, "providebw"_n, std::make_tuple(provider.actor, _self)});
+        for (const auto& pool: pools) {
+            trx.actions.emplace_back(action{provider, "cyber"_n, "providebw"_n, std::make_tuple(provider.actor, pool)});
+        }
+    }
     trx.delay_sec = delay;
     trx.send(sender_id, _self);
 

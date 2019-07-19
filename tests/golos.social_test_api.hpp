@@ -1,6 +1,7 @@
 #pragma once
 #include "test_api_helper.hpp"
 #include "../golos.social/types.h"
+#include "contracts.hpp"
 
 namespace eosio { namespace testing {
 
@@ -10,6 +11,10 @@ struct golos_social_api: base_contract_api {
     :   base_contract_api(tester, code)
     ,   _symbol(sym) {}
     symbol _symbol;
+
+    void initialize_contract() {
+        _tester->install_contract(_code, contracts::social_wasm(), contracts::social_abi());
+    }
 
     //// social actions
     action_result pin(account_name pinner, account_name pinning) {

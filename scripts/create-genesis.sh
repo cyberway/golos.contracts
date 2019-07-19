@@ -5,7 +5,7 @@ set -e
 : ${GOLOS_STATE:="golos.dat"}
 : ${GOLOS_IMAGE:="cyberway/golos.contracts:latest"}
 
-INITIAL_TIMESTAMP=$(date +"%FT%T.%3N" -d0)
+INITIAL_TIMESTAMP=$(date +"%FT%T.%3N" --utc)
 
 echo "Create directory $DEST"
 [ -d $DEST ] || mkdir $DEST
@@ -16,6 +16,7 @@ docker image ls $GOLOS_IMAGE | tail -n +2
 docker run --rm \
     -v `readlink -f $GOLOS_STATE`:/golos.dat \
     -v `readlink -f $GOLOS_STATE.map`:/golos.dat.map \
+    -v `readlink -f $GOLOS_STATE.reputation`:/golos.dat.reputation \
     -v `readlink -f $DEST`:/genesis-data \
     $GOLOS_IMAGE bash -c \
     'ls -l / /opt/cyberway/bin/ /opt/golos.contracts /opt/golos.contracts/genesis &&

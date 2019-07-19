@@ -19,27 +19,82 @@ class Struct(object): pass
 
 args = None
 logFile = None
+golosAccounts = []
 
 unlockTimeout = 999999999
 
-_golosAccounts = [
-    # name           inGenesis    contract
-    ('gls',          True,       None),
-    ('gls.ctrl',     True,       'golos.ctrl'),
-    ('gls.emit',     True,       'golos.emit'),
-    ('gls.vesting',  True,       'golos.vesting'),
-    ('gls.publish',  True,       'golos.publication'),
-    ('gls.social',   True,       'golos.social'),
-    ('gls.charge',   True,       'golos.charge'),
-    ('gls.referral', True,       'golos.referral'),
-    ('gls.worker',   True,       None),
-]
-
-golosAccounts = []
-for (name, inGenesis, contract) in _golosAccounts:
-    acc = Struct()
-    (acc.name, acc.inGenesis, acc.contract) = (name, inGenesis, contract)
-    golosAccounts.append(acc)
+def fillGolosAccounts(golosAccounts):
+    _golosAccounts = [
+        # name           inGenesis    contract    permissions (name, keys, accounts, links)
+        ('gls',          True,       None,
+            [("owner",       [], ["gls@witn.smajor"], []),
+             ("active",      [], ["gls@witn.smajor", "gls.ctrl@cyber.code", "gls@testing"], []),
+             ("golos.io",    ["GLS7KqcmMzmVURzrPvpjfq8ZJSS7Dno82xQ7rpHVYxhz5JnZ9RxY9"], [], []),
+             ("testing",     ["GLS5a2eDuRETEg7uy8eHbiCqGZM3wnh2pLjiXrFduLWBKVZKCkB62"], [], []),
+             ("issue",       [], ["gls.emit@cyber.code", "gls@testing"], ["cyber.token:issue", "cyber.token:transfer"]),
+             ("createuser",  [], ["gls@golos.io"], ["cyber.domain:newusername"]),
+             ("invoice",     [], ["gls.charge@cyber.code", "gls.publish@cyber.code"], ["gls.charge:*", "gls.vesting:retire"]),
+             ("changevest",  [], ["gls.vesting@cyber.code"], ["gls.ctrl:changevest"]),
+             ("providebw",   [], ["gls@golos.io", "gls.emit@cyber.code", "gls.vesting@cyber.code", "gls.publish@cyber.code"], ["cyber:providebw"]},
+             ("witn.smajor", [], [], []),
+             ("witn.major",  [], [], []),
+             ("witn.minor",  [], [], []),
+            ]),
+        ('gls.ctrl',     True,       'golos.ctrl',
+            [("owner",       [], ["gls@owner"], []),
+             ("active",      [], ["gls@active"], []),
+             ("code",        [], ["gls.ctrl@cyber.code"], ["cyber.token:transfer", "cyber.token:payment", "cyber.token:bulkpayment", "cyber.token:bulktransfer"]),
+            ]),
+        ('gls.emit',     True,       'golos.emit',
+            [("owner",       [], ["gls@owner"], []),
+             ("active",      [], ["gls@active"], []),
+             ("code",        [], ["gls.emit@cyber.code"], ["gls.emit:emit"]),
+            ]),
+        ('gls.vesting',  True,       'golos.vesting',
+            [("owner",       [], ["gls@owner"], []),
+             ("active",      [], ["gls@active"], []),
+             ("code",        [], ["gls.vesting@cyber.code"], ["cyber.token:transfer", "cyber.token:payment", "gls.vesting:timeout", "gls.vesting:timeoutconv", "gls.vesting:timeoutrdel"]),
+            ]),
+        ('gls.publish',  True,       'golos.publication',
+            [("owner",       [], ["gls@owner"], []),
+             ("active",      [], ["gls@active"], []),
+             ("code",        [], ["gls.publish@cyber.code"], ["cyber.token:transfer", "cyber.token:payment", "cyber.token:bulktransfer", "cyber.token:bulkpayment", "gls.publish:closemssgs", "gls.publish:paymssgrwrd", "gls.publish:deletevotes"]),
+             ("calcrwrdwt",  [], ["gls.charge@cyber.code"], ["gls.publish:calcrwrdwt"]),
+            ]),
+        ('gls.social',   True,       'golos.social',
+            [("owner",       [], ["gls@owner"], []),
+             ("active",      [], ["gls@active"], []),
+            ]),
+        ('gls.charge',   True,       'golos.charge',
+            [("owner",       [], ["gls@owner"], []),
+             ("active",      [], ["gls@active"], []),
+            ]),
+        ('gls.referral', True,       'golos.referral',
+            [("owner",       [], ["gls@owner"], []),
+             ("active",      [], ["gls@active"], []),
+             ("newreferral", [], ["gls@golos.io"], ["gls.referral:addreferral"]),
+             ("code",        [], ["gls.referral@cyber.code"]),
+            ]),
+        ('gls.memo',     True,       None,
+            [("owner",       [], ["gls@owner"], []),
+             ("active",      [], ["gls@active"], []),
+            ]),
+        ('gls.worker',   True,       None,
+            [("owner",       [], ["gls@owner"], []),
+             ("active",      [], ["gls@active"], []),
+            ]),
+    ]
+    
+    for (name, inGenesis, contract, permissions) in _golosAccounts:
+        acc = Struct()
+        perms = []
+        for (pname, keys, accounts, links) in permissions:
+            perm = Struct()
+            parent = "owner" if pname == "active" else "active"
+            (perm.name, perm.parent, perm.keys, perm.accounts, perm.links) = (pname, parent, keys, accounts, links)
+            perms.append(perm)
+        (acc.name, acc.inGenesis, acc.contract, acc.permissions) = (name, inGenesis, contract, perms)
+        golosAccounts.append(acc)
 
 def jsonArg(a):
     return " '" + json.dumps(a) + "' "
@@ -123,6 +178,8 @@ def updateAuth(account, permission, parent, keys, accounts):
     }) + '-p ' + account)
 
 def linkAuth(account, code, action, permission):
+    if action == '*':
+        action = ''
     retry(args.cleos + 'set action permission %s %s %s %s -p %s'%(account, code, action, permission, account))
 
 def createAuthority(keys, accounts):
@@ -166,14 +223,14 @@ def voteWitness(ctrl, voter, witness):
     retry(args.cleos + ' push action ' + ctrl + ' votewitness ' +
         jsonArg([voter, witness]) + '-p %s'%voter)
 
-def createPost(author, permlink, header, body, curatorsPrcnt, *, beneficiaries=[]):
+def createPost(author, permlink, header, body, curatorsPrcnt, maxPayout, *, beneficiaries=[]):
     retry(args.cleos + 'push action gls.publish createmssg' +
-        jsonArg([author, permlink, "", "", beneficiaries, 0, False, header, body, 'ru', [], '', curatorsPrcnt]) +
+        jsonArg([author, permlink, "", "", beneficiaries, 0, False, header, body, 'ru', [], '', curatorsPrcnt, maxPayout]) +
         '-p %s'%author)
 
-def createComment(author, permlink, pauthor, ppermlink, header, body, curatorsPrcnt, *, beneficiaries=[]):
+def createComment(author, permlink, pauthor, ppermlink, header, body, curatorsPrcnt, maxPayout, *, beneficiaries=[]):
     retry(args.cleos + 'push action gls.publish createmssg' +
-        jsonArg([author, permlink, pauthor, ppermlink, beneficiaries, 0, False, header, body, 'ru', [], '', curatorsPrcnt]) +
+        jsonArg([author, permlink, pauthor, ppermlink, beneficiaries, 0, False, header, body, 'ru', [], '', curatorsPrcnt, maxPayout]) +
         '-p %s'%author)
 
 def upvotePost(voter, author, permlink, weight):
@@ -223,34 +280,12 @@ def createGolosAccounts():
     for acc in golosAccounts:
         if not (args.golos_genesis and acc.inGenesis):
             createAccount('cyber', acc.name, args.public_key)
+            for perm in acc.permissions:
+                updateAuth(acc.name, acc.name, acc.parent, acc.keys, acc.accounts)
+                for link in perm.links:
+                    (code, action) = link.split(':',2)
+                    linkAuth(acc.name, code, action, perm.name)
 
-    if not args.golos_genesis:
-        updateAuth('gls',  'witn.major', 'active', [args.public_key], [])
-        updateAuth('gls',  'witn.minor', 'active', [args.public_key], [])
-        updateAuth('gls',  'witn.smajor', 'active', [args.public_key], [])
-        updateAuth('gls',  'active', 'owner', [args.public_key], ['gls.ctrl@cyber.code', 'gls.emit@cyber.code'])
-        updateAuth('gls.ctrl',    'active', 'owner', [args.public_key], ['gls.ctrl@cyber.code'])
-        updateAuth('gls.publish', 'active', 'owner', [args.public_key], ['gls.publish@cyber.code'])
-        updateAuth('gls.vesting', 'active', 'owner', [args.public_key], ['gls.vesting@cyber.code'])
-        updateAuth('gls.social',  'active', 'owner', [args.public_key], ['gls.publish@cyber.code'])
-        updateAuth('gls.emit',    'active', 'owner', [args.public_key], ['gls.emit@cyber.code'])
-
-        updateAuth('gls', 'createuser', 'active', ['GLS5a2eDuRETEg7uy8eHbiCqGZM3wnh2pLjiXrFduLWBKVZKCkB62'], [])
-        linkAuth('gls', 'cyber', 'newaccount', 'createuser')
-        linkAuth('gls', 'cyber.domain', 'newusername', 'createuser')
-        linkAuth('gls', 'gls.vesting', 'open', 'createuser')
-        linkAuth('gls', 'cyber.token', 'open', 'createuser')
-
-        updateAuth('gls',  'issue', 'active', ['GLS5a2eDuRETEg7uy8eHbiCqGZM3wnh2pLjiXrFduLWBKVZKCkB62'], [])
-        linkAuth('gls', 'cyber.token', 'issue', 'issue')
-        linkAuth('gls', 'cyber.token', 'transfer', 'issue')
-
-        updateAuth('gls',  'invoice', 'active', ['gls.publish@cyber.code'])
-        linkAuth('gls', 'gls.charge', 'use', 'invoice')
-        linkAuth('gls', 'gls.charge', 'usenotifygt', 'invoice')
-
-        updateAuth('gls.publish', 'calcrwrdwt', 'active', ['gls.charge@cyber.code'])
-        linkAuth('gls.publish', 'gls.publush', 'calcrwrdwt', 'calcrwrdwt')
 
 def stepInstallContracts():
     for acc in golosAccounts:
@@ -306,7 +341,6 @@ def createCommunity():
                     'min_amount':5000000,
                     'min_remainder':15000000,
                     'min_time':0,
-                    'max_interest':0,
                     'return_time':120
                 }]
             ]]) + '-p gls')
@@ -335,16 +369,15 @@ def createCommunity():
             ]]) + '-p gls.ctrl')
 
         retry(args.cleos + 'push action gls.referral setparams ' + jsonArg([[
-            ['breakout_parametrs', {'min_breakout': intToToken(10000), 'max_breakout': intToToken(100000)}],
-            ['expire_parametrs', {'max_expire': 7*24*3600}],  # sec
-            ['percent_parametrs', {'max_percent': 5000}],     # 50.00%
-            ['delay_parametrs', {'delay_clear_old_ref': 1*24*3600}] # sec
+            ['breakout_parametrs', {'min_breakout': "0.001 %s" % args.symbol, 'max_breakout': intToToken(100)}],
+            ['percent_parametrs', {'max_percent': 1000}],     # 10.00%
+            ['expire_parametrs', {'max_expire': 6*30*24*3600}]  # sec
         ]]) + '-p gls.referral')
 
 def createWitnessAccounts():
     for i in range(firstWitness, firstWitness + numWitness):
         a = accounts[i]
-        createAccount('cyber', a['name'], a['pub'])
+        createAccount('gls', a['name'], a['pub'])
         openVestingBalance(a['name'])
         buyVesting(a['name'], intToToken(10000000*10000))
         registerWitness('gls.ctrl', a['name'])
@@ -372,11 +405,11 @@ def initCommunity():
 
     # testnet
     limits = [
-        # action            charge_id   price                cutoff        vest_price  min_vest
-        ("post",            1,          _100percent,         _100percent,  0,          0),
-        ("comment",         2,          _100percent/10,      _100percent,  0,          0),
-        ("vote",            0,          _100percent/(5*40),  _100percent,  0,          0),
-        ("post bandwidth",  3,          _100percent/4,       _100percent,  0,          0),
+        # action            charge_id   price                cutoff         vest_price  min_vest
+        ("post",            1,          _100percent,         _100percent,   0,          0),
+        ("comment",         2,          _100percent/10,      _100percent,   0,          0),
+        ("vote",            0,          _100percent/(5*40),  _100percent,   0,          0),
+        ("post bandwidth",  3,          _100percent,         _100percent*4, 0,          0),
     ]
     restorers = [
         # charge_id     restorer        max_prev    max_vest    max_elapsed
@@ -413,7 +446,7 @@ def initCommunity():
 def addUsers():
     for i in range(0, firstWitness-1):
         a = accounts[i]
-        createAccount('cyber', a['name'], a['pub'])
+        createAccount('gls', a['name'], a['pub'])
         openVestingBalance(a['name'])
         buyVesting(a['name'], intToToken(50000))
 
@@ -477,8 +510,9 @@ args.token = '%d,%s' % (args.token_precision, args.symbol)
 args.vesting = '%d,%s' % (args.vesting_precision, args.symbol)
 
 logFile = open(args.log_path, 'a')
-
 logFile.write('\n\n' + '*' * 80 + '\n\n\n')
+
+fillGolosAccounts(golosAccounts)
 
 accounts_filename = os.path.dirname(os.path.realpath(__file__)) + '/accounts.json'
 with open(accounts_filename) as f:

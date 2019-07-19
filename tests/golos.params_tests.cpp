@@ -99,7 +99,8 @@ public:
     }
 
     void prepare_balances() {
-        BOOST_CHECK_EQUAL(success(), token.create(BLOG, dasset(100500), {cfg::emission_name}));
+        token.create_invoice_authority(BLOG, {cfg::emission_name});
+        BOOST_CHECK_EQUAL(success(), token.create(BLOG, dasset(100500)));
         BOOST_CHECK_EQUAL(success(), vest.create_vesting(BLOG, _token));
         BOOST_CHECK_EQUAL(success(), vest.open(cfg::vesting_name, _token, cfg::vesting_name));
         vector<std::pair<uint64_t,double>> amounts = {
@@ -141,21 +142,22 @@ BOOST_FIXTURE_TEST_CASE(set_params, golos_params_tester) try {
     auto pools2 = "['reward_pools',{'pools':[" + emit.pool_json(_alice,1000) + "," + emit.pool_json(_bob,0) + "]}]";
     auto infrate = emit.infrate_json(0,0);
     auto infrate2 = emit.infrate_json(500,500);
+    auto bwprovider = emit.bwprovider_json(name(), name());
     auto token_symbol = emit.token_symbol_json(_token);
     auto interval = "['emit_interval',{'value':'" + std::to_string(_interval) + "'}]";
-    BOOST_CHECK_EQUAL(err.bad_variant_order, emit.set_params("[" + pools + "," + infrate + "," + token_symbol + "," + interval + "]"));
-    BOOST_CHECK_EQUAL(err.duplicates, emit.set_params("[" + infrate + "," + infrate + "," + token_symbol + "," + interval + "]"));
-    BOOST_CHECK_EQUAL(err.duplicates, emit.set_params("[" + infrate + "," + infrate2 + "," + token_symbol + "," + interval + "]"));
-    BOOST_CHECK_EQUAL(err.duplicates, emit.set_params("[" + pools + "," + pools2 + "," + token_symbol + "," + interval + "]"));
+    BOOST_CHECK_EQUAL(err.bad_variant_order, emit.set_params("[" + pools + "," + infrate + "," + token_symbol + "," + interval + "," + bwprovider + "]"));
+    BOOST_CHECK_EQUAL(err.duplicates, emit.set_params("[" + infrate + "," + infrate + "," + token_symbol + "," + interval + "," + bwprovider + "]"));
+    BOOST_CHECK_EQUAL(err.duplicates, emit.set_params("[" + infrate + "," + infrate2 + "," + token_symbol + "," + interval + "," + bwprovider + "]"));
+    BOOST_CHECK_EQUAL(err.duplicates, emit.set_params("[" + pools + "," + pools2 + "," + token_symbol + "," + interval + "," + bwprovider + "]"));
 
     BOOST_TEST_MESSAGE("--- setparams: fail if first call to setparams action contains not all parameters");
     BOOST_CHECK_EQUAL(err.incomplete, emit.set_params("[" + infrate + "]"));
     BOOST_CHECK_EQUAL(err.incomplete, emit.set_params("[" + emit.infrate_json(1,1) + "]"));
 
     BOOST_TEST_MESSAGE("--- success on valid parameters and changing parameters");
-    BOOST_CHECK_EQUAL(success(), emit.set_params("[" + infrate + "," + pools + "," + token_symbol + "," + interval + "]"));
+    BOOST_CHECK_EQUAL(success(), emit.set_params("[" + infrate + "," + pools + "," + token_symbol + "," + interval + "," + bwprovider + "]"));
     produce_block();
-    BOOST_CHECK_EQUAL(success(), emit.set_params("[" + infrate2 + "," + pools2 + "," + token_symbol + "," + interval + "]"));
+    BOOST_CHECK_EQUAL(success(), emit.set_params("[" + infrate2 + "," + pools2 + "," + token_symbol + "," + interval + "," + bwprovider + "]"));
     produce_block();
     BOOST_CHECK_EQUAL(success(), emit.set_params("[" + pools + "]"));
     produce_block();

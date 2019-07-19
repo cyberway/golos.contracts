@@ -2,9 +2,12 @@
 #include <boost/test/unit_test.hpp>
 #include <eosio/testing/tester.hpp>
 #include <eosio/chain/abi_serializer.hpp>
+#include <eosio/chain/permission_link_object.hpp>
 #include <fc/variant_object.hpp>
 
 #define UNIT_TEST_ENV
+
+#define MAX_ASSET_AMOUNT (1LL << 62) - 1
 
 // Note: cannot check nested mvo
 #define CHECK_EQUAL_OBJECTS(left, right) { \
@@ -24,9 +27,15 @@
         auto filtered = ::eosio::testing::filter_fields(a.get_object(), b.get_object()); \
         BOOST_CHECK_EQUAL_COLLECTIONS(a.get_object().begin(), a.get_object().end(), filtered.begin(), filtered.end()); }}
 
+#define CHECK_EQUAL_WITH_DELTA(left, right, delta) { \
+    BOOST_CHECK_EQUAL(typeid(left).name(), typeid(right).name()); \
+    BOOST_CHECK(std::abs(left - right) <= delta); \
+}
+
 namespace eosio { namespace testing {
 
 uint64_t hash64(const std::string& arg);
+authority create_code_authority(const std::vector<name> contracts);
 
 // TODO: maybe use native db struct
 struct permission {
@@ -36,6 +45,7 @@ struct permission {
 };
 
 struct contract_error_messages {
+    const string wrong_asset_symbol = amsg("comparison of assets with different symbols is not allowed");
 protected:
     const string amsg(const string& x) const { return base_tester::wasm_assert_msg(x); }
 };
@@ -60,6 +70,10 @@ public:
     void install_contract(account_name acc, const std::vector<uint8_t>& wasm, const std::vector<char>& abi, bool produce = true);
 
     std::vector<permission> get_account_permissions(account_name a);
+    fc::optional<permission> get_account_permission(account_name a, permission_name p);
+
+    bool has_code_authority(name account, permission_name perm, name code);
+    bool has_link_authority(name account, permission_name perm, name code, action_name action);
 
     action_result push_and_check_action(account_name, action_name, account_name, const variant_object&);
     action_result push_action(account_name code, action_name name, account_name signer, const variant_object& data);
@@ -72,8 +86,8 @@ public:
         variant r;
         try {
             bytes data = fc::raw::pack(key);
-            const auto& finfo = _chaindb.lower_bound({code, scope, tbl, indx}, data.data(), data.size());
-            r = _chaindb.value_at_cursor({code, finfo.cursor});
+            const auto& finfo = _chaindb.lower_bound({code, scope, tbl, indx}, cyberway::chaindb::cursor_kind::ManyRecords, data.data(), data.size());
+            r = _chaindb.object_at_cursor({code, finfo.cursor}).value;
         } catch (...) {
             // key not found
         }
