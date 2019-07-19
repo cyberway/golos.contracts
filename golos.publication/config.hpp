@@ -9,6 +9,8 @@ constexpr unsigned paymssgrwrd_expiration_sec = 3*60*60;
 constexpr unsigned deletevotes_expiration_sec = 3*60*60;
 constexpr unsigned closemssgs_expiration_sec  = 3*60*60;
 
+constexpr unsigned closemssgs_sender_id = 1;
+
 constexpr size_t target_payments_per_trx = 20;
 constexpr size_t max_payments_per_trx    = 20;
 constexpr size_t max_deletions_per_trx   = 100;

@@ -445,7 +445,7 @@ void vesting::procwaiting(symbol symbol, name payer) {
         trx.actions.emplace_back(action{permission_level(_self, config::code_name), _self, "procwaiting"_n, std::make_tuple(symbol, _self)});
         providebw_for_trx(trx, cfg.get().bwprovider.provider);
         trx.delay_sec = 120;
-        trx.send(static_cast<uint128_t>(now.time_since_epoch().count()) << 64, payer, true);
+        trx.send(static_cast<uint128_t>(config::procwaiting_sender_id) << 64, payer, true);
     }
 }
 
