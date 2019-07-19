@@ -6,8 +6,7 @@
           "types": [
                 "breakout_parametrs",
                 "expire_parametrs",
-                "percent_parametrs",
-                "delay_parametrs"
+                "percent_parametrs"
             ]
         }
     ],
@@ -18,7 +17,7 @@
             "fields": [
                 {"type": "name", "name": "referrer"},
                 {"type": "name", "name": "referral"},
-                {"type": "uint32", "name": "percent"},
+                {"type": "uint16", "name": "percent"},
                 {"type": "uint64", "name": "expire"},
                 {"type": "asset", "name": "breakout"}
             ]
@@ -42,14 +41,7 @@
            "name": "percent_parametrs",
            "base": "",
            "fields": [
-              {"name": "max_percent", "type": "uint32"}
-           ]
-        },
-        {
-           "name": "delay_parametrs",
-           "base": "",
-           "fields": [
-              {"name": "delay_clear_old_ref", "type": "uint32"}
+              {"name": "max_percent", "type": "uint16"}
            ]
         },
         {
@@ -59,8 +51,7 @@
               {"name": "id", "type": "uint64"},
               {"name": "breakout_params", "type": "breakout_parametrs"},
               {"name": "expire_params",   "type": "expire_parametrs"},
-              {"name": "percent_params",  "type": "percent_parametrs"},
-              {"name": "delay_params",    "type": "delay_parametrs"}
+              {"name": "percent_params",  "type": "percent_parametrs"}
            ]
         },
         {
