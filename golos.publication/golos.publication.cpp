@@ -542,7 +542,7 @@ void publication::close_messages(name payer) {
             trx.actions.emplace_back(action{permission_level(_self, config::code_name), _self, "closemssgs"_n, std::make_tuple(_self)});
             providebw_for_trx(trx, provider);
             trx.delay_sec = 0;
-            trx.send(static_cast<uint128_t>(cur_time) << 64, payer, true);
+            trx.send(static_cast<uint128_t>(config::closemssgs_sender_id) << 64, payer, true);
             break;
         }
 
