@@ -11,7 +11,7 @@ struct golos_charge_api: base_contract_api {
     void initialize_contract() {
         _tester->install_contract(_code, contracts::charge_wasm(), contracts::charge_abi());
     }
-    
+
     action_result set_restorer(name issuer, uint8_t charge_id, std::string func_str,
         int64_t max_prev, int64_t max_vesting, int64_t max_elapsed) {
         return push(N(setrestorer), issuer, args()
@@ -39,7 +39,7 @@ struct golos_charge_api: base_contract_api {
             ("vesting_price", vesting_price)
         );
     }
-    
+
     action_result use_and_store(name issuer, name user, uint8_t charge_id, int64_t stamp_id, int64_t price) {
         return push(N(useandstore), issuer, args()
             ("user", user)
@@ -49,7 +49,7 @@ struct golos_charge_api: base_contract_api {
             ("price", price)
         );
     }
-    
+
     action_result remove_stored(name issuer, name user, uint8_t charge_id, int64_t stamp_id) {
         return push(N(removestored), issuer, args()
             ("user", user)

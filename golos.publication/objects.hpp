@@ -126,8 +126,7 @@ struct rewardrules {
     funcinfo mainfunc;
     funcinfo curationfunc;
     funcinfo timepenalty;
-    uint16_t maxtokenprop;  // percent
-    //uint64_t cashout_time; //TODO:
+    uint16_t maxtokenprop;  // percent  // TODO: move to params #828
 };
 
 struct poolstate {

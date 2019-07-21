@@ -377,9 +377,9 @@ public:
 
     void pay(
             account_name from,
-            account_name to, 
+            account_name to,
             double payout,
-            payment_t mode) 
+            payment_t mode)
     {
         if (mode == payment_t::TOKEN) {
             if (!_state.balances[to].tokenclosed)
@@ -465,7 +465,7 @@ public:
                     author_payout -= ben_payout_sum;
 
                     auto author_token_rwrd = author_payout * m.tokenprop;
-                    pay(_forum_name, m.key.author, author_token_rwrd, payment_t::TOKEN); 
+                    pay(_forum_name, m.key.author, author_token_rwrd, payment_t::TOKEN);
                     pay(_forum_name, m.key.author, author_payout - author_token_rwrd, payment_t::VESTING);
 
                     p.messages.erase(itr_m++);
@@ -569,8 +569,6 @@ public:
                 ? post.upvote(voter, message_id, weight)
                 : post.downvote(voter, message_id, -weight);
 
-//        message_key msg_key{author, permlink};
-
         string ret_str = ret;
         const auto current_time = control->head_block_time().sec_since_epoch();
         if ((ret == success()) || (ret_str.find("forum::apply_limits:") != string::npos)) {
@@ -614,7 +612,7 @@ public:
             _state.balances[owner].tokenclosed = true;
         return ret;
     }
-    
+
     action_result close_vest_acc(name owner, symbol symbol) {
         auto ret = vest.close(owner, symbol);
         if (ret == success())
@@ -638,7 +636,7 @@ public:
                 interest_rate,
                 quantity.to_real()
             });
-            _state.dlg_balances[from].delegated += quantity.to_real(); 
+            _state.dlg_balances[from].delegated += quantity.to_real();
             _state.dlg_balances[to].received += quantity.to_real();
         }
         return ret;
@@ -964,7 +962,7 @@ BOOST_FIXTURE_TEST_CASE(golos_curation_test, reward_calcs_tester) try {
     BOOST_TEST_MESSAGE("golos_curation_test");
     int64_t maxfp = std::numeric_limits<fixp_t>::max();
     auto bignum = 500000000000;
-    
+
     vector<account_name> additional_users;
     auto add_users_num = 210 - _users.size();
     for (size_t u = 0; u < add_users_num; u++) {
@@ -972,7 +970,7 @@ BOOST_FIXTURE_TEST_CASE(golos_curation_test, reward_calcs_tester) try {
     }
     create_accounts(additional_users);
     _users.insert(_users.end(), additional_users.begin(), additional_users.end());
-    
+
     init(bignum, 500000);
     produce_blocks();
     BOOST_TEST_MESSAGE("--- setrules");
@@ -1041,7 +1039,7 @@ BOOST_FIXTURE_TEST_CASE(close_token_acc_test, reward_calcs_tester) try {
     produce_blocks(golos::seconds_to_blocks(post.window));
     BOOST_CHECK_EQUAL(success(), post.closemssgs());
     produce_block();
-    BOOST_CHECK_GT(token.get_account(_forum_name)["payments"].as<asset>(), forum_name_balance); 
+    BOOST_CHECK_GT(token.get_account(_forum_name)["payments"].as<asset>(), forum_name_balance);
     check();
 } FC_LOG_AND_RETHROW()
 
@@ -1080,7 +1078,7 @@ BOOST_FIXTURE_TEST_CASE(close_vest_acc_test, reward_calcs_tester) try {
     produce_blocks(golos::seconds_to_blocks(post.window));
     BOOST_CHECK_EQUAL(success(), post.closemssgs());
     produce_block();
-    BOOST_CHECK_GT(token.get_account(_forum_name)["payments"].as<asset>(), forum_name_balance); 
+    BOOST_CHECK_GT(token.get_account(_forum_name)["payments"].as<asset>(), forum_name_balance);
     check();
 } FC_LOG_AND_RETHROW()
 
@@ -1122,7 +1120,7 @@ BOOST_FIXTURE_TEST_CASE(golos_delegators_test, reward_calcs_tester) try {
     const auto amount = vest.make_asset(min_remainder);
     auto vest_amount = vest.make_asset(150000000);
     uint16_t interest_rate = 3000;
-    
+
     BOOST_TEST_MESSAGE("--- one delegator interest_rate > 0");
     BOOST_TEST_MESSAGE("--- create_message: " << name{_users[0]}.to_string());
     BOOST_CHECK_EQUAL(success(), create_message({_users[0], "permlink"}));
@@ -1184,7 +1182,7 @@ BOOST_FIXTURE_TEST_CASE(golos_delegators_test, reward_calcs_tester) try {
     BOOST_CHECK_GT(vest.get_balance_raw(_users[20])["vesting"].as<asset>(), voter_amount);
     BOOST_CHECK_EQUAL(vest.get_balance_raw(_users[4])["vesting"].as<asset>(), delegator_amount);
     check();
-    
+
     BOOST_TEST_MESSAGE("--- add_funds_to_forum");
     BOOST_CHECK_EQUAL(success(), add_funds_to_forum(50000));
     check();
@@ -1245,7 +1243,7 @@ BOOST_FIXTURE_TEST_CASE(golos_delegators_test, reward_calcs_tester) try {
     BOOST_TEST_MESSAGE("--- add_funds_to_forum");
     BOOST_CHECK_EQUAL(success(), add_funds_to_forum(50000));
     check();
-    
+
     BOOST_TEST_MESSAGE("--- checking that interest_rate < 1");
     BOOST_TEST_MESSAGE("--- create_message: " << name{_users[0]}.to_string());
     BOOST_CHECK_EQUAL(success(), create_message({_users[0], "permlink5"}));
@@ -1300,7 +1298,7 @@ BOOST_FIXTURE_TEST_CASE(golos_delegators_test, reward_calcs_tester) try {
 
     BOOST_TEST_MESSAGE("--- increase vesting amount for " << name{_users[15]}.to_string());
     add_vesting({_users[15]}, vest_amount.get_amount());
-    
+
     BOOST_TEST_MESSAGE("--- checking that interest_rate doesn't overflow and curator has no reward");
     BOOST_TEST_MESSAGE("--- create_message: " << name{_users[0]}.to_string());
     BOOST_CHECK_EQUAL(success(), create_message({_users[0], "permlink6"}));
@@ -1320,7 +1318,7 @@ BOOST_FIXTURE_TEST_CASE(golos_delegators_test, reward_calcs_tester) try {
     produce_blocks(golos::seconds_to_blocks(post.window));
     BOOST_CHECK_EQUAL(success(), post.closemssgs());
     produce_block();
-    
+
     BOOST_CHECK_EQUAL(voter_amount.get_amount(), 0);
     BOOST_CHECK_EQUAL(vest.get_balance_raw(_users[24])["vesting"].as<asset>(), voter_amount);
     BOOST_CHECK_GT(vest.get_balance_raw(_users[15])["vesting"].as<asset>(), delegator_amount);
@@ -1332,7 +1330,7 @@ BOOST_FIXTURE_TEST_CASE(a_lot_of_delegators_test, reward_calcs_tester) try {
     BOOST_TEST_MESSAGE("a_lot_of_delegators_test");
     int64_t maxfp = std::numeric_limits<fixp_t>::max();
     auto bignum = 500000000000;
-    
+
     vector<account_name> additional_users;
     size_t voters_num = 30;
     auto total_users_num = 210;
@@ -1356,7 +1354,7 @@ BOOST_FIXTURE_TEST_CASE(a_lot_of_delegators_test, reward_calcs_tester) try {
 
     BOOST_TEST_MESSAGE("--- add_funds_to_forum");
     BOOST_CHECK_EQUAL(success(), add_funds_to_forum(50000));
-    
+
     for (size_t i = voters_num; i < total_users_num; i++) {
         produce_block();
         BOOST_CHECK_EQUAL(success(), delegate_vest(_users[i], _users[i % voters_num], asset(vest_amount, vest._symbol), cfg::_100percent));
@@ -1386,7 +1384,7 @@ BOOST_FIXTURE_TEST_CASE(posting_bw_penalty, reward_calcs_tester) try {
     auto reward_weight_delta = 0.001;
     init(bignum, 500000);
     produce_blocks();
-    
+
     auto params = "[" + post.get_str_cashout_window(window, post.upvote_lockout) + "]";
     BOOST_CHECK_EQUAL(success(), post.set_params(params));
 
@@ -1395,15 +1393,15 @@ BOOST_FIXTURE_TEST_CASE(posting_bw_penalty, reward_calcs_tester) try {
     limitsarg lims = {{"t/300", "t/200", "t/(5*86400)", "t*p/86400"}, {{1, 0, cfg::_100percent, cfg::_100percent}, {2, 1, cfg::_100percent, cfg::_100percent/10}, {0, 2, cfg::_100percent, cfg::_100percent/(5*40)}, {3, 3, pb_cutoff, cfg::_100percent}}, {0, 0}, {0, 0, 0}};
     vector<limits::func_t> restorers_fn = {
             [](double p, double v, double t){ return t/300; },
-            [](double p, double v, double t){ return t/200; }, 
+            [](double p, double v, double t){ return t/200; },
             [](double p, double v, double t){ return t/(5*86400); },
             [](double p, double v, double t){ return t*p/86400; }
         };
-    
+
     BOOST_CHECK_EQUAL(success(), setrules({"x", maxfp}, {golos_curation::func_str, maxfp}, {"x/1800", 1800},
         [](double x){ return x; }, golos_curation::func, [](double x){ return x / 1800.0; }, lims, std::move(restorers_fn)));
     check();
-    
+
     BOOST_TEST_MESSAGE("--- create messages");
     auto charge = 0.0;
     auto charge_prev = 0.0;
