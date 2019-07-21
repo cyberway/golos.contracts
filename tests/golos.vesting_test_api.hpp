@@ -31,7 +31,7 @@ struct golos_vesting_api: base_contract_api {
     action_result create_vesting(name creator) {
         return create_vesting(creator, _symbol, golos::config::control_name);
     }
-    action_result create_vesting(name creator, symbol vesting_symbol, name notify_acc = N(notify.acc), bool skip_authority_check = false) {
+    action_result create_vesting(name creator, symbol vesting_symbol, name notify_acc, bool skip_authority_check = false) {
         if (!skip_authority_check) {
             BOOST_CHECK(_tester->has_code_authority(creator, cfg::changevest_name, _code));
             BOOST_CHECK(_tester->has_link_authority(creator, cfg::changevest_name, notify_acc, N(changevest)));

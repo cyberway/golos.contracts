@@ -40,7 +40,7 @@ struct cyber_token_api: base_contract_api {
         );
     }
 
-    action_result issue(account_name issuer, account_name to, asset quantity, string memo) {
+    action_result issue(account_name issuer, account_name to, asset quantity, string memo = "") {
         return push(N(issue), issuer, args()
             ("to", to)
             ("quantity", quantity)
@@ -48,6 +48,9 @@ struct cyber_token_api: base_contract_api {
         );
     }
 
+    action_result open(name owner) {
+        return open(owner, _symbol, owner);
+    }
     action_result open(account_name owner, symbol symbol, account_name payer = {}) {
         return push(N(open), owner, args()
             ("owner", owner)

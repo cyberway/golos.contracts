@@ -138,14 +138,14 @@ struct golos_posting_api: base_contract_api {
         );
     }
 
-    action_result upvote(account_name voter, mssgid message_id, uint16_t weight) {
+    action_result upvote(account_name voter, mssgid message_id, uint16_t weight = cfg::_100percent) {
         return push(N(upvote), voter, args()
             ("voter", voter)
             ("message_id", message_id)
             ("weight", weight)
         );
     }
-    action_result downvote(account_name voter, mssgid message_id, uint16_t weight) {
+    action_result downvote(account_name voter, mssgid message_id, uint16_t weight = cfg::_100percent) {
         return push(N(downvote), voter, args()
             ("voter", voter)
             ("message_id", message_id)
@@ -260,8 +260,9 @@ struct golos_posting_api: base_contract_api {
         return variant();
     }
 
-    variant get_vote(account_name acc, uint64_t id) {
-        return _tester->get_chaindb_struct(_code, acc, N(vote), id, "voteinfo");
+    // Note: vote scope is message author, not voter
+    variant get_vote(account_name author, uint64_t id) {
+        return _tester->get_chaindb_struct(_code, author, N(vote), id, "voteinfo");
     }
 
     std::vector<variant> get_reward_pools() {
