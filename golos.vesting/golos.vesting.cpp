@@ -367,7 +367,7 @@ bool vesting::process_withdraws(eosio::time_point now, symbol symbol, name payer
             fail || last_payment ? obj = idx.erase(obj) : ++obj
         ) {
             if (max_steps-- <= 0) {
-            	return true;
+                return true;
             }
 
             fail = obj->remaining_payments == 0 || obj->to_withdraw < obj->withdraw_rate;  // must not happen
