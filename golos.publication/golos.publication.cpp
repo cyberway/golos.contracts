@@ -992,6 +992,7 @@ void publication::set_limit(
     });
 }
 
+// TODO: move maxtokenprop to setparams #828
 void publication::set_rules(const funcparams& mainfunc, const funcparams& curationfunc, const funcparams& timepenalty,
     uint16_t maxtokenprop, eosio::symbol tokensymbol
 ) {
