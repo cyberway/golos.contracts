@@ -52,11 +52,14 @@ void vesting::setparams(symbol symbol, std::vector<vesting_param> params) {
     }
 }
 
+// memo can contain real recipient if formatted like "send to: RECIPIENT; comment" (';' and comment part are optional)
 name get_recipient(const std::string& memo) {
     size_t memo_size = memo.size();
-    const auto find_symbol = memo.find(';');
-    if (find_symbol != std::string::npos && memo.size())
-        memo_size = find_symbol;
+    if (memo_size) {
+        const auto find_symbol = memo.find(';');
+        if (find_symbol != std::string::npos)
+            memo_size = find_symbol;
+    }
 
     const size_t pref_size = config::send_prefix.size();
     if (memo_size < pref_size || memo.substr(0, pref_size) != config::send_prefix)

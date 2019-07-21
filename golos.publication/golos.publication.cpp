@@ -455,32 +455,32 @@ int16_t publication::use_charge(tables::limit_table& lims, structures::limitpara
     eosio::check(lim_itr != lims.end(), "publication::use_charge: limit parameters not set");
     eosio::check(eff_vesting >= lim_itr->min_vesting, "insufficient effective vesting amount");
 
-    int16_t k = config::_100percent;
-
+    const auto price = lim_itr->price;
+    int16_t k = 1;
     if (act == structures::limitparams::VOTE) {
-        k = 200;
-        if (lim_itr->price > 0) {
-            k = config::_100percent / lim_itr->price;
+        k = 200;    // TODO: fix wrong default
+        if (price > 0) {
+            k = config::_100percent / price;
         }
 
         auto current_power = charge::get_current_value(config::charge_name, account, token_code, lim_itr->charge_id);
-        int16_t charge = config::_100percent - current_power;
-
-        weight = static_cast<int16_t>((((static_cast<int64_t>(abs(weight)) * charge) / config::_100percent)  + k - 1) / k);
+        int64_t charge = config::_100percent - current_power;
+        weight = static_cast<int16_t>((abs(weight) * charge / config::_100percent + k - 1) / k);
     }
 
-    if(lim_itr->price >= 0)
+    if (price >= 0) {
         INLINE_ACTION_SENDER(charge, use) (config::charge_name,
             {issuer, config::invoice_name}, {
                 account,
                 token_code,
                 lim_itr->charge_id,
-                (lim_itr->price * abs(weight) / config::_100percent * k) / config::_100percent,
+                price * abs(weight)*k / config::_100percent,
                 lim_itr->cutoff,
-                vestpayment ? (lim_itr->vesting_price * abs(weight) / config::_100percent * k) / config::_100percent : 0
-            });
-
-    return weight;
+                vestpayment ? lim_itr->vesting_price * abs(weight)*k / config::_100percent : 0
+            }
+        );
+    }
+    return weight;      // vote only
 }
 
 void publication::use_postbw_charge(
