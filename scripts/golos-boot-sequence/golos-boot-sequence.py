@@ -416,19 +416,20 @@ def initCommunity():
         }) + '-p gls.publish')
 
     # testnet
+    cutoff = _100percent    # note: postbw have larger cutoff
     limits = [
-        # action            charge_id   price                cutoff         vest_price  min_vest
-        ("post",            1,          _100percent,         _100percent,   0,          0),
-        ("comment",         2,          _100percent/10,      _100percent,   0,          0),
-        ("vote",            0,          _100percent/(5*40),  _100percent,   0,          0),
-        ("post bandwidth",  3,          _100percent,         _100percent*4, 0,          0),
+        # action            charge_id   price           cutoff    vest_price  min_vest
+        ("post",            1,          cutoff,         cutoff,   0,          0),
+        ("comment",         2,          cutoff/10,      cutoff,   0,          0),
+        ("vote",            0,          cutoff/(5*40),  cutoff,   0,          0),
+        ("post bandwidth",  3,          cutoff,         cutoff*4, 0,          0),
     ]
     restorers = [
-        # charge_id     restorer        max_prev    max_vest    max_elapsed
-        (1,             "t/300",        fixp_max,   fixp_max,   fixp_max),
-        (2,             "t/200",        fixp_max,   fixp_max,   fixp_max),
-        (0,             "t/(5*86400)",  fixp_max,   fixp_max,   fixp_max),
-        (3,             "t*p/86400",    fixp_max,   fixp_max,   fixp_max),
+        # charge_id restorer                    max_prev    max_vest    max_elapsed
+        (1,         "t*%i/300" % cutoff,        fixp_max,   fixp_max,   fixp_max),
+        (2,         "t*%i/200" % cutoff,        fixp_max,   fixp_max,   fixp_max),
+        (0,         "t*%i/(5*86400)" % cutoff,  fixp_max,   fixp_max,   fixp_max),
+        (3,         "t*p/86400",                fixp_max,   fixp_max,   fixp_max),
     ]
 
     if not args.golos_genesis:

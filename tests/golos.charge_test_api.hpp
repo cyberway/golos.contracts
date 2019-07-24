@@ -12,6 +12,7 @@ struct golos_charge_api: base_contract_api {
         _tester->install_contract(_code, contracts::charge_wasm(), contracts::charge_abi());
     }
 
+    // actions
     action_result set_restorer(name issuer, uint8_t charge_id, std::string func_str,
         int64_t max_prev, int64_t max_vesting, int64_t max_elapsed) {
         return push(N(setrestorer), issuer, args()
@@ -57,6 +58,12 @@ struct golos_charge_api: base_contract_api {
             ("charge_id", charge_id)
             ("stamp_id", stamp_id)
         );
+    }
+
+    // tables
+    variant get_balance(name acc, uint8_t charge_id) {
+        // base_api_helper knows code
+        return get_struct(acc, N(balances), _symbol.to_symbol_code().value << 8 | charge_id, "balance");
     }
 };
 

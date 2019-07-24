@@ -189,7 +189,7 @@ public:
         std::function<double(double)>&& mainfunc_,
         std::function<double(double)>&& curationfunc_,
         std::function<double(double)>&& timepenalty_,
-        limitsarg lims = {{"0"}, {{0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}}, {0, 0}, {0, 0, 0}},
+        limitsarg lims = {{"0"}, {{0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}}, {}, {}},
         vector<limits::func_t>&& func_restorers = {
             [](double, double, double){ return 0.0; }
         }
@@ -499,8 +499,10 @@ public:
         fill_from_tables(_res);
         fill_from_state(_req);
 
+        auto orig_res = _res;
         _res.remove_same(_req);
         if (!_res.empty()) {
+            _req.remove_same(orig_res);
             BOOST_TEST_MESSAGE("contract state != model state\n diff:");
             BOOST_TEST_MESSAGE("contract:");
             BOOST_TEST_MESSAGE(_res);
@@ -526,7 +528,6 @@ public:
     ) {
         const auto current_time = control->head_block_time().sec_since_epoch();
         auto ret = post.create_msg(message_id, parent_message_id, beneficiaries, tokenprop, vestpayment, title, body, language, tags, json_metadata, curators_prcnt, max_payout);
-//        message_key key{author, permlink};
 
         auto reward_weight = 0.0;
         string ret_str = ret;
@@ -549,10 +550,10 @@ public:
             }
             _state.pools.back().messages.emplace_back(message(
                 message_id,
-                static_cast<double>(tokenprop) / static_cast<double>(cfg::_100percent),
+                static_cast<double>(tokenprop) / cfg::_100percent,
                 static_cast<double>(current_time),
                 beneficiaries, reward_weight,
-                static_cast<double>(curators_prcnt) / static_cast<double>(cfg::_100percent), msg_max_payout));
+                static_cast<double>(curators_prcnt) / cfg::_100percent, msg_max_payout));
         } else {
             message_id.permlink = std::string();
         }
@@ -593,7 +594,8 @@ public:
                             m.votes.emplace_back(vote{
                                 voter,
                                 std::min(get_prop(weight), 1.0),
-                                PRECISION_DIV * static_cast<double>(FP(_state.balances[voter].vestamount + _state.dlg_balances[voter].received)), //raw amount
+                                PRECISION_DIV * static_cast<double>(
+                                    FP(_state.balances[voter].vestamount + _state.dlg_balances[voter].received)), //raw amount
                                 static_cast<double>(current_time)
                             });
                         else {
@@ -1033,7 +1035,7 @@ BOOST_FIXTURE_TEST_CASE(golos_linear_curation_test, reward_calcs_tester) try {
 
     BOOST_TEST_MESSAGE("--- setrules");
     limitsarg lims = {
-        {"t/300", "t/200", "t/(5*86400)", "t*p/86400"},
+        {"t*10000/300", "t*10000/200", "t*10000/(5*86400)", "t*p/86400"},
         {
             {1, 0, cfg::_100percent, cfg::_100percent},
             {2, 1, cfg::_100percent, cfg::_100percent/10},
@@ -1044,9 +1046,9 @@ BOOST_FIXTURE_TEST_CASE(golos_linear_curation_test, reward_calcs_tester) try {
         {0, 0, 0}
     };
     vector<limits::func_t> restorers_fn = {
-        [](double p, double v, double t){ return t/300; },
-        [](double p, double v, double t){ return t/200; },
-        [](double p, double v, double t){ return t/(5*86400); },
+        [](double p, double v, double t){ return t*cfg::_100percent/300; },
+        [](double p, double v, double t){ return t*cfg::_100percent/200; },
+        [](double p, double v, double t){ return t*cfg::_100percent/(5*86400); },
         [](double p, double v, double t){ return t*p/86400; }
     };
     BOOST_CHECK_EQUAL(success(), setrules(
@@ -1064,7 +1066,7 @@ BOOST_FIXTURE_TEST_CASE(golos_linear_curation_test, reward_calcs_tester) try {
     BOOST_CHECK_EQUAL(success(), add_funds_to_forum(50000));
     check();
 
-    int n_comments = 4;
+    int n_comments = 5;
     BOOST_TEST_MESSAGE("--- create_message and " + std::to_string(n_comments) + " comments");
     mssgid post_id{maker, "permlink"};
     BOOST_CHECK_EQUAL(success(), create_message(post_id));
@@ -1489,16 +1491,26 @@ BOOST_FIXTURE_TEST_CASE(posting_bw_penalty, reward_calcs_tester) try {
 
     BOOST_TEST_MESSAGE("--- setrules");
     using namespace golos_curation;
-    limitsarg lims = {{"t/300", "t/200", "t/(5*86400)", "t*p/86400"}, {{1, 0, cfg::_100percent, cfg::_100percent}, {2, 1, cfg::_100percent, cfg::_100percent/10}, {0, 2, cfg::_100percent, cfg::_100percent/(5*40)}, {3, 3, pb_cutoff, cfg::_100percent}}, {0, 0}, {0, 0, 0}};
+    limitsarg lims = {
+        {"t*10000/300", "t*10000/200", "t*10000/(5*86400)", "t*p/86400"},
+        {
+            {1, 0, cfg::_100percent, cfg::_100percent},
+            {2, 1, cfg::_100percent, cfg::_100percent/10},
+            {0, 2, cfg::_100percent, cfg::_100percent/(5*40)},
+            {3, 3, pb_cutoff, cfg::_100percent}
+        },
+        {}, {}
+    };
     vector<limits::func_t> restorers_fn = {
-            [](double p, double v, double t){ return t/300; },
-            [](double p, double v, double t){ return t/200; },
-            [](double p, double v, double t){ return t/(5*86400); },
-            [](double p, double v, double t){ return t*p/86400; }
-        };
+        [](double p, double v, double t){ return t*cfg::_100percent/300; },
+        [](double p, double v, double t){ return t*cfg::_100percent/200; },
+        [](double p, double v, double t){ return t*cfg::_100percent/(5*86400); },
+        [](double p, double v, double t){ return t*p/86400; }
+    };
 
     BOOST_CHECK_EQUAL(success(), setrules({"x", maxfp}, {golos_curation::func_str, maxfp}, {"x/1800", 1800},
-        [](double x){ return x; }, golos_curation::func, [](double x){ return x / 1800.0; }, lims, std::move(restorers_fn)));
+        [](double x){ return x; }, golos_curation::func, [](double x){ return x / 1800.0; },
+        lims, std::move(restorers_fn)));
     check();
 
     BOOST_TEST_MESSAGE("--- create messages");
