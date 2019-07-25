@@ -578,13 +578,15 @@ public:
         if ((ret == success()) || (ret_str.find("forum::apply_limits:") != string::npos)) {
             auto& pool = _state.pools.back();
             auto& charges = pool.charges[voter];
+            auto idx = pool.lims.get_limited_act(limits::VOTE).chargenum;
+            charge = charges.size() > idx ? charges[idx].data : 0;
             auto apply_ret = pool.lims.apply(
                 limits::VOTE,
                 charges,
                 _state.balances[voter].vestamount,
                 seconds(current_time).count(),
                 get_prop(std::abs(weight)));
-            charge = charges[pool.lims.get_limited_act(limits::VOTE).chargenum].data;
+            BOOST_TEST_MESSAGE("VCHRG:"<<charges[pool.lims.get_limited_act(limits::VOTE).chargenum].data << " / "<<apply_ret);
             BOOST_REQUIRE_MESSAGE(((ret == success()) == (apply_ret >= 0.0)), "wrong ret_str: " + ret_str
                 + "; vesting = " + std::to_string(_state.balances[voter].vestamount)
                 + "; apply_ret = " + std::to_string(apply_ret));
@@ -1109,13 +1111,14 @@ BOOST_FIXTURE_TEST_CASE(golos_linear_curation_test, reward_calcs_tester) try {
         vote = post.get_vote(maker, i+1);
         BOOST_CHECK_EQUAL(vote["rshares"], expect_rshares);
         BOOST_CHECK_EQUAL(vote["curatorsw"], expect_rshares);
+        check();
     }
     BOOST_CHECK_EQUAL(success(), addvote(voter, {maker, "comment" + std::to_string(n_comments)}, 10000));
     expect_rshares = effective * 49 / cfg::_100percent; // four votes reduce weight factor to 49
     vote = post.get_vote(maker, n_comments+1);
     BOOST_CHECK_EQUAL(vote["rshares"], expect_rshares);
     BOOST_CHECK_EQUAL(vote["curatorsw"], expect_rshares);
-    // check();     // can't check here because model doesn't support vote limits correctly
+    check();
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE(close_token_acc_test, reward_calcs_tester) try {
