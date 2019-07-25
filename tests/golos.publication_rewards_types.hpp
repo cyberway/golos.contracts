@@ -190,20 +190,21 @@ struct vote {
     double revote_vesting = 0.0;
     double revote_weight() const { return weight + revote_diff; };
 
-    double weight_charge (double weight, int64_t charge = 0) const {
-        double current_power = std::min(static_cast<int>(golos::config::_100percent - charge), golos::config::_100percent);
-        int used_charge = ((abs(weight) * current_power) + 200 - 1) / 200;
-        return used_charge;
+    double weight_charge(double weight, int64_t charge = 0) const {
+        auto current_power = std::min(golos::config::_100percent - charge, int64_t(golos::config::_100percent));
+        int64_t abs_w = abs(weight) * current_power;
+        auto used_charge = (abs_w + 200 - 1) / 200;     // TODO: `200` should depend on limit
+        return static_cast<double>(used_charge) / golos::config::_100percent;
     };
 
     double rshares(int64_t charge = 0) const {
         auto weight_rshares = revote_diff ? revote_weight() : weight;
-        auto abs_rshares = revote_diff ? weight_charge(weight_rshares) * revote_vesting / golos::config::_100percent : weight_charge(weight_rshares) * vesting / golos::config::_100percent;
+        auto abs_rshares = weight_charge(weight_rshares, charge) * (revote_diff ? revote_vesting : vesting);
         return (weight_rshares < 0) ? -abs_rshares : abs_rshares;
     };
 
     double voteshares() const {
-        return weight > 0.0 ? weight_charge(weight) * vesting  / golos::config::_100percent : 0.0;
+        return weight > 0.0 ? weight_charge(weight) * vesting : 0.0;
     };
 };
 
@@ -284,7 +285,8 @@ struct limits {
     }
 
     double get_min_vesting_for(kind_t kind) const {
-        return minvestings.at(static_cast<size_t>(kind));
+        auto pos = static_cast<size_t>(kind);
+        return pos < minvestings.size() ? minvestings.at(pos) : 0;
     }
 
     size_t get_charges_num() const {
@@ -303,7 +305,7 @@ struct limits {
         return true;
     }
 
-    void update_charge(chargeinfo& chg, const func_t* restorer, uint64_t cur_time, double vesting, double price, double w = 1.0) const {
+    void update_charge(chargeinfo& chg, const func_t* restorer, uint64_t cur_time, double vesting, double price) const {
         using namespace golos::config;    // for limit_restorer_domain
         if (restorer != nullptr) {
             auto prev = std::min(chg.data, static_cast<double>(limit_restorer_domain::max_prev));
@@ -317,7 +319,7 @@ struct limits {
                 chg.data = std::min(chg.data - restored, static_cast<double>(limit_restorer_domain::max_res));
         }
         if (price > 0.0) {
-            auto added = std::max(price * w, static_cast<double>(std::numeric_limits<fixed_point_utils::fixp_t>::min()));
+            auto added = std::max(price, static_cast<double>(std::numeric_limits<fixed_point_utils::fixp_t>::min()));
             chg.data = std::min(chg.data + added, static_cast<double>(limit_restorer_domain::max_res));
         }
         chg.lastupdate = cur_time;
@@ -327,22 +329,23 @@ struct limits {
         auto& lim_act = get_limited_act(kind);
         auto restorer = get_restorer(kind);
         auto& chg = charges[lim_act.chargenum];
-        update_charge(chg, restorer, cur_time, vesting, get_prop(lim_act.chargeprice), w);
-        return (chg.data > get_prop(lim_act.cutoffval)) ? get_prop(lim_act.cutoffval) / chg.data : 1.0;
+        update_charge(chg, restorer, cur_time, vesting, lim_act.chargeprice * w);
+        return (chg.data > lim_act.cutoffval) ? lim_act.cutoffval / chg.data : 1.0;
     }
 
+    // w - vote-battery only multiplier with 1.0 base (100% = 1.0)
     double apply(kind_t kind, usercharges& charges, double& vesting_ref, uint64_t cur_time, double w) const {
+        auto use_vest = vesting_ref;
         if (kind == limits::VOTE && w != 0) {
-            if (w * vesting_ref < get_min_vesting_for(kind))
-                return -1.0;
+            use_vest *= w;
         }
-        else if (kind != limits::VOTE && vesting_ref < get_min_vesting_for(kind))
+        if (use_vest < get_min_vesting_for(kind))
             return -1.0;
 
         auto charges_prev = charges;
         if (charges.empty())
             charges.resize(get_charges_num(), {cur_time, 0});
-        auto power = calc_power(kind, charges, cur_time, vesting_ref, (kind == limits::VOTE) ? w : 1.0);
+        auto power = calc_power(kind, charges, cur_time, vesting_ref, kind == limits::VOTE ? w : 1.0);
         if (power != 1.0)
             charges = charges_prev;
 
@@ -359,8 +362,8 @@ struct limits {
             vesting_ref -= price;
         }
 
-        if (kind != limits::COMM) {
-            power =  calc_power(limits::POSTBW, charges, cur_time, vesting_ref, 1.0);
+        if (kind == limits::POST) {
+            power = calc_power(limits::POSTBW, charges, cur_time, vesting_ref, 1.0);
             return power*power;
         }
 

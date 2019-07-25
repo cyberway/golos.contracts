@@ -109,11 +109,7 @@ protected:
     const mvo _test_msg = mvo()
         ("id", 1)
         ("tokenprop", 5000)
-        ("beneficiaries", variants({}
-            // mvo()
-            // ("account", "golos.pub")
-            // ("weight", 777)
-        ))
+        ("beneficiaries", variants({}))
         ("rewardweight", cfg::_100percent)  // TODO: test that Golos rules (charge restorer) works as expected #617
         ("state", mvo()("netshares",0)("voteshares",0)("sumcuratorsw",0))
         ("curators_prcnt", 1000);

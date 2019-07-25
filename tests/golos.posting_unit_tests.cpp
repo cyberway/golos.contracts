@@ -129,17 +129,19 @@ public:
 
     void set_rules_with_preset(fn_preset fn, lim_preset lim = lim_preset::base) {
         const limitsarg lim_base = {{"0"}, {{0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}, {0, 0, 0, 0}}, {}, {}};
+        auto cutoff = cfg::_100percent;
+        auto muldiv_fn = [](std::string t, auto m, auto d) { return t + "*" + m + "/" + std::to_string(d); }; // "t*m/d"
         const limitsarg lim_real = {
             {
-                "t/" + std::to_string(posts_window),
-                "t/" + std::to_string(comments_window),
-                "t/" + std::to_string(day_seconds * days_to_restore_votes),
-                "t*p/" + std::to_string(day_seconds)
+                muldiv_fn("t", std::to_string(cutoff), posts_window),
+                muldiv_fn("t", std::to_string(cutoff), comments_window),
+                muldiv_fn("t", std::to_string(cutoff), day_seconds * days_to_restore_votes),
+                muldiv_fn("t", "p",                    day_seconds)
             }, {
-                {1, 0, cfg::_100percent, cfg::_100percent / posts_per_window},
-                {2, 1, cfg::_100percent, cfg::_100percent / comments_per_window},
-                {0, 2, cfg::_100percent, cfg::_100percent / (votes_restore_per_day * days_to_restore_votes)},
-                {3, 3, cfg::_100percent*4, cfg::_100percent}
+                {1, 0, cutoff, cutoff / posts_per_window},
+                {2, 1, cutoff, cutoff / comments_per_window},
+                {0, 2, cutoff, cutoff / (votes_restore_per_day * days_to_restore_votes)},
+                {3, 3, cutoff*4, cutoff}
             },
             {},
             {}
@@ -180,15 +182,17 @@ BOOST_FIXTURE_TEST_CASE(golos_rshares_test, posting_tester) try {
 
     BOOST_TEST_MESSAGE("--- setrules");
     set_rules_with_preset(fn_preset::linear, lim_preset::real);
+    BOOST_CHECK_EQUAL(success(), post.set_params("["+post.get_str_cashout_window(12*3600, post.upvote_lockout)+"]"));
     produce_block();
 
     auto votes_capacity = days_to_restore_votes * votes_restore_per_day;    // 200 by default
     auto factor = cfg::_100percent / votes_capacity;                        // 50 by default
     int n_comments = votes_capacity / factor;   // number of votes required to reduce factor
-    BOOST_TEST_MESSAGE("--- create_message and " + std::to_string(n_comments) + " comments");
+    n_comments++;                       // add 1: votes have delays for 1 block, so some fraction of battery restored
+    BOOST_TEST_MESSAGE("--- create_message and " + std::to_string(n_comments+1) + " comments");
     mssgid post_id{poster, "post"};
     BOOST_CHECK_EQUAL(success(), post.create_msg(post_id));
-    for (int i = 1; i <= n_comments; i++) {
+    for (int i = 1; i <= n_comments + 1; i++) {
         BOOST_CHECK_EQUAL(success(), post.create_msg({poster, "comment" + std::to_string(i)}, post_id));
     }
     produce_block();
@@ -216,9 +220,22 @@ BOOST_FIXTURE_TEST_CASE(golos_rshares_test, posting_tester) try {
         CHECK_MATCHING_OBJECT(post.get_vote(poster, i+1), make_rshares(expect, expect));
     }
     BOOST_CHECK_EQUAL(success(), post.upvote(voter, {poster, "comment" + std::to_string(n_comments)}));
-    expect = effective * (factor-1) / cfg::_100percent;     // four votes reduce weight factor to 49
-    BOOST_CHECK_EQUAL(1705'009'673, expect);
-    CHECK_MATCHING_OBJECT(post.get_vote(poster, n_comments+1), make_rshares(expect, expect));
+    int64_t expect2 = effective * (factor-1) / cfg::_100percent;     // four votes reduce weight factor to 49
+    BOOST_CHECK_EQUAL(1705'009'673, expect2);
+    CHECK_MATCHING_OBJECT(post.get_vote(poster, n_comments+1), make_rshares(expect2, expect2));
+
+    BOOST_TEST_MESSAGE("--- wait to restore battery to get full-weight vote again");
+    // last vote got reduced weight factor 49, one vote before got full weight 50
+    auto units = factor + factor - 1;
+    auto seconds = (day_seconds * days_to_restore_votes) * units / cfg::_100percent;
+    auto blocks = golos::seconds_to_blocks(seconds);
+    blocks -= 2 + (n_comments - 1); // votes casted with delay (1st 2 blocks, other 1 block), so reduce blocks count
+    blocks++;                       // add one more block to compensate possible rounding
+    produce_blocks(blocks);
+    BOOST_CHECK_EQUAL(success(), post.upvote(voter, {poster, "comment" + std::to_string(n_comments+1)}));
+    produce_block();
+    CHECK_MATCHING_OBJECT(post.get_vote(poster, n_comments+2), make_rshares(expect, expect));
+
 } FC_LOG_AND_RETHROW()
 
 BOOST_AUTO_TEST_SUITE_END()

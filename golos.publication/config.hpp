@@ -19,12 +19,12 @@ constexpr size_t max_closed_posts_per_action = 20;
 
 static_assert(max_payments_per_trx >= target_payments_per_trx, "max_payments_per_trx < target_payments_per_trx");
 
-namespace limit_restorer_domain {//TODO: it will look better in a rule settings
+namespace limit_restorer_domain {   // TODO: remove or rework (there are different cutoffs + postbw grows over cutoff)
     using namespace fixed_point_utils;
-    constexpr fixp_t max_prev = fixp_t(100);
+    constexpr fixp_t max_prev = fixp_t(400000);
     constexpr fixp_t max_vesting = std::numeric_limits<fixp_t>::max() / fixp_t(10);
     constexpr fixp_t max_elapsed_seconds = fixp_t(max_cashout_time);
-    constexpr fixp_t max_res = fixp_t(100);
+    constexpr fixp_t max_res = fixp_t(400000);
 }
 
 const uint16_t max_length = 256;
