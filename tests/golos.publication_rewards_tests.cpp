@@ -805,15 +805,16 @@ BOOST_FIXTURE_TEST_CASE(limits_test, reward_calcs_tester) try {
         {
             .restorers = {
                 "t * 10000 / 250",
-                "sqrt(v / 500000) * (t * 10000 / 150)"
+                "sqrt(v / 500000) * (t * 10000 / 150)",
                 "sqrt(v / 500000) * (t * 20000 / 150)",
-                "sqrt(v / 500000) * (t * 30000 / 150)",
+                "sqrt(v / 500000) * (t * 30000 / 150)"
             },
             .limitedacts = {
                 {.chargenum = 1, .restorernum = 2, .cutoffval = 20000, .chargeprice = 9900}, //POST
                 {.chargenum = 1, .restorernum = 3, .cutoffval = 30000, .chargeprice = 1000}, //COMMENT
                 {.chargenum = 0, .restorernum = 0, .cutoffval = 10000, .chargeprice = 1000}, //VOTE
-                {.chargenum = 1, .restorernum = 1, .cutoffval = 10000, .chargeprice = 0}},   //POST BW
+                {.chargenum = 1, .restorernum = 1, .cutoffval = 10000, .chargeprice = 0}     //POST BW
+            },
             .vestingprices = {150000, -1},
             .minvestings = {300000, 100000, 100000}
         }, {
