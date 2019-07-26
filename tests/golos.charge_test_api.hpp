@@ -1,6 +1,9 @@
 #pragma once
 #include "test_api_helper.hpp"
 
+#define CHARGE_DISABLE_VESTING
+#define CHARGE_DISABLE_STORABLE
+
 namespace eosio { namespace testing {
 struct golos_charge_api: base_contract_api {
     golos_charge_api(golos_tester* tester, name code, symbol sym)

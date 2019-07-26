@@ -12,6 +12,12 @@
 #include <common/config.hpp>
 #include <golos.vesting/golos.vesting.hpp>
 
+// disable for now. will be enabled later when properly tested
+#define DISABLE_CHARGE_VESTING
+// disable for now. not used
+#define DISABLE_CHARGE_STORABLE
+
+
 namespace golos {
 using namespace eosio;
 
@@ -36,8 +42,11 @@ public:
     [[eosio::action]] void use(name user, symbol_code token_code, uint8_t charge_id, int64_t price, int64_t cutoff, int64_t vesting_price);
     [[eosio::action]] void usenotifygt(name user, symbol_code token_code, uint8_t charge_id, int64_t price_arg, int64_t id, name code, name action_name, int64_t cutoff);
     [[eosio::action]] void usenotifylt(name user, symbol_code token_code, uint8_t charge_id, int64_t price_arg, int64_t id, name code, name action_name, int64_t cutoff);
+
+#ifndef DISABLE_CHARGE_STORABLE
     [[eosio::action]] void removestored(name user, symbol_code token_code, uint8_t charge_id, int64_t stamp_id);
     [[eosio::action]] void useandstore(name user, symbol_code token_code, uint8_t charge_id, int64_t stamp_id, int64_t price_arg);
+#endif
 
     [[eosio::action]] void setrestorer(symbol_code token_code, uint8_t charge_id, std::string func_str,
         int64_t max_prev, int64_t max_vesting, int64_t max_elapsed);
@@ -46,8 +55,10 @@ public:
     //TODO:? user can restore a charge by transferring some amount to this contract (it will send these funds to the issuer)
     //a price is specified in a settings, charge_id is in a memo (default charge_id for empty memo)
 
+private:
     template<typename Lambda>
-    void consume_and_notify(name user, symbol_code token_code, uint8_t charge_id, int64_t price_arg, int64_t id, name code, name action_name, int64_t cutoff, name issuer, Lambda &&compare);
+    void consume_and_notify(name user, symbol_code token_code, uint8_t charge_id, int64_t price_arg, int64_t id,
+        name code, name action_name, int64_t cutoff, Lambda&& compare);
 
 private:
     struct balance {
@@ -105,7 +116,11 @@ private:
             atmsp::machine<fixp_t> machine;
 
             int64_t elapsed_seconds = static_cast<int64_t>((cur_time - user_balance.last_update) / eosio::seconds(1).count());
-            int64_t vesting = golos::vesting::get_account_effective_vesting(config::vesting_name, user, token_code).amount;
+#           ifdef DISABLE_CHARGE_VESTING
+                int64_t vesting = 0;
+#           else
+                int64_t vesting = golos::vesting::get_account_effective_vesting(config::vesting_name, user, token_code).amount;
+#           endif
             itr.func.to_machine(machine);
             restored = machine.run(
                 {prev, fp_cast<fixp_t>(vesting, false), fp_cast<fixp_t>(elapsed_seconds, false)}, {

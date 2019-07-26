@@ -121,8 +121,10 @@ void publication::create_message(
     std::optional<asset> max_payout = std::nullopt
 ) {
     require_auth(message_id.author);
-    close_messages(message_id.author);
 
+#   ifdef DISABLE_CHARGE_VESTING
+    eosio::check(!vestpayment, "vestpayment disabled");
+#   endif
     eosio::check(message_id.permlink.length() && message_id.permlink.length() < config::max_length,
             "Permlink length is empty or more than 256.");
     eosio::check(validate_permlink(message_id.permlink), "Permlink contains wrong symbol.");
@@ -149,15 +151,15 @@ void publication::create_message(
         }
     }
 
+    // close after basic checks. or else it can consume CPU on closing and fail later on bad input params
+    close_messages(message_id.author);
+
     tables::reward_pools pools(_self, _self.value);
     auto pool = pools.begin();   // TODO: Reverse iterators doesn't work correctly
     eosio::check(pool != pools.end(), "publication::create_message: [pools] is empty");
     pool = pools.end();
     --pool;
     check_acc_vest_balance(message_id.author, pool->state.funds.symbol);
-    auto token_code = pool->state.funds.symbol.code();
-    auto issuer = token::get_issuer(config::token_name, token_code);
-    tables::limit_table lims(_self, _self.value);
 
     if (!!max_payout) {
         eosio::check(max_payout >= asset(0, pool->state.funds.symbol), "max_payout must not be negative.");
@@ -165,6 +167,9 @@ void publication::create_message(
         max_payout = asset(asset::max_amount, pool->state.funds.symbol);
     }
 
+    auto token_code = pool->state.funds.symbol.code();
+    auto issuer = token::get_issuer(config::token_name, token_code);
+    tables::limit_table lims(_self, _self.value);
     use_charge(
             lims,
             parent_id.author ? structures::limitparams::COMM : structures::limitparams::POST,
@@ -972,6 +977,9 @@ void publication::set_limit(
     using namespace tables;
     using namespace structures;
     require_auth(_self);
+#   ifdef DISABLE_CHARGE_VESTING
+    eosio::check(vesting_price == 0 && min_vesting == 0, "set_limit: vesting disabled in charge");
+#   endif
     eosio::check(
             price < 0 ||
             golos::charge::exist(config::charge_name, token_code, charge_id),
