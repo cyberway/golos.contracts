@@ -56,6 +56,7 @@ protected:
         const string limit_no_power     = amsg("not enough power");
         const string limit_no_vesting   = amsg("insufficient effective vesting amount");
         const string delete_upvoted     = amsg("Cannot delete a comment with net positive votes.");
+        const string no_vestpayment     = amsg("vestpayment disabled");
     } err;
 
     void init(int64_t issuer_funds, int64_t user_vesting_funds) {
@@ -586,7 +587,6 @@ public:
                 _state.balances[voter].vestamount,
                 seconds(current_time).count(),
                 get_prop(std::abs(weight)));
-            BOOST_TEST_MESSAGE("VCHRG:"<<charges[pool.lims.get_limited_act(limits::VOTE).chargenum].data << " / "<<apply_ret);
             BOOST_REQUIRE_MESSAGE(((ret == success()) == (apply_ret >= 0.0)), "wrong ret_str: " + ret_str
                 + "; vesting = " + std::to_string(_state.balances[voter].vestamount)
                 + "; apply_ret = " + std::to_string(apply_ret));
@@ -802,14 +802,15 @@ BOOST_FIXTURE_TEST_CASE(limits_test, reward_calcs_tester) try {
     auto params = "[" + post.get_str_curators_prcnt(0, post.max_curators_prcnt) + "]";
     BOOST_CHECK_EQUAL(success(), post.set_params(params));
 
+    // TODO: test vesting variable properly when enable pay with vesting
     BOOST_CHECK_EQUAL(success(), setrules({"x", bignum}, {"sqrt(x)", bignum}, {"x / 1800", 1800},
         [](double x){ return x; }, [](double x){ return sqrt(x); }, [](double x){ return x / 1800.0; },
         {
             .restorers = {
                 "t * 10000 / 250",
-                "sqrt(v / 500000) * (t * 10000 / 150)",
-                "sqrt(v / 500000) * (t * 20000 / 150)",
-                "sqrt(v / 500000) * (t * 30000 / 150)"
+                "t * 10000 / 150",
+                "t * 20000 / 150",
+                "t * 30000 / 150"
             },
             .limitedacts = {
                 {.chargenum = 1, .restorernum = 2, .cutoffval = 20000, .chargeprice = 9900}, //POST
@@ -817,13 +818,13 @@ BOOST_FIXTURE_TEST_CASE(limits_test, reward_calcs_tester) try {
                 {.chargenum = 0, .restorernum = 0, .cutoffval = 10000, .chargeprice = 1000}, //VOTE
                 {.chargenum = 1, .restorernum = 1, .cutoffval = 10000, .chargeprice = 0}     //POST BW
             },
-            .vestingprices = {150000, -1},
-            .minvestings = {300000, 100000, 100000}
+            .vestingprices = {},    // disabled
+            .minvestings = {}       // disabled
         }, {
             [](double p, double v, double t){ return t*10000 / 250; },
-            [](double p, double v, double t){ return sqrt(v / (500000.0 / PRECISION_DIV)) * (t*10000 / 150); }, // !Vesting
-            [](double p, double v, double t){ return sqrt(v / (500000.0 / PRECISION_DIV)) * (t*20000 / 150); }, // !Vesting
-            [](double p, double v, double t){ return sqrt(v / (500000.0 / PRECISION_DIV)) * (t*30000 / 150); }  // !Vesting
+            [](double p, double v, double t){ return t*10000 / 150; }, // TODO: !Vesting
+            [](double p, double v, double t){ return t*20000 / 150; }, // TODO: !Vesting
+            [](double p, double v, double t){ return t*30000 / 150; }  // TODO: !Vesting
         })
     );
 
@@ -851,21 +852,27 @@ BOOST_FIXTURE_TEST_CASE(limits_test, reward_calcs_tester) try {
     BOOST_CHECK_EQUAL(success(), add_funds_to_forum(100000));
     check();
 
-    BOOST_CHECK_EQUAL(success(), create_msg({N(bob), "permlink"}));
+    mssgid post1{N(bob), "permlink"};
+    mssgid payed_post{N(bob), "i-can-pay-for-posting"};
+    BOOST_CHECK_EQUAL(success(), create_msg(post1));
     BOOST_CHECK_EQUAL(success(), create_msg({N(bob), "permlink1"}));
     BOOST_CHECK_EQUAL(err.limit_no_power, create_msg({N(bob), "permlink2"}));
     BOOST_TEST_MESSAGE("--- comments");
     for (size_t i = 0; i < 10; i++) {   // TODO: remove magic number, 10 must be derived from some constant used in rules
-        BOOST_CHECK_EQUAL(success(), create_msg({N(bob), "comment" + std::to_string(i)},
-                                                {N(bob), "permlink"}));
+        BOOST_CHECK_EQUAL(success(), create_msg({N(bob), "comment" + std::to_string(i)}, post1));
     }
-    BOOST_CHECK_EQUAL(err.limit_no_power, create_msg({N(bob), "oops"},
-                                                     {N(bob), "permlink"}));
-    BOOST_CHECK_EQUAL(success(), create_msg({N(bob), "i-can-pay-for-posting"}, {N(), ""}, true));
-    BOOST_CHECK_EQUAL(err.limit_no_power,
-        create_msg({N(bob), "only-if-it-is-not-a-comment"}, {N(bob), "permlink"}, true));
-    BOOST_CHECK_EQUAL(success(), addvote(N(alice), {N(bob), "i-can-pay-for-posting"}, 10000));
-    BOOST_CHECK_EQUAL(success(), addvote(N(bob), {N(bob), "i-can-pay-for-posting"}, 10000)); //He can also vote
+    BOOST_CHECK_EQUAL(err.limit_no_power, create_msg({N(bob), "oops"}, post1));
+#   ifdef CHARGE_DISABLE_VESTING
+    auto vote_post = post1;
+    BOOST_CHECK_EQUAL(err.no_vestpayment, create_msg(payed_post, {N(), ""}, true));
+    BOOST_CHECK_EQUAL(err.no_vestpayment, create_msg({N(bob), "only-if-it-is-not-a-comment"}, post1, true));
+#   else
+    auto vote_post = payed_post;
+    BOOST_CHECK_EQUAL(success(), create_msg(payed_post, {N(), ""}, true));
+    BOOST_CHECK_EQUAL(err.limit_no_power, create_msg({N(bob), "only-if-it-is-not-a-comment"}, post1, true));
+#   endif
+    BOOST_CHECK_EQUAL(success(), addvote(N(alice), vote_post, 10000));
+    BOOST_CHECK_EQUAL(success(), addvote(N(bob), vote_post, 10000)); //He can also vote
     BOOST_CHECK_EQUAL(success(), create_msg({N(bob1), "permlink"}));
     produce_blocks();     // push transactions before run() call
 
@@ -873,12 +880,13 @@ BOOST_FIXTURE_TEST_CASE(limits_test, reward_calcs_tester) try {
     produce_blocks(golos::seconds_to_blocks(150));  // TODO: remove magic number
     BOOST_CHECK_EQUAL(success(), post.closemssgs());
     check();
-    produce_blocks(golos::seconds_to_blocks(150));  // TODO: remove magic number
+    produce_blocks(golos::seconds_to_blocks(100));  // TODO: remove magic number
     check();
     BOOST_CHECK_EQUAL(err.limit_no_power, create_msg({N(bob), "limit-no-power"}));
     produce_blocks(golos::seconds_to_blocks(45));   // TODO: remove magic number
     BOOST_CHECK_EQUAL(success(), create_msg({N(bob), "test"}));
     check();
+#   ifndef CHARGE_DISABLE_VESTING
     BOOST_CHECK_EQUAL(success(), setrules({"x", bignum}, {"sqrt(x)", bignum}, {"x / 1800", 1800},
         [](double x){ return x; }, [](double x){ return sqrt(x); }, [](double x){ return x / 1800.0; },
         {
@@ -898,6 +906,7 @@ BOOST_FIXTURE_TEST_CASE(limits_test, reward_calcs_tester) try {
     BOOST_CHECK_EQUAL(err.limit_no_vesting, create_msg({N(bob), "limit-no-vesting"}));
     BOOST_CHECK_EQUAL(success(), create_msg({N(bob1), "test2"}));
     check();
+#   endif
     show();
 } FC_LOG_AND_RETHROW()
 
@@ -1714,7 +1723,6 @@ BOOST_FIXTURE_TEST_CASE(message_closing, reward_calcs_tester) try {
     BOOST_CHECK_EQUAL(post.get_message({N(bob2), "permlink"}).is_null(), true);
     check();
     show();
-
 } FC_LOG_AND_RETHROW()
 
 BOOST_AUTO_TEST_SUITE_END()

@@ -76,6 +76,8 @@ protected:
         const string stored_not_found = amsg("itr == storedvals_index.end()");
         const string insufficient_vesting = amsg("insufficient vesting amount");
 
+        const string vesting_var = amsg("vesting disabled, function must not contain `v` variable");
+        const string use_vesting = amsg("can't use vesting for charge");
     } err;
 
 };
@@ -114,6 +116,7 @@ BOOST_FIXTURE_TEST_CASE(basic_tests, golos_charge_tester) try {
     BOOST_CHECK_EQUAL(err.cutoff, use0(price*10));
     produce_block();
 
+#   ifndef CHARGE_DISABLE_VESTING
     BOOST_TEST_MESSAGE("--- try to use (cutoff == 1000, vesting_price = 101)");
     BOOST_CHECK_EQUAL(err.insufficient_vesting, use(price*10, 101));
     produce_block();
@@ -123,12 +126,15 @@ BOOST_FIXTURE_TEST_CASE(basic_tests, golos_charge_tester) try {
     BOOST_TEST_MESSAGE("--- try to use (cutoff == 1000, vesting_price = 1)");
     BOOST_CHECK_EQUAL(err.insufficient_vesting, use(price*10, 1));
     produce_block();
+#   endif
 
     BOOST_TEST_MESSAGE("--- waiting 100");
     _produce_block(seconds(100));
     BOOST_TEST_MESSAGE("--- use (cutoff == 1000)");
     BOOST_CHECK_EQUAL(success(), use0(price));
     produce_block();
+
+#   ifndef CHARGE_DISABLE_STORABLE
     BOOST_TEST_MESSAGE("--- use_and_store (42)");
     BOOST_CHECK_EQUAL(success(), charge.use_and_store(issuer, user, c_id, 42, price*10 << 12));
     produce_block();
@@ -141,7 +147,28 @@ BOOST_FIXTURE_TEST_CASE(basic_tests, golos_charge_tester) try {
     BOOST_TEST_MESSAGE("--- try to remove_stored (42)");
     BOOST_CHECK_EQUAL(err.stored_not_found, charge.remove_stored(issuer, user, c_id, 42));
     produce_block();
-
+#   endif
 } FC_LOG_AND_RETHROW()
+
+#ifdef CHARGE_DISABLE_VESTING
+BOOST_FIXTURE_TEST_CASE(disabled_vesting, golos_charge_tester) try {
+    BOOST_TEST_MESSAGE("Test disabled vesting");
+    init(1, 100);
+    const auto issuer = cfg::issuer_name;
+    const uint8_t c_id = 'c';
+    const auto max_arg = static_cast<uint64_t>(std::numeric_limits<fixp_t>::max());
+
+    BOOST_TEST_MESSAGE("--- test set restorer action");
+    BOOST_CHECK_EQUAL(err.vesting_var, charge.set_restorer(issuer, c_id, "v", max_arg, max_arg, max_arg));
+    BOOST_CHECK_EQUAL(err.vesting_var, charge.set_restorer(issuer, c_id, "t*v", max_arg, max_arg, max_arg));
+    BOOST_CHECK_EQUAL(err.vesting_var, charge.set_restorer(issuer, c_id, "v*t", max_arg, max_arg, max_arg));
+    BOOST_CHECK_EQUAL(err.vesting_var, charge.set_restorer(issuer, c_id, "5*v+t", max_arg, max_arg, max_arg));
+    BOOST_CHECK_EQUAL(err.vesting_var, charge.set_restorer(issuer, c_id, "contains-v-char", max_arg, max_arg, max_arg));
+
+    BOOST_TEST_MESSAGE("--- test use action");
+    BOOST_CHECK_EQUAL(err.use_vesting, charge.use(issuer, _users[0], c_id, 100, 1000, 1));
+    BOOST_CHECK_EQUAL(err.use_vesting, charge.use(issuer, _users[0], c_id, 100, 1000, -1));
+} FC_LOG_AND_RETHROW()
+#endif
 
 BOOST_AUTO_TEST_SUITE_END()
