@@ -36,10 +36,11 @@ struct message_data {
     double sumcuratorsw = 0.0;
 };
 
+// positive values are max absolute delta, and negatives represent max relative delta (1.0 is 100%)
 constexpr struct {
-    balance_data balance {0.1, 1, 0.005};            // this values are divided to PRECISION_DIV, scale if change
-    pool_data pool {0.001, 0.1, 0.1, 0.1};  // 0.015 value is divided to PRECISION_DIV (=15 if PRECISION_DIV=1.0)
-    message_data message {0.1, 0.1, -0.2};
+    balance_data balance {0.1, 1, 0.005};       // this absolute values are divided to PRECISION_DIV, scale if change
+    pool_data pool {0, 0.1, 0.1, 0.1};          // 0.015 value is divided to PRECISION_DIV (=15 if PRECISION_DIV=1.0)
+    message_data message {-0.001, -0.001, -0.001};
 } delta;
 
 constexpr double balance_delta = 0.01;
@@ -186,20 +187,21 @@ struct vote {
     double weight;
     double vesting;
     double created;         // time
+    int64_t charge = 0;     // charge value at vote time (in percent units 0-10000)
     double revote_diff = 0.0;
     double revote_vesting = 0.0;
     double revote_weight() const { return weight + revote_diff; };
 
-    double weight_charge(double weight, int64_t charge = 0) const {
+    double weight_charge(double weight) const {
         auto current_power = std::min(golos::config::_100percent - charge, int64_t(golos::config::_100percent));
         int64_t abs_w = abs(weight) * current_power;
         auto used_charge = (abs_w + 200 - 1) / 200;     // TODO: `200` should depend on limit
         return static_cast<double>(used_charge) / golos::config::_100percent;
     };
 
-    double rshares(int64_t charge = 0) const {
+    double rshares() const {
         auto weight_rshares = revote_diff ? revote_weight() : weight;
-        auto abs_rshares = weight_charge(weight_rshares, charge) * (revote_diff ? revote_vesting : vesting);
+        auto abs_rshares = weight_charge(weight_rshares) * (revote_diff ? revote_vesting : vesting);
         return (weight_rshares < 0) ? -abs_rshares : abs_rshares;
     };
 

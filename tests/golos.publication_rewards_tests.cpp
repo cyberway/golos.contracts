@@ -28,8 +28,9 @@ double log2(double arg) {
 namespace golos_curation {
 constexpr int64_t _2s = 2 * 2000000000000;
 constexpr int64_t _m = MAX_FIXP;
-std::string func_str = std::to_string(_m) + " / ((" + std::to_string(_2s) + " / max(x, 0.1)) + 1)";
-auto func = [](double x){ return static_cast<double>(_m) / ((static_cast<double>(_2s) / std::max(x, 0.000000000001)) + 1.0); };
+// looks like this function works bad when x = 0
+std::string func_str = std::to_string(_m) + " / ((" + std::to_string(_2s) + " / max(x, 0.01)) + 1)";
+auto func = [](double x){ return static_cast<double>(_m) / ((static_cast<double>(_2s) / std::max(x, 0.01)) + 1.0); };
 }
 
 class reward_calcs_tester : public golos_tester {
@@ -573,13 +574,19 @@ public:
 
         string ret_str = ret;
         const auto current_time = control->head_block_time().sec_since_epoch();
+        int64_t charge = 0;
         if ((ret == success()) || (ret_str.find("forum::apply_limits:") != string::npos)) {
-            auto apply_ret = _state.pools.back().lims.apply(
+            auto& pool = _state.pools.back();
+            auto& charges = pool.charges[voter];
+            auto idx = pool.lims.get_limited_act(limits::VOTE).chargenum;
+            charge = charges.size() > idx ? charges[idx].data : 0;
+            auto apply_ret = pool.lims.apply(
                 limits::VOTE,
-                _state.pools.back().charges[voter],
+                charges,
                 _state.balances[voter].vestamount,
                 seconds(current_time).count(),
                 get_prop(std::abs(weight)));
+            BOOST_TEST_MESSAGE("VCHRG:"<<charges[pool.lims.get_limited_act(limits::VOTE).chargenum].data << " / "<<apply_ret);
             BOOST_REQUIRE_MESSAGE(((ret == success()) == (apply_ret >= 0.0)), "wrong ret_str: " + ret_str
                 + "; vesting = " + std::to_string(_state.balances[voter].vestamount)
                 + "; apply_ret = " + std::to_string(apply_ret));
@@ -590,15 +597,16 @@ public:
                 for (auto& m : p.messages) {
                     if (m.key == message_id) {
                         auto vote_itr = std::find_if(m.votes.begin(), m.votes.end(), [voter](const vote& v) {return v.voter == voter;});
-                        if (vote_itr == m.votes.end())
+                        if (vote_itr == m.votes.end()) {
                             m.votes.emplace_back(vote{
-                                voter,
-                                std::min(get_prop(weight), 1.0),
-                                PRECISION_DIV * static_cast<double>(
+                                .voter = voter,
+                                .weight = std::min(get_prop(weight), 1.0),
+                                .vesting = PRECISION_DIV * static_cast<double>(
                                     FP(_state.balances[voter].vestamount + _state.dlg_balances[voter].received)), //raw amount
-                                static_cast<double>(current_time)
+                                .created = static_cast<double>(current_time),
+                                .charge = charge
                             });
-                        else {
+                        } else {
                             vote_itr->revote_diff = std::min(get_prop(weight), 1.0) - vote_itr->weight;
                             vote_itr->revote_vesting =
                                 PRECISION_DIV * static_cast<double>(FP(_state.balances[voter].vestamount));
@@ -654,7 +662,7 @@ BOOST_AUTO_TEST_SUITE(reward_calcs_tests)
 BOOST_FIXTURE_TEST_CASE(basic_tests, reward_calcs_tester) try {
     BOOST_TEST_MESSAGE("Basic publication_rewards tests");
     auto bignum = 500000000000;
-    init(bignum, 500000);
+    init(bignum, 50000000);         // user's vesting increased to avoid rounding in contract on low values
     produce_blocks();
     BOOST_TEST_MESSAGE("--- setrules");
     BOOST_CHECK_EQUAL(err.not_monotonic,
@@ -787,8 +795,6 @@ BOOST_FIXTURE_TEST_CASE(timepenalty_test, reward_calcs_tester) try {
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE(limits_test, reward_calcs_tester) try {
-    // TODO: fix #831
-    /*
     BOOST_TEST_MESSAGE("Simple limits test");
     auto bignum = 500000000000;
     init(bignum, 500000);
@@ -799,17 +805,25 @@ BOOST_FIXTURE_TEST_CASE(limits_test, reward_calcs_tester) try {
     BOOST_CHECK_EQUAL(success(), setrules({"x", bignum}, {"sqrt(x)", bignum}, {"x / 1800", 1800},
         [](double x){ return x; }, [](double x){ return sqrt(x); }, [](double x){ return x / 1800.0; },
         {
-            .restorers = {"t / 250", "sqrt(v / 500000) * (t / 150)"},
+            .restorers = {
+                "t * 10000 / 250",
+                "sqrt(v / 500000) * (t * 10000 / 150)",
+                "sqrt(v / 500000) * (t * 20000 / 150)",
+                "sqrt(v / 500000) * (t * 30000 / 150)"
+            },
             .limitedacts = {
-                {.chargenum = 1, .restorernum = 1, .cutoffval = 20000, .chargeprice = 9900}, //POST
-                {.chargenum = 1, .restorernum = 1, .cutoffval = 30000, .chargeprice = 1000}, //COMMENT
+                {.chargenum = 1, .restorernum = 2, .cutoffval = 20000, .chargeprice = 9900}, //POST
+                {.chargenum = 1, .restorernum = 3, .cutoffval = 30000, .chargeprice = 1000}, //COMMENT
                 {.chargenum = 0, .restorernum = 0, .cutoffval = 10000, .chargeprice = 1000}, //VOTE
-                {.chargenum = 1, .restorernum = 1, .cutoffval = 10000, .chargeprice = 0}},   //POST BW
+                {.chargenum = 1, .restorernum = 1, .cutoffval = 10000, .chargeprice = 0}     //POST BW
+            },
             .vestingprices = {150000, -1},
             .minvestings = {300000, 100000, 100000}
         }, {
-            [](double p, double v, double t){ return t / 250.0; },
-            [](double p, double v, double t){ return sqrt(v / (500000.0 / PRECISION_DIV)) * (t / 150.0); }  // !Vesting
+            [](double p, double v, double t){ return t*10000 / 250; },
+            [](double p, double v, double t){ return sqrt(v / (500000.0 / PRECISION_DIV)) * (t*10000 / 150); }, // !Vesting
+            [](double p, double v, double t){ return sqrt(v / (500000.0 / PRECISION_DIV)) * (t*20000 / 150); }, // !Vesting
+            [](double p, double v, double t){ return sqrt(v / (500000.0 / PRECISION_DIV)) * (t*30000 / 150); }  // !Vesting
         })
     );
 
@@ -877,8 +891,7 @@ BOOST_FIXTURE_TEST_CASE(limits_test, reward_calcs_tester) try {
             .vestingprices = {-1, -1},
             .minvestings = {400000, 0, 0}
         }, {
-            [](double p, double v, double t){ return 0.0; },
-            [](double p, double v, double t){ return 0.0; }
+            [](double p, double v, double t){ return t; }
         })
     );
     check();
@@ -886,7 +899,6 @@ BOOST_FIXTURE_TEST_CASE(limits_test, reward_calcs_tester) try {
     BOOST_CHECK_EQUAL(success(), create_msg({N(bob1), "test2"}));
     check();
     show();
-    */
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE(rshares_sum_overflow_test, reward_calcs_tester) try {
@@ -1099,13 +1111,14 @@ BOOST_FIXTURE_TEST_CASE(golos_linear_curation_test, reward_calcs_tester) try {
         vote = post.get_vote(maker, i+1);
         BOOST_CHECK_EQUAL(vote["rshares"], expect_rshares);
         BOOST_CHECK_EQUAL(vote["curatorsw"], expect_rshares);
+        check();
     }
     BOOST_CHECK_EQUAL(success(), addvote(voter, {maker, "comment" + std::to_string(n_comments)}, 10000));
     expect_rshares = effective * 49 / cfg::_100percent; // four votes reduce weight factor to 49
     vote = post.get_vote(maker, n_comments+1);
     BOOST_CHECK_EQUAL(vote["rshares"], expect_rshares);
     BOOST_CHECK_EQUAL(vote["curatorsw"], expect_rshares);
-    // check();     // can't check here because model doesn't support vote limits correctly
+    check();
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE(close_token_acc_test, reward_calcs_tester) try {
