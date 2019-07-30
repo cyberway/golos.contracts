@@ -2,7 +2,7 @@
 
 *****  
 [![buildkite](https://badge.buildkite.com/cbc4061f218d570917e365bfff8a251c03996f43f35f4deb66.svg?branch=master)](https://buildkite.com/golos.contracts)  
-[![GitHub](https://img.shields.io/github/license/goloschain/golos.contracts.svg)](https://github.com/GolosChain/golos.contracts/blob/master/LICENSE)  
+[![GitHub](https://img.shields.io/github/license/goloschain/golos.contracts.svg)](https://github.com/cyberway/golos.contracts/blob/master/LICENSE)
 
 # golos dapp prototype contracts
 
