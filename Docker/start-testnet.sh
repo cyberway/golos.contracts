@@ -73,7 +73,9 @@ docker run --rm --network cyberway_cyberway-net -ti $GOLOS_IMAGE /bin/bash -c 'r
 call_hook "nodeos-started"
 
 echo "=== Deploy cyberway & golos contracts"
-docker run --rm --network cyberway_cyberway-net -ti $GOLOS_IMAGE /opt/golos.contracts/scripts/boot-sequence.py
+if [[ -n "$RUN_BOOT_SEQUENCE" ]]; then
+    docker run --rm --network cyberway_cyberway-net -ti $GOLOS_IMAGE /opt/golos.contracts/scripts/boot-sequence.py
+fi
 call_hook "contracts-loaded"
 
 if [[ -n "$GOLOS_DB" ]]; then
