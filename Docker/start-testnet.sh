@@ -54,12 +54,14 @@ call_hook "files-preextract"
 
 echo "=== Extract cyberway startup scripts from $CYBERWAY_IMAGE"
 rm -fR startup || true
+docker pull --quiet $CYBERWAY_IMAGE
 docker create --name extract-cyberway $CYBERWAY_IMAGE
 docker cp extract-cyberway:/opt/cyberway/startup startup
 docker rm extract-cyberway
 
 echo "=== Extract Golos convertion scripts from $GOLOS_IMAGE"
 rm -fR scripts || true
+docker pull --quiet $GOLOS_IMAGE
 docker create --name extract-golos-scripts $GOLOS_IMAGE
 docker cp extract-golos-scripts:/opt/golos.contracts/scripts scripts
 docker rm extract-golos-scripts
