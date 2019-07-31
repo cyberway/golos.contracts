@@ -288,7 +288,8 @@
             "abi_type": "emit_state",
             "rows": [{"scope":"gls.emit", "payer": "gls.emit", "pk": 6097199460613750784, "data": {
                 "id": 6097199460613750784,
-                "infrate": {"start":1399, "stop":95, "narrowing":250000},   # 1399 = 1515 - 29000000/250000
+# Infrate value: 1399 = 1515 - 29000000/250000
+                "infrate": {"start":1399, "stop":95, "narrowing":250000},
                 "pools": {"pools":[
                     {"name":"gls.ctrl", "percent":0},
                     {"name":"gls.publish", "percent":6667},
@@ -304,13 +305,14 @@
             "rows": [{"scope":"GOLOS", "payer": "gls.vesting", "pk": 15758546561230307328, "data": {
                 "id": 15758546561230307328,
                 "withdraw": {"intervals":13, "interval_seconds":604800},
-                "min_amount": {"min_amount":10500000000},   # 3.0 GOLOS * 10 * 3500 gests
+# min_amount: 3.0 GOLOS * 10 * 3500 gests
+                "min_amount": {"min_amount":10500000000},
                 "delegation": {
-                    # median: 0.030 GOLOS and 0.010 GOLOS:
-                    #"min_amount":105000000,
-                    #"min_remainder":35000000,
+#                   median: 0.030 GOLOS and 0.010 GOLOS:
+#                   "min_amount":105000000,
+#                   "min_remainder":35000000,
 
-                    # increased to 1.000 GOLOS:
+#                   increased to 1.000 GOLOS:
                     "min_amount":3500000000,
                     "min_remainder":3500000000,
 
