@@ -388,10 +388,10 @@ BOOST_FIXTURE_TEST_CASE(upvote, golos_publication_tester) try {
 
     BOOST_TEST_MESSAGE("--- fail while upvote lockout");
     produce_block();
-    //BOOST_CHECK_EQUAL(err.upvote_near_close, vote_jackie(cfg::_100percent));          // TODO Fix broken test GolosChain/golos-smart#410
+    //BOOST_CHECK_EQUAL(err.upvote_near_close, vote_jackie(cfg::_100percent));          // TODO Fix broken test cyberway/golos-smart#410
     produce_blocks(seconds_to_blocks(post.upvote_lockout) - 1);
     BOOST_CHECK_EQUAL(success(), post.closemssgs());
-    //BOOST_CHECK_EQUAL(err.upvote_near_close, vote_jackie(cfg::_100percent));          // TODO Fix broken test GolosChain/golos-smart#410
+    //BOOST_CHECK_EQUAL(err.upvote_near_close, vote_jackie(cfg::_100percent));          // TODO Fix broken test cyberway/golos-smart#410
 
     BOOST_TEST_MESSAGE("--- succeed vote after cashout");
     produce_block();
