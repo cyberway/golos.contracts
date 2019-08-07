@@ -5,8 +5,13 @@ set -e
 : ${GOLOS_STATE:="golos.dat"}
 : ${GOLOS_OP_STATE:="operation_dump"}
 : ${GOLOS_IMAGE:="cyberway/golos.contracts:latest"}
+: ${INITIAL_TIMESTAMP:=$(date +"%FT%T.%3N" --utc)}
 
-INITIAL_TIMESTAMP=$(date +"%FT%T.%3N" --utc)
+err() {
+    echo "ERROR: $*" >&2
+    exit 1
+}
+
 
 echo "Create directory $DEST"
 [ -d $DEST ] || mkdir $DEST
@@ -33,8 +38,14 @@ docker run --rm \
     -e LS_CMD="$LS_CMD" \
     -e CREATE_GENESIS_CMD="$CREATE_GENESIS_CMD" \
     $GOLOS_IMAGE bash -c \
-    ' $LS_CMD &&
-     sed "s|\${INITIAL_TIMESTAMP}|'$INITIAL_TIMESTAMP'|; /^#/d" /opt/golos.contracts/genesis/genesis.json.tmpl | tee genesis.json && \
+    '$LS_CMD &&
+     sed "s|\${INITIAL_TIMESTAMP}|'$INITIAL_TIMESTAMP$'|; /^#/d" /opt/golos.contracts/genesis/genesis.json.tmpl | tee genesis.json /genesis-data/genesis.json&& \
      sed "s|\$CYBERWAY_CONTRACTS|$CYBERWAY_CONTRACTS|;s|\$GOLOS_CONTRACTS|$GOLOS_CONTRACTS|; /^#/d" /opt/golos.contracts/genesis/genesis-info.json.tmpl | tee genesis-info.json && \
-      $CREATE_GENESIS_CMD && \
-     sed "s|\${GENESIS_DATA_HASH}|$(sha256sum /genesis-data/genesis.dat | cut -f1 -d" ")|" genesis.json | tee /genesis-data/genesis.json'
+     $CREATE_GENESIS_CMD'
+
+gpo=$(grep -oP "Dynamic global property: \K.*" <create-genesis.log || err "Failed to extract dynamic global property")
+head_block_id=$(echo $gpo | grep -oP '"head_block_id":"\K[0-9a-f]{40}(?=")' || err "Failed to extract head_block_num")
+
+GENESIS_DATA_HASH=$(sha256sum $DEST/genesis.dat | cut -f1 -d" ")
+sed -i.bak "s|\${GENESIS_DATA_HASH}|$GENESIS_DATA_HASH|; s|\(\"initial_chain_id\":\s*\"0\+\)0\{40\}\"|\1$head_block_id\"|" $DEST/genesis.json
+cat $DEST/genesis.json
