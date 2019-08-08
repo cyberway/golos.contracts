@@ -2,6 +2,8 @@
     "state_file": "golos.dat",
     "genesis_json": "genesis.json",
     "params":{
+# NOTE: set initial_prod_count to 7 for mainnet
+        "initial_prod_count": 0,
         "stake":{
             "enabled": true,
             "max_proxies":[30, 10, 3, 1],
@@ -40,11 +42,6 @@
                 "maxarg":4096
             },
             "maxtokenprop":5000
-        },
-# set required hardfork to 21.1.0 for disable producers start in testnet
-        "require_hardfork":{
-            "version":352387072,
-            "time":"2019-06-28T12:00:00.000"
         }
     },
     "accounts": [
