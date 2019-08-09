@@ -11,7 +11,6 @@ using namespace eosio;
 
 struct [[eosio::table]] state {
     uint64_t prev_emit;
-    uint128_t tx_id;
     uint64_t start_time;
     bool active;
 };
@@ -39,7 +38,7 @@ private:
         return cfg;
     }
 
-    void schedule_next(state& s, uint32_t delay);
+    void schedule_next(uint32_t delay);
 };
 
 } // golos

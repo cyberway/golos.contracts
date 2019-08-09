@@ -79,19 +79,18 @@ BOOST_FIXTURE_TEST_CASE(start_emission_test, golos_emit_tester) try {
     BOOST_TEST_MESSAGE("--- started");
     produce_block();    // `emit` being processed in next tx (deferred), go next block to be sure state updated
     auto obj_params = emit.get_params();
-    auto t = emit.get_state();
-    auto tx = t["tx_id"];
+    auto t1 = emit.get_state()["prev_emit"];
 
     BOOST_TEST_MESSAGE("--- go to block just before emission");
     auto emit_interval = obj_params["interval"]["value"].as<uint16_t>() * 1000 / cfg::block_interval_ms;
     produce_blocks(emit_interval - 1);      // actually we go to emission block now; TODO: resolve, why deferred tx sometimes applied before get_state() and sometimes we need to go next block
-    BOOST_CHECK_EQUAL(tx, emit.get_state()["tx_id"]);
+    BOOST_CHECK_EQUAL(t1, emit.get_state()["prev_emit"]);
     BOOST_TEST_MESSAGE("--- next block, check emission");
     produce_block();
-    auto tx2 = emit.get_state()["tx_id"];
-    BOOST_CHECK_NE(tx, tx2);
+    auto t2 = emit.get_state()["prev_emit"];
+    BOOST_CHECK_NE(t1, t2);
     produce_block();
-    BOOST_CHECK_EQUAL(tx2, emit.get_state()["tx_id"]);
+    BOOST_CHECK_EQUAL(t2, emit.get_state()["prev_emit"]);
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE(set_params, golos_emit_tester) try {
