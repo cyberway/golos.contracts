@@ -328,7 +328,7 @@ void publication::delete_message(structures::mssgid message_id) {
 
     auto remove_id = mssg_itr->id;
     message_table.erase(mssg_itr);
-    send_deletevotes_trx(remove_id, message_id.author);
+    send_deletevotes_trx(remove_id, message_id.author, message_id.author);
 }
 
 void publication::upvote(name voter, structures::mssgid message_id, uint16_t weight) {
@@ -523,12 +523,12 @@ void publication::send_postreward_trx(uint64_t id, const structures::mssgid& mes
     trx.send((static_cast<uint128_t>(id) << 64) | message_id.author.value, payer);
 }
 
-void publication::send_deletevotes_trx(int64_t message_id, name author) {
+void publication::send_deletevotes_trx(int64_t message_id, name author, name payer) {
     transaction trx(eosio::current_time_point() + eosio::seconds(config::deletevotes_expiration_sec));
     trx.actions.emplace_back(action{permission_level(_self, config::code_name), _self, "deletevotes"_n, std::make_tuple(message_id, author)});
     providebw_for_trx(trx, params().bwprovider_param.provider);
     trx.delay_sec = 0;
-    trx.send((static_cast<uint128_t>(message_id) << 64) | author.value, _self);
+    trx.send((static_cast<uint128_t>(message_id) << 64) | author.value, payer);
 }
 
 void publication::close_messages(name payer) {
@@ -667,7 +667,7 @@ void publication::deletevotes(int64_t message_id, name author) {
     }
 
     if (vote_itr != votetable_index.end()) {
-        send_deletevotes_trx(message_id, author);
+        send_deletevotes_trx(message_id, author, _self);
     }
 }
 
@@ -742,7 +742,7 @@ void publication::paymssgrwrd(structures::mssgid message_id) {
         fill_depleted_pool(pools, asset(unclaimed_rewards, payout.symbol), pools.end());
 
         send_postreward_event(message_id, payout, asset(ben_payout_sum, payout.symbol), asset(actual_curation_payout, payout.symbol), asset(unclaimed_rewards, payout.symbol));
-        send_deletevotes_trx(remove_id, message_id.author);
+        send_deletevotes_trx(remove_id, message_id.author, _self);
     }
     else {
         pay_to(std::move(vesting_payouts), true);
