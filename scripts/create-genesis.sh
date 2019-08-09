@@ -29,10 +29,13 @@ if [ -d "$GOLOS_OP_STATE" ]; then
 	EE_OP_STATE_LINK="-v `readlink -f $GOLOS_OP_STATE`:/operation_dump"
 fi
 
+rm -f create-genesis.log && touch create-genesis.log
+
 docker run --rm \
     -v `readlink -f $GOLOS_STATE`:/golos.dat \
     -v `readlink -f $GOLOS_STATE.map`:/golos.dat.map \
     -v `readlink -f $GOLOS_STATE.reputation`:/golos.dat.reputation \
+    -v `readlink -f create-genesis.log`:/create-genesis.log \
     $EE_OP_STATE_LINK \
     -v `readlink -f $DEST`:/genesis-data \
     -e LS_CMD="$LS_CMD" \
@@ -41,7 +44,7 @@ docker run --rm \
     '$LS_CMD &&
      sed "s|\${INITIAL_TIMESTAMP}|'$INITIAL_TIMESTAMP$'|; /^#/d" /opt/golos.contracts/genesis/genesis.json.tmpl | tee genesis.json /genesis-data/genesis.json&& \
      sed "s|\$CYBERWAY_CONTRACTS|$CYBERWAY_CONTRACTS|;s|\$GOLOS_CONTRACTS|$GOLOS_CONTRACTS|; /^#/d" /opt/golos.contracts/genesis/genesis-info.json.tmpl | tee genesis-info.json && \
-     $CREATE_GENESIS_CMD'
+     $CREATE_GENESIS_CMD 2>&1 | tee create-genesis.log'
 
 gpo=$(grep -oP "Dynamic global property: \K.*" <create-genesis.log || err "Failed to extract dynamic global property")
 head_block_id=$(echo $gpo | grep -oP '"head_block_id":"\K[0-9a-f]{40}(?=")' || err "Failed to extract head_block_num")
