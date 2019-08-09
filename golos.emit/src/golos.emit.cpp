@@ -72,20 +72,17 @@ void emission::start() {
 
     uint32_t elapsed = microseconds(now - s.prev_emit).to_seconds();
     auto delay = elapsed < interval ? interval - elapsed : 0;
-    schedule_next(s, delay);
+    _state.set(s, _self);
+    schedule_next(delay);
 }
 
 void emission::stop() {
     require_auth(_self);
     auto s = _state.get();  // TODO: create own singleton allowing custom assert message
     eosio::check(s.active, "already stopped");
-    auto id = s.tx_id;
     s.active = false;
-    s.tx_id = 0;
     _state.set(s, _self);
-    if (id) {
-        cancel_deferred(id);
-    }
+    cancel_deferred(cfg().token.symbol.raw());
 }
 
 void emission::emit() {
@@ -146,11 +143,12 @@ void emission::emit() {
     }
 
     s.prev_emit = now;
-    schedule_next(s, interval);
+    _state.set(s, _self);
+    schedule_next(interval);
 }
 
-void emission::schedule_next(state& s, uint32_t delay) {
-    auto sender_id = (uint128_t(cfg().token.symbol.raw()) << 64) | s.prev_emit;
+void emission::schedule_next(uint32_t delay) {
+    auto sender_id = cfg().token.symbol.raw();
     auto& provider = cfg().bwprovider.provider;
     auto& pools = cfg().pools.pools;
 
@@ -164,9 +162,6 @@ void emission::schedule_next(state& s, uint32_t delay) {
     }
     trx.delay_sec = delay;
     trx.send(sender_id, _self);
-
-    s.tx_id = sender_id;
-    _state.set(s, _self);
 }
 
 
