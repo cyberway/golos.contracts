@@ -42,6 +42,7 @@ protected:
     vector<account_name> _users;
 
     struct errors: contract_error_messages {
+        const string too_low_power = amsg("too low voting power");
     } err;
 
 public:
@@ -236,6 +237,24 @@ BOOST_FIXTURE_TEST_CASE(golos_rshares_test, posting_tester) try {
     produce_block();
     CHECK_MATCHING_OBJECT(post.get_vote(poster, n_comments+2), make_rshares(expect, expect));
 
+    BOOST_TEST_MESSAGE("--- creating comments to full discharge battery");
+    int n_full_comments = (votes_capacity / factor) * (votes_capacity-1);
+    n_full_comments += 20; // regeneration by blocks
+    n_full_comments++; // and 1 comment for vote after 1% charge
+    for (int i = 1; i <= n_full_comments; i++) {
+        BOOST_CHECK_EQUAL(success(), post.create_msg({poster, "fullcomment" + std::to_string(i)}, post_id));
+        produce_blocks(golos::seconds_to_blocks(comments_window / comments_per_window) + 1);
+    }
+    produce_block();
+
+    BOOST_TEST_MESSAGE("--- vote for comments and testing discharge check");
+    int i = 1;
+    for (; i <= n_full_comments - 1; i++) {
+        BOOST_CHECK_EQUAL(success(), post.upvote(voter, {poster, "fullcomment" + std::to_string(i)}));
+        produce_block();
+    }
+
+    BOOST_CHECK_EQUAL(err.too_low_power, post.upvote(voter, {poster, "fullcomment" + std::to_string(i)}));
 } FC_LOG_AND_RETHROW()
 
 BOOST_AUTO_TEST_SUITE_END()

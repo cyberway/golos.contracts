@@ -470,6 +470,7 @@ int16_t publication::use_charge(tables::limit_table& lims, structures::limitpara
 
         auto current_power = charge::get_current_value(config::charge_name, account, token_code, lim_itr->charge_id);
         int64_t charge = config::_100percent - current_power;
+        eosio::check(charge >= config::_1percent, "too low voting power");
         weight = static_cast<int16_t>((abs(weight) * charge / config::_100percent + k - 1) / k);
     }
 
