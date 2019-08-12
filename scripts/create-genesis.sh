@@ -48,7 +48,9 @@ docker run --rm \
 
 gpo=$(grep -oP "Dynamic global property: \K.*" <create-genesis.log || err "Failed to extract dynamic global property")
 head_block_id=$(echo $gpo | grep -oP '"head_block_id":"\K[0-9a-f]{40}(?=")' || err "Failed to extract head_block_num")
+initial_timestamp=$(grep -oP "Set initial_timestamp to \K.*$" <create-genesis.log || true)
+[ "$initial_timestamp" ] && set_initial_timestamp="s|\(\"initial_timestamp\"\s*:\s*\)\".*\"|\1\"$initial_timestamp\"|; " || true
 
 GENESIS_DATA_HASH=$(sha256sum $DEST/genesis.dat | cut -f1 -d" ")
-sed -i.bak "s|\${GENESIS_DATA_HASH}|$GENESIS_DATA_HASH|; s|\(\"initial_chain_id\":\s*\"0\+\)0\{40\}\"|\1$head_block_id\"|" $DEST/genesis.json
+sed -i.bak "s|\${GENESIS_DATA_HASH}|$GENESIS_DATA_HASH|; s|\(\"initial_chain_id\":\s*\"0\+\)0\{40\}\"|\1$head_block_id\"|; $set_initial_timestamp" $DEST/genesis.json
 cat $DEST/genesis.json
