@@ -42,6 +42,8 @@ protected:
     vector<account_name> _users;
 
     struct errors: contract_error_messages {
+        const string too_low_power = amsg("too low voting power");
+        const string too_low_weight = amsg("too low vote weight");
     } err;
 
 public:
@@ -58,6 +60,7 @@ public:
 
         create_accounts({_code, _issuer, cfg::token_name, cfg::vesting_name, cfg::control_name, cfg::charge_name});
         create_accounts(_users);
+        create_accounts({N(stranger)});
         produce_block();
         install_contract(cfg::token_name, contracts::token_wasm(), contracts::token_abi());
         vest.add_changevest_auth_to_issuer(_issuer, cfg::control_name);
@@ -197,6 +200,11 @@ BOOST_FIXTURE_TEST_CASE(golos_rshares_test, posting_tester) try {
     }
     produce_block();
 
+    BOOST_TEST_MESSAGE("--- vote by stranger with no balance");
+    buy_vesting_for_users({N(stranger)}, 10);
+    BOOST_CHECK_EQUAL(err.too_low_weight, post.upvote(N(stranger), post_id));
+    produce_block();
+
     BOOST_TEST_MESSAGE("--- vote with 100%");
     BOOST_CHECK_EQUAL(success(), post.upvote(voter, post_id));
     produce_block();
@@ -236,6 +244,24 @@ BOOST_FIXTURE_TEST_CASE(golos_rshares_test, posting_tester) try {
     produce_block();
     CHECK_MATCHING_OBJECT(post.get_vote(poster, n_comments+2), make_rshares(expect, expect));
 
+    BOOST_TEST_MESSAGE("--- creating comments to full discharge battery");
+    int n_full_comments = (votes_capacity / factor) * (votes_capacity-1);
+    n_full_comments += 20; // regeneration by blocks
+    n_full_comments++; // and 1 comment for vote after 1% charge
+    for (int i = 1; i <= n_full_comments; i++) {
+        BOOST_CHECK_EQUAL(success(), post.create_msg({poster, "fullcomment" + std::to_string(i)}, post_id));
+        produce_blocks(golos::seconds_to_blocks(comments_window / comments_per_window) + 1);
+    }
+    produce_block();
+
+    BOOST_TEST_MESSAGE("--- vote for comments and testing discharge check");
+    int i = 1;
+    for (; i <= n_full_comments - 1; i++) {
+        BOOST_CHECK_EQUAL(success(), post.upvote(voter, {poster, "fullcomment" + std::to_string(i)}));
+        produce_block();
+    }
+
+    BOOST_CHECK_EQUAL(err.too_low_power, post.upvote(voter, {poster, "fullcomment" + std::to_string(i)}));
 } FC_LOG_AND_RETHROW()
 
 BOOST_AUTO_TEST_SUITE_END()

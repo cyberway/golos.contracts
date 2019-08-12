@@ -1028,6 +1028,7 @@ BOOST_FIXTURE_TEST_CASE(golos_curation_test, reward_calcs_tester) try {
     produce_block();
     check();
     BOOST_CHECK_EQUAL(success(), vest.open(_stranger, _token_symbol, _stranger));
+    add_vesting({_stranger}, 20000);
     BOOST_TEST_MESSAGE("--- _stranger opened an account");
     BOOST_CHECK_EQUAL(success(), addvote(_stranger, {_users[0], "permlink"}, 10000));
     BOOST_TEST_MESSAGE("--- _stranger voted");

@@ -60,7 +60,8 @@ public:
         BOOST_CHECK_EQUAL(success(), post.set_limit("post bandwidth"));
 
         BOOST_CHECK_EQUAL(success(), post.init_default_params());
-
+        auto params = "[" + post.get_str_min_abs_rshares_param(0) + "]";
+        BOOST_CHECK_EQUAL(success(), post.set_params(params));
         produce_block();
         for (auto& u : _users) {
             BOOST_CHECK_EQUAL(success(), vest.open(u, _sym, u));
