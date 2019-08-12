@@ -2,6 +2,7 @@
 #include <common/parameter_ops.hpp>
 #include <eosio/transaction.hpp>
 #include <eosio/time.hpp>
+#include <cmath>
 
 namespace golos {
 
@@ -85,6 +86,12 @@ void emission::stop() {
     cancel_deferred(cfg().token.symbol.raw());
 }
 
+int64_t emission::get_continuous_rate(int64_t annual_rate) {
+    static auto constexpr real_100percent = static_cast<double>(config::_100percent);
+    auto real_rate = static_cast<double>(annual_rate);
+    return static_cast<int64_t>(std::log(1.0 + (real_rate / real_100percent)) * real_100percent); 
+}
+
 void emission::emit() {
     auto s = _state.get();
     eosio::check(s.active, "emit called in inactive state");    // impossible?
@@ -102,7 +109,7 @@ void emission::emit() {
     auto& pools = cfg().pools.pools;
     auto& infrate = cfg().infrate;
     auto narrowed = microseconds(now - s.start_time).to_seconds() / infrate.narrowing;
-    auto inf_rate = std::max(int64_t(infrate.start) - narrowed, int64_t(infrate.stop));
+    auto inf_rate = get_continuous_rate(std::max(int64_t(infrate.start) - narrowed, int64_t(infrate.stop)));
 
     auto supply = token::get_supply(config::token_name, token.symbol.code());
     auto issuer = token::get_issuer(config::token_name, token.symbol.code());

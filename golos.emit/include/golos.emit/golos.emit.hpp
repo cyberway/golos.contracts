@@ -29,6 +29,7 @@ public:
     [[eosio::action]] void stop();
 
 private:
+    static int64_t get_continuous_rate(int64_t annual_rate);
     void recalculate_state(std::vector<emit_param>);
     state_singleton _state;
     emit_params_singleton _cfg;
