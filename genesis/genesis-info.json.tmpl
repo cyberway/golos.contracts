@@ -10,6 +10,11 @@
             "depriving_window":2592000,
             "min_own_staked_for_election":0
         },
+        "funds": [
+            {"name": "cyber.appfund", "numerator": 10, "denominator": 9},
+            {"name": "cyber.core",    "numerator":  1, "denominator": 18},
+            {"name": "cyber.io",      "numerator":  1, "denominator": 18}
+        ],
         "posting_rules": {
             "mainfunc":{
                 "code":{
@@ -138,6 +143,18 @@
                 {"name": "active", "keys": [], "accounts": ["cyber@prods"]},
             ],
         },
+        {"name": "cyber.core",
+            "permissions": [
+                {"name": "owner",  "keys": [], "accounts": ["~goloscore@owner"]},
+                {"name": "active", "keys": [], "accounts": ["~goloscore@active"]}
+            ]
+        },
+        {"name": "cyber.io",
+            "permissions": [
+                {"name": "owner",  "keys": [], "accounts": ["~golosio@owner"]},
+                {"name": "active", "keys": [], "accounts": ["~golosio@active"]}
+            ]
+        },
 
 # NOTE: Technical account to start testnet and tests (remove from mainnet)
         {
@@ -155,7 +172,7 @@
                 {"name": "owner",        "accounts": ["@witn.smajor"]},
 # NOTE: Remove "@testing" from mainnet
                 {"name": "active",       "accounts": ["@witn.smajor", "gls.ctrl@cyber.code", "@testing"]},
-                {"name": "golos.io",     "accounts": ["qwm3tgmbeog5@golos.io"]},
+                {"name": "golos.io",     "accounts": ["~golosio@golos.io"]},
 # NOTE: Remove testing key from mainnet
                 {"name": "testing",      "key": "GLS5a2eDuRETEg7uy8eHbiCqGZM3wnh2pLjiXrFduLWBKVZKCkB62"},
                 {"name": "issue",        "accounts": ["gls.emit@cyber.code", "@testing"]},
