@@ -98,6 +98,10 @@ struct posting_params_setter: set_params_visitor<posting_state> {
         new_bwprovider = p;
         return set_param(p, &posting_state::bwprovider_param);
     }
+
+    bool operator()(const min_abs_rshares_prm& param) {
+        return set_param(param, &posting_state::min_abs_rshares_param);
+    }
 };
 
 // cached to prevent unneeded db access
@@ -767,6 +771,7 @@ fixp_t publication::calc_available_rshares(name voter, int16_t weight, uint64_t 
     auto used_power = use_charge(lims, structures::limitparams::VOTE, token::get_issuer(config::token_name, token_code),
         voter, eff_vesting, token_code, false, weight);
     fixp_t abs_rshares = FP(eff_vesting) * elaf_t(elai_t(used_power) / elai_t(config::_100percent));
+    eosio::check(abs_rshares >= FP(params().min_abs_rshares_param.value), "too low vote weight");
     return (weight < 0) ? -abs_rshares : abs_rshares;
 }
 

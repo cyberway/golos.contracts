@@ -89,8 +89,14 @@ namespace golos {
     };
     using bwprovider_prm = param_wrapper<st_bwprovider,1>;
 
+    struct st_min_abs_rshares : parameter {
+        uint64_t value;
+    };
+    using min_abs_rshares_prm = param_wrapper<st_min_abs_rshares, 1>;
+
     using posting_params = std::variant<max_vote_changes_prm, cashout_window_prm, max_beneficiaries_prm,
-          max_comment_depth_prm, social_acc_prm, referral_acc_prm, curators_prcnt_prm, bwprovider_prm>;
+          max_comment_depth_prm, social_acc_prm, referral_acc_prm, curators_prcnt_prm, bwprovider_prm,
+          min_abs_rshares_prm>;
 
     struct [[eosio::table]] posting_state {
         max_vote_changes_prm max_vote_changes_param;
@@ -101,8 +107,9 @@ namespace golos {
         referral_acc_prm referral_acc_param;
         curators_prcnt_prm curators_prcnt_param;
         bwprovider_prm bwprovider_param;
+        min_abs_rshares_prm min_abs_rshares_param;
 
-        static constexpr int params_count = 8;
+        static constexpr int params_count = 9;
     };
     using posting_params_singleton = eosio::singleton<"pstngparams"_n, posting_state>;
 

@@ -191,9 +191,10 @@ struct golos_posting_api: base_contract_api {
         auto referral = get_str_referral_acc(name());
         auto curators_prcnt = get_str_curators_prcnt(min_curators_prcnt, max_curators_prcnt);
         auto bwprovider = get_str_bwprovider(name(), name());
+        auto min_abs_rshares = get_str_min_abs_rshares_param(8);
 
         auto params = "[" + vote_changes + "," + cashout_window + "," + beneficiaries + "," + comment_depth +
-            "," + social + "," + referral + "," + curators_prcnt + "," + bwprovider + "]";
+            "," + social + "," + referral + "," + curators_prcnt + "," + bwprovider + "," + min_abs_rshares + "]";
         return set_params(params);
     }
 
@@ -231,6 +232,10 @@ struct golos_posting_api: base_contract_api {
 
     string get_str_bwprovider(account_name actor, permission_name permission) {
         return string("['st_bwprovider', {'actor':'") + name{actor}.to_string() + "','permission':'" + name{permission}.to_string() + "'}]";
+    }
+
+    string get_str_min_abs_rshares_param(uint64_t value) {
+        return string("['st_min_abs_rshares', {'value':'") + std::to_string(value) + "'}]";
     }
     //// posting tables
     variant get_permlink(account_name acc, uint64_t id) {

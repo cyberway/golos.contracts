@@ -43,6 +43,7 @@ protected:
 
     struct errors: contract_error_messages {
         const string too_low_power = amsg("too low voting power");
+        const string too_low_weight = amsg("too low vote weight");
     } err;
 
 public:
@@ -59,6 +60,7 @@ public:
 
         create_accounts({_code, _issuer, cfg::token_name, cfg::vesting_name, cfg::control_name, cfg::charge_name});
         create_accounts(_users);
+        create_accounts({N(stranger)});
         produce_block();
         install_contract(cfg::token_name, contracts::token_wasm(), contracts::token_abi());
         vest.add_changevest_auth_to_issuer(_issuer, cfg::control_name);
@@ -196,6 +198,11 @@ BOOST_FIXTURE_TEST_CASE(golos_rshares_test, posting_tester) try {
     for (int i = 1; i <= n_comments + 1; i++) {
         BOOST_CHECK_EQUAL(success(), post.create_msg({poster, "comment" + std::to_string(i)}, post_id));
     }
+    produce_block();
+
+    BOOST_TEST_MESSAGE("--- vote by stranger with no balance");
+    buy_vesting_for_users({N(stranger)}, 10);
+    BOOST_CHECK_EQUAL(err.too_low_weight, post.upvote(N(stranger), post_id));
     produce_block();
 
     BOOST_TEST_MESSAGE("--- vote with 100%");
