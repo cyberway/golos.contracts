@@ -20,13 +20,13 @@ extern "C" {
             return eosio::execute_action(eosio::name(receiver), eosio::name(code), fn);
         };
 
-        if (receiver != code)
-            return;
-
 #define NN(x) N(x).value
 
         if (NN(transfer) == action && config::token_name.value == code)
             execute_action(&publication::on_transfer);
+
+        if (receiver != code)
+            return;
 
         if (NN(createmssg) == action)
             execute_action(&publication::create_message);
