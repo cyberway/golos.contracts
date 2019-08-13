@@ -71,7 +71,7 @@ private:
     const auto& get_message(const tables::message_table& messages, const structures::mssgid& message_id);
     void providebw_for_trx(eosio::transaction& trx, const permission_level& provider);
     void send_postreward_trx(uint64_t id, const structures::mssgid& message_id, const name payer, const permission_level& provider);
-    void send_deletevotes_trx(int64_t message_id, name author);
+    void send_deletevotes_trx(int64_t message_id, name author, name payer);
 };
 
 } // golos

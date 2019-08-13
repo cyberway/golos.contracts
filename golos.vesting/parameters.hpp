@@ -23,7 +23,7 @@ using vesting_withdraw_param = param_wrapper<vesting_withdraw,2>;
 
 
 struct vesting_min_amount : parameter {
-    uint64_t min_amount;
+    uint64_t min_amount;    // withdraw
 };
 using vesting_min_amount_param = param_wrapper<vesting_min_amount,1>;
 

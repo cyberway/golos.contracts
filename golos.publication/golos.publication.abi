@@ -34,7 +34,8 @@
       "st_social_acc",
       "st_referral_acc",
       "st_curators_prcnt",
-      "st_bwprovider"
+      "st_bwprovider",
+      "st_min_abs_rshares"
     ]
   }],
   "structs": [
@@ -685,6 +686,13 @@
      ]
   },
   {
+     "name": "st_min_abs_rshares",
+     "base": "",
+     "fields": [
+        {"type": "uint64", "name": "value"}
+     ]
+  },
+  {
     "name": "posting_state",
     "base": "",
     "fields": [
@@ -723,6 +731,10 @@
       {
         "name": "bwprovider",
         "type": "st_bwprovider"
+      },
+      {
+        "name": "min_abs_rshares",
+        "type": "st_min_abs_rshares"
       }
     ]
   },

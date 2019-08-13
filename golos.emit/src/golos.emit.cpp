@@ -2,6 +2,7 @@
 #include <common/parameter_ops.hpp>
 #include <eosio/transaction.hpp>
 #include <eosio/time.hpp>
+#include <cmath>
 
 namespace golos {
 
@@ -72,20 +73,23 @@ void emission::start() {
 
     uint32_t elapsed = microseconds(now - s.prev_emit).to_seconds();
     auto delay = elapsed < interval ? interval - elapsed : 0;
-    schedule_next(s, delay);
+    _state.set(s, _self);
+    schedule_next(delay);
 }
 
 void emission::stop() {
     require_auth(_self);
     auto s = _state.get();  // TODO: create own singleton allowing custom assert message
     eosio::check(s.active, "already stopped");
-    auto id = s.tx_id;
     s.active = false;
-    s.tx_id = 0;
     _state.set(s, _self);
-    if (id) {
-        cancel_deferred(id);
-    }
+    cancel_deferred(cfg().token.symbol.raw());
+}
+
+int64_t emission::get_continuous_rate(int64_t annual_rate) {
+    static auto constexpr real_100percent = static_cast<double>(config::_100percent);
+    auto real_rate = static_cast<double>(annual_rate);
+    return static_cast<int64_t>(std::log(1.0 + (real_rate / real_100percent)) * real_100percent); 
 }
 
 void emission::emit() {
@@ -105,7 +109,7 @@ void emission::emit() {
     auto& pools = cfg().pools.pools;
     auto& infrate = cfg().infrate;
     auto narrowed = microseconds(now - s.start_time).to_seconds() / infrate.narrowing;
-    auto inf_rate = std::max(int64_t(infrate.start) - narrowed, int64_t(infrate.stop));
+    auto inf_rate = get_continuous_rate(std::max(int64_t(infrate.start) - narrowed, int64_t(infrate.stop)));
 
     auto supply = token::get_supply(config::token_name, token.symbol.code());
     auto issuer = token::get_issuer(config::token_name, token.symbol.code());
@@ -146,11 +150,12 @@ void emission::emit() {
     }
 
     s.prev_emit = now;
-    schedule_next(s, interval);
+    _state.set(s, _self);
+    schedule_next(interval);
 }
 
-void emission::schedule_next(state& s, uint32_t delay) {
-    auto sender_id = (uint128_t(cfg().token.symbol.raw()) << 64) | s.prev_emit;
+void emission::schedule_next(uint32_t delay) {
+    auto sender_id = cfg().token.symbol.raw();
     auto& provider = cfg().bwprovider.provider;
     auto& pools = cfg().pools.pools;
 
@@ -164,9 +169,6 @@ void emission::schedule_next(state& s, uint32_t delay) {
     }
     trx.delay_sec = delay;
     trx.send(sender_id, _self);
-
-    s.tx_id = sender_id;
-    _state.set(s, _self);
 }
 
 

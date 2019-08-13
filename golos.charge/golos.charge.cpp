@@ -60,9 +60,13 @@ fixp_t charge::consume_charge(name issuer, name user, symbol_code token_code, ui
 void charge::use(name user, symbol_code token_code, uint8_t charge_id, int64_t price_arg, int64_t cutoff_arg, int64_t vesting_price) {
     auto issuer = token::get_issuer(config::token_name, token_code);
     require_auth(issuer);
+#   ifdef DISABLE_CHARGE_VESTING
+        eosio::check(vesting_price == 0, "can't use vesting for charge");
+#   endif
     consume_charge(issuer, user, token_code, charge_id, price_arg, cutoff_arg, vesting_price);
 }
 
+#ifndef DISABLE_CHARGE_STORABLE
 void charge::useandstore(name user, symbol_code token_code, uint8_t charge_id, int64_t stamp_id, int64_t price_arg) {
     auto issuer = token::get_issuer(config::token_name, token_code);
     require_auth(issuer);
@@ -72,14 +76,15 @@ void charge::useandstore(name user, symbol_code token_code, uint8_t charge_id, i
     auto storedvals_index = storedvals_table.get_index<"symbolstamp"_n>();
     auto k = stored::get_key(token_code, charge_id, stamp_id);
     auto itr = storedvals_index.find(k);
-    if (itr != storedvals_index.end())
+    if (itr != storedvals_index.end()) {
         storedvals_index.modify(itr, issuer, [&]( auto &item ) { item.value = new_val.data(); });
-    else
+    } else {
         storedvals_table.emplace(issuer, [&]( auto &item ) {
             item.id = storedvals_table.available_primary_key();
             item.symbol_stamp = k;
             item.value = new_val.data();
         });
+    }
 }
 
 void charge::removestored(name user, symbol_code token_code, uint8_t charge_id, int64_t stamp_id) {
@@ -90,13 +95,17 @@ void charge::removestored(name user, symbol_code token_code, uint8_t charge_id, 
     eosio::check(itr != storedvals_index.end(), "itr == storedvals_index.end()");
     storedvals_index.erase(itr);
 }
+#endif
 
 void charge::setrestorer(symbol_code token_code, uint8_t charge_id, std::string func_str,
-        int64_t max_prev, int64_t max_vesting, int64_t max_elapsed) {
-
+        int64_t max_prev, int64_t max_vesting, int64_t max_elapsed
+) {
     eosio::check(max_prev <= max_arg, "max_prev > max_input");
     eosio::check(max_vesting <= max_arg, "max_vesting > max_input");
     eosio::check(max_elapsed <= max_arg, "max_elapsed > max_input");
+#   ifdef DISABLE_CHARGE_VESTING
+    eosio::check(func_str.find('v') == std::string::npos, "vesting disabled, function must not contain `v` variable");
+#   endif
     auto issuer = token::get_issuer(config::token_name, token_code);
     require_auth(issuer);
     auto charge_symbol = symbol(token_code, charge_id);
@@ -110,31 +119,38 @@ void charge::setrestorer(symbol_code token_code, uint8_t charge_id, std::string 
     pa(machine, func_str, "p,v,t");//prev value, vesting, time(elapsed seconds)
     func.from_machine(machine);
 
-    if (itr != restorers_table.end())
+    if (itr != restorers_table.end()) {
         restorers_table.modify(*itr, issuer, [&]( auto &item ) {
-             item.func = func;
-             item.max_prev = to_fixp(max_prev).data();
-             item.max_vesting = to_fixp(max_vesting).data();
-             item.max_elapsed = to_fixp(max_elapsed).data();
+            item.func = func;
+            item.max_prev = to_fixp(max_prev).data();
+            item.max_vesting = to_fixp(max_vesting).data();
+            item.max_elapsed = to_fixp(max_elapsed).data();
         });
-    else
+    } else {
         restorers_table.emplace(issuer, [&]( auto &item ) {
-             item.charge_symbol = charge_symbol.raw();
-             item.token_code = token_code;
-             item.charge_id = charge_id;
-             item.func = func;
-             item.max_prev = to_fixp(max_prev).data();
-             item.max_vesting = to_fixp(max_vesting).data();
-             item.max_elapsed = to_fixp(max_elapsed).data();
+            item.charge_symbol = charge_symbol.raw();
+            item.token_code = token_code;
+            item.charge_id = charge_id;
+            item.func = func;
+            item.max_prev = to_fixp(max_prev).data();
+            item.max_vesting = to_fixp(max_vesting).data();
+            item.max_elapsed = to_fixp(max_elapsed).data();
         });
+    }
 }
 
 void charge::send_charge_event(name user, const balance& state) {
-    eosio::event(_self, "chargestate"_n, std::make_tuple(user, state.charge_symbol, state.token_code, state.charge_id, state.last_update, int_cast(FP(state.value)))).send();
+    auto data = std::make_tuple(
+        user, state.charge_symbol, state.token_code, state.charge_id, state.last_update, int_cast(FP(state.value)));
+    eosio::event(_self, "chargestate"_n, data).send();
 }
 
 template<typename Lambda>
-void charge::consume_and_notify(name user, symbol_code token_code, uint8_t charge_id, int64_t price_arg, int64_t id, name code, name action_name, int64_t cutoff, name issuer, Lambda &&compare) {
+void charge::consume_and_notify(name user, symbol_code token_code, uint8_t charge_id, int64_t price_arg, int64_t id,
+    name code, name action_name, int64_t cutoff, Lambda&& compare
+) {
+    auto issuer = token::get_issuer(config::token_name, token_code);
+    require_auth(issuer);
     auto charge = consume_charge(issuer, user, token_code, charge_id, price_arg);
     auto new_val = from_fixp(charge);
 
@@ -148,19 +164,20 @@ void charge::consume_and_notify(name user, symbol_code token_code, uint8_t charg
 }
 
 void charge::usenotifygt(name user, symbol_code token_code, uint8_t charge_id, int64_t price_arg, int64_t id, name code, name action_name, int64_t cutoff) {
-    auto issuer = token::get_issuer(config::token_name, token_code);
-    require_auth(issuer);
-
-    consume_and_notify(user, token_code, charge_id, price_arg, id, code, action_name, cutoff, issuer, [](auto value, auto limit) {return value > limit;});
+    consume_and_notify(user, token_code, charge_id, price_arg, id, code, action_name, cutoff,
+        [](auto value, auto limit) {return value > limit;});
 }
 
 void charge::usenotifylt(name user, symbol_code token_code, uint8_t charge_id, int64_t price_arg, int64_t id, name code, name action_name, int64_t cutoff) {
-    auto issuer = token::get_issuer(config::token_name, token_code);
-    require_auth(issuer);
-    consume_and_notify(user, token_code, charge_id, price_arg, id, code, action_name, cutoff, issuer, [](auto value, auto limit) {return value < limit;});
+    consume_and_notify(user, token_code, charge_id, price_arg, id, code, action_name, cutoff,
+        [](auto value, auto limit) {return value < limit;});
 }
 
-EOSIO_DISPATCH(charge, (use)(usenotifygt)(usenotifylt)(useandstore)(removestored)(setrestorer) )
+EOSIO_DISPATCH(charge, (use)(usenotifygt)(usenotifylt)
+#ifndef DISABLE_CHARGE_STORABLE
+    (useandstore)(removestored)
+#endif
+    (setrestorer)
+)
 
 } /// namespace golos
-

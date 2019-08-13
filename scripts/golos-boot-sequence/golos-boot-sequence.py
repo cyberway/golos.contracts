@@ -309,15 +309,15 @@ def createCommunity():
         retry(args.cleos + 'push action gls.emit setparams ' + jsonArg([
             [
                 ['inflation_rate',{
-                    'start':1500,
+                    'start':1515 - (29000000//250000),  # initial emission set related to current Golos block number
                     'stop':95,
                     'narrowing':250000
                 }],
                 ['reward_pools',{
                     'pools':[
                         {'name':'gls.ctrl','percent':0},
-                        {'name':'gls.publish','percent':6000},
-                        {'name':'gls.vesting','percent':2400}
+                        {'name':'gls.publish','percent':6667},
+                        {'name':'gls.vesting','percent':2667}
                     ]
                 }],
                 ['emit_token',{
@@ -332,16 +332,24 @@ def createCommunity():
             [
                 ['vesting_withdraw',{
                     'intervals':13,
-                    'interval_seconds':120
+                    'interval_seconds':7*24*3600
                 }],
                 ['vesting_amount',{
-                    'min_amount':10000
+                    'min_amount':3 * 10 * 3500 * 1000000    # min withdraw is 10x account creation fee
                 }],
                 ['vesting_delegation',{
-                    'min_amount':5000000,
-                    'min_remainder':15000000,
+                    'min_amount':   3500*1000000,   # min_update = create_account_min_golos_fee
+                    'min_remainder':3500*1000000,   # min_delegation (in GESTS: 1 GOLOS ≈ 3500 GESTS)
+                    # the following values are actual median, but they are useless
+                    # 'min_amount':   int(0.030*3500*1000000),    # min_update = create_account_min_golos_fee
+                    # 'min_remainder':int(0.010*3500*1000000),    # min_delegation (in GESTS: 1 GOLOS ≈ 3500 GESTS)
                     'min_time':0,
-                    'return_time':120
+                    'return_time':7*24*3600,
+                    'max_delegators':32
+                }],
+                ['bwprovider',{
+                    'actor':'gls',
+                    'permission':'providebw'
                 }]
             ]]) + '-p gls')
         retry(args.cleos + 'push action gls.ctrl setparams ' + jsonArg([
@@ -353,7 +361,7 @@ def createCommunity():
                     'name':'gls'
                 }],
                 ['max_witnesses',{
-                    'max':5
+                    'max':21
                 }],
                 ['multisig_perms',{
                     'super_majority':0,
@@ -386,37 +394,42 @@ def createWitnessAccounts():
 def initCommunity():
     if not args.golos_genesis:
         retry(args.cleos + 'push action gls.publish setparams ' + jsonArg([[
-            ['st_max_vote_changes', {'value':5}],
-            ['st_cashout_window', {'window': 120, 'upvote_lockout': 15}],
+            ['st_max_vote_changes', {'value': 5}],
+            ['st_cashout_window', {'window': 7*24*3600, 'upvote_lockout': 60}],
             ['st_max_beneficiaries', {'value': 64}],
             ['st_max_comment_depth', {'value': 127}],
             ['st_social_acc', {'value': 'gls.social'}],
             ['st_referral_acc', {'value': ''}], # TODO Add referral contract to posting-settings
-            ['st_curators_prcnt', {'min_curators_prcnt': 0, 'max_curators_prcnt': 9000}]
+            ['st_curators_prcnt', {'min_curators_prcnt': 5000, 'max_curators_prcnt': 10000}]
         ]]) + '-p gls.publish')
-    
+
         retry(args.cleos + 'push action gls.publish setrules ' + jsonArg({
             "mainfunc":{"str":"x","maxarg":fixp_max},
-            "curationfunc":{"str":golos_curation_func_str,"maxarg":fixp_max},
-            "timepenalty":{"str":"x/1800","maxarg":1800},
+            # "curationfunc":{"str":golos_curation_func_str,"maxarg":fixp_max}, # bounded
+            "curationfunc":{"str":"x","maxarg":fixp_max},
+            # without auction:
+            "timepenalty":{"str":"1","maxarg":1<<12},
+            # 30 minutes auction:
+            #"timepenalty":{"str":"x/1800","maxarg":1800},
             "maxtokenprop":5000,
             "tokensymbol":args.token
         }) + '-p gls.publish')
 
     # testnet
+    cutoff = _100percent    # note: postbw have larger cutoff
     limits = [
-        # action            charge_id   price                cutoff         vest_price  min_vest
-        ("post",            1,          _100percent,         _100percent,   0,          0),
-        ("comment",         2,          _100percent/10,      _100percent,   0,          0),
-        ("vote",            0,          _100percent/(5*40),  _100percent,   0,          0),
-        ("post bandwidth",  3,          _100percent,         _100percent*4, 0,          0),
+        # action            charge_id   price           cutoff    vest_price  min_vest
+        ("post",            1,          cutoff,         cutoff,   0,          0),
+        ("comment",         2,          cutoff/10,      cutoff,   0,          0),
+        ("vote",            0,          cutoff/(5*40),  cutoff,   0,          0),
+        ("post bandwidth",  3,          cutoff,         cutoff*4, 0,          0),
     ]
     restorers = [
-        # charge_id     restorer        max_prev    max_vest    max_elapsed
-        (1,             "t/300",        fixp_max,   fixp_max,   fixp_max),
-        (2,             "t/200",        fixp_max,   fixp_max,   fixp_max),
-        (0,             "t/(5*86400)",  fixp_max,   fixp_max,   fixp_max),
-        (3,             "t*p/86400",    fixp_max,   fixp_max,   fixp_max),
+        # charge_id restorer                    max_prev    max_vest    max_elapsed
+        (1,         "t*%i/300" % cutoff,        fixp_max,   fixp_max,   fixp_max),
+        (2,         "t*%i/200" % cutoff,        fixp_max,   fixp_max,   fixp_max),
+        (0,         "t*%i/(5*86400)" % cutoff,  fixp_max,   fixp_max,   fixp_max),
+        (3,         "t*p/86400",                fixp_max,   fixp_max,   fixp_max),
     ]
 
     if not args.golos_genesis:

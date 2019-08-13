@@ -35,7 +35,7 @@ The action `use` has the form:
   * `charge_id` — battery ID. This value, in conjunction with the `token_code` value, provides battery identification.  
   * `price` — amount of battery charge (in conventional units) by which the battery charge decreases when the user performs an action.  
   * `cutoff` — the threshold value of the battery charge, upon which the action is terminated.  
-  * `vesting_price` — the amount of funds (in vesting) that the `user` must pay  in case of insufficient battery charge to complete an operation. That is, if the battery charge exceeds the `cutoff` threshold before the operation completes.  
+  * `vesting_price` — the amount of funds (in vesting) that the `user` must pay  in case of insufficient battery charge to complete an operation. That is, if the battery charge exceeds the `cutoff` threshold before the operation completes. **Note:** parameter currently disabled and should be `0`.
 
 Any of the smart contracts can turn to the battery, but not directly, but through an action call. In case the battery charge does not meet the `cutoff` value conditions, the smart battery contract issues a corresponding message with a lock on the execution of the transaction, including the action that caused the access to the battery.  
 
@@ -46,6 +46,7 @@ In order for the user to be able to pay for the missing battery charge (to compl
 .  
  
 ## useandstore
+**Note:** action currently disabled and has no effect.  
 The `useandstore` action as well as `use` is used to account for battery charge when the user performs any actions. Unlike `use`, the `useandstore` action saves the values of the battery resources used in the tables inside the `golos.charge` smart contract and remains readable by other smart contracts.  
 
 The `useandstore` action has the following form:
@@ -66,6 +67,7 @@ The `useandstore` action has the following form:
   * `price` — the amount of funds (in conventional units of the battery), accrued to the `user` account for the used part of the battery resource.
  
 ## removestored
+**Note:** action currently disabled and has no effect.  
 The `removestored` action is used to delete previously saved data on the use of battery resources in `golos.charge`. The key to finding deleted data is the set of values for the `charge_id`, `token_code`, and `stamp_id` parameters. The `removestored` action can be called from any smart contract.  
 
 The action `removestored` is:
@@ -106,7 +108,7 @@ The `setrestorer` action operation has the form:
 
 The `func_str` value parameter is calculated by a defined function with three variables, namely:  
   * `p` — sets the previous value of the battery charge.  
-  * `v` — sets the value of the user's visitor.  
+  * `v` — sets the value of the user's vesting. **Note:** currently disabled and must not be used in function.  
   * `t` — sets the time period since the last setrestorer call.  
 
 For example, if a string is passed as the `func_str` parameter  

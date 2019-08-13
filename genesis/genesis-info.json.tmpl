@@ -2,12 +2,19 @@
     "state_file": "golos.dat",
     "genesis_json": "genesis.json",
     "params":{
+# NOTE: set initial_prod_count to 7 for mainnet
+        "initial_prod_count": 0,
         "stake":{
             "enabled": true,
             "max_proxies":[30, 10, 3, 1],
             "depriving_window":2592000,
             "min_own_staked_for_election":0
         },
+        "funds": [
+            {"name": "cyber.appfund", "numerator": 10, "denominator": 9},
+            {"name": "cyber.core",    "numerator":  1, "denominator": 18},
+            {"name": "cyber.io",      "numerator":  1, "denominator": 18}
+        ],
         "posting_rules": {
             "mainfunc":{
                 "code":{
@@ -22,36 +29,24 @@
             "curationfunc":{
                 "code":{
                     "varssize":1,
-                    "operators":[0,0,0,0,26,4,0,1,4],
-                    "values":[
-                        {"kind":0,"idx":0},
-                        {"kind":0,"idx":1},
-                        {"kind":1,"idx":0},
-                        {"kind":0,"idx":2},
-                        {"kind":0,"idx":3}],
-                    "nums":["9223372036854771712","16384000000000000",409,4096],
+                    "operators":[0],
+                    "values":[{"kind":1,"idx":0}],
+                    "nums":[],
                     "consts":[]
                 },
                 "maxarg":"9223372036854771712"
             },
             "timepenalty":{
                 "code":{
-                    "varssize":1,
-                    "operators":[0,0,4],
-                    "values":[
-                        {"kind":1,"idx":0},
-                        {"kind":0,"idx":0}],
-                    "nums":[7372800],
+                    "varssize":0,
+                    "operators":[0],
+                    "values":[{"kind":0,"idx":0}],
+                    "nums":[4096],
                     "consts":[]
                 },
-                "maxarg":7372800
+                "maxarg":4096
             },
             "maxtokenprop":5000
-        },
-# set required hardfork to 21.1.0 for disable producers start in testnet
-        "require_hardfork":{
-            "version":352387072,
-            "time":"2019-06-28T12:00:00.000"
         }
     },
     "accounts": [
@@ -148,10 +143,22 @@
                 {"name": "active", "keys": [], "accounts": ["cyber@prods"]},
             ],
         },
+        {"name": "cyber.core",
+            "permissions": [
+                {"name": "owner",  "keys": [], "accounts": ["~goloscore@owner"]},
+                {"name": "active", "keys": [], "accounts": ["~goloscore@active"]}
+            ]
+        },
+        {"name": "cyber.io",
+            "permissions": [
+                {"name": "owner",  "keys": [], "accounts": ["~golosio@owner"]},
+                {"name": "active", "keys": [], "accounts": ["~golosio@active"]}
+            ]
+        },
 
 # NOTE: Technical account to start testnet and tests (remove from mainnet)
         {
-            "name": "tech", 
+            "name": "tech",
             "permissions": [{"name": "owner", "key": "INITIAL"}, {"name": "active", "key": "INITIAL"}],
             "sys_balance": "100000.0000 CYBER",
             "sys_staked": "100000.0000 CYBER",
@@ -165,7 +172,7 @@
                 {"name": "owner",        "accounts": ["@witn.smajor"]},
 # NOTE: Remove "@testing" from mainnet
                 {"name": "active",       "accounts": ["@witn.smajor", "gls.ctrl@cyber.code", "@testing"]},
-                {"name": "golos.io",     "accounts": ["qwm3tgmbeog5@golos.io"]},
+                {"name": "golos.io",     "accounts": ["~golosio@golos.io"]},
 # NOTE: Remove testing key from mainnet
                 {"name": "testing",      "key": "GLS5a2eDuRETEg7uy8eHbiCqGZM3wnh2pLjiXrFduLWBKVZKCkB62"},
                 {"name": "issue",        "accounts": ["gls.emit@cyber.code", "@testing"]},
@@ -295,11 +302,12 @@
             "abi_type": "emit_state",
             "rows": [{"scope":"gls.emit", "payer": "gls.emit", "pk": 6097199460613750784, "data": {
                 "id": 6097199460613750784,
-                "infrate": {"start":1500, "stop":95, "narrowing":250000},
+# Infrate value: 1399 = 1515 - 29000000/250000
+                "infrate": {"start":1399, "stop":95, "narrowing":250000},
                 "pools": {"pools":[
                     {"name":"gls.ctrl", "percent":0},
-                    {"name":"gls.publish", "percent":6000},
-                    {"name":"gls.vesting", "percent":2400}]},
+                    {"name":"gls.publish", "percent":6667},
+                    {"name":"gls.vesting", "percent":2667}]},
                 "token": {"symbol":"3,GOLOS"},
                 "interval": {"value":900},
                 "bwprovider": {"actor":"gls","permission":"providebw"}
@@ -310,12 +318,19 @@
             "abi_type": "vesting_state",
             "rows": [{"scope":"GOLOS", "payer": "gls.vesting", "pk": 15758546561230307328, "data": {
                 "id": 15758546561230307328,
-                "withdraw": {"intervals":13, "interval_seconds":120},
-                "min_amount": {"min_amount":10000},
+                "withdraw": {"intervals":13, "interval_seconds":604800},
+# min_amount: 3.0 GOLOS * 10 * 3500 gests
+                "min_amount": {"min_amount":10500000000},
                 "delegation": {
-                    "min_amount":5000000,
-                    "min_remainder":15000000,
-                    "return_time":120,
+#                   median: 0.030 GOLOS and 0.010 GOLOS:
+#                   "min_amount":105000000,
+#                   "min_remainder":35000000,
+
+#                   increased to 1.000 GOLOS:
+                    "min_amount":3500000000,
+                    "min_remainder":3500000000,
+
+                    "return_time":604800,
                     "min_time":0,
                     "max_delegators":32},
                 "bwprovider": {"actor":"gls","permission":"providebw"}
@@ -349,13 +364,14 @@
             "rows": [{"scope":"gls.publish", "payer": "gls.publish", "pk": 12552436324427411456, "data": {
                 "id": 12552436324427411456,
                 "max_vote_changes": {"value":5},
-                "cashout_window": {"window":120, "upvote_lockout":15},
+                "cashout_window": {"window":604800, "upvote_lockout":60},
                 "max_beneficiaries": {"value":64},
                 "max_comment_depth": {"value":127},
                 "social_acc": {"value":"gls.social"},
                 "referral_acc": {"value":""},
-                "curators_prcnt": {"min_curators_prcnt":0, "max_curators_prcnt":9000},
-                "bwprovider": {"actor":"gls","permission":"providebw"}
+                "curators_prcnt": {"min_curators_prcnt":5000, "max_curators_prcnt":10000},
+                "bwprovider": {"actor":"gls","permission":"providebw"},
+                "min_abs_rshares": {"value":30000000}
             }}]
         },{
             "code": "gls.publish",
@@ -423,25 +439,29 @@
                         "charge_symbol" : 91600047785729, "token_code" : "GOLOS", "charge_id" : 1,
                         "func" : {
                             "varssize" : 3,
-                            "operators" : [0, 0, 4],
-                            "values" : [{"kind" : 1, "idx" : 2}, {"kind": 0, "idx": 0}],
-                            "nums" : [1228800],
+                            "operators" : [0, 0, 3, 0, 4],
+                            "values" : [{"kind" : 1, "idx" : 2}, {"kind": 0, "idx": 0}, {"kind": 0, "idx": 1}],
+                            "nums" : [40960000, 1228800],
                             "consts" : [ ]
                         },
-                        "max_prev" : 922337203685477, "max_vesting" : 922337203685477, "max_elapsed" : 922337203685477
+                        "max_prev" : 9223372036854771712,
+                        "max_vesting" : 9223372036854771712,
+                        "max_elapsed" : 9223372036854771712
                     }
                 },{
                     "scope": "gls.charge", "payer": "gls", "pk": 91600047785730,
                     "data": {
-                            "charge_symbol" : 91600047785730, "token_code" : "GOLOS", "charge_id" : 2,
-                            "func" : {
+                        "charge_symbol" : 91600047785730, "token_code" : "GOLOS", "charge_id" : 2,
+                        "func" : {
                             "varssize" : 3,
-                        "operators" : [0, 0, 4],
-                        "values" : [{"kind" : 1, "idx" : 2}, {"kind" : 0, "idx" : 0}],
-                        "nums" : [819200],
+                            "operators" : [0, 0, 3, 0, 4],
+                            "values" : [{"kind" : 1, "idx" : 2}, {"kind": 0, "idx": 0}, {"kind": 0, "idx": 1}],
+                            "nums" : [40960000, 819200],
                             "consts" : [ ]
                         },
-                        "max_prev" : 922337203685477, "max_vesting" : 922337203685477, "max_elapsed" : 922337203685477
+                        "max_prev" : 9223372036854771712,
+                        "max_vesting" : 9223372036854771712,
+                        "max_elapsed" : 9223372036854771712
                     }
                 },{
                     "scope": "gls.charge", "payer": "gls", "pk": 91600047785728,
@@ -449,12 +469,14 @@
                         "charge_symbol" : 91600047785728, "token_code" : "GOLOS", "charge_id" : 0,
                         "func" : {
                             "varssize" : 3,
-                            "operators" : [0, 0, 0, 3, 4],
-                            "values" : [{"kind" : 1, "idx" : 2}, {"kind" : 0, "idx" : 0}, {"kind" : 0, "idx" : 1}],
-                            "nums" : [20480, 353894400],
+                            "operators" : [0, 0, 3, 0, 4],
+                            "values" : [{"kind" : 1, "idx" : 2}, {"kind": 0, "idx": 0}, {"kind": 0, "idx": 1}],
+                            "nums" : [40960000, 1769472000],
                             "consts" : [ ]
                         },
-                        "max_prev" : 922337203685477, "max_vesting" : 922337203685477, "max_elapsed" : 922337203685477
+                        "max_prev" : 9223372036854771712,
+                        "max_vesting" : 9223372036854771712,
+                        "max_elapsed" : 9223372036854771712
                     }
                 },{
                     "scope": "gls.charge", "payer": "gls", "pk": 91600047785731,
@@ -467,7 +489,9 @@
                             "nums" : [353894400],
                             "consts" : [ ]
                         },
-                        "max_prev" : 922337203685477, "max_vesting" : 922337203685477, "max_elapsed" : 922337203685477
+                        "max_prev" : 9223372036854771712,
+                        "max_vesting" : 9223372036854771712,
+                        "max_elapsed" : 9223372036854771712
                     }
                 }
             ]

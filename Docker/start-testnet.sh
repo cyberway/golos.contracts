@@ -74,9 +74,11 @@ echo "=== Waiting for nodeosd started"
 docker run --rm --network cyberway_cyberway-net -ti $GOLOS_IMAGE /bin/bash -c 'retry=30; until /opt/cyberway/bin/cleos --url http://nodeosd:8888 get info; do sleep 10; let retry--; [ $retry -gt 0 ] || exit 1; done; exit 0'
 call_hook "nodeos-started"
 
-echo "=== Deploy cyberway & golos contracts"
-docker run --rm --network cyberway_cyberway-net -ti $GOLOS_IMAGE /opt/golos.contracts/scripts/boot-sequence.py
-call_hook "contracts-loaded"
+if [[ -n "$RUN_BOOT_SEQUENCE" ]]; then
+    echo "=== Deploy cyberway & golos contracts"
+    docker run --rm --network cyberway_cyberway-net -ti $GOLOS_IMAGE /opt/golos.contracts/scripts/boot-sequence.py
+    call_hook "contracts-loaded"
+fi
 
 if [[ -n "$GOLOS_DB" ]]; then
     [[ -z "$CYBERWAY_DB" ]] && export CYBERWAY_DB=$(awk -F'[=#]' '/^chaindb_address\s*=/{sub(/^ *| *$/, "", $2); print $2;}' <${PWD}/config.ini)

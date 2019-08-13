@@ -60,7 +60,8 @@ public:
         BOOST_CHECK_EQUAL(success(), post.set_limit("post bandwidth"));
 
         BOOST_CHECK_EQUAL(success(), post.init_default_params());
-
+        auto params = "[" + post.get_str_min_abs_rshares_param(0) + "]";
+        BOOST_CHECK_EQUAL(success(), post.set_params(params));
         produce_block();
         for (auto& u : _users) {
             BOOST_CHECK_EQUAL(success(), vest.open(u, _sym, u));
@@ -109,11 +110,7 @@ protected:
     const mvo _test_msg = mvo()
         ("id", 1)
         ("tokenprop", 5000)
-        ("beneficiaries", variants({}
-            // mvo()
-            // ("account", "golos.pub")
-            // ("weight", 777)
-        ))
+        ("beneficiaries", variants({}))
         ("rewardweight", cfg::_100percent)  // TODO: test that Golos rules (charge restorer) works as expected #617
         ("state", mvo()("netshares",0)("voteshares",0)("sumcuratorsw",0))
         ("curators_prcnt", 1000);
@@ -166,6 +163,9 @@ protected:
         const string max_payout_greater_prev = amsg("Cannot replace max payout with greater one.");
         const string no_max_payout = amsg("Max payout can be changed only before voting.");
         const string same_max_payout_val = amsg("Same max payout is already set.");
+
+        const string no_vestpayment     = amsg("vestpayment disabled");
+        const string no_vesting_limits  = amsg("set_limit: vesting disabled in charge");
     } err;
 };
 
@@ -389,10 +389,10 @@ BOOST_FIXTURE_TEST_CASE(upvote, golos_publication_tester) try {
 
     BOOST_TEST_MESSAGE("--- fail while upvote lockout");
     produce_block();
-    //BOOST_CHECK_EQUAL(err.upvote_near_close, vote_jackie(cfg::_100percent));          // TODO Fix broken test GolosChain/golos-smart#410
+    //BOOST_CHECK_EQUAL(err.upvote_near_close, vote_jackie(cfg::_100percent));          // TODO Fix broken test cyberway/golos-smart#410
     produce_blocks(seconds_to_blocks(post.upvote_lockout) - 1);
     BOOST_CHECK_EQUAL(success(), post.closemssgs());
-    //BOOST_CHECK_EQUAL(err.upvote_near_close, vote_jackie(cfg::_100percent));          // TODO Fix broken test GolosChain/golos-smart#410
+    //BOOST_CHECK_EQUAL(err.upvote_near_close, vote_jackie(cfg::_100percent));          // TODO Fix broken test cyberway/golos-smart#410
 
     BOOST_TEST_MESSAGE("--- succeed vote after cashout");
     produce_block();
@@ -771,6 +771,24 @@ BOOST_FIXTURE_TEST_CASE(set_max_payout, golos_publication_tester) try {
     BOOST_CHECK_EQUAL(err.no_permlink, post.set_max_payout({N(brucelee), "notexist"}, token.make_asset(1000)));
 
 } FC_LOG_AND_RETHROW()
+
+#ifdef CHARGE_DISABLE_VESTING
+BOOST_FIXTURE_TEST_CASE(disabled_charge_vesting, golos_publication_tester) try {
+    BOOST_TEST_MESSAGE("Test disabled vesing in charge");
+    init();
+
+    BOOST_TEST_MESSAGE("--- fail on vestpayment=true in create message");
+    BOOST_CHECK_EQUAL(err.no_vestpayment, post.create_msg({N(brucelee),"a"}, {N(),"b"}, {}, 5000, true));
+
+    BOOST_TEST_MESSAGE("--- fail on non-zero vesting_price or min_vesting in set limit");
+    BOOST_CHECK_EQUAL(err.no_vesting_limits, post.set_limit("any", 0, -1, 0, 1, 0));
+    BOOST_CHECK_EQUAL(err.no_vesting_limits, post.set_limit("any", 0, -1, 0, 0, 1));
+    BOOST_CHECK_EQUAL(err.no_vesting_limits, post.set_limit("any", 0, -1, 0, 1, 1));
+    BOOST_CHECK_EQUAL(err.no_vesting_limits, post.set_limit("any", 0, -1, 0, -1, 0));
+    BOOST_CHECK_EQUAL(err.no_vesting_limits, post.set_limit("any", 0, -1, 0, 0, -1));
+    BOOST_CHECK_EQUAL(err.no_vesting_limits, post.set_limit("any", 0, -1, 0, -1, -1));
+} FC_LOG_AND_RETHROW()
+#endif
 
 BOOST_FIXTURE_TEST_CASE(reblog_message, golos_publication_tester) try {
     BOOST_TEST_MESSAGE("Reblog message testing.");

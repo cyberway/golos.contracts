@@ -138,14 +138,14 @@ struct golos_posting_api: base_contract_api {
         );
     }
 
-    action_result upvote(account_name voter, mssgid message_id, uint16_t weight) {
+    action_result upvote(account_name voter, mssgid message_id, uint16_t weight = cfg::_100percent) {
         return push(N(upvote), voter, args()
             ("voter", voter)
             ("message_id", message_id)
             ("weight", weight)
         );
     }
-    action_result downvote(account_name voter, mssgid message_id, uint16_t weight) {
+    action_result downvote(account_name voter, mssgid message_id, uint16_t weight = cfg::_100percent) {
         return push(N(downvote), voter, args()
             ("voter", voter)
             ("message_id", message_id)
@@ -191,9 +191,10 @@ struct golos_posting_api: base_contract_api {
         auto referral = get_str_referral_acc(name());
         auto curators_prcnt = get_str_curators_prcnt(min_curators_prcnt, max_curators_prcnt);
         auto bwprovider = get_str_bwprovider(name(), name());
+        auto min_abs_rshares = get_str_min_abs_rshares_param(8);
 
         auto params = "[" + vote_changes + "," + cashout_window + "," + beneficiaries + "," + comment_depth +
-            "," + social + "," + referral + "," + curators_prcnt + "," + bwprovider + "]";
+            "," + social + "," + referral + "," + curators_prcnt + "," + bwprovider + "," + min_abs_rshares + "]";
         return set_params(params);
     }
 
@@ -232,6 +233,10 @@ struct golos_posting_api: base_contract_api {
     string get_str_bwprovider(account_name actor, permission_name permission) {
         return string("['st_bwprovider', {'actor':'") + name{actor}.to_string() + "','permission':'" + name{permission}.to_string() + "'}]";
     }
+
+    string get_str_min_abs_rshares_param(uint64_t value) {
+        return string("['st_min_abs_rshares', {'value':'") + std::to_string(value) + "'}]";
+    }
     //// posting tables
     variant get_permlink(account_name acc, uint64_t id) {
         return _tester->get_chaindb_struct(_code, acc, N(permlink), id, "permlink");
@@ -260,8 +265,9 @@ struct golos_posting_api: base_contract_api {
         return variant();
     }
 
-    variant get_vote(account_name acc, uint64_t id) {
-        return _tester->get_chaindb_struct(_code, acc, N(vote), id, "voteinfo");
+    // Note: vote scope is message author, not voter
+    variant get_vote(account_name author, uint64_t id) {
+        return _tester->get_chaindb_struct(_code, author, N(vote), id, "voteinfo");
     }
 
     std::vector<variant> get_reward_pools() {

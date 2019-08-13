@@ -73,9 +73,10 @@ public:
         auto referral_acc = post.get_str_referral_acc(cfg::referral_name);
         auto curators_prcnt = post.get_str_curators_prcnt(post.min_curators_prcnt, post.max_curators_prcnt);
         auto bwprovider = post.get_str_bwprovider(name(), name());
+        auto min_abs_rshares = post.get_str_min_abs_rshares_param(8);
 
         auto params = "[" + vote_changes + "," + cashout_window + "," + beneficiaries + "," + comment_depth +
-                "," + social_acc + "," + referral_acc + "," + curators_prcnt + "," + bwprovider + "]";
+                "," + social_acc + "," + referral_acc + "," + curators_prcnt + "," + bwprovider + "," + min_abs_rshares + "]";
         BOOST_CHECK_EQUAL(success(), post.set_params(params));
         produce_blocks();
     }

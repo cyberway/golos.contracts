@@ -65,7 +65,6 @@
             "fields": [
                 {"type": "uint64", "name": "id"},
                 {"type": "uint64", "name": "prev_emit"},
-                {"type": "uint128", "name": "tx_id"},
                 {"type": "uint64", "name": "start_time"},
                 {"type": "bool", "name": "active"}
             ]
