@@ -7,7 +7,9 @@ COPY --from=cdt /opt/cyberway.cdt /opt/cyberway.cdt
 COPY --from=cyberway /opt/cyberway /opt/cyberway
 
 ARG branch=master
-ADD https://api.github.com/repos/cyberway/golos.contracts/git/refs/heads/$branch /etc/version.json
+ARG ref=heads/$branch
+
+ADD https://api.github.com/repos/cyberway/golos.contracts/git/refs/$ref /etc/version.json
 RUN git clone -b $branch https://github.com/cyberway/golos.contracts.git --recursive
 
 RUN cd golos.contracts/cyberway.contracts \
