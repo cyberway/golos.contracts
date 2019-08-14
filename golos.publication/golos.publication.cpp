@@ -774,7 +774,7 @@ fixp_t publication::calc_available_rshares(name voter, int16_t weight, uint64_t 
     auto used_power = use_charge(lims, structures::limitparams::VOTE, token::get_issuer(config::token_name, token_code),
         voter, eff_vesting, token_code, false, weight);
     fixp_t abs_rshares = FP(eff_vesting) * elaf_t(elai_t(used_power) / elai_t(config::_100percent));
-    eosio::check(abs_rshares >= FP(params().min_abs_rshares_param.value), "too low vote weight");
+    eosio::check(!weight || abs_rshares >= FP(params().min_abs_rshares_param.value), "too low vote weight");
     return (weight < 0) ? -abs_rshares : abs_rshares;
 }
 
