@@ -9,7 +9,7 @@ COPY --from=cyberway /opt/cyberway /opt/cyberway
 ARG branch=master
 ARG ref=heads/$branch
 
-ADD https://api.github.com/repos/cyberway/golos.contracts/git/refs/$branch /etc/version.json
+ADD https://api.github.com/repos/cyberway/golos.contracts/git/refs/$ref /etc/version.json
 RUN git clone -b $branch https://github.com/cyberway/golos.contracts.git --recursive
 
 RUN cd golos.contracts/cyberway.contracts \
