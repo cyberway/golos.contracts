@@ -55,6 +55,7 @@ void referral::addreferral(
 )
 ```
 **Parameters:**  
+  * `referrer` — referrer account name.
   * `referral` — referral account name.  
   * `percent` — the percentage of payment to the referrer withdrawn from the referral income. The parameter takes a value from zero to the maximum allowed by the witnesses.  
   * `expire` — time (in seconds) of the referral program. The value must not exceed the maximum allowed time set by witnesses.  
