@@ -264,4 +264,54 @@ BOOST_FIXTURE_TEST_CASE(golos_rshares_test, posting_tester) try {
     BOOST_CHECK_EQUAL(err.too_low_power, post.upvote(voter, {poster, "fullcomment" + std::to_string(i)}));
 } FC_LOG_AND_RETHROW()
 
+BOOST_FIXTURE_TEST_CASE(overcharge_test, posting_tester) try {
+    BOOST_TEST_MESSAGE("Test battery overcharge");
+    BOOST_TEST_MESSAGE("--- create test accounts, add vesting and set rules");
+    _users.resize(2);
+    auto vests = 100000;
+    init((vests / 1000 + 1) * _users.size());
+    produce_block();
+
+    auto poster = _users[0];
+    auto voter = _users[1];
+    buy_vesting_for_users(_users, vests);
+    produce_block();
+
+    set_rules_with_preset(fn_preset::linear, lim_preset::real);
+    BOOST_CHECK_EQUAL(success(), post.set_params("["+post.get_str_cashout_window(12*3600, post.upvote_lockout)+"]"));
+    produce_block();
+
+    BOOST_CHECK(charge.get_balance(voter, 0).is_null());
+
+    int n_comments = 2;
+    BOOST_TEST_MESSAGE("--- create message and " + std::to_string(n_comments) + " comments");
+    mssgid post_id{poster, "post"};
+    BOOST_CHECK_EQUAL(success(), post.create_msg(post_id));
+    for (int i = 1; i <= n_comments; i++) {
+        BOOST_CHECK_EQUAL(success(), post.create_msg({poster, "comment" + std::to_string(i)}, post_id));
+    }
+    produce_block();
+
+    BOOST_TEST_MESSAGE("--- vote with 100%");
+    BOOST_CHECK_EQUAL(success(), post.upvote(voter, post_id));
+    produce_block();
+    BOOST_CHECK(!charge.get_balance(voter, 0).is_null());
+    BOOST_TEST_MESSAGE("ch: " + fc::json::to_string(charge.get_balance(voter, 0)));
+
+    BOOST_TEST_MESSAGE("--- wait for overcharge");
+    produce_blocks(golos::seconds_to_blocks(day_seconds * days_to_restore_votes / cfg::_100percent * (50+50+10)));
+
+    BOOST_TEST_MESSAGE("--- vote overcharged, it will delete battery due 100% charge after vote");
+    BOOST_CHECK_EQUAL(success(), post.upvote(voter, {poster, "comment1"}));
+    BOOST_CHECK(charge.get_balance(voter, 0).is_null());
+    BOOST_TEST_MESSAGE("ch: " + fc::json::to_string(charge.get_balance(voter, 0)));
+    BOOST_TEST_MESSAGE("--- vote again, it will re-create battery");
+    BOOST_CHECK_EQUAL(success(), post.upvote(voter, {poster, "comment2"}));
+    BOOST_CHECK(!charge.get_balance(voter, 0).is_null());
+    BOOST_TEST_MESSAGE("ch: " + fc::json::to_string(charge.get_balance(voter, 0)));
+
+    produce_blocks(50); // go over lib
+
+} FC_LOG_AND_RETHROW()
+
 BOOST_AUTO_TEST_SUITE_END()
