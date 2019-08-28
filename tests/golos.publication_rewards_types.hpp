@@ -65,6 +65,13 @@ struct mssgid {
     }
 };
 
+struct permlink_info {
+    mssgid msg;
+    mssgid parent;
+    uint16_t level;
+    uint32_t childcount;
+};
+
 
 struct aprox_val_t {
     double val;
@@ -418,3 +425,4 @@ struct state {
 
 FC_REFLECT(eosio::testing::beneficiary, (account)(weight))
 FC_REFLECT(eosio::testing::mssgid, (author)(permlink))
+FC_REFLECT(eosio::testing::permlink_info, (msg)(parent)(level)(childcount))

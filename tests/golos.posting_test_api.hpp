@@ -181,6 +181,24 @@ struct golos_posting_api: base_contract_api {
         return closemssgs(_code);
     }
 
+    action_result add_permlink(mssgid msg, mssgid parent, uint16_t level = 0, uint32_t childcount = 0) {
+        return push(N(addpermlink), _code, args()
+            ("msg", msg)
+            ("parent", parent)
+            ("level", level)
+            ("childcount", childcount)
+        );
+    }
+    action_result del_permlink(mssgid msg) {
+        return push(N(delpermlink), _code, args()("msg", msg));
+    }
+    action_result add_permlinks(std::vector<permlink_info> permlinks) {
+        return push(N(addpermlinks), _code, args()("permlinks", permlinks));
+    }
+    action_result del_permlinks(std::vector<mssgid> permlinks) {
+        return push(N(delpermlinks), _code, args()("permlinks", permlinks));
+    }
+
 
     action_result init_default_params() {
         auto vote_changes = get_str_vote_changes(max_vote_changes);
