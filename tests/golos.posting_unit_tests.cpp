@@ -422,7 +422,7 @@ BOOST_FIXTURE_TEST_CASE(permlinks_internal_test, posting_tester) try {
     BOOST_CHECK(post.get_permlink({parent, "one-more"}).is_null());
 
     BOOST_TEST_MESSAGE("--- test batch add from file");
-    const auto filename = "../tests/test_permlinks.csv";
+    const auto filename = "test_permlinks.csv";
     auto path = boost::filesystem::absolute(boost::filesystem::path(filename));
     BOOST_CHECK(boost::filesystem::exists(path));
     boost::filesystem::ifstream in(path);
