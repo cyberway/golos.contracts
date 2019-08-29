@@ -10,6 +10,8 @@
 #include "../golos.publication/types.h"
 #include "../golos.publication/config.hpp"
 #include "contracts.hpp"
+#include <boost/filesystem/fstream.hpp>
+#include <boost/algorithm/string.hpp>
 
 namespace cfg = golos::config;
 using namespace fixed_point_utils;
@@ -418,6 +420,41 @@ BOOST_FIXTURE_TEST_CASE(permlinks_internal_test, posting_tester) try {
     BOOST_CHECK(post.get_permlink({author, "3rd"}).is_null());
     BOOST_CHECK(post.get_permlink({author, "4th"}).is_null());
     BOOST_CHECK(post.get_permlink({parent, "one-more"}).is_null());
+
+    BOOST_TEST_MESSAGE("--- test batch add from file");
+    const auto filename = "../tests/test_permlinks.csv";
+    auto path = boost::filesystem::absolute(boost::filesystem::path(filename));
+    BOOST_CHECK(boost::filesystem::exists(path));
+    boost::filesystem::ifstream in(path);
+    std::map<name,bool> accs;
+    std::vector<permlink_info> permlinks;
+    std::vector<std::string> parts;
+    std::string line;
+    auto current_max_size = 1, max_size = 500;
+    while (in >> line) {
+        boost::split(parts, line, boost::is_any_of(";"));
+        auto level = std::stol(parts[4]);
+        uint32_t count = std::stol(parts[5]);
+        BOOST_REQUIRE(level >= 0 && level < 65536 & count >= 0);
+
+        name author{parts[0]};
+        if (accs.count(author) == 0) {
+            accs.emplace(author, true);
+            create_account(author);
+        }
+        permlinks.emplace_back(permlink_info{{author, parts[1]}, {name{parts[2]}, parts[3]}, uint16_t(level), count});
+        if (permlinks.size() >= current_max_size) {
+            BOOST_TEST_MESSAGE("... " << line);
+            BOOST_REQUIRE_EQUAL(success(), post.add_permlinks(permlinks));
+            permlinks.clear();
+            if (current_max_size < max_size)
+                current_max_size++;
+            produce_block();
+        }
+    };
+    if (permlinks.size()) {
+        BOOST_CHECK_EQUAL(success(), post.add_permlinks(permlinks));
+    }
 
 } FC_LOG_AND_RETHROW()
 
