@@ -7,10 +7,10 @@ The Control (or `golos.ctrl`) smart contract implements logic for election of wi
   * a voting procedure for election of a witness;
   * determining a list of the most rated witnesses.
 
-The `golos.ctrl` smart contract contains settings that apply to the Golos application as a whole. These settings can be used to change parameters of any subsystems (for example, emission distribution between pools). Other Golos application smart contracts can access the `golos.ctrl` smart contract and get these settings, percentage ratios of the funds distributed by pools, limits on battery resources. Also, the smart contracts can receive a list of the most rated witnesses with corresponding authority values. This makes it possible to verify the authenticity of actions certified by witnesses.
+The `golos.ctrl` smart contract contains settings that apply to the Golos application as a whole. These settings can be used to the change parameters of any subsystems (for example, emission distribution between pools). Other Golos application smart contracts can access the `golos.ctrl` smart contract and get these settings, percentage ratios of the funds distributed by pools, limits on battery resources. Also, the smart contracts can obtain a list of the most rated witnesses with corresponding authority values. This makes it possible to verify the authenticity of actions certified by witnesses.
 
 ## Parameters set in the Control smart contract
-The `golos.ctrl` smart contract contains a kit of the parameters. To configure the contract, it needs to apply the action `setparams` action. The structure containing setting parameters is as follows:
+The `golos.ctrl` smart contract contains a kit of the parameters. To configure the contract, it needs to apply the action `setparams` action. The list of available parameters used by the contract is as follows:
 
 ```cpp
 ctrl_param, types: [
@@ -32,12 +32,12 @@ ctrl_param, types: [
   * `ctrl_token` — a token symbol that uniquely identifies a specific token:  
     * token name. It should consist of a set of capital letters;  
     * token rate. The token cost accuracy is set as a number of decimal digits.  
-  * `multisig_acc` — an account name. The authorization of this account changes each time after a change in a list of the top witnesses. 
+  * `multisig_acc` — an account name that controls a multisignature authorisation. The authorization of this account changes each time after a change in a list of the top witnesses. 
   * `max_witnesses` — a maximum number of witnesses that can take a decision (for example, sign transactions) on behalf of the application. The `multisig_acc` parameter contains a list of such witnesses.  
   * `multisig_perms` — a required number of signatures from the most rated witnesses that have a permission to perform actions on behalf of the application. To change a parameter value it requires an appropriate level of permission. Different parameters require a different level of permission that is connected to their importance. There are three permission levels:  
-    * `super_majority` — a high level of permission. To get such level it needs to pick up at least «two-thirds plus one» votes of the most rated witnesses (set by default);  
-    * `majority` — an average level of permission. To get such level it needs to pick up at least «half plus one» votes of the most rated witnesses (set by default);  
-    * `minor_majority` — a low level of permission. To get such level it needs to pick up at least «one-third plus one» votes of the the most rated witnesses (set by default). 
+    * `super_majority` — a high level of permission. To get such level it needs to pick up at least «two-thirds plus one» votes of the most rated witnesses (if this parameter is "0", it takes default value — "2/3+1");  
+    * `majority` — an average level of permission. To get such level it needs to pick up at least «half plus one» votes of the most rated witnesses (if this parameter is "0", it takes default value — "1/2+1");  
+    * `minor_majority` — a low level of permission. To get such level it needs to pick up at least «one-third plus one» votes of the the most rated witnesses (if this parameter is "0", it takes default value — "1/3+1"). 
   * `max_witness_votes` — a maximum number of witnesses for which a user can vote.  
   * `update_auth` — a parameter that specifies frequency of updating the authorization for the `multisig_acc` account:  
     * `period` — an update period (in seconds). Re-authorization change for account is not performed if specified period has not passed since the last update.  
@@ -81,9 +81,9 @@ void control::unregwitness(name witness)
 ```
 `witness` — the user name to be removed from the list of witnesses registered as candidates.  
 
-The `regwitness` action can be called either by the candidate (in case of a withdrawal) or by a witness who found a discrepancy of the witness capabilities to desirable witness requirements, and mismatched data published on the web site with her/his relevant data. 
+The `unregwitness` action can be called either by the candidate (in case of a withdrawal) or by a witness who found a discrepancy of the witness capabilities to desirable witness requirements, and mismatched data published on the web site with her/his relevant data. 
 
-Conditions for performing the `regwitness` action:  
+Conditions for performing the `unregwitness` action:  
   * no votes for this witness candidate. Votes of all users who voted for this witness candidate should be removed;  
   * the transaction must be signed by the `witness` candidate himself.
 
@@ -151,7 +151,7 @@ It is allowed to withdraw a vote cast for a witness candidate whose activity is 
 Doing the `unvotewitn` action requires signing the `voter` account.
 
 ## The changevest action
-The `changevest` action is internal and unavailable to the user. It is used by `golos.vesting` smart contract to notify the `golos.ctrl` smart contract about a change of the vesting amount on the user's balance. The `changevest` action has the following form:
+The `changevest` is an internal and unavailable to the user action. It is used by `golos.vesting` smart contract to notify the `golos.ctrl` smart contract about a change of the vesting amount on the user's balance. The `changevest` action has the following form:
 ```cpp
 void control::changevest(
     name who,
@@ -164,7 +164,7 @@ void control::changevest(
 
 The `changevest` action is called automatically each time in case the vesting amount is changed on a user's balance. The `golos.vesting` smart contract informs the `golos.ctrl` smart contract about this change. Because changing the vesting amount on the user's balance changes the weight of this user's vote, the witness rating that the user voted for will also be changed. The `golos.ctrl` smart contract corrects the rating of each witness based on received information about the change. The data of the smart contract table is not modified.  
 
-In case a list of the most rated witnesses is changed, their authorization will automatically be changed too.  
+In case a list of the most rated witnesses is changed, `multisig_acc` authorization will automatically be changed too.  
 ****
 
 

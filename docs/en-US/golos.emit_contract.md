@@ -4,7 +4,7 @@
 The smart contract `golos.emit` ensures the generation of new tokens and their distribution among reward pools in accordance with settings the parameters of the smart contract.  
 
 ## Overview
-Tokens in the smart contract `golos.emit` are emitted according to the algorithm specified in the setting parameters. New tokens are distributed between the reward pools of such smart contracts as `golos.vesting`, `golos.publication`, `golos.ctrl` in accordance with the settings of the `golos.emit` smart contract parameters. Funds from the vesting pool are accrued to the owners of vesting party, from the publication pool — to the authors and curators of posts.  
+Tokens in the smart contract golos.emit are emitted according to the algorithm specified in the parameter settings. New tokens are distributed between smart contract reward pools, such as `golos.vesting`, `golos.publication`, `golos.ctrl` in accordance with the settings of the `golos.emit` smart contract parameters. Funds from the vesting pool are accrued to the owners of vesting, from the publication pool — to the authors and curators of posts.  
 
 ## Parameters set in golos.emit smart-contract
 The setting parameters have the following forms:  

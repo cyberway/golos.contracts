@@ -1,5 +1,4 @@
-﻿# Смарт-контракт golos.vesting
-
+﻿
 ## Назначение смарт-контракта golos.vesting
 
 Смарт-контракт `golos.vesting` обеспечивает привязку вестинга к токену, который создается смарт-контрактом `cyber.token`.
@@ -41,7 +40,7 @@ name: vesting_param,
 1) `vesting_withdraw` — содержит параметры, которые используется для вывода вестинга в токены (конвертирования, «понижения»). Имеет вид структуры:
 ```cpp
 struct vesting_withdraw : parameter {
-    uint8_t intervals;
+    uint32_t intervals;
     uint32_t interval_seconds;
 }
 ```
@@ -63,19 +62,16 @@ struct vesting_delegation : parameter {
     uint64_t min_remainder;
     uint32_t return_time;
     uint32_t min_time;
-    uint32_t max_delegators;
 }
 ```
 `min_amount` — минимально допустимое количество вестинга для делегирования/возврата делегированного. Изменение делегированного вестинга на величину меньше этого значения не выполняется.  
 `min_remainder` — минимальный остаток делегированного. Недопустимо делегировать меньше этого значения. В результате возврата делегированного, остаток должен быть не менее этого значения, либо должен быть нулевым.  
 `return_time` — время возврата делегированных средств (в секундах). Время отсчитывается с момента снятия средств с баланса аккаунта, которому они были делегированы, до момента их зачисления на баланс делегатора.  
 `min_time` — минимальное время делегирования (в секундах). Отзыв делегированных средств возможен не ранее этого значения.  
-`max_delegators` — максимально допустимое количество делегаций на одного получателя.  
-
 
 
 ## Операции-действия, применяемые в смарт-контракте golos.vesting
-В смарт-контракте `golos.vesting` реализованы следующие операции-действия: [setparams](#operaciya-deistvie-setparams), [validateprms](#operaciya-deistvie-validateprms), [create](#operaciya-deistvie-create), [retire](#operaciya-deistvie-retire), [unlocklimit](#operaciya-deistvie-unlocklimit), [withdraw](#operaciya-deistvie-withdraw), [stopwithdraw](#operaciya-deistvie-stopwithdraw), [delegate](#operaciya-deistvie-delegate), [undelegate](#operaciya-deistvie-undelegate), [timeoutrdel](#operacii-deistviya-timeoutrdel-timeoutconv-i-timeout), [timeoutconv](#operacii-deistviya-timeoutrdel-timeoutconv-i-timeout), [timeout](#operacii-deistviya-timeoutrdel-timeoutconv-i-timeout), [open](#operaciya-deistvie-open), [close](#operaciya-deistvie-close).
+В смарт-контракте `golos.vesting` реализованы следующие операции-действия: [setparams](#operaciya-deistvie-setparams), [validateprms](#operaciya-deistvie-validateprms), [create](#operaciya-deistvie-create), [retire](#operaciya-deistvie-retire), [unlocklimit](#operaciya-deistvie-unlocklimit), [withdraw](#operaciya-deistvie-withdraw), [stopwithdraw](#operaciya-deistvie-stopwithdraw), [delegate](#operaciya-deistvie-delegate), [undelegate](#operaciya-deistvie-undelegate), [timeoutrdel](#operacii-deistviya-timeoutrdel-timeoutconv-i-timeout), [timeoutconv](#operacii-deistviya-timeoutrdel-timeoutconv-i-timeout), [timeout](#operacii-deistviya-timeoutrdel-timeoutconv-i-timeout), [open](#operaciya-deistvie-open), [close](#operaciya-deistvie-close), [paydelegator](#operaciya-deistvie-paydelegator).
 
 ## Операция-действие setparams
 Операция-действие `setparams` используется для настройки параметров смарт-контракта вестинга. Операция-действие имеет следующий вид:  
@@ -210,6 +206,7 @@ void vesting::delegate(
     name to,
     asset quantity,
     uint16_t interest_rate,
+    uint8_t payout_strategy
 )
 ```
 Параметры:  
@@ -217,6 +214,7 @@ void vesting::delegate(
 `to` — имя аккаунта, которому делегируются средства. На счет этого аккаунта будет зачислена сумма средств в вестинге. Эта сумма средств возвратная и по завершении делегирования будет возвращена аккаунту `from`;  
 `quantity` — количество выделяемых для делегирования средств;  
 `interest_rate` — процент выплаты аккаунту `from` от доходов аккаунта `to` за курирование;  
+`payout_strategy` — идентификатор стратегии делегирования (варианты делегирования: делегирование средств с возвратом кураторских вознаграждений на счет аккаунта `from`(to_delegator); делегирование, при котором вознаграждения от курирования прибавляются к делегированным средствам — со сложными процентами, то есть с начислением процентов от процентов (to_delegated_vesting)). Принимает одно из двух значений: «0» — to_delegator или «1» — to_delegated_vesting.  
  
 Выполнение операции-действия `delegate` требует подписи аккаунта `from`.  
 
@@ -298,19 +296,19 @@ void vesting::close(
 Транзакция должна быть подписана аккаунтом `owner`.  
 Для выполнения операции-действия требуется, чтобы баланс всего вестинга, в том числе делегированного, был нулевым.
 
-
-## Операция-действие procwaiting
-Операция-действие `procwaiting` используется для ускорения вывода средств, предназначенных для вывода, и отмены делегирований, предназначенных для отмены. Операция-действие имеет вид:
+## Операция-действие paydelegator
+Операция-действие `paydelegator` является системной, вызывается смарт-контрактом публикации (posting). Смарт-контракт постинг не может вносить изменения в таблицы смарт-контракта вестинг. Поэтому при закрытии поста смарт-контракт постинг вызывает `paydelegator` и через него проводит выплаты делегаторам. Операция-действие `paydelegator` имеет вид:
 ```cpp
-void vesting::procwaiting(
-    symbol symbol,
-    name payer
+void vesting::paydelegator(
+    name voter,
+    asset reward,
+    name delegator,
+    uint8_t payout_strategy
 )
 ```
- 
 Параметры:  
-`symbol` — параметр, однозначно определяющий вид вестинга.  
-`payer` — имя аккаунта, оплачивающего bandwidth.
- 
-Транзакция не требует подписей.
+`voter` — имя аккаунта отправителя (куратора), чьи кураторские привели к выплате делегаторам;  
+`reward` — размер вознаграждения;  
+`delegator` — имя аккаунта, получателя вознаграждения;  
+`payout_strategy` — идентификатор стратегии делегирования. Принимает одно из двух значений — «0» или «1». («0» — вознаграждение в виде токенов; «1» — вознаграждение в виде вестинга).
 

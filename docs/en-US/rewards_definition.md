@@ -34,7 +34,7 @@ struct reward_weight_event {
 
 The `rewardweight` event shows a share (as a percentage) of reward for a post, which will be paid with taking into account the fine imposed on the author.  
 
-The activity of each author is limited, that is, the author can publish only a certain number of posts within a specified time interval. If the author’s activity does not exceed the limit, this author is not charged a penalty and the parameter `rewardweight` takes the value of 100%. Otherwise, for each extra publication, the author will be dynamically charged a fine in the amount of from 0 to 100%. Accordingly, the value of `rewardweight` for each extra publication will be reduced by the amount of the fine.
+The activity of each author is limited, that is, the author can publish only a certain number of posts within a specified time interval. If the author’s activity does not exceed the limit, this author is not charged a penalty and the parameter `rewardweight` takes the value of 100 %. Otherwise, for each extra publication, the author will be dynamically charged a fine in the amount of from 0 to 100 %. Accordingly, the value of `rewardweight` for each extra publication will be reduced by the amount of the fine.
 
 ### The poststate event 
 The `poststate` event structure contains data about current state of a post.  
@@ -50,7 +50,7 @@ struct post_event {
 **Parameters:**  
   * `message_id` — identifier of the post. The parameter contains the fields: `author` — author name of the post, `permlink` — unique name of the post within publications of this author.  
   * `netshares` — amount of funds, which will be taken from the rewards pool as a total fee for the post (this parameter is calculated as a sum of `voteshares` values of all votes).  
-  * `voteshares` — a share of reward for the post is related to a separate voice. The separate voice value is calculated as multiplying a number of vesting by a weight of voting account. This parameter can take both positive and negative values. The sign «-» is assigned to «downvote» voice while the sign «+» is assigned to «upvote» one.
+  * `voteshares` — a share of reward for the post is related to a separate vote. The separate vote value is calculated as multiplying a number of vesting by a weight of voting account. This parameter can take both positive and negative values. The sign «-» is assigned to «downvote» vote while the sign «+» is assigned to «upvote» one.
   * `sumcuratorsw` — total weight of all curators votes at the current time.
   * `sharesfn` — function for calculating rewards including calculating the `shares` parameter of post.
 
@@ -86,7 +86,7 @@ struct vote_event {
 **Parameters:**  
   * `voter` — account name (a user) who votes for the post.  
   * `message_id` — identifier of the post. The parameter contains the fields: `author` — author name of the post, `permlink` — unique name of the post within publications of this author.  
-  * `weight` — a vote weight of the account `voter`. While voting, a vote weight is specified with an accuracy of one hundredth of a percent. This parameter takes an integer value in range from 0 to 10000 (the value 10000 corresponds to 100%). The vote of «downvote» corresponds to a negative value.  
+  * `weight` — a vote weight of the account `voter`. While voting, a vote weight is specified with an accuracy of one hundredth of a percent. This parameter takes an integer value in range from 0 to 10000 (the value 10000 corresponds to 100 %). The vote of «downvote» corresponds to a negative value.  
   * `curatorsw` — a share of curator’s fee (the share is a persentage of rewards assigned for all curators. The value of the share depends on curator's weight).  
   * `rshares` — parameter used in calculating rewards for a post. The parameter is calculated as multiplication of voting account's vesting by a vote weight in percentages (`rshares = eff_vesting * weight / 10000`). This parameter can take both positive and negative values.The vote of «downvote» corresponds to a negative value.  
 
@@ -130,8 +130,8 @@ curator_rewardⱼ = curation_payout × (curatorswⱼ / weights_sum)     (3)
 ```
 **Components of the formula:**  
   * `curation_payout` — total amount of fee to curators for the post, calculated by the formula (2).  
-  * `curatorswⱼ = votestate::curatorswⱼ` — a weight of a positive voice j of the «upvote» type.  
-  * `weights_sum = poststate::weights_sum` — total weight of all positive voices of the «upvote» type.  
+  * `curatorswⱼ = votestate::curatorswⱼ` — a weight of a positive vote j of the «upvote» type.  
+  * `weights_sum = poststate::weights_sum` — total weight of all positive votes of the «upvote» type.  
   * `(curatorswⱼ / weights_sum)` — a share allocated to j-th curator of the total fee of all curators. 
 
 The calculation of the fee amount via the formula (3) should be performed for each curator. Needed data about the curator are contained in the `vote_event` structure..

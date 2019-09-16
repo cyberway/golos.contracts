@@ -12,7 +12,7 @@ referral_param, types:[
         asset max_breakout
     },
     expire_parametrs (uint64_t max_expire),
-    percent_parametrs (uint16_t max_percent)
+    percent_parametrs (uint16_t max_percent),
 ]
 ```
 
@@ -22,7 +22,7 @@ referral_param, types:[
     * `max_breakout` — the maximum allowable number of tokens required for the redemption of the referral account and, accordingly, the termination of the referral program.
   * `expire_parametrs `— the maximum allowable time of the referral program.
   * `percent_parametrs` — maximum allowable percentage of deduction to the referrer during the duration of the referral program.
-  
+
 
 ## Actions used in golos.referral smart contract
 
@@ -33,7 +33,7 @@ The `setparams` action is used to set (configure) the parameters of a smart cont
 ```cpp
 void referral::setparams(std::vector<referral_params> params)
 ``` 
- The parameter `params`is a value in the form of a structure which contains the fields: `breakout_parametrs`, `expire_parametrs`, `percent_parametrs`.
+ The parameter `params`is a value in the form of a structure which contains the fields: `breakout_parametrs`, `expire_parametrs`, `percent_parametrs`, `delay_parametrs`.  
 
 
 ## validateprms
@@ -70,5 +70,5 @@ The action has the following form:
 void referral::closeoldref()
 ```
 
-To perform the `closeoldref` action, authorization is not required. The call is made automatically on addreferral() and paying breakout.
+To perform the `closeoldref` action, the smart contract account authorization is required. The call is made automatically.
 
