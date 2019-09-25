@@ -343,6 +343,7 @@ void vesting::undelegate(name from, name to, asset quantity) {
 
 void vesting::create(symbol symbol, name notify_acc) {
     require_auth(name(token::get_issuer(config::token_name, symbol.code())));
+    eosio::check(is_account(notify_acc), "notify_acc account does not exist");
 
     vesting_table table_vesting(_self, _self.value);
     auto vesting = table_vesting.find(symbol.code().raw());
