@@ -10,6 +10,8 @@
 #include "../golos.publication/types.h"
 #include "../golos.publication/config.hpp"
 #include "contracts.hpp"
+#include <boost/filesystem/fstream.hpp>
+#include <boost/algorithm/string.hpp>
 
 namespace cfg = golos::config;
 using namespace fixed_point_utils;
@@ -42,8 +44,23 @@ protected:
     vector<account_name> _users;
 
     struct errors: contract_error_messages {
-        const string too_low_power = amsg("too low voting power");
+        const string too_low_power  = amsg("too low voting power");
         const string too_low_weight = amsg("too low vote weight");
+
+        const string plnk_empty_parent  = amsg("Parent permlink must not be empty");
+        const string plnk_no_parent     = amsg("Parent permlink doesn't exist");
+        const string plnk_bad_level     = amsg("Parent permlink level mismatch");
+        const string plnk_bad_children  = amsg("Parent permlink should have children");
+        const string plnk_empty         = amsg("Permlink must not be empty");
+        const string plnk_too_long      = amsg("Permlink must be less than 256 symbols");
+        const string plnk_invalid       = amsg("Permlink must only contain 0-9, a-z and _ symbols");
+        const string plnk_bad_root_lvl  = amsg("Root permlink must have 0 level");
+        const string plnk_root_parent   = amsg("Root permlink must have empty parent");
+        const string plnk_no_author     = amsg("Author account must exist");
+        const string plnk_already_there = amsg("Permlink already exists");
+        const string plnk_not_found     = amsg("Permlink doesn't exist");
+        const string plnk_empty_vector  = amsg("`permlinks` must not be empty");
+
     } err;
 
 public:
@@ -311,6 +328,136 @@ BOOST_FIXTURE_TEST_CASE(overcharge_test, posting_tester) try {
     BOOST_TEST_MESSAGE("ch: " + fc::json::to_string(charge.get_balance(voter, 0)));
 
     produce_blocks(50); // go over lib
+
+} FC_LOG_AND_RETHROW()
+
+BOOST_FIXTURE_TEST_CASE(permlinks_internal_test, posting_tester) try {
+    BOOST_TEST_MESSAGE("Test internal permlink actions");
+    BOOST_TEST_MESSAGE("--- create test accounts and init");
+    _users.resize(2);
+    init(100500);
+    produce_block();
+
+    auto parent = _users[0];
+    auto author = _users[1];
+    auto unk    = "non.existing"_n;
+
+    BOOST_TEST_MESSAGE("--- fails on bad parameters");
+    mssgid msg{parent, "test"};
+    mssgid empty{};
+    BOOST_CHECK_EQUAL(err.plnk_empty_parent,    post.add_permlink(msg, {unk, ""}));
+    BOOST_CHECK_EQUAL(err.plnk_no_parent,       post.add_permlink(msg, {unk, "not-created"}));
+    BOOST_CHECK_EQUAL(err.plnk_empty,           post.add_permlink({unk, ""}, empty));
+    BOOST_CHECK_EQUAL(err.plnk_too_long,        post.add_permlink({unk, std::string(256, 'a')}, empty));
+    BOOST_CHECK_EQUAL(err.plnk_invalid,         post.add_permlink({unk, "bad+symbol"}, empty));
+    BOOST_CHECK_EQUAL(err.plnk_bad_root_lvl,    post.add_permlink(msg, empty, 1));
+    BOOST_CHECK_EQUAL(err.plnk_bad_root_lvl,    post.add_permlink(msg, empty, 10));
+    BOOST_CHECK_EQUAL(err.plnk_root_parent,     post.add_permlink(msg, {{}, "non-empty"}));
+    BOOST_CHECK_EQUAL(err.plnk_no_author,       post.add_permlink({unk, "not-registered"}, empty));
+
+    BOOST_CHECK_EQUAL(err.plnk_empty_vector,    post.add_permlinks({}));
+    BOOST_CHECK_EQUAL(err.plnk_empty_vector,    post.del_permlinks({}));
+
+    BOOST_TEST_MESSAGE("--- add permlink to test parent asserts");
+    mssgid lastchild{author, "no-children"};
+    BOOST_CHECK_EQUAL(success(), post.add_permlink(msg, empty, 0, 1));
+    BOOST_CHECK_EQUAL(success(), post.add_permlink(lastchild, msg, 1));
+    mssgid longpl{parent, std::string(255, 'a')};
+    BOOST_CHECK_EQUAL(success(), post.add_permlink(longpl, empty));
+    CHECK_MATCHING_OBJECT(post.get_permlink(msg), mvo()("value", msg.permlink));
+    CHECK_MATCHING_OBJECT(post.get_permlink(lastchild), mvo()("value", lastchild.permlink));
+    CHECK_MATCHING_OBJECT(post.get_permlink(longpl), mvo()("value", longpl.permlink));
+
+    BOOST_TEST_MESSAGE("--- fails on mismatch with parent");
+    mssgid poem{author, "poem"};
+    BOOST_CHECK_EQUAL(err.plnk_bad_level,       post.add_permlink(poem, msg, 0));
+    BOOST_CHECK_EQUAL(err.plnk_bad_level,       post.add_permlink(poem, msg, 2));
+    BOOST_CHECK_EQUAL(err.plnk_bad_level,       post.add_permlink(poem, msg, 3));
+    BOOST_CHECK_EQUAL(err.plnk_bad_level,       post.add_permlink(poem, lastchild, 0));
+    BOOST_CHECK_EQUAL(err.plnk_bad_level,       post.add_permlink(poem, lastchild, 1));
+    BOOST_CHECK_EQUAL(err.plnk_bad_level,       post.add_permlink(poem, lastchild, 3));
+    BOOST_CHECK_EQUAL(err.plnk_bad_level,       post.add_permlink(poem, lastchild, 4));
+    BOOST_CHECK_EQUAL(err.plnk_bad_children,    post.add_permlink(poem, lastchild, 2));
+
+    BOOST_TEST_MESSAGE("--- fails if already exists or not exists");
+    BOOST_CHECK_EQUAL(err.plnk_already_there,   post.add_permlink(msg, empty));
+    BOOST_CHECK_EQUAL(err.plnk_not_found,       post.del_permlink(poem));
+
+    BOOST_TEST_MESSAGE("--- delete works even with parent having children");
+    BOOST_CHECK_EQUAL(success(), post.del_permlink(msg));
+    BOOST_CHECK(post.get_permlink(msg).is_null());
+    produce_block();    // avoid "duplicate transaction"
+    BOOST_CHECK_EQUAL(err.plnk_not_found, post.del_permlink(msg));
+
+    BOOST_TEST_MESSAGE("--- test batch add/delete");
+    BOOST_CHECK_EQUAL(success(), post.add_permlinks({
+        {{parent, "1st"}, empty, 0, 1},
+        {{author, "2nd"}, {parent, "1st"}, 1, 1},
+        {{parent, "2nd-a"}, {parent, "1st"}, 1, 0},
+        {{author, "3rd"}, {author, "2nd"}, 2, 1},
+        {{author, "4th"}, {author, "3rd"}, 3, 0},
+    }));
+    BOOST_CHECK_EQUAL(success(), post.add_permlinks({{{parent, "one-more"}, empty, 0, 0}}));
+    BOOST_CHECK_EQUAL(success(), post.del_permlinks({{author, "3rd"}}));
+    BOOST_CHECK_EQUAL(success(), post.del_permlinks({
+        {parent, "1st"},
+        {author, "2nd"},
+        {parent, "2nd-a"},
+        {author, "4th"},
+        {parent, "one-more"}
+    }));
+    produce_block();
+    BOOST_CHECK_EQUAL(err.plnk_not_found, post.del_permlinks({{parent, "1st"}}));
+    BOOST_CHECK_EQUAL(err.plnk_not_found, post.del_permlinks({{author, "2nd"}}));
+    BOOST_CHECK_EQUAL(err.plnk_not_found, post.del_permlinks({{parent, "2nd-a"}}));
+    BOOST_CHECK_EQUAL(err.plnk_not_found, post.del_permlinks({{author, "3rd"}}));
+    BOOST_CHECK_EQUAL(err.plnk_not_found, post.del_permlinks({{author, "4th"}}));
+    BOOST_CHECK_EQUAL(err.plnk_not_found, post.del_permlinks({{parent, "one-more"}}));
+
+    BOOST_CHECK(post.get_permlink({parent, "1st"}).is_null());
+    BOOST_CHECK(post.get_permlink({author, "2nd"}).is_null());
+    BOOST_CHECK(post.get_permlink({parent, "2nd-a"}).is_null());
+    BOOST_CHECK(post.get_permlink({author, "3rd"}).is_null());
+    BOOST_CHECK(post.get_permlink({author, "4th"}).is_null());
+    BOOST_CHECK(post.get_permlink({parent, "one-more"}).is_null());
+
+    BOOST_TEST_MESSAGE("--- test batch add from file");
+    const auto filename = "test_permlinks.csv";
+    auto path = boost::filesystem::absolute(boost::filesystem::path(filename));
+    if (!boost::filesystem::exists(path)) {
+        BOOST_TEST_MESSAGE("------ skip, '" << filename << "' not found");
+        return;
+    }
+    boost::filesystem::ifstream in(path);
+    std::map<name,bool> accs;
+    std::vector<permlink_info> permlinks;
+    std::vector<std::string> parts;
+    std::string line;
+    auto current_max_size = 1, max_size = 500;
+    while (in >> line) {
+        boost::split(parts, line, boost::is_any_of(";"));
+        auto level = std::stol(parts[4]);
+        uint32_t count = std::stol(parts[5]);
+        BOOST_REQUIRE(level >= 0 && level < 65536 & count >= 0);
+
+        name author{parts[0]};
+        if (accs.count(author) == 0) {
+            accs.emplace(author, true);
+            create_account(author);
+        }
+        permlinks.emplace_back(permlink_info{{author, parts[1]}, {name{parts[2]}, parts[3]}, uint16_t(level), count});
+        if (permlinks.size() >= current_max_size) {
+            BOOST_TEST_MESSAGE("... " << line);
+            BOOST_REQUIRE_EQUAL(success(), post.add_permlinks(permlinks));
+            permlinks.clear();
+            if (current_max_size < max_size)
+                current_max_size++;
+            produce_block();
+        }
+    };
+    if (permlinks.size()) {
+        BOOST_CHECK_EQUAL(success(), post.add_permlinks(permlinks));
+    }
 
 } FC_LOG_AND_RETHROW()
 

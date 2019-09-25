@@ -62,6 +62,15 @@ extern "C" {
             execute_action(&publication::set_max_payout);
         if (NN(deletevotes) == action)
             execute_action(&publication::deletevotes);
+
+        if (NN(addpermlink) == action)
+            execute_action(&publication::addpermlink);
+        if (NN(delpermlink) == action)
+            execute_action(&publication::delpermlink);
+        if (NN(addpermlinks) == action)
+            execute_action(&publication::addpermlinks);
+        if (NN(delpermlinks) == action)
+            execute_action(&publication::delpermlinks);
     }
 #undef NN
 }
@@ -271,7 +280,7 @@ void publication::create_message(
         item.cashout_time = cur_time + seconds(cashout_window_param.window).count();
     });
 
-    permlink_table.emplace(message_id.author, [&]( auto &item) {
+    permlink_table.emplace(message_id.author, [&](auto& item) {
         item.id = message_pk;
         item.parentacc = parent_id.author;
         item.parent_id = parent_pk;
@@ -279,6 +288,66 @@ void publication::create_message(
         item.level = level;
         item.childcount = 0;
     });
+}
+
+void publication::addpermlink(structures::mssgid msg, structures::mssgid parent, uint16_t level, uint32_t childcount) {
+    require_auth(_self);
+    uint64_t parent_pk = 0;
+    if (parent.author) {
+        eosio::check(parent.permlink.size() > 0, "Parent permlink must not be empty");
+        tables::permlink_table tbl(_self, parent.author.value);
+        auto idx = tbl.get_index<"byvalue"_n>();
+        auto itr = idx.find(parent.permlink);
+        eosio::check(itr != idx.end(), "Parent permlink doesn't exist");
+        eosio::check(itr->level + 1 == level, "Parent permlink level mismatch");
+        eosio::check(itr->childcount > 0, "Parent permlink should have children");
+        // Note: can try to also check (itr.childcount <= actual children), but it's hard due scope
+        parent_pk = itr->id;
+    } else {
+        eosio::check(msg.permlink.size() > 0, "Permlink must not be empty");
+        eosio::check(msg.permlink.size() < config::max_length, "Permlink must be less than 256 symbols");
+        eosio::check(validate_permlink(msg.permlink), "Permlink must only contain 0-9, a-z and _ symbols");
+        eosio::check(0 == level, "Root permlink must have 0 level");
+        eosio::check(parent.permlink.size() == 0, "Root permlink must have empty parent");
+    }
+    eosio::check(is_account(msg.author), "Author account must exist");
+
+    tables::permlink_table tbl(_self, msg.author.value);
+    auto idx = tbl.get_index<"byvalue"_n>();
+    auto itr = idx.find(msg.permlink);
+    eosio::check(itr == idx.end(), "Permlink already exists");
+
+    tbl.emplace(_self, [&](auto& pl) {
+        pl.id = tbl.available_primary_key();
+        pl.parentacc = parent.author;
+        pl.parent_id = parent_pk;
+        pl.value = msg.permlink;
+        pl.level = level;
+        pl.childcount = childcount;
+    });
+}
+
+void publication::delpermlink(structures::mssgid msg) {
+    require_auth(_self);
+    tables::permlink_table tbl(_self, msg.author.value);
+    auto idx = tbl.get_index<"byvalue"_n>();
+    auto itr = idx.find(msg.permlink);
+    eosio::check(itr != idx.end(), "Permlink doesn't exist");
+    idx.erase(itr);
+}
+
+void publication::addpermlinks(std::vector<structures::permlink_info> permlinks) {
+    eosio::check(permlinks.size() > 0, "`permlinks` must not be empty");
+    for (const auto& p: permlinks) {
+        addpermlink(p.msg, p.parent, p.level, p.childcount);
+    }
+}
+
+void publication::delpermlinks(std::vector<structures::mssgid> permlinks) {
+    eosio::check(permlinks.size() > 0, "`permlinks` must not be empty");
+    for (const auto& p: permlinks) {
+        delpermlink(p);
+    }
 }
 
 void publication::update_message(structures::mssgid message_id,
