@@ -160,12 +160,13 @@ void publication::create_message(
         curators_prcnt = curators_prcnt_param.min_curators_prcnt;
     }
 
-    if (parent_id.author) {
-        if (social_acc_param.account) {
-            eosio::check(!social::is_blocking(social_acc_param.account, parent_id.author, message_id.author),
-                    "You are blocked by this account");
-        }
-    }
+    // TODO: Temporarily disabled - not all blockings stored in table and now this check anyway should be in client
+    // if (parent_id.author) {
+    //     if (social_acc_param.account) {
+    //         eosio::check(!social::is_blocking(social_acc_param.account, parent_id.author, message_id.author),
+    //                 "You are blocked by this account");
+    //     }
+    // }
 
     // close after basic checks. or else it can consume CPU on closing and fail later on bad input params
     close_messages(message_id.author);
@@ -857,7 +858,6 @@ void publication::set_vote(name voter, const structures::mssgid& message_id, int
     };
 
     const auto& max_vote_changes_param = params().max_vote_changes_param;
-    const auto& social_acc_param = params().social_acc_param;
 
     tables::permlink_table permlink_table(_self, message_id.author.value);
     auto permlink_index = permlink_table.get_index<"byvalue"_n>();
