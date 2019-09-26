@@ -87,6 +87,13 @@ struct permlink {
     }
 };
 
+struct permlink_info {
+    mssgid msg;
+    mssgid parent;
+    uint16_t level;
+    uint32_t childcount;
+};
+
 struct delegate_voter {
     delegate_voter() = default;
 

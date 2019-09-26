@@ -38,16 +38,9 @@ struct limitsarg {
 
 enum class payment_t: enum_t { TOKEN, VESTING };
 
-struct forumprops {
-    forumprops() = default;
-
-    name social_contract = name();
-};
-
 #ifdef UNIT_TEST_ENV
 }} // eosio::testing
 FC_REFLECT(eosio::testing::limitedact, (chargenum)(restorernum)(cutoffval)(chargeprice))
 FC_REFLECT(eosio::testing::limitsarg, (restorers)(limitedacts)(vestingprices)(minvestings))
-FC_REFLECT(eosio::testing::forumprops, (social_contract))
 #endif
 
