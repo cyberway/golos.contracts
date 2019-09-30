@@ -91,6 +91,8 @@ protected:
         const string cannot_unblock_not_blocked = amsg("You have not blocked this account");
         const string already_blocked            = amsg("You already have blocked this account");
         const string you_are_blocked            = amsg("You are blocked by this account");
+        const string no_blocker                 = amsg("Blocker account doesn't exist.");
+        const string no_pinner                  = amsg("Pinner account doesn't exist.");
     } err;
 };
 
@@ -189,6 +191,42 @@ BOOST_FIXTURE_TEST_CASE(golos_blocked_commenting_test, golos_social_tester) try 
                                                            {"dave"_n, "permlink"}));
     produce_block();
 } FC_LOG_AND_RETHROW()
+
+BOOST_FIXTURE_TEST_CASE(golos_sync_pinning_blocking_test, golos_social_tester) try {
+    BOOST_TEST_MESSAGE("Testing pinning and blocking with _self authority");
+
+    BOOST_TEST_MESSAGE("--- pin: dave erin");
+    BOOST_CHECK_EQUAL(success(), social.pin("dave"_n, "erin"_n, _code));
+    produce_block();
+
+    BOOST_TEST_MESSAGE("--- unpin: dave erin");
+    BOOST_CHECK_EQUAL(success(), social.unpin("dave"_n, "erin"_n, _code));
+    produce_block();
+
+    BOOST_TEST_MESSAGE("--- block: dave erin");
+    BOOST_CHECK_EQUAL(success(), social.block("dave"_n, "erin"_n, _code));
+    produce_block();
+
+    BOOST_TEST_MESSAGE("--- unblock: dave erin");
+    BOOST_CHECK_EQUAL(success(), social.unblock("dave"_n, "erin"_n, _code));
+    produce_block();
+
+    BOOST_TEST_MESSAGE("--- pin: notexist erin");
+    BOOST_CHECK_EQUAL(err.no_pinner, social.pin("notexist"_n, "erin"_n, _code));
+    produce_block();
+
+    BOOST_TEST_MESSAGE("--- unpin: notexist erin");
+    BOOST_CHECK_EQUAL(err.no_pinner, social.unpin("notexist"_n, "erin"_n, _code));
+    produce_block();
+
+    BOOST_TEST_MESSAGE("--- block: notexist erin");
+    BOOST_CHECK_EQUAL(err.no_blocker, social.block("notexist"_n, "erin"_n, _code));
+    produce_block();
+
+    BOOST_TEST_MESSAGE("--- unblock: notexist erin");
+    BOOST_CHECK_EQUAL(err.no_blocker, social.unblock("notexist"_n, "erin"_n, _code));
+    produce_block();
+} FC_LOG_AND_RETHROW();
 
 BOOST_FIXTURE_TEST_CASE(golos_accountmeta_test, golos_social_tester) try {
     BOOST_TEST_MESSAGE("Simple golos accountmeta test");

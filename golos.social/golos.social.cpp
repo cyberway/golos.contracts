@@ -8,7 +8,11 @@ using namespace eosio;
 EOSIO_DISPATCH(social, (pin)(unpin)(block)(unblock)(updatemeta)(deletemeta))
 
 void social::pin(name pinner, name pinning) {
-    require_auth(pinner);
+    auto user_auth = has_auth(pinner);
+    eosio::check(user_auth || has_auth(_self), "missing required signature");
+    if (!user_auth) {
+        eosio::check(is_account(pinner), "Pinner account doesn't exist.");
+    }
 
     eosio::check(is_account(pinning), "Pinning account doesn't exist.");
     eosio::check(pinner != pinning, "You cannot pin yourself");
@@ -26,7 +30,7 @@ void social::pin(name pinner, name pinning) {
         });
 
     } else {
-        table.emplace(pinner, [&](auto& item){
+        table.emplace(user_auth ? pinner : _self, [&](auto& item){
             item.account = pinning;
             item.pinning = true;
         });
@@ -34,7 +38,11 @@ void social::pin(name pinner, name pinning) {
 }
 
 void social::unpin(name pinner, name pinning) {
-    require_auth(pinner);
+    auto user_auth = has_auth(pinner);
+    eosio::check(user_auth || has_auth(_self), "missing required signature");
+    if (!user_auth) {
+        eosio::check(is_account(pinner), "Pinner account doesn't exist.");
+    }
 
     eosio::check(pinner != pinning, "You cannot unpin yourself");
 
@@ -57,7 +65,11 @@ bool social::record_is_empty(structures::pinblock_record record) {
 }
 
 void social::block(name blocker, name blocking) {
-    require_auth(blocker);
+    auto user_auth = has_auth(blocker);
+    eosio::check(user_auth || has_auth(_self), "missing required signature");
+    if (!user_auth) {
+        eosio::check(is_account(blocker), "Blocker account doesn't exist.");
+    }
 
     eosio::check(is_account(blocking), "Blocking account doesn't exist.");
     eosio::check(blocker != blocking, "You cannot block yourself");
@@ -75,7 +87,7 @@ void social::block(name blocker, name blocking) {
         });
 
     } else {
-        table.emplace(blocker, [&](auto& item){
+        table.emplace(user_auth ? blocker : _self, [&](auto& item){
             item.account = blocking;
             item.blocking = true;
         });
@@ -83,7 +95,11 @@ void social::block(name blocker, name blocking) {
 }
 
 void social::unblock(name blocker, name blocking) {
-    require_auth(blocker);
+    auto user_auth = has_auth(blocker);
+    eosio::check(user_auth || has_auth(_self), "missing required signature");
+    if (!user_auth) {
+        eosio::check(is_account(blocker), "Blocker account doesn't exist.");
+    }
 
     eosio::check(blocker != blocking, "You cannot unblock yourself");
 

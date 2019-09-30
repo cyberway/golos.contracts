@@ -17,29 +17,33 @@ struct golos_social_api: base_contract_api {
     }
 
     //// social actions
-    action_result pin(account_name pinner, account_name pinning) {
-        return push("pin"_n, pinner, args()
+    action_result pin(account_name pinner, account_name pinning, account_name signer = account_name()) {
+        if (!signer) signer = pinner;
+        return push("pin"_n, signer, args()
             ("pinner", pinner)
             ("pinning", pinning)
         );
     }
 
-    action_result unpin(account_name pinner, account_name pinning) {
-        return push("unpin"_n, pinner, args()
+    action_result unpin(account_name pinner, account_name pinning, account_name signer = account_name()) {
+        if (!signer) signer = pinner;
+        return push("unpin"_n, signer, args()
             ("pinner", pinner)
             ("pinning", pinning)
         );
     }
 
-    action_result block(account_name blocker, account_name blocking) {
-        return push("block"_n, blocker, args()
+    action_result block(account_name blocker, account_name blocking, account_name signer = account_name()) {
+        if (!signer) signer = blocker;
+        return push("block"_n, signer, args()
             ("blocker", blocker)
             ("blocking", blocking)
         );
     }
 
-    action_result unblock(account_name blocker, account_name blocking) {
-        return push("unblock"_n, blocker, args()
+    action_result unblock(account_name blocker, account_name blocking, account_name signer = account_name()) {
+        if (!signer) signer = blocker;
+        return push("unblock"_n, signer, args()
             ("blocker", blocker)
             ("blocking", blocking)
         );
