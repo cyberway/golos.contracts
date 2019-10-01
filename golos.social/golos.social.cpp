@@ -5,7 +5,7 @@ namespace golos {
 
 using namespace eosio;
 
-EOSIO_DISPATCH(social, (pin)(unpin)(block)(unblock)(updatemeta)(deletemeta))
+EOSIO_DISPATCH(social, (pin)(addpin)(unpin)(block)(addblock)(unblock)(updatemeta)(deletemeta))
 
 void social::pin(name pinner, name pinning) {
     require_auth(pinner);
@@ -25,6 +25,23 @@ void social::pin(name pinner, name pinning) {
             item.pinning = true;
         });
     }
+}
+
+void social::addpin(name pinner, name pinning) {
+    require_auth(_self);
+
+    eosio::check(is_account(pinner), "Pinner account doesn't exist.");
+    eosio::check(is_account(pinning), "Pinning account doesn't exist.");
+    eosio::check(pinner != pinning, "Pinner cannot pin himself");
+
+    tables::pinblock_table table(_self, pinner.value);
+    auto itr = table.find(pinning.value);
+    eosio::check(itr == table.end(), "Record already exists.");
+
+    table.emplace(_self, [&](auto& item){
+        item.account = pinning;
+        item.pinning = true;
+    });
 }
 
 void social::unpin(name pinner, name pinning) {
@@ -63,6 +80,23 @@ void social::block(name blocker, name blocking) {
             item.blocking = true;
         });
     }
+}
+
+void social::addblock(name blocker, name blocking) {
+    require_auth(_self);
+
+    eosio::check(is_account(blocker), "Blocker account doesn't exist.");
+    eosio::check(is_account(blocking), "Blocking account doesn't exist.");
+    eosio::check(blocker != blocking, "Blocker cannot block himself");
+
+    tables::pinblock_table table(_self, blocker.value);
+    auto itr = table.find(blocking.value);
+    eosio::check(itr == table.end(), "Record already exists.");
+
+    table.emplace(_self, [&](auto& item){
+        item.account = blocking;
+        item.blocking = true;
+    });
 }
 
 void social::unblock(name blocker, name blocking) {

@@ -22,6 +22,13 @@ struct golos_social_api: base_contract_api {
         );
     }
 
+    action_result addpin(account_name pinner, account_name pinning) {
+        return push("addpin"_n, _code, args()
+            ("pinner", pinner)
+            ("pinning", pinning)
+        );
+    }
+
     action_result unpin(account_name pinner, account_name pinning) {
         return push("unpin"_n, pinner, args()
             ("pinner", pinner)
@@ -31,6 +38,13 @@ struct golos_social_api: base_contract_api {
 
     action_result block(account_name blocker, account_name blocking) {
         return push("block"_n, blocker, args()
+            ("blocker", blocker)
+            ("blocking", blocking)
+        );
+    }
+
+    action_result addblock(account_name blocker, account_name blocking) {
+        return push("addblock"_n, _code, args()
             ("blocker", blocker)
             ("blocking", blocking)
         );
