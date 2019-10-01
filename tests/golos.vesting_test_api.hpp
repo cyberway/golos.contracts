@@ -107,6 +107,15 @@ struct golos_vesting_api: base_contract_api {
     }
     
     action_result delegate(name from, name to, asset quantity, uint16_t interest_rate = 0) {
+        if (from == to) {
+            return push(N(delegate), from, args()
+                ("from", from)
+                ("to", to)
+                ("quantity", quantity)
+                ("interest_rate", 0)
+            );
+        }
+
         return push_msig(N(delegate), {{from, config::active_name}, {to, config::active_name}}, {from, to}, args()
             ("from", from)
             ("to", to)
