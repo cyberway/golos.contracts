@@ -10,9 +10,11 @@ private:
     using contract::contract;
 public:
     void pin(name pinner, name pinning);
+    void addpin(name pinner, name pinning);
     void unpin(name pinner, name pinning);
 
     void block(name blocker, name blocking);
+    void addblock(name blocker, name blocking);
     void unblock(name blocker, name blocking);
 
     void updatemeta(name account, accountmeta meta);
