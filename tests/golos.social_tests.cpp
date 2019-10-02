@@ -229,7 +229,7 @@ BOOST_FIXTURE_TEST_CASE(golos_sync_pinning_blocking_test, golos_social_tester) t
     produce_block();
 
     BOOST_TEST_MESSAGE("--- fail addpin: dave erin");
-    BOOST_CHECK_EQUAL(err.record_alredy_exists, social.addpin("dave"_n, "erin"_n));
+    BOOST_CHECK_EQUAL(err.record_already_exists, social.addpin("dave"_n, "erin"_n));
     produce_block();
 
     BOOST_TEST_MESSAGE("--- unblock: dave erin");
