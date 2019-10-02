@@ -584,7 +584,7 @@ BOOST_FIXTURE_TEST_CASE(delegate, golos_vesting_tester) try {
     const auto charge_prop = 0.7;
 
     BOOST_TEST_MESSAGE("--- fail when delegate to self");
-    BOOST_CHECK_EQUAL(err.unsuccessful_delegation, vest.msig_delegate(N(sania), N(sania), amount));
+    BOOST_CHECK_EQUAL(err.self_delegate, vest.delegate(N(sania), N(sania), amount));
 
     BOOST_TEST_MESSAGE("--- fail on bad interest rate");
     BOOST_CHECK_EQUAL(err.interest_to_high, vest.delegate(N(sania), N(pasha), amount, 10001)); // TODO: test boundaries #744
