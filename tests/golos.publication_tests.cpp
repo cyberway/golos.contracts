@@ -254,6 +254,77 @@ BOOST_FIXTURE_TEST_CASE(set_rules, golos_publication_tester) try {
     BOOST_CHECK_EQUAL(err.gt_maxtokenprop, post.create_msg({u, "50p"},{N(),""}, {}, p+1));
 } FC_LOG_AND_RETHROW()
 
+BOOST_FIXTURE_TEST_CASE(syncpool, golos_publication_tester) try {
+    
+    BOOST_TEST_MESSAGE("Test syncpool.");
+    init();
+    BOOST_CHECK_EQUAL(success(), token.issue(cfg::emission_name, N(brucelee), token.make_asset(1000), ""));
+    BOOST_CHECK_EQUAL(success(), token.issue(cfg::emission_name, N(jackiechan), token.make_asset(1000), ""));
+    BOOST_CHECK_EQUAL(success(), token.transfer(N(brucelee), cfg::vesting_name, token.make_asset(1000)));
+    BOOST_CHECK_EQUAL(success(), token.transfer(N(jackiechan), cfg::vesting_name, token.make_asset(1000)));
+    
+    funcparams fn{"0", 1};
+    auto reward = token.make_asset(5000);
+    
+    std::vector<uint64_t> pools_created;
+    
+    BOOST_CHECK_EQUAL(success(), token.issue(cfg::emission_name, _code, reward, "reward"));
+    BOOST_CHECK_EQUAL(success(), post.create_msg({N(brucelee), "pool0"}));
+    BOOST_CHECK_EQUAL(success(), post.create_msg({N(jackiechan), "pool0"}));
+    produce_block();
+    pools_created.push_back(post.get_reward_pools().back()["created"].as<uint64_t>());
+    
+    BOOST_CHECK_EQUAL(success(), post.set_rules(fn ,fn ,fn, 5000));
+    BOOST_CHECK_EQUAL(success(), token.issue(cfg::emission_name, _code, reward, "reward"));
+    BOOST_CHECK_EQUAL(success(), post.create_msg({N(brucelee), "pool1"}));
+    BOOST_CHECK_EQUAL(success(), post.create_msg({N(jackiechan), "pool1"}));
+    produce_block();
+    pools_created.push_back(post.get_reward_pools().back()["created"].as<uint64_t>());
+    
+    auto incorrect_sym = symbol(_sym.decimals() + 1, _sym.name().c_str());
+    
+    BOOST_CHECK_EQUAL(success(), post.set_rules(fn ,fn ,fn, 5000, incorrect_sym));
+    BOOST_CHECK_EQUAL(success(), token.issue(cfg::emission_name, _code, reward, "reward"));
+    BOOST_CHECK_EQUAL(success(), post.create_msg({N(brucelee), "pool2"}));
+    BOOST_CHECK_EQUAL(success(), post.create_msg({N(jackiechan), "pool2"}));
+    produce_block();
+    
+    BOOST_CHECK_EQUAL(success(), post.delete_msg({N(brucelee), "pool0"}));
+    BOOST_CHECK_EQUAL(success(), post.delete_msg({N(jackiechan), "pool0"}));
+    BOOST_CHECK_EQUAL(success(), post.delete_msg({N(brucelee), "pool1"}));
+        
+    BOOST_CHECK_EQUAL(success(), post.upvote(N(jackiechan), {N(jackiechan), "pool1"}, 10000));
+    BOOST_CHECK_EQUAL(success(), post.upvote(N(brucelee), {N(brucelee), "pool2"}, 10000));
+    BOOST_CHECK_EQUAL(success(), post.upvote(N(jackiechan), {N(jackiechan), "pool2"}, 10000));
+    produce_block();
+    
+    pools_created.push_back(post.get_reward_pools().back()["created"].as<uint64_t>());
+    
+    auto pools = post.get_reward_pools();
+    for (size_t i = 0; i < 3; i++) {
+        BOOST_CHECK_EQUAL(pools[i]["created"].as<uint64_t>(), pools_created[i]);
+        BOOST_CHECK_EQUAL(pools[i]["state"]["msgs"].as<uint8_t>(), 2);
+    }
+    
+    BOOST_CHECK_EQUAL(pools[0]["state"]["funds"].as<asset>(), reward);
+    BOOST_CHECK_EQUAL(pools[1]["state"]["funds"].as<asset>(), reward);
+    BOOST_CHECK_EQUAL(pools[2]["state"]["funds"].as<asset>(), reward + reward + reward);
+    
+    BOOST_CHECK_EQUAL(success(), post.syncpool());
+    pools = post.get_reward_pools();
+    BOOST_CHECK_EQUAL(pools.size(), 2);
+    
+    BOOST_CHECK_EQUAL(pools[0]["created"].as<uint64_t>(), pools_created[1]);
+    BOOST_CHECK_EQUAL(pools[0]["state"]["msgs"].as<uint64_t>(), 2); // 1
+    BOOST_CHECK_EQUAL(pools[0]["state"]["funds"].as<asset>(), reward);
+    
+    BOOST_CHECK_EQUAL(pools[1]["created"].as<uint64_t>(), pools_created[2]);
+    BOOST_CHECK_EQUAL(pools[1]["state"]["msgs"].as<uint64_t>(), 2); // 0
+    BOOST_CHECK_EQUAL(pools[1]["state"]["funds"].as<asset>(), reward + reward);
+    
+    
+} FC_LOG_AND_RETHROW()
+
 BOOST_FIXTURE_TEST_CASE(create_message, golos_publication_tester) try {
     BOOST_TEST_MESSAGE("Create message testing.");
     init();

@@ -41,6 +41,7 @@ public:
     [[eosio::action]] void addpermlinks(std::vector<structures::permlink_info> permlinks);
     [[eosio::action]] void delpermlinks(std::vector<structures::mssgid> permlinks);
 
+    void syncpool(std::optional<symbol> tokensymbol);
 private:
     const posting_state& params();
     void set_vote(name voter, const structures::mssgid &message_id, int16_t weight);
