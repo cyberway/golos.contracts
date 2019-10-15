@@ -33,7 +33,7 @@ public:
         , post({this, cfg::publish_name, _token_sym})
         , vest({this, cfg::vesting_name, _vesting_sym})
         , token({this, cfg::token_name, _token_sym})
-        , social({this, _code, _token_sym})
+        , social({this, _code})
         , _users{"dave"_n, "erin"_n} {
 
         produce_block();
@@ -81,8 +81,10 @@ public:
 protected:
 
     struct errors: contract_error_messages {
+        const string no_pinning                 = amsg("Pinning account doesn't exist.");
         const string cannot_pin_yourself        = amsg("You cannot pin yourself");
         const string cannot_unpin_yourself      = amsg("You cannot unpin yourself");
+        const string no_blocking                = amsg("Blocking account doesn't exist.");
         const string cannot_block_yourself      = amsg("You cannot block yourself");
         const string cannot_unblock_yourself    = amsg("You cannot unblock yourself");
         const string cannot_pin_blocked         = amsg("You have blocked this account. Unblock it before pinning");
@@ -91,6 +93,12 @@ protected:
         const string cannot_unblock_not_blocked = amsg("You have not blocked this account");
         const string already_blocked            = amsg("You already have blocked this account");
         const string you_are_blocked            = amsg("You are blocked by this account");
+        const string no_blocker                 = amsg("Blocker account doesn't exist.");
+        const string blocker_block_himself      = amsg("Blocker cannot block himself");
+        const string no_pinner                  = amsg("Pinner account doesn't exist.");
+        const string pinner_pin_himself         = amsg("Pinner cannot pin himself");
+        const string record_already_exists      = amsg("Record already exists.");
+        string missing_auth(name arg) { return "missing authority of " + arg.to_string(); };
     } err;
 };
 
@@ -100,6 +108,14 @@ BOOST_AUTO_TEST_SUITE(social_tests)
 BOOST_FIXTURE_TEST_CASE(golos_pinning_test, golos_social_tester) try {
     BOOST_TEST_MESSAGE("Simple golos pinning test");
 
+    BOOST_TEST_MESSAGE("--- pin not-exist account");
+    BOOST_CHECK_EQUAL(err.no_pinning, social.pin("dave"_n, "notexist"_n));
+    produce_block();
+
+    BOOST_TEST_MESSAGE("--- unpin not-exist account");
+    BOOST_CHECK_EQUAL(err.no_pinning, social.unpin("dave"_n, "notexist"_n));
+    produce_block();
+
     BOOST_TEST_MESSAGE("--- pin: dave dave");
     BOOST_CHECK_EQUAL(err.cannot_pin_yourself, social.pin("dave"_n, "dave"_n));
     produce_block();
@@ -107,6 +123,16 @@ BOOST_FIXTURE_TEST_CASE(golos_pinning_test, golos_social_tester) try {
     BOOST_TEST_MESSAGE("--- unpin: dave dave");
     BOOST_CHECK_EQUAL(err.cannot_unpin_yourself, social.unpin("dave"_n, "dave"_n));
     produce_block();
+
+    BOOST_TEST_MESSAGE("--- unpin: dave erin without record (success)");
+    BOOST_CHECK_EQUAL(success(), social.unpin("dave"_n, "erin"_n));
+    produce_block();
+
+    BOOST_TEST_MESSAGE("--- pin: dave erin with wrong authority");
+    BOOST_CHECK_EQUAL(err.missing_auth("dave"_n), social.push("pin"_n, "erin"_n, social.args()
+        ("pinner", "dave"_n)
+        ("pinning", "erin"_n)
+    ));
 
     BOOST_TEST_MESSAGE("--- pin: dave erin");
     BOOST_CHECK_EQUAL(success(), social.pin("dave"_n, "erin"_n));
@@ -116,16 +142,20 @@ BOOST_FIXTURE_TEST_CASE(golos_pinning_test, golos_social_tester) try {
     BOOST_CHECK_EQUAL(err.already_pinned, social.pin("dave"_n, "erin"_n));
     produce_block();
 
+    BOOST_TEST_MESSAGE("--- unpin: dave erin with wrong authority");
+    BOOST_CHECK_EQUAL(err.missing_auth("dave"_n), social.push("unpin"_n, "erin"_n, social.args()
+        ("pinner", "dave"_n)
+        ("pinning", "erin"_n)
+    ));
+
     BOOST_TEST_MESSAGE("--- unpin: dave erin");
     BOOST_CHECK_EQUAL(success(), social.unpin("dave"_n, "erin"_n));
     produce_block();
 
-    BOOST_TEST_MESSAGE("--- unpin: dave erin again (fail)");
-    BOOST_CHECK_EQUAL(err.cannot_unpin_not_pinned, social.unpin("dave"_n, "erin"_n));
+    BOOST_TEST_MESSAGE("--- block: dave erin, and try unpin again (fail)");
+    BOOST_CHECK_EQUAL(success(), social.block("dave"_n, "erin"_n));
     produce_block();
-
-    BOOST_TEST_MESSAGE("--- pin: dave erin");
-    BOOST_CHECK_EQUAL(success(), social.pin("dave"_n, "erin"_n));
+    BOOST_CHECK_EQUAL(err.cannot_unpin_not_pinned, social.unpin("dave"_n, "erin"_n));
     produce_block();
 } FC_LOG_AND_RETHROW()
 
@@ -140,6 +170,10 @@ BOOST_FIXTURE_TEST_CASE(golos_blocking_test, golos_social_tester) try {
     BOOST_CHECK_EQUAL(err.cannot_unblock_yourself, social.unblock("dave"_n, "dave"_n));
     produce_block();
 
+    BOOST_TEST_MESSAGE("--- unblock: dave erin without record (success)");
+    BOOST_CHECK_EQUAL(success(), social.unblock("dave"_n, "erin"_n));
+    produce_block();
+
     BOOST_TEST_MESSAGE("--- block: dave erin");
     BOOST_CHECK_EQUAL(success(), social.block("dave"_n, "erin"_n));
     produce_block();
@@ -152,7 +186,9 @@ BOOST_FIXTURE_TEST_CASE(golos_blocking_test, golos_social_tester) try {
     BOOST_CHECK_EQUAL(success(), social.unblock("dave"_n, "erin"_n));
     produce_block();
 
-    BOOST_TEST_MESSAGE("--- unblock: dave erin again (fail)");
+    BOOST_TEST_MESSAGE("--- pin dave erin, and try unblock again (fail)");
+    BOOST_CHECK_EQUAL(success(), social.pin("dave"_n, "erin"_n));
+    produce_block();
     BOOST_CHECK_EQUAL(err.cannot_unblock_not_blocked, social.unblock("dave"_n, "erin"_n));
     produce_block();
 
@@ -164,6 +200,59 @@ BOOST_FIXTURE_TEST_CASE(golos_blocking_test, golos_social_tester) try {
     BOOST_CHECK_EQUAL(err.cannot_pin_blocked, social.pin("dave"_n, "erin"_n));
     produce_block();
 } FC_LOG_AND_RETHROW()
+
+BOOST_FIXTURE_TEST_CASE(golos_sync_pinning_blocking_test, golos_social_tester) try {
+    BOOST_TEST_MESSAGE("Testing pinning and blocking with _self authority");
+
+    BOOST_TEST_MESSAGE("--- fail addpin: dave dave");
+    BOOST_CHECK_EQUAL(err.pinner_pin_himself, social.addpin("dave"_n, "dave"_n));
+    produce_block();
+
+    BOOST_TEST_MESSAGE("--- addpin: dave erin");
+    BOOST_CHECK_EQUAL(success(), social.addpin("dave"_n, "erin"_n));
+    produce_block();
+
+    BOOST_TEST_MESSAGE("--- fail addblock: dave erin");
+    BOOST_CHECK_EQUAL(err.record_already_exists, social.addblock("dave"_n, "erin"_n));
+    produce_block();
+
+    BOOST_TEST_MESSAGE("--- unpin: dave erin");
+    BOOST_CHECK_EQUAL(success(), social.unpin("dave"_n, "erin"_n));
+    produce_block();
+
+    BOOST_TEST_MESSAGE("--- fail addblock: dave dave");
+    BOOST_CHECK_EQUAL(err.blocker_block_himself, social.addblock("dave"_n, "dave"_n));
+    produce_block();
+
+    BOOST_TEST_MESSAGE("--- addblock: dave erin");
+    BOOST_CHECK_EQUAL(success(), social.addblock("dave"_n, "erin"_n));
+    produce_block();
+
+    BOOST_TEST_MESSAGE("--- fail addpin: dave erin");
+    BOOST_CHECK_EQUAL(err.record_already_exists, social.addpin("dave"_n, "erin"_n));
+    produce_block();
+
+    BOOST_TEST_MESSAGE("--- unblock: dave erin");
+    BOOST_CHECK_EQUAL(success(), social.unblock("dave"_n, "erin"_n));
+    produce_block();
+
+    BOOST_TEST_MESSAGE("--- fail addpin: notexist erin");
+    BOOST_CHECK_EQUAL(err.no_pinner, social.addpin("notexist"_n, "erin"_n));
+    produce_block();
+
+    BOOST_TEST_MESSAGE("--- fail addpin: dave notexist");
+    BOOST_CHECK_EQUAL(err.no_pinning, social.addpin("dave"_n, "notexist"_n));
+    produce_block();
+
+    BOOST_TEST_MESSAGE("--- fail addblock: notexist erin");
+    BOOST_CHECK_EQUAL(err.no_blocker, social.addblock("notexist"_n, "erin"_n));
+    produce_block();
+
+    BOOST_TEST_MESSAGE("--- fail addblock: dave notexist");
+    BOOST_CHECK_EQUAL(err.no_blocking, social.addblock("dave"_n, "notexist"_n));
+    produce_block();
+
+} FC_LOG_AND_RETHROW();
 
 BOOST_FIXTURE_TEST_CASE(golos_blocked_commenting_test, golos_social_tester) try {
     BOOST_TEST_MESSAGE("Test commenting when blocked");
@@ -184,8 +273,12 @@ BOOST_FIXTURE_TEST_CASE(golos_blocked_commenting_test, golos_social_tester) try 
     BOOST_CHECK_EQUAL(success(), social.block("dave"_n, "erin"_n));
     produce_block();
 
-    BOOST_TEST_MESSAGE("--- create comment: erin to dave again (fail)");
-    BOOST_CHECK_EQUAL(err.you_are_blocked, post.create_msg({"erin"_n, "permlink3"},
+    // TODO: checking removed
+    // BOOST_TEST_MESSAGE("--- create comment: erin to dave again (fail)");
+    // BOOST_CHECK_EQUAL(err.you_are_blocked, post.create_msg({"erin"_n, "permlink3"},
+    //                                                        {"dave"_n, "permlink"}));
+    BOOST_TEST_MESSAGE("--- create comment: erin to dave again (success)");
+    BOOST_CHECK_EQUAL(success(), post.create_msg({"erin"_n, "permlink3"},
                                                            {"dave"_n, "permlink"}));
     produce_block();
 } FC_LOG_AND_RETHROW()

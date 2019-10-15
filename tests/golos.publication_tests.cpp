@@ -166,6 +166,8 @@ protected:
 
         const string no_vestpayment     = amsg("vestpayment disabled");
         const string no_vesting_limits  = amsg("set_limit: vesting disabled in charge");
+        
+        const string precision_mismatch = amsg("symbol precision mismatch");
     } err;
 };
 
@@ -252,6 +254,52 @@ BOOST_FIXTURE_TEST_CASE(set_rules, golos_publication_tester) try {
     BOOST_CHECK_EQUAL(success(), post.create_msg({u, "50-"},{N(),""}, {}, p-1));
     BOOST_CHECK_EQUAL(success(), post.create_msg({u, "50"},{N(),""}, {}, p));
     BOOST_CHECK_EQUAL(err.gt_maxtokenprop, post.create_msg({u, "50p"},{N(),""}, {}, p+1));
+} FC_LOG_AND_RETHROW()
+
+BOOST_FIXTURE_TEST_CASE(message_counter_on_erase, golos_publication_tester) try {
+    BOOST_TEST_MESSAGE("Message counter on erase test");
+    init();
+    funcparams fn{"0", 1};
+    
+    std::vector<uint64_t> pools_created;
+    
+    BOOST_CHECK_EQUAL(success(), post.create_msg({N(brucelee), "pool0"}));
+    BOOST_CHECK_EQUAL(success(), post.create_msg({N(jackiechan), "pool0"}));
+    produce_block();
+    pools_created.push_back(post.get_reward_pools().back()["created"].as<uint64_t>());
+    
+    BOOST_CHECK_EQUAL(success(), post.set_rules(fn ,fn ,fn, 5000));
+    BOOST_CHECK_EQUAL(success(), post.create_msg({N(brucelee), "pool1"}));
+    BOOST_CHECK_EQUAL(success(), post.create_msg({N(jackiechan), "pool1"}));
+    produce_block();
+    BOOST_CHECK_EQUAL(success(), post.delete_msg({N(brucelee), "pool0"}));
+    BOOST_CHECK_EQUAL(success(), post.delete_msg({N(jackiechan), "pool0"}));
+    pools_created.push_back(post.get_reward_pools().back()["created"].as<uint64_t>());
+    
+    auto incorrect_sym = symbol(_sym.decimals() + 1, _sym.name().c_str());
+    
+    BOOST_CHECK_EQUAL(err.precision_mismatch, post.set_rules(fn ,fn ,fn, 5000, incorrect_sym));
+    BOOST_CHECK_EQUAL(success(), post.set_rules(fn ,fn ,fn, 5000));
+    BOOST_CHECK_EQUAL(success(), post.create_msg({N(brucelee), "pool2"}));
+    BOOST_CHECK_EQUAL(success(), post.create_msg({N(jackiechan), "pool2"}));
+    produce_block();
+    
+    BOOST_CHECK_EQUAL(success(), post.delete_msg({N(brucelee), "pool1"}));
+    BOOST_CHECK_EQUAL(success(), post.delete_msg({N(brucelee), "pool2"}));
+    BOOST_CHECK_EQUAL(success(), post.delete_msg({N(jackiechan), "pool2"}));
+    produce_block();
+    
+    pools_created.push_back(post.get_reward_pools().back()["created"].as<uint64_t>());
+    
+    auto pools = post.get_reward_pools();
+    BOOST_CHECK_EQUAL(pools.size(), 2);
+    
+    BOOST_CHECK_EQUAL(pools[0]["created"].as<uint64_t>(), pools_created[1]);
+    BOOST_CHECK_EQUAL(pools[0]["state"]["msgs"].as<uint64_t>(), 1); // 1
+    
+    BOOST_CHECK_EQUAL(pools[1]["created"].as<uint64_t>(), pools_created[2]);
+    BOOST_CHECK_EQUAL(pools[1]["state"]["msgs"].as<uint64_t>(), 0); // 0
+    
 } FC_LOG_AND_RETHROW()
 
 BOOST_FIXTURE_TEST_CASE(create_message, golos_publication_tester) try {

@@ -530,16 +530,6 @@
     ]
   },
   {
-    "name": "createacc",
-    "base": "",
-    "fields": [
-      {
-        "name": "name",
-        "type": "name"
-      }
-    ]
-  },
-  {
     "name": "setlimit",
     "base": "",
     "fields": [
@@ -596,6 +586,16 @@
         {
             "name": "tokensymbol",
             "type": "symbol"
+        }
+    ]
+  },
+  {
+    "name": "syncpool",
+    "base": "",
+    "fields": [
+        {
+            "name": "tokensymbol",
+            "type": "symbol?"
         }
     ]
   },
@@ -873,6 +873,34 @@
     ]
   },
   {
+    "name": "addpermlink",
+    "base": "",
+    "fields": [
+      { "type": "mssgid", "name": "msg" },
+      { "type": "mssgid", "name": "parent" },
+      { "type": "uint16", "name": "level" },
+      { "type": "uint32", "name": "childcount" }
+    ]
+  },{
+    "name": "delpermlink",
+    "base": "",
+    "fields": [
+      { "type": "mssgid", "name": "msg" }
+    ]
+  },{
+    "name": "addpermlinks",
+    "base": "",
+    "fields": [
+      { "type": "addpermlink[]", "name": "permlinks" }
+    ]
+  },{
+    "name": "delpermlinks",
+    "base": "",
+    "fields": [
+      { "type": "mssgid[]", "name": "permlinks" }
+    ]
+  },
+  {
     "name": "post_event",
     "base": "",
     "fields": [
@@ -965,12 +993,12 @@
     "type": "closemssgs"
   },
   {
-    "name": "createacc",
-    "type": "createacc"
-  },
-  {
     "name": "setrules",
     "type": "setrules"
+  },
+  {
+    "name": "syncpool",
+    "type": "syncpool"
   },
   {
     "name": "setlimit",
@@ -1007,7 +1035,12 @@
   {
     "name": "setmaxpayout",
     "type": "setmaxpayout"
-  }
+  },
+
+    { "name": "addpermlink",  "type": "addpermlink" },
+    { "name": "delpermlink",  "type": "delpermlink" },
+    { "name": "addpermlinks", "type": "addpermlinks" },
+    { "name": "delpermlinks", "type": "delpermlinks" }
   ],
   "tables": [
   {

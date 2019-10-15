@@ -57,4 +57,14 @@ void check_positive_monotonic(atmsp::machine<fixp_t>& machine, fixp_t max_arg, c
     eosio::check(inc ? (res_zero <= prev_res) : (res_zero >= prev_res), ("check monotonic [0] failed for " + name).c_str());
 }
 
+int64_t safe_prop_from_wide(int64_t arg, wide_t numer, wide_t denom) {
+    if (!arg || !numer) { return 0; }
+    constexpr wide_t narrow_max = std::numeric_limits<int64_t>::max();
+    while (numer > narrow_max || denom > narrow_max) {
+        numer >>= 1;
+        denom >>= 1;
+    }
+    return static_cast<int64_t>((arg * numer) / denom);
+}
+
 } // golos

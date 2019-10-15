@@ -34,6 +34,14 @@ public:
     void calcrwrdwt(name account, int64_t mssg_id, int64_t post_charge);
     void paymssgrwrd(structures::mssgid message_id);
     void deletevotes(int64_t message_id, name author);
+
+    [[eosio::action]]
+    void addpermlink(structures::mssgid msg, structures::mssgid parent, uint16_t level, uint32_t childcount);
+    [[eosio::action]] void delpermlink(structures::mssgid msg);
+    [[eosio::action]] void addpermlinks(std::vector<structures::permlink_info> permlinks);
+    [[eosio::action]] void delpermlinks(std::vector<structures::mssgid> permlinks);
+
+    void syncpool(std::optional<symbol> tokensymbol);
 private:
     const posting_state& params();
     void set_vote(name voter, const structures::mssgid &message_id, int16_t weight);

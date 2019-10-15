@@ -83,8 +83,10 @@
   ],
   "actions": [
      {"name": "pin",          "type": "pin"},
+     {"name": "addpin",       "type": "pin"},
      {"name": "unpin",        "type": "pin"},
      {"name": "block",        "type": "block"},
+     {"name": "addblock",     "type": "block"},
      {"name": "unblock",      "type": "block"},
      {"name": "updatemeta",   "type": "updatemeta"},
      {"name": "deletemeta",   "type": "delete"},

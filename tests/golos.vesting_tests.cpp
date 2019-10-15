@@ -105,6 +105,7 @@ protected:
         const string wrong_precision    = amsg("wrong asset precision");
         const string vesting_params     = amsg("not found vesting params");
         const string issuer_not_autority = "missing authority of " + cfg::emission_name.to_string();
+        const string wrong_notify_acc    = amsg("notify_acc account does not exist");
 
         const string withdraw_intervals        = amsg("intervals <= 0");
         const string withdraw_interval_seconds = amsg("interval_seconds <= 0");
@@ -220,6 +221,9 @@ BOOST_FIXTURE_TEST_CASE(create_vesting, golos_vesting_tester) try {
 
     BOOST_TEST_MESSAGE("--- fail on non-existing token");
     BOOST_CHECK_EQUAL(err.key_not_found, vest.create_vesting(_issuer, symbol(_token_precision, "GOLOSA"), N(notify.acc), skip_authority_check));
+
+    BOOST_TEST_MESSAGE("--- fails when wrong notify acc");
+    BOOST_CHECK_EQUAL(err.wrong_notify_acc, vest.create_vesting(_issuer, _vesting_sym, N(notexist), skip_authority_check));
 
     BOOST_TEST_MESSAGE("--- fails when not issuer");
     BOOST_CHECK_EQUAL(err.issuer_not_autority, vest.create_vesting(N(sania), _vesting_sym, N(notify.acc), skip_authority_check));
@@ -580,7 +584,7 @@ BOOST_FIXTURE_TEST_CASE(delegate, golos_vesting_tester) try {
     const auto charge_prop = 0.7;
 
     BOOST_TEST_MESSAGE("--- fail when delegate to self");
-    BOOST_CHECK_EQUAL(err.unsuccessful_delegation, vest.msig_delegate(N(sania), N(sania), amount));
+    BOOST_CHECK_EQUAL(err.self_delegate, vest.delegate(N(sania), N(sania), amount));
 
     BOOST_TEST_MESSAGE("--- fail on bad interest rate");
     BOOST_CHECK_EQUAL(err.interest_to_high, vest.delegate(N(sania), N(pasha), amount, 10001)); // TODO: test boundaries #744

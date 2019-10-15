@@ -38,14 +38,19 @@ struct golos_posting_api: base_contract_api {
         const funcparams& main_fn,
         const funcparams& curation_fn,
         const funcparams& time_penalty,
-        uint16_t max_token_prop) {
+        uint16_t max_token_prop,
+        std::optional<symbol> token_symbol = std::optional<symbol>()) {
         return push(N(setrules), _code, args()
             ("mainfunc", fn_to_mvo(main_fn))
             ("curationfunc", fn_to_mvo(curation_fn))
             ("timepenalty", fn_to_mvo(time_penalty))
             ("maxtokenprop", max_token_prop)
-            ("tokensymbol", _symbol)
+            ("tokensymbol", token_symbol.value_or(_symbol))
         );
+    }
+    
+    action_result syncpool() {
+        return push(N(syncpool), _code, args());
     }
 
     action_result set_limit(std::string act, uint8_t charge_id = 0, int64_t price = -1, int64_t cutoff = 0, int64_t vesting_price = 0, int64_t min_vesting = 0) {
@@ -179,6 +184,24 @@ struct golos_posting_api: base_contract_api {
     }
     action_result closemssgs() {
         return closemssgs(_code);
+    }
+
+    action_result add_permlink(mssgid msg, mssgid parent, uint16_t level = 0, uint32_t childcount = 0) {
+        return push(N(addpermlink), _code, args()
+            ("msg", msg)
+            ("parent", parent)
+            ("level", level)
+            ("childcount", childcount)
+        );
+    }
+    action_result del_permlink(mssgid msg) {
+        return push(N(delpermlink), _code, args()("msg", msg));
+    }
+    action_result add_permlinks(std::vector<permlink_info> permlinks) {
+        return push(N(addpermlinks), _code, args()("permlinks", permlinks));
+    }
+    action_result del_permlinks(std::vector<mssgid> permlinks) {
+        return push(N(delpermlinks), _code, args()("permlinks", permlinks));
     }
 
 
