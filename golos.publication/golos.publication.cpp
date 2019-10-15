@@ -401,6 +401,10 @@ void publication::delete_message(structures::mssgid message_id) {
     if (mssg_itr == message_table.end()) {
         return;
     }
+    
+    tables::reward_pools pools(_self, _self.value);
+    auto pool = get_pool(pools, mssg_itr->pool_date);
+    pools.modify(*pool, eosio::same_payer, [&](auto &item){ item.state.msgs--; });
 
     cancel_deferred((static_cast<uint128_t>(mssg_itr->id) << 64) | message_id.author.value);
 
@@ -1083,6 +1087,7 @@ void publication::set_limit(
 void publication::set_rules(const funcparams& mainfunc, const funcparams& curationfunc, const funcparams& timepenalty,
     uint16_t maxtokenprop, eosio::symbol tokensymbol
 ) {
+    eosio::check(tokensymbol == token::get_supply(config::token_name, tokensymbol.code()).symbol, "symbol precision mismatch");
     validate_percent(maxtokenprop, "maxtokenprop");
     //TODO: machine's constants
     using namespace tables;
