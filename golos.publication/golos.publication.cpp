@@ -62,7 +62,6 @@ extern "C" {
             execute_action(&publication::set_max_payout);
         if (NN(deletevotes) == action)
             execute_action(&publication::deletevotes);
-
         if (NN(addpermlink) == action)
             execute_action(&publication::addpermlink);
         if (NN(delpermlink) == action)
@@ -71,6 +70,8 @@ extern "C" {
             execute_action(&publication::addpermlinks);
         if (NN(delpermlinks) == action)
             execute_action(&publication::delpermlinks);
+        if (NN(syncpool) == action)
+            execute_action(&publication::syncpool);
     }
 #undef NN
 }
@@ -400,6 +401,10 @@ void publication::delete_message(structures::mssgid message_id) {
     if (mssg_itr == message_table.end()) {
         return;
     }
+    
+    tables::reward_pools pools(_self, _self.value);
+    auto pool = get_pool(pools, mssg_itr->pool_date);
+    pools.modify(*pool, eosio::same_payer, [&](auto &item){ item.state.msgs--; });
 
     cancel_deferred((static_cast<uint128_t>(mssg_itr->id) << 64) | message_id.author.value);
 
@@ -1082,6 +1087,7 @@ void publication::set_limit(
 void publication::set_rules(const funcparams& mainfunc, const funcparams& curationfunc, const funcparams& timepenalty,
     uint16_t maxtokenprop, eosio::symbol tokensymbol
 ) {
+    eosio::check(tokensymbol == token::get_supply(config::token_name, tokensymbol.code()).symbol, "symbol precision mismatch");
     validate_percent(maxtokenprop, "maxtokenprop");
     //TODO: machine's constants
     using namespace tables;
@@ -1325,6 +1331,65 @@ void publication::calcrwrdwt(name account, int64_t mssg_id, int64_t post_charge)
         eosio::check(permlink_itr != permlink_table.end(), "Permlink doesn't exist.");
 
         send_rewardweight_event(structures::mssgid{account, permlink_itr->value}, reward_weight);
+    }
+}
+
+void publication::syncpool(std::optional<symbol> tokensymbol) {
+    require_auth(_self);
+    
+    symbol token_symbol;
+    {
+        tables::reward_pools pools(_self, _self.value);
+        eosio::check(pools.begin() != pools.end(), "nothing to sync");
+        auto last_pool = pools.end();
+        --last_pool;
+        
+        // support for multiple tokens is actually redundant in this contract.
+        // perhaps it makes sense to remove this logic.
+        token_symbol = tokensymbol.value_or(last_pool->state.funds.symbol);
+
+        auto date_of_oldest_mssg = last_pool->created;
+        tables::message_table message_table(_self, _self.value);
+        auto oldest_mssg_itr = message_table.begin();
+        if (oldest_mssg_itr != message_table.end() && oldest_mssg_itr->date < date_of_oldest_mssg) {
+            date_of_oldest_mssg = oldest_mssg_itr->date;
+        }
+        auto pool = pools.begin();
+        while (pool->created < date_of_oldest_mssg) {
+            send_poolerase_event(*pool);
+            pool = pools.erase(pool);
+            eosio::check(pool != pools.end(), "SYSTEM: no pools left");
+        }
+    } //? invalidation of pools after erasing ?
+    tables::reward_pools pools(_self, _self.value);
+    
+    wide_t rshares_sum = 0;
+    for (auto pool = pools.begin(); pool != pools.end(); ++pool) {
+        if (token_symbol == pool->state.funds.symbol) {
+            rshares_sum += pool->state.rshares;
+        }
+    }
+    
+    int64_t total_amount = token::get_balance(config::token_name, _self, token_symbol.code()).amount;
+    int64_t left_amount = total_amount;
+    for (auto pool = pools.begin(); pool != pools.end(); ++pool) {
+        if (token_symbol == pool->state.funds.symbol) {
+            pools.modify(pool, eosio::same_payer, [&](auto &item) {
+                auto cur_amount = safe_prop_from_wide(total_amount, item.state.rshares, rshares_sum);
+                    
+                item.state.funds.amount = cur_amount;
+                left_amount -= cur_amount;
+                send_poolstate_event(item);
+            });
+        }
+    }
+    
+    eosio::check(left_amount >= 0, "SYSTEM: incorrect left_amount");
+    if (left_amount > 0) {
+         pools.modify(pools.begin(), eosio::same_payer, [&](auto &item) {
+            item.state.funds.amount += left_amount;
+            send_poolstate_event(item);
+        });
     }
 }
 

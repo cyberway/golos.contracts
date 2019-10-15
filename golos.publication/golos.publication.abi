@@ -590,6 +590,16 @@
     ]
   },
   {
+    "name": "syncpool",
+    "base": "",
+    "fields": [
+        {
+            "name": "tokensymbol",
+            "type": "symbol?"
+        }
+    ]
+  },
+  {
     "name": "st_max_vote_changes",
     "base": "",
     "fields": [
@@ -985,6 +995,10 @@
   {
     "name": "setrules",
     "type": "setrules"
+  },
+  {
+    "name": "syncpool",
+    "type": "syncpool"
   },
   {
     "name": "setlimit",

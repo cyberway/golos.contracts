@@ -38,14 +38,19 @@ struct golos_posting_api: base_contract_api {
         const funcparams& main_fn,
         const funcparams& curation_fn,
         const funcparams& time_penalty,
-        uint16_t max_token_prop) {
+        uint16_t max_token_prop,
+        std::optional<symbol> token_symbol = std::optional<symbol>()) {
         return push(N(setrules), _code, args()
             ("mainfunc", fn_to_mvo(main_fn))
             ("curationfunc", fn_to_mvo(curation_fn))
             ("timepenalty", fn_to_mvo(time_penalty))
             ("maxtokenprop", max_token_prop)
-            ("tokensymbol", _symbol)
+            ("tokensymbol", token_symbol.value_or(_symbol))
         );
+    }
+    
+    action_result syncpool() {
+        return push(N(syncpool), _code, args());
     }
 
     action_result set_limit(std::string act, uint8_t charge_id = 0, int64_t price = -1, int64_t cutoff = 0, int64_t vesting_price = 0, int64_t min_vesting = 0) {
