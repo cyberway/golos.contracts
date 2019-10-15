@@ -1383,10 +1383,14 @@ void publication::syncpool(std::optional<symbol> tokensymbol) {
             });
         }
     }
-     pools.modify(pools.begin(), eosio::same_payer, [&](auto &item) {
-        item.state.funds.amount += left_amount;
-        send_poolstate_event(item);
-    });
+    
+    eosio::check(left_amount >= 0, "SYSTEM: incorrect left_amount");
+    if (left_amount > 0) {
+         pools.modify(pools.begin(), eosio::same_payer, [&](auto &item) {
+            item.state.funds.amount += left_amount;
+            send_poolstate_event(item);
+        });
+    }
 }
 
 } // golos
