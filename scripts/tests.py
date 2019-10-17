@@ -8,6 +8,7 @@ import os
 import re
 import random
 import time
+import socket
 
 golosIoKey='5JUKEmKs7sMX5fxv5PnHnShnUm4mmizfyBtWc8kgWnDocH9R6fr'
 testingKey='5JdhhMMJdb1KEyCatAynRLruxVvi7mWPywiSjpLYqKqgsT4qjsN'
@@ -19,6 +20,11 @@ def wait(timeout):
         print('\r                    \rWait %d sec' % timeout, flush=True, end='')
         timeout -= w
         time.sleep(w)
+    print('\r                      \r', flush=True, end='')
+
+def randomName():
+    letters = 'abcdefghijklmnopqrstuvwxyz12345'
+    return ''.join(random.choice(letters) for i in range(12))
 
 def randomUsername():
     letters = 'abcdefghijklmnopqrstuvwxyz0123456789'
@@ -276,14 +282,14 @@ class TestGolosIo(unittest.TestCase):
     def test_createUser(self):
         (private,public) = createKey()
         username = randomUsername()
-        
+
         user = createRandomAccount(
-                public, creator=self.siteAccount, 
+                public, creator=self.siteAccount,
                 providebw=self.siteAccount+'/gls@providebw',
                 keys=[self.siteKey, golosIoKey])
 
         testnet.pushAction(
-                'gls.vesting', 'open', self.siteAccount, [user, testnet.args.vesting, self.siteAccount], 
+                'gls.vesting', 'open', self.siteAccount, [user, testnet.args.vesting, self.siteAccount],
                 providebw=self.siteAccount+'/gls@providebw',
                 keys=[self.siteKey, golosIoKey])
 
@@ -304,14 +310,14 @@ class TestGolosIo(unittest.TestCase):
         permlink = randomPermlink()
         publishUsage = getResourceUsage('gls.publish')
         testnet.createPost(
-                user, permlink, "", randomText(32), randomText(1024), 
-                providebw=user+'/gls@providebw', 
+                user, permlink, "", randomText(32), randomText(1024),
+                providebw=user+'/gls@providebw',
                 keys=[private, golosIoKey])
         print("Was: %s, current: %s" % (publishUsage, getResourceUsage('gls.publish')))
 
         testnet.upvotePost(
-                user, user, permlink, 10000, 
-                providebw=user+'/gls@providebw', 
+                user, user, permlink, 10000,
+                providebw=user+'/gls@providebw',
                 keys=[private, golosIoKey])
 
     def test_addReferral(self):
@@ -327,7 +333,7 @@ class TestGolosIo(unittest.TestCase):
         breakout = params['breakout_params']['min_breakout']
         expire = 60
         testnet.pushAction(
-                'gls.referral', 'addreferral', 'gls.referral@newreferral', 
+                'gls.referral', 'addreferral', 'gls.referral@newreferral',
                 [user1, user2, percent, expire, breakout],
                 providebw='gls.referral/gls@providebw',
                 keys=[golosIoKey])
@@ -337,7 +343,7 @@ class TestGolosIo(unittest.TestCase):
         params = json.loads(testnet.cleos('get table gls.vesting GOLOS vestparams'))['rows'][0]
         min_amount = params['min_amount']['min_amount']
         min_amount += -1 if min_amount%2 else +1
-        
+
         with self.assertRaisesRegex(Exception, 'transaction declares authority \'{"actor":"gls","permission":"active"}\', but does not have signatures for it'):
             testnet.pushAction(
                     'gls.vesting', 'setparams', 'gls@active', ["6,GOLOS",[["vesting_amount",{"min_amount":min_amount}]]],
@@ -377,8 +383,8 @@ class TestGolosIo(unittest.TestCase):
 
         permlink = randomPermlink()
         testnet.createPost(
-                author, permlink, "", randomText(32), randomText(1024), 
-                providebw=author+'/tech@active', 
+                author, permlink, "", randomText(32), randomText(1024),
+                providebw=author+'/tech@active',
                 keys=[private, techKey])
 
         with self.assertRaisesRegex(Exception, "Message doesn't closed"):
@@ -518,6 +524,301 @@ class TestGolosIoTesting(unittest.TestCase):
                 'gls.publish', 'setparams', 'gls.publish', [[["st_max_comment_depth",{"value":max_comment_depth}]]],
                 providebw='gls.publish/gls@providebw',
                 keys=[testingKey, golosIoKey])
+
+
+def urlInDocker(url=testnet.params['nodeos_url']):
+    r = re.match(r'http://([^:]+)(:[0-9]+)?', url)
+    host = socket.gethostbyname(r.group(1))
+    internalUrl = 'http://{host}{port}'.format(host=host, port=r.group(2))
+    return internalUrl
+
+
+class TestGolos_v2_0_1(unittest.TestCase):
+    def setUp(self):
+        self.image = 'cyberway/golos.contracts:stable'
+
+    def updateGlsPublish(self):
+        cmd = 'docker run -ti {image} bash -c "PATH=$PATH:/opt/cyberway/bin/; ' \
+              'cleos wallet create --to-console && cleos wallet import --private-key {KEY} && ' \
+              'cleos --url {URL} set contract gls.publish /opt/golos.contracts/golos.publication --bandwidth-provider gls.publish/gls"'.format(
+              URL=urlInDocker(), KEY=testingKey, image=self.image)
+        subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT, universal_newlines=True)
+
+    def updateGlsSocial(self):
+        cmd = 'docker run -ti {image} bash -c "PATH=$PATH:/opt/cyberway/bin/; ' \
+              'cleos wallet create --to-console && cleos wallet import --private-key {KEY} && ' \
+              'cleos --url {URL} set contract gls.social /opt/golos.contracts/golos.social --bandwidth-provider gls.social/gls"'.format(
+              URL=urlInDocker(), KEY=testingKey, image=self.image)
+        subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT, universal_newlines=True)
+
+    def createGolosIoAuthorityTrx(self):
+        trx = testnet.Trx(expiration=5*60)
+    
+        golosIoAuth = testnet.createAuthority([], ['gls@golos.io'])
+        codeActions = [
+            ('gls.publish', ['addpermlink', 'delpermlink', 'addpermlinks', 'delpermlinks',]),
+            ('gls.social',  ['addpin', 'addblock',])
+        ]
+    
+        for (code, actions) in codeActions:
+            trx.addAction('cyber', 'updateauth', code, {
+                    'account': code,
+                    'permission': 'golos.io',
+                    'parent': 'active',
+                    'auth': golosIoAuth
+                })
+    
+            trx.addAction('cyber', 'providebw', 'gls', {
+                    'provider': 'gls',
+                    'account': code
+                })
+    
+            for act in actions:
+                trx.addAction('cyber', 'linkauth', code, {
+                        "account": code,
+                        "code": code,
+                        "type": act,
+                        "requirement": "golos.io"
+                    })
+        print(json.dumps(trx.getTrx(),indent=3))
+        return trx
+
+    def updateGolosIoAuthority(self):
+        trx = creatGolosIoAuthorityTrx()
+
+        proposer = 'gls'
+        name = randomName()
+        auth = testnet.parseAuthority('gls@active')
+        testnet.cleos('multisig propose_trx {name} {auth} {trx} {proposer}'.format(
+                name=name, auth=testnet.jsonArg([auth]), trx=testnet.jsonArg(trx.getTrx()), proposer=proposer),
+                keys=[testingKey])
+        testnet.cleos('multisig approve {proposer} {name} {permission}'.format(
+                proposer=proposer, name=name, permission=testnet.jsonArg(auth)),
+                keys=[testingKey])
+        testnet.cleos('multisig exec {proposer} {name} {executer}'.format(
+                proposer=proposer, name=name, executer=proposer),
+                keys=[testingKey])
+
+        wait(5)
+        glsPublish = testnet.getAccount('gls.publish')
+        print(glsPublish)
+
+
+    def test_addpinblock(self):
+        (private1, public1) = createKey()
+        user1 = createRandomAccount(public1)
+
+        (private2, public2) = createKey()
+        user2 = createRandomAccount(public2)
+
+        testnet.pushAction('gls.social', 'addpin', 'gls.social@golos.io', {
+                "pinner": self.user1,
+                "pinning": self.user2
+            }, providebw='gls.social/gls@providebw', keys=[golosIoKey])
+
+        testnet.pushAction('gls.social', 'addblock', 'gls.social@golos.io', {
+                "blocker": self.user2,
+                "blocking": self.user1
+            }, providebw='gls.social/gls@providebw', keys=[golosIoKey])
+
+    def test_adddelpermlink(self):
+        author = resolve("null@golos")
+        permlink = randomPermlink()
+        testnet.pushAction('gls.publish', 'addpermlink', 'gls.publish@golos.io', {
+                'msg': {'author': author, 'permlink': permlink},
+                'parent': {'author': '', 'permlink': ''},
+                'level': 0,
+                'childcount': 0
+            }, providebw='gls.publish/gls@providebw', keys=[golosIoKey])
+
+        testnet.pushAction('gls.publish', 'delpermlink', 'gls.publish@golos.io', {
+                'msg': {'author': author, 'permlink': permlink}
+            }, providebw='gls.publish/gls@providebw', keys=[golosIoKey])
+
+    def printRewardPools(self):
+        pools = json.loads(testnet.cleos('get table gls.publish gls.publish rewardpools -l 10'))['rows']
+        for pool in pools:
+            print('{created} with {fund} funds {msgs} messages and {rshares}'.format(
+                    created=pool['created'], fund=pool['state']['funds'], msgs=pool['state']['msgs'], rshares=pool['state']['rshares']))
+
+        msgs = json.loads(testnet.cleos('get table gls.publish gls.publish message -l 50'))['rows']
+        for msg in msgs:
+            print('{pool_date} {date} {author}/{ident}'.format(
+                    pool_date=msg['pool_date'], date=msg['date'], author=msg['author'], ident=msg['id']))
+
+    def test_syncpool(self):
+        # Description: test for syncpool mechanics:
+        # Precondition: golos testnet with no closed posts (cyberway/golos.contracts:ci-skip-posts)
+        # Check:
+        #   - fix message count broken by deletemssg action
+        #   - fix difference between gls.publish GOLOS balance and reward-pools state
+
+        print('--- Change reward window settings & emission period ---')
+        params = json.loads(testnet.cleos('get table gls.publish gls.publish pstngparams'))['rows'][0]
+        if params['cashout_window']['window'] != 60 or params['cashout_window']['upvote_lockout'] != 5:
+            testnet.pushAction('gls.publish', 'setparams', 'gls.publish', {
+                    'params':[
+                        ['st_cashout_window', {'window': 60, 'upvote_lockout': 5}]
+                    ]
+               }, providebw='gls.publish/gls', keys=[testingKey])
+
+        params = json.loads(testnet.cleos('get table gls.emit gls.emit emitparams'))['rows'][0]
+        if params['interval']['value'] != 15:
+            testnet.pushAction('gls.emit', 'setparams', 'gls.emit', {
+                    'params':[
+                        ['emit_interval', {'value': 15}]
+                    ]
+                }, providebw='gls.emit/gls', keys=[testingKey])
+
+        self.printRewardPools()
+
+        print('--- Set rules for new pool ---')
+        rules = {
+            "mainfunc": {
+                "str": "x",
+                "maxarg": "2251799813685247"
+            },
+            "curationfunc": {
+                "str": "x",
+                "maxarg": "2251799813685247"
+            },
+            "timepenalty": {
+                "str": "1",
+                "maxarg": 1
+            },
+            "maxtokenprop": 5000,
+            "tokensymbol": "3,GOLOS"
+        }
+        testnet.pushAction('gls.publish', 'setrules', 'gls.publish', rules, providebw='gls.publish/gls', keys=[testingKey])
+
+        self.printRewardPools()
+
+        print('--- Create some accounts ---')
+        accounts = {}
+        for i in range(5):
+            (private, public) = createKey()
+            acc = createRandomAccount(public)
+            accounts[acc] = private
+            testnet.openVestingBalance(acc, 'gls', keys=[testingKey])
+            testnet.issueToken(acc, '100.000 GOLOS', providebw=acc+'/gls', keys=[testingKey])
+            testnet.transfer(acc, 'gls.vesting', '100.000 GOLOS', '', providebw=acc+'/gls', keys=[private, testingKey])
+
+        print('--- Create posts ---')
+        pauthor = random.choice(list(accounts))
+        ppermlink = randomPermlink()
+        testnet.createPost(pauthor, ppermlink, 'ru', randomText(12), randomText(32),
+                providebw=pauthor+'/gls@providebw', keys=[golosIoKey, accounts[pauthor]])
+
+        posts = []
+        for i in range(5):
+            author = random.choice(list(accounts))
+            permlink = randomPermlink()
+            testnet.createComment(author, permlink, pauthor, ppermlink, randomText(12), randomText(32),
+                    providebw=author+'/gls@providebw', keys=[golosIoKey, accounts[author]])
+            # testnet.upvotePost(author, author, permlink, 10000, providebw=author+'/gls@providebw', keys=[golosIoKey, accounts[author]])
+            posts.append((author, permlink,))
+            wait(10)
+
+        self.printRewardPools()
+
+        print('--- Remove some posts ---')
+        print('posts has {count}'.format(count=len(posts)))
+        for i in range(2):
+            (author, permlink) = random.choice(posts)
+            posts.remove((author, permlink,))
+            testnet.pushAction('gls.publish', 'deletemssg', author, {
+                    'message_id': {'author': author, 'permlink': permlink}
+                }, providebw=author+'/gls@providebw', keys=[golosIoKey, accounts[author]])
+        print('posts has {count}'.format(count=len(posts)))
+
+        self.printRewardPools()
+
+        print('--- Wait for close some posts ---')
+        wait(60)
+
+        self.printRewardPools()
+
+        print('--- Set new rules (broken) ---')
+        rules = {
+            "mainfunc": {
+                "str": "((x + 4000000000000) / (x + 8000000000000)) * (x / 4096)",
+                "maxarg": "2000000000000000"
+            },
+            "curationfunc": {
+                "str": "x",
+                "maxarg": "2251799813685247"
+            },
+            "timepenalty": {
+                "str": "1",
+                "maxarg": 1
+            },
+            "maxtokenprop": 5000,
+            "tokensymbol": "6,GOLOS"
+        }
+        testnet.pushAction('gls.publish', 'setrules', 'gls.publish', rules, providebw='gls.publish/gls', keys=[testingKey])
+        
+        self.printRewardPools()
+
+        print('--- Wait some time (periodically create posts) ---')
+        for i in range(10):
+            permlink = randomPermlink()
+            testnet.createComment(author, permlink, pauthor, ppermlink, randomText(12), randomText(32),
+                    providebw=author+'/gls@providebw', keys=[golosIoKey, accounts[author]])
+            # testnet.upvotePost(author, author, permlink, 10000, providebw=author+'/gls@providebw', keys=[golosIoKey, accounts[author]])
+            posts.append((author, permlink,))
+            wait(10)
+
+        self.printRewardPools()
+
+        print('--- Remove some posts ---')
+        for i in range(2):
+            (author, permlink) = random.choice(posts)
+            posts.remove((author, permlink,))
+            testnet.pushAction('gls.publish', 'deletemssg', author, {
+                    'message_id': {'author': author, 'permlink': permlink}
+                }, providebw=author+'/gls@providebw', keys=[golosIoKey, accounts[author]])
+
+        
+        # Check pool state
+
+        self.printRewardPools()
+
+        print('--- Update gls.publish contract ---')
+        self.updateGlsPublish()
+
+        self.printRewardPools()
+
+        print('--- Set new rules (fixed) ---')
+        rules['tokensymbol'] = '3,GOLOS'
+        testnet.pushAction('gls.publish', 'setrules', 'gls.publish', rules, providebw='gls.publish/gls', keys=[testingKey])
+
+        self.printRewardPools()
+
+        print('--- Execute `syncpool` ---')
+        testnet.pushAction('gls.publish', 'syncpool', 'gls.publish', {}, providebw='gls.publish/gls', keys=[testingKey])
+
+        self.printRewardPools()
+
+        print('--- Remove some posts ---')
+        for i in range(2):
+            (author, permlink) = random.choice(posts)
+            posts.remove((author, permlink,))
+            testnet.pushAction('gls.publish', 'deletemssg', author, {
+                    'message_id': {'author': author, 'permlink': permlink}
+                }, providebw=author+'/gls@providebw', keys=[golosIoKey, accounts[author]])
+
+        self.printRewardPools()
+
+        print('--- Wait some time ---')
+        for i in range(15):
+            permlink = randomPermlink()
+            testnet.createComment(author, permlink, pauthor, ppermlink, randomText(12), randomText(32),
+                    providebw=author+'/gls@providebw', keys=[golosIoKey, accounts[author]])
+            # testnet.upvotePost(author, author, permlink, 10000, providebw=author+'/gls@providebw', keys=[golosIoKey, accounts[author]])
+            posts.append((author, permlink,))
+            wait(10)
+
+        # Check pool state
 
 
 if __name__ == '__main__':

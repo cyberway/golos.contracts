@@ -35,7 +35,7 @@ def _cleos(arguments, *, output=True):
     except subprocess.CalledProcessError as e:
         import sys
         (exception, traceback) = (e, sys.exc_info()[2])
-    
+
     msg = str(exception) + ' with output:\n' + exception.output
     raise Exception(msg).with_traceback(traceback)
 
@@ -47,7 +47,7 @@ def cleos(arguments, *, keys=None):
         return _cleos("push transaction -j --skip-sign '%s'" % trx, output=False)
     else:
         return _cleos(arguments)
-    
+
 
 def pushAction(code, action, actor, args, *, additional='', delay=None, expiration=None, providebw=None, keys=None):
     additional += ' --delay-sec %d' % delay if delay else ''
@@ -75,6 +75,38 @@ def removeRootKeys():
 
 def unlockWallet():
     cleos('wallet unlock --password %s' % args.wallet_password)
+
+def parseAuthority(auth):
+    if type(auth) == type([]):
+        return [parseAuthority(a) for a in auth]
+    d = auth.split('@',2)
+    if len(d) == 1:
+        d.extend(['active'])
+    return {'actor':d[0], 'permission':d[1]}
+
+def createAction(contract, action, actors, args):
+    data = cleos("convert pack_action_data {contract} {action} {args}".format(
+            contract=contract, action=action, args=jsonArg(args))).rstrip()
+    return {
+        'account':contract,
+        'name':action,
+        'authorization':parseAuthority(actors if type(actors)==type([]) else [actors]),
+        'data':data
+    }
+
+class Trx:
+    def __init__(self, expiration=None):
+        additional = '--skip-sign --dont-broadcast'
+        if expiration:
+            additional += ' --expiration {exp}'.format(exp=expiration)
+        self.trx = pushAction('cyber', 'checkwin', 'cyber', {}, additional=additional)
+        self.trx['actions'] = []
+
+    def addAction(self, contract, action, actors, args):
+        self.trx['actions'].append(createAction(contract, action, actors, args))
+
+    def getTrx(self):
+        return self.trx
 
 # --------------------- EOSIO functions ---------------------------------------
 
@@ -162,9 +194,19 @@ def createPost(author, permlink, category, header, body, *, beneficiaries=[], pr
             'jsonmetadata':''
         }, providebw=providebw, keys=keys)
 
-def createComment(author, permlink, pauthor, ppermlink, header, body, *, beneficiaries=[]):
-    return pushAction('gls.publish', 'createmssg', author,
-        [author, permlink, pauthor, ppermlink, beneficiaries, 0, False, header, body, 'ru', [], ''])
+def createComment(author, permlink, pauthor, ppermlink, header, body, *, beneficiaries=[], providebw=None, keys=None):
+    return pushAction('gls.publish', 'createmssg', author, {
+            'message_id':{'author':author, 'permlink':permlink}, 
+            'parent_id':{'author':pauthor, 'permlink':ppermlink}, 
+            'beneficiaries':beneficiaries,
+            'tokenprop':0,
+            'vestpayment':False,
+            'headermssg':header,
+            'bodymssg':body,
+            'languagemssg':'ru',
+            'tags':[],
+            'jsonmetadata':''
+        }, providebw=providebw, keys=keys)
 
 def upvotePost(voter, author, permlink, weight, *, providebw=None, keys=None):
     return pushAction('gls.publish', 'upvote', voter, {'voter':voter, 'message_id':{'author':author, 'permlink':permlink}, 'weight':weight}, providebw=providebw, keys=keys)
