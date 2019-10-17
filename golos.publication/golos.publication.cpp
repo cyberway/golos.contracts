@@ -1351,8 +1351,8 @@ void publication::syncpool(std::optional<symbol> tokensymbol) {
         auto date_of_oldest_mssg = last_pool->created;
         tables::message_table message_table(_self, _self.value);
         auto oldest_mssg_itr = message_table.begin();
-        if (oldest_mssg_itr != message_table.end() && oldest_mssg_itr->date < date_of_oldest_mssg) {
-            date_of_oldest_mssg = oldest_mssg_itr->date;
+        if (oldest_mssg_itr != message_table.end() && oldest_mssg_itr->pool_date < date_of_oldest_mssg) {
+            date_of_oldest_mssg = oldest_mssg_itr->pool_date;
         }
         auto pool = pools.begin();
         while (pool->created < date_of_oldest_mssg) {
