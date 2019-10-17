@@ -584,7 +584,7 @@ class TestGolos_v2_0_1(unittest.TestCase):
         return trx
 
     def updateGolosIoAuthority(self):
-        trx = creatGolosIoAuthorityTrx()
+        trx = self.createGolosIoAuthorityTrx()
 
         proposer = 'gls'
         name = randomName()
@@ -612,13 +612,13 @@ class TestGolos_v2_0_1(unittest.TestCase):
         user2 = createRandomAccount(public2)
 
         testnet.pushAction('gls.social', 'addpin', 'gls.social@golos.io', {
-                "pinner": self.user1,
-                "pinning": self.user2
+                "pinner": user1,
+                "pinning": user2
             }, providebw='gls.social/gls@providebw', keys=[golosIoKey])
 
         testnet.pushAction('gls.social', 'addblock', 'gls.social@golos.io', {
-                "blocker": self.user2,
-                "blocking": self.user1
+                "blocker": user2,
+                "blocking": user1
             }, providebw='gls.social/gls@providebw', keys=[golosIoKey])
 
     def test_adddelpermlink(self):
@@ -646,6 +646,7 @@ class TestGolos_v2_0_1(unittest.TestCase):
             print('{pool_date} {date} {author}/{ident}'.format(
                     pool_date=msg['pool_date'], date=msg['date'], author=msg['author'], ident=msg['id']))
 
+    @unittest.skipUnless(os.environ.get("RUN_SKIPPED",False), "Test skipped due it should be executed on empty testnet")
     def test_syncpool(self):
         # Description: test for syncpool mechanics:
         # Precondition: golos testnet with no closed posts (cyberway/golos.contracts:ci-skip-posts)
