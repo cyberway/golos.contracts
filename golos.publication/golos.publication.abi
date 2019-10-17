@@ -936,6 +936,13 @@
     ]
   },
   {
+    "name": "pool_erase_event",
+    "base": "",
+    "fields": [
+        {"name": "created", "type": "uint64"}
+    ]
+  },
+  {
     "name": "reward_weight_event",
     "base": "",
     "fields": [
@@ -957,7 +964,7 @@
   ],
   "events": [
     {"name": "poolstate", "type": "pool_event"},
-    {"name": "poolerase", "type": "uint64"},
+    {"name": "poolerase", "type": "pool_erase_event"},
     {"name": "poststate", "type": "post_event"},
     {"name": "votestate", "type": "vote_event"},
     {"name": "rewardweight", "type": "reward_weight_event"},
