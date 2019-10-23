@@ -36,8 +36,8 @@ setlimit(
   * `charge_id` — battery ID. The action specified as `act` is limited to the charge of this battery. Multiple actions can be linked to a single battery. For voting actions such as `upvote`, `downvote` and `unvote`, the battery ID value should be set to zero.    
   * `price` — a price (in arbitrary units) of the consumed battery recourse with the `charge_id` identifier for the `act` action. The battery recourse is reduced after each performed action and recovered with time.   
   * `cutoff` — lower threshold value of the battery recourse at which the `act` action is blocked.  
-  * `vesting_price` — amount of vesting, that the user must pay for performing the `act` action, in case of exhaustion of the battery recourse (reaching lower threshold value). The `act` action will be executed if the user allows to withdraw the specified amount of vesting from her/his balance. For payment it is necessary that on the user balance there was a necessary sum of vesting in unblocked state.  
-  * `min_vesting` — minimum value of vesting that a user needs to have on her/his balance to perform the `act` action.  
+  * `vesting_price` — amount of vesting, that the user must pay for performing the `act` action, in case of exhaustion of the battery recourse (reaching lower threshold value). The `act` action will be executed if the user allows to withdraw the specified amount of vesting from her/his balance. For payment it is necessary that on the user balance there was a necessary sum of vesting in unblocked state. *(**Note:** this parameter is currently disabled and should be equal to "0")*.  
+  * `min_vesting` — minimum value of vesting that a user needs to have on her/his balance to perform the `act` action. *(**Note:** this parameter is currently disabled and should be equal to "0")*.   
 
 The interaction of smart publishing contracts and batteries allows a witness to flexibly configure restrictions on user actions (for example, such actions as voting for posts, publication of post and leaving comments can be correlated with the resources of three separate batteries. In this case, user activity will be limited for each of these actions. Also, all these actions can be linked to only one battery, that is, be limited by resources of the same battery). For each action performed by the user, she/he is charged a value corresponding to cost of the consumed battery recourse. When the `golos.charge` smart contract reaches the threshold value of used battery recourse, user's actions are blocked until necessary resource appears in the battery again.  
 
@@ -85,7 +85,7 @@ void createmssg(
   * `parent_id` — identifier of the parent message. The parameter contains the fields: `author` — author of the parent message, `permlink` — unique name of the message within publications of this author.  
   * `beneficiaries` — a structure containing the names of beneficiaries and total amount of their fees. This amount is a percentage of total reward for the message.  
   * `tokenprop` — amount of tokens. This value cannot exceed the `maxtokenprop` value  specified in `set_rules`.  
-  * `vestpayment` — `true`, if a user gives permission to pay in vestings in case of battery resource exhaustion (the message is sent regardless of battery resource). Default value is `false`.  
+  * `vestpayment` — `true`, if a user gives permission to pay in vestings in case of battery resource exhaustion (the message is sent regardless of battery resource). Default value is `false`. *(**Note:** this parameter is currently disabled and should take "false")*.  
   * `headermssg` — title of the message.  
   * `bodymssg` — body of the message.  
   * `languagemssg` — language of the message.  

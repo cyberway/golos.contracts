@@ -33,7 +33,7 @@ The `setparams` action is used to set (configure) the parameters of a smart cont
 ```cpp
 void referral::setparams(std::vector<referral_params> params)
 ``` 
- The parameter `params`is a value in the form of a structure which contains the fields: `breakout_parametrs`, `expire_parametrs`, `percent_parametrs`, `delay_parametrs`.  
+ The parameter `params`is a value in the form of a structure which contains the fields: `breakout_parametrs`, `expire_parametrs`, `percent_parametrs`.  
 
 
 ## validateprms
