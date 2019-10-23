@@ -32,7 +32,7 @@ ctrl_param, types: [
   * `ctrl_token` — a token symbol that uniquely identifies a specific token:  
     * token name. It should consist of a set of capital letters;  
     * token rate. The token cost accuracy is set as a number of decimal digits.  
-  * `multisig_acc` — an account name that controls a multisignature authorisation. The authorization of this account changes each time after a change in a list of the top witnesses. 
+  * `multisig_acc` — an account name that controls a multisignature authorisation. 
   * `max_witnesses` — a maximum number of witnesses that can take a decision (for example, sign transactions) on behalf of the application. The `multisig_acc` parameter contains a list of such witnesses.  
   * `multisig_perms` — a required number of signatures from the most rated witnesses that have a permission to perform actions on behalf of the application. To change a parameter value it requires an appropriate level of permission. Different parameters require a different level of permission that is connected to their importance. There are three permission levels:  
     * `super_majority` — a high level of permission. To get such level it needs to pick up at least «two-thirds plus one» votes of the most rated witnesses (if this parameter is "0", it takes default value — "2/3+1");  

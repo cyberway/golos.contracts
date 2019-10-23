@@ -1,8 +1,8 @@
 ## Determining rewards for a post on the Golos application website in real time mode
 
-After a post is published, users (including curators, beneficiaries and author of this post) may be interested in voting process for this post, as well as predicted rewards for it. Users are given the opportunity to get up-to-date information about the voting process and predicted payments for the post on Golos application website.  
+After a message is published, users (including curators, beneficiaries and author of this post) may be interested in voting process for this message, as well as predicted rewards for it. Users are given the opportunity to get up-to-date information about the voting process and predicted payments for the message on Golos application website.  
 
-The `golos.publication` smart contract implements logic to calculate all the necessary payments for the post and put the actual calculation results on the website. This logic is based on processing of actual data taken from messages that are received from Event Engine. The calculation results are modified after each received message from Event Engine and depend mainly on such parameters as a size of the reward pool, a number of current publications, as well as weight of each voting user.  
+The `golos.publication` smart contract implements logic to calculate all the necessary payments for the post and put the actual calculation results on the website. This logic is based on processing of actual data taken from messages that are received from Event Engine. The calculation results are modified after each received message from Event Engine in real time and depend mainly on such parameters as a size of the reward pool, a number of current publications, as well as «weight» of each voting user.  
 
 This section provides methods that can be applied in applications to determine the (predicted) amounts of rewards in real time mode, while is voting for a post. The list of determined rewards is as follows:  
   * total amount of rewards for the post;  
@@ -15,12 +15,12 @@ This section provides methods that can be applied in applications to determine t
 ### The data used in the methods of calculating rewards for a post
 Voting for a post occurs after its creation and before it is closed. Amount of reward for the created post mainly depends on results of voting for this post and amount of funds in a rewards pool. The rewards pool for the post is selected with taking the time this post was created.  
 
-Each vote is registered in the `golos.publication` smart contract as an event. Information about this event is sent to Event Engine. Then this information is sent to Golos application. Based on this received up-to-date information about voting for a post, it is possible on the application's website to display all needed (predicted) amounts of rewards for this post in real time mode.  
+Each vote is registered in the `golos.publication` smart contract as an event. Information about this event is sent to Event Engine. Then this information is sent to Golos application.    
 
 Each application can apply its own method of calculating the rewards for a post and display all results in real time mode. However, it is recommended that the following events received from Event Engine were applied in their methods. These are: `rewardweight`, `poststate`, `poolstate` and `votestate`. 
 
 
-### The rewardweight event 
+### rewardweight 
 The `rewardweight` event structure contains data about a paid share of reward for a post.  
 ```cpp
 struct reward_weight_event {
@@ -29,14 +29,14 @@ struct reward_weight_event {
 };
 ```
 **Parameters:**  
-  * `message_id` — identifier of the post for which the paid share of reward is setting. The parameter contains the fields: `author` — author name of the post, `permlink` — unique name of the post within publications of this author.  
-  * `rewardweight` — the paid share of reward for the post taking into account the imposed fine. This parameter is an integer value. The weight of the paid share is calculated to one hundredth of a percent. The value «10000» corresponds to «100 %».  
+  * `message_id` — identifier of the post.  
+  * `rewardweight` — the paid share (in percent) of reward for the post taking into account the imposed fine.  
 
-The `rewardweight` event shows a share (as a percentage) of reward for a post, which will be paid with taking into account the fine imposed on the author.  
+The activity of each author is limited, that is, the author can publish only a certain number of posts within a specified time interval. If the author’s activity does not exceed the limit, this author is not charged a penalty and the parameter `rewardweight` takes the value of 100 %. Otherwise, for each extra publication, the author will be dynamically charged a fine in the amount of from 0 to 100 %. Accordingly, the value of `rewardweight` for each extra publication will be reduced by the amount of the fine.  
 
-The activity of each author is limited, that is, the author can publish only a certain number of posts within a specified time interval. If the author’s activity does not exceed the limit, this author is not charged a penalty and the parameter `rewardweight` takes the value of 100 %. Otherwise, for each extra publication, the author will be dynamically charged a fine in the amount of from 0 to 100 %. Accordingly, the value of `rewardweight` for each extra publication will be reduced by the amount of the fine.
+The `rewardweight` event is dispatched only in case of a penalty, at 100 % reward it is not dispatched.
 
-### The poststate event 
+### poststate 
 The `poststate` event structure contains data about current state of a post.  
 ```cpp
 struct post_event {
@@ -48,13 +48,13 @@ struct post_event {
 };
 ```
 **Parameters:**  
-  * `message_id` — identifier of the post. The parameter contains the fields: `author` — author name of the post, `permlink` — unique name of the post within publications of this author.  
-  * `netshares` — amount of funds, which will be taken from the rewards pool as a total fee for the post (this parameter is calculated as a sum of `voteshares` values of all votes).  
+  * `message_id` — identifier of the message.  
+  * `netshares` — amount of funds, which will be taken from the rewards pool as a total fee for the post (this parameter is calculated as a sum of positive `voteshares` values of all votes).  
   * `voteshares` — a share of reward for the post is related to a separate vote. The separate vote value is calculated as multiplying a number of vesting by a weight of voting account. This parameter can take both positive and negative values. The sign «-» is assigned to «downvote» vote while the sign «+» is assigned to «upvote» one.
   * `sumcuratorsw` — total weight of all curators votes at the current time.
-  * `sharesfn` — function for calculating rewards including calculating the `shares` parameter of post.
+  * `sharesfn` — value calculated by the reward function (`mainfunc`) applied to the `netshares` message.
 
-### The poolstate event 
+### poolstate 
 The `poolstate` event structure contains data about current rewards pool.   
 ```cpp
 struct pool_event {
@@ -66,13 +66,13 @@ struct pool_event {
 };
 ```
 **Parameters:**  
-  * `created` — the post creation time (a pool selected by this time).  
-  * `msgs` — a number of posts for which rewards are paid from the pool selected by `created`.  
+  * `created` — the pool creation time (a pool selected by this time).  
+  * `msgs` — a number of messages awaiting rewards from the pool `created`.  
   * `funds` — a number of tokens in the rewards pool.  
   * `rshares` — total `rshares` value of all posts in the pool.  
-  * `rsharesfn` — total `rsharesfn` value of all posts in the pool.  
+  * `rsharesfn` — total `sharesfn` value of all posts in the pool.  
 
-### The votestate event 
+### votestate 
 The `votestate` event structure contains data about current post voting results.  
 ```cpp
 struct vote_event {
@@ -84,10 +84,10 @@ struct vote_event {
 };
 ```
 **Parameters:**  
-  * `voter` — account name (a user) who votes for the post.  
-  * `message_id` — identifier of the post. The parameter contains the fields: `author` — author name of the post, `permlink` — unique name of the post within publications of this author.  
-  * `weight` — a vote weight of the account `voter`. While voting, a vote weight is specified with an accuracy of one hundredth of a percent. This parameter takes an integer value in range from 0 to 10000 (the value 10000 corresponds to 100 %). The vote of «downvote» corresponds to a negative value.  
-  * `curatorsw` — a share of curator’s fee (the share is a persentage of rewards assigned for all curators. The value of the share depends on curator's weight).  
+  * `voter` — account name (a user) who votes for the message.  
+  * `message_id` — identifier of the message.  
+  * `weight` — a vote weight (in percent) of the account `voter`.    
+  * `curatorsw` — a «weight» of the curator.  
   * `rshares` — parameter used in calculating rewards for a post. The parameter is calculated as multiplication of voting account's vesting by a vote weight in percentages (`rshares = eff_vesting * weight / 10000`). This parameter can take both positive and negative values.The vote of «downvote» corresponds to a negative value.  
 
 ### Calculating a total reward for a post
@@ -124,15 +124,15 @@ curation_payout = curators_prcnt × payout        (2)
 
 Calculated by the formula (2) the total fee amount is distributed between all curators in accordance with the rules accepted in application. Below is recommended method of determining a fee amount for each of the curators.  
 
-To determine the `curator_rewardⱼ` fee allocated to individual curator j it is recommended to use this formula
+To determine the `curator_rewardⱼ` fee allocated to individual curator `j` it is recommended to use this formula
 ```
 curator_rewardⱼ = curation_payout × (curatorswⱼ / weights_sum)     (3)
 ```
 **Components of the formula:**  
   * `curation_payout` — total amount of fee to curators for the post, calculated by the formula (2).  
-  * `curatorswⱼ = votestate::curatorswⱼ` — a weight of a positive vote j of the «upvote» type.  
+  * `curatorswⱼ = votestate::curatorswⱼ` — a weight of a positive vote `j` of the «upvote» type.  
   * `weights_sum = poststate::weights_sum` — total weight of all positive votes of the «upvote» type.  
-  * `(curatorswⱼ / weights_sum)` — a share allocated to j-th curator of the total fee of all curators. 
+  * `(curatorswⱼ / weights_sum)` — a share allocated to `j-th` curator of the total fee of all curators. 
 
 The calculation of the fee amount via the formula (3) should be performed for each curator. Needed data about the curator are contained in the `vote_event` structure..
 
@@ -149,17 +149,17 @@ unclaimed_rewards = curation_payout - ∑(curator_rewardⱼ)       (4)
 ### Сalculating the rewards to beneficiaries for a post
 The part of funds allocated to author in the form of reward for a post is distributed between the beneficiaries and the author. The share of total reward allocated to beneficiaries, as well as the number of beneficiaries, are determined by the author at the time of posting. The rules according to which the reward is distributed among the beneficiaries are set and accepted for each application individually. Below is recommended method of determining the reward amount for each of the beneficiaries.  
 
-To determine the amount of reward to j-th beneficiary, it is recommended to apply the formula
+To determine the amount of reward to `j-th` beneficiary, it is recommended to apply the formula
 
 ```
 ben_rewardⱼ = (payout - curation_payout) × weightⱼ       (5)
 ```
 **Components of the formula:**  
-  * `ben_rewardⱼ` — amount of reward to j-th beneficiary.
+  * `ben_rewardⱼ` — amount of reward to `j-th` beneficiary.
   * `payout` — total amount of reward for the post, calculated by the formula (1).  
   * `curation_payout` — total amount of fee to curators for the post, calculated by the formula (2). 
   * `(payout - curation_payout)` — total amount of rewards allocated to beneficiaries and author.  
-  * `weightⱼ` — a weight of reward allocated to j-th beneficiary. This percentage value is set by the author at the time of posting.  
+  * `weightⱼ` — a weight of reward allocated to `j-th` beneficiary. This percentage value is set by the author at the time of posting.  
 
 The award amount should be determined by the formula (5) for each beneficiary. Needed data about beneficiaries can be taken from the field  `beneficiaries` of the table `message`. There is an array containing names and percentage deductions.  
 
