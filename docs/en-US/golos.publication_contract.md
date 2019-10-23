@@ -1,17 +1,40 @@
 # The Publication Smart Contract
 
-## Overview
-
-The `golos.publication` smart contract provides users to perform actions on posts, including: 
-  * publishing posts; 
-  * leaving comments to posts; 
-  * voting for posts;
-  * closing posts.
-In addition, this contract contains logic for determining the [payments to authors, curators and beneficiaries of posts](https://cyberway.gitbook.io/en/devportal/golos_contracts/rewards_definition).
-
 ## The list of actions implemented in the golos.publication smart contract
- 
-The `golos.publication` smart contract supports the following user actions: [setlimit](#setlimit), [setrules](#setrules), [createmssg](#createmssg), [updatemssg](#updatemssg), [deletemssg](#deletemssg), [upvote](#upvote), [downvote](#downvote), [unvote](#unvote), [closemssgs](#closemssgs), [reblog](#reblog), [setcurprcnt](#setcurprcnt), [setmaxpayout](#setmaxpayout), [calcrwrdwt](#calcrwrdwt), [paymssgrwrd](#paymssgrwrd) and [setparams](#setparams).
+* contract setting: [setlimit](#setlimit), [setrules](#setrules) and [setparams](#setparams);
+* message actions: [createmssg](#createmssg), [updatemssg](#updatemssg), [deletemssg](#deletemssg), [reblog](#reblog), [erasereblog](#erasereblog), [setcurprcnt](#setcurprcnt) and [setmaxpayout](#setmaxpayout);
+* voting: [upvote](#upvote), [downvote](#downvote) and [unvote](#unvote);
+* system actions: [closemssgs](#closemssgs), [calcrwrdwt](#calcrwrdwt), [paymssgrwrd](#paymssgrwrd) and [deletevotes](#deletevotes).  
+
+In addition, this contract contains logic for determining the [payments to authors, curators and beneficiaries of posts](https://cyberway.gitbook.io/en/devportal/application_contracts/golos_contracts/rewards_definition).
+
+### Data types used
+
+**percentage**  
+16-bit value with declaration types `int16_t` or `uint16_t` and accuracy to hundredths of a percent. The percentage is between -10000 and 10000 (for example: -10000 = -100 %, 0 = 0 %, 10000 = 100 %, 1234 = 12,34 %).  
+Negative percentage values are specified by the type `int16_t`.
+
+**mssgid**  
+Message identifier, structure containing fields:  
+  * `author` — message author;
+  * `permlink` — unique name of message within a particular author's publications.  
+```cpp
+struct mssgid {
+    name author;
+    std::string permlink;
+}
+```  
+
+**beneficiary**  
+Beneficiary, structure containing fields:
+  * `account` — beneficiary account;
+  * `weight` — _percentage_, a share of payment to a beneficiary. It is a part of an author reward amount.  
+```cpp
+struct beneficiary {
+    name account;
+    uint16_t weight;
+};
+```  
 
 ## setlimit
 
@@ -30,13 +53,13 @@ setlimit(
 );
 ```
 **Parameters:**  
-  * `act` — a name of action.  
+  * `act` — a name of action. The contract supports the values `post`, `comment`, `vote` and `post bandwidth`. 
   * `token_code` —  token code (character string that uniquely identifies a token).  
   * `charge_id` — battery ID. The action specified as `act` is limited to the charge of this battery. Multiple actions can be linked to a single battery. For voting actions such as `upvote`, `downvote` and `unvote`, the battery ID value should be set to zero.    
   * `price` — a price (in arbitrary units) of the consumed battery recourse with the `charge_id` identifier for the `act` action. The battery recourse is reduced after each performed action and recovered with time.   
   * `cutoff` — lower threshold value of the battery recourse at which the `act` action is blocked.  
-  * `vesting_price` — amount of vesting, that the user must pay for performing the `act` action, in case of exhaustion of the battery recourse (reaching lower threshold value). The `act` action will be executed if the user allows to withdraw the specified amount of vesting from her/his balance. For payment it is necessary that on the user balance there was a necessary sum of vesting in unblocked state. **Note:** currently parameter disabled and should be `0`.  
-  * `min_vesting` — minimum value of vesting that a user needs to have on her/his balance to perform the `act` action. **Note:** currently parameter disabled and should be `0`.  
+  * `vesting_price` — amount of vesting, that the user must pay for performing the `act` action, in case of exhaustion of the battery recourse (reaching lower threshold value). The `act` action will be executed if the user allows to withdraw the specified amount of vesting from her/his balance. For payment it is necessary that on the user balance there was a necessary sum of vesting in unblocked state. *(**Note:** this parameter is currently disabled and should be equal to «0»)*. 
+  * `min_vesting` — minimum value of vesting that a user needs to have on her/his balance to perform the `act` action. *(**Note:** this parameter is currently disabled and should be equal to «0»)*.  
 
 The interaction of smart publishing contracts and batteries allows a witness to flexibly configure restrictions on user actions (for example, such actions as voting for posts, publication of post and leaving comments can be correlated with the resources of three separate batteries. In this case, user activity will be limited for each of these actions. Also, all these actions can be linked to only one battery, that is, be limited by resources of the same battery). For each action performed by the user, she/he is charged a value corresponding to cost of the consumed battery recourse. When the `golos.charge` smart contract reaches the threshold value of used battery recourse, user's actions are blocked until necessary resource appears in the battery again.  
 
@@ -45,21 +68,21 @@ The `setrules` action is used for setting rules that apply in application for di
 The `setrules` action has the following form:  
 ```cpp
 void setrules(
-    const funcparams&  mainfunc,
-    const funcparams&  curationfunc,
-    const funcparams&  timepenalty,
-    int64_t            maxtokenprop,
-    symbol             tokensymbol
+    funcparams  mainfunc,
+    funcparams  curationfunc,
+    funcparams  timepenalty,
+    int64_t     maxtokenprop,
+    symbol      tokensymbol
 );
 ```  
 **Parameters:**  
   * `mainfunc` — a function that calculates a total amount of rewards for an author and post curators in accordance with accepted algorithm (for example, a linear algorithm or a square root algorithm). The algorithm used in the function is selected by witnesses voting. The function contains two parameters: mathematical expression (the algorithm itself) by which the reward is calculated, and maximum allowable value of argument for this function. When setting parameter values for `setrules`, they are checked for correctness (including for monotonous behavior and for non-negative value).  
   * `curationfunc` — a function that calculates a fee for each of the curators in accordance with accepted algorithm (similar to calculation for `mainfunc`).  
   * `timepenalty` — a function that calculates a weight of vote, taking into account the time of voting and the penalty time duration.  
-  * `maxtokenprop` — the maximum amount of tokens possible that can be assigned to author of post. This parameter is set by witnesses voting.  
+  * `maxtokenprop` — the maximum share of the reward paid to an author in tokens (balance in vesting).  
   * `tokensymbol` — a token type (within the Golos application, only Golos tokens are used).  
 
-To perform the `setrules` action, a user should have a witness authorization. In addition, the transaction must be signed by the `golos.publication` smart contract.  
+A transaction containing the `setrules` action must be signed by most leaders.  
 
 ## createmssg
 The `createmssg` action is used to create a message as a response to a previously received (parent) message. The `createmssg` action has the following form:  
@@ -68,32 +91,32 @@ void createmssg(
     mssgid        message_id,
     mssgid        parent_id,
     std::vector<structures::beneficiary> beneficiaries,
-    int64_t       tokenprop,
+    int16_t       tokenprop,
     bool          vestpayment,
     std::string   headermssg,
     std::string   bodymssg,
     std::string   languagemssg,
     std::vector<structures::tag> tags,
     std::string   jsonmetadata,
-	std::optional<uint16_t> curators_prcnt,
-	std::optional<asset> max_payout
+    std::optional<uint16_t> curators_prcnt,
+    std::optional<asset> max_payout
 );
 ```  
 **Parameters:**  
-  * `message_id` — identifier of the reply message. The parameter is a structure containing the fields: `author` — author of the message, `permlink` — unique name of the message within publications of this author.  
-  * `parent_id` — identifier of the parent message. The parameter contains the fields: `author` — author of the parent message, `permlink` — unique name of the message within publications of this author.  
-  * `beneficiaries` — a structure containing the names of beneficiaries and total amount of their fees. This amount is a percentage of total reward for the message.  
-  * `tokenprop` — amount of tokens. This value cannot exceed the `maxtokenprop` value  specified in `set_rules`.  
-  * `vestpayment` — `true`, if a user gives permission to pay in vestings in case of battery resource exhaustion (the message is sent regardless of battery resource). Default value is `false`. **Note:** currently parameter disabled and should be `false`.  
+  * `message_id` — identifier of the message.  
+  * `parent_id` — identifier of the parent message. To create a post, the field `parent_id.author` should be empty.  
+  * `beneficiaries` — list of beneficiaries. The list may be empty.  
+  * `tokenprop` — a share of reward paid in liquid tokens (the balance is paid in vesting). This value cannot exceed the `maxtokenprop` value  specified in `set_rules`.  
+  * `vestpayment` — `true`, if a user gives permission to pay in vestings in case of battery resource exhaustion (the message is sent regardless of battery resource). Default value is `false`. *(**Note:** this parameter is currently disabled and should be equal to «false»)*. 
   * `headermssg` — title of the message.  
   * `bodymssg` — body of the message.  
   * `languagemssg` — language of the message.  
-  * `tags` — tag that is assigned to the message.  
+  * `tags` — a list of tags.  
   * `jsonmetadata` — metadata in the JSON format.  
-  * `curators_prcnt` — a share (in percent) of reward deducted to curators from total amount of rewards for the created message. The parameter value is set by the message author within the range of values set by witnesses. By default, this parameter is set to zero `curators_prcnt = std::nullopt`;
-  * `max_payout` — maximum possible reward amount for the message being paid out of the pool to which this message is linked. This amount is set by the author in the form of funds (tokens) that are in this pool. The parameter is optional and defaults to `asset::max_amount`.  
+  * `curators_prcnt` — a share (in percent) of reward deducted to curators from total amount of rewards for the created message. The parameter value is set by the message author within the range of values set by leaders. This parameter is optional. If is not specified it takes default value — the value of [min_curators_prcnt](#setparams);
+  * `max_payout` — maximum possible reward amount for the message being paid out of the pool to which this message is linked. This amount is set by the author. It can be used to create messages without payouts. The parameter is optional and defaults to `asset::max_amount`.  
 
-The pair of `parentacc` and `parentprmlnk` parameters identifies the parent message to which a response is created via `createmssg`.
+The `parent_id` parameter identifies the parent message to which a response is created via `createmssg`.
 
 To perform the `createmssg` action it is required that the transaction should be signed by the author of the message.
 
@@ -149,8 +172,8 @@ void upvote(
 ```
 **Parameters:**  
   * `voter` — voting account name.  
-  * `message_id` — identifier of the post for which the `voter` account is voting. The parameter contains the fields: `author` — author name of the post being voted for, `permlink` — unique name of the post within publications of this author.  
-  * `weight` — the vote weight of the account name `voter`.  
+  * `message_id` — identifier of the message.  
+  * `weight` — the vote weight of the account name `voter`, _percentage_.  
 
 To perform the `upvote` action it is required that the transaction should be signed by the account name `voter`. 
 
@@ -166,8 +189,8 @@ void downvote(
 ```
 **Parameters:**  
   * `voter` — voting account name.  
-  * `message_id` — identifier of the post for which the `voter` account is voting. The parameter contains the fields: `author` — author name of the post being voted for, `permlink` — unique name of the post within publications of this author.   
-  * `weight` — the vote weight of the account name `voter`.    
+  * `message_id` — identifier of the message.   
+  * `weight` — the vote weight of the account name `voter`, _percentage_ (the weight value must be positive).    
 
 To perform the `downvote` action it is required that the transaction should be signed by the account name `voter`.  
 
@@ -183,49 +206,60 @@ void unvote(
 
 **Parameters:**  
   * `voter` — account name that revokes her/his own vote previously cast for the message.  
-  * `message_id` — identifier of the post from which the vote is being revoked. The parameter contains the fields: `author` — author name of the post from which the vote is being revoked, `permlink` — unique name of the post within publications of this author.  
+  * `message_id` — identifier of the message.  
 
 To perform the `unvote` action it is required that the transaction should be signed by the account name `voter`.
 
 
 ## closemssgs
 
-The `closemssgs` action is used to close next amount of posts manually by user.  
+The `closemssgs` is a system action and used to «close» messages that have reached the time of payment.  
 The `closemssgs` action has the following form:
 ```
-void close_messages()
+void close_messages(name payer)
 ```
-**Parameters:**  
-  * none.  
+**Parameter:**  
+  * `payer` — account name paying for data storage.  
 
-The `closemssgs` action requires no sign.
 
 ## reblog
-The `reblog` action is used to place a post adopted from another author under this smart contract, as well as to add rebloger's own text to the post in the form of note or comment.  
-
-Reblog post retains authorship of post-original. Added note to the post-reblog may contain its own title. An operation of deleting the post-original does not affect the post-reblog and keep comments to the post-reblog.  
+The `reblog` action is used to place a post adopted from another author under this smart contract, as well as to add rebloger's own title and text to the post as a note.  
    
 The `reblog` action has the following form:  
 ```
 void reblog(
     name rebloger,
-    structures::mssgid message_id,
+    mssgid message_id,
     std::string headermssg,
     std::string bodymssg
 )
 ```
 **Parameters:**  
   * `rebloger` — account name of the reblogger.   
-  * `message_id` — identifier of the post-original. The parameter contains the fields: `author` — author of the post-original, `permlink` — unique name of the post-original within publications of this author.  
+  * `message_id` — identifier of the post-original.  
   * `headermssg` —  title of the note to be added. This field can be empty.  
-  * `bodymssg` — body of the note to be added. This field can be empty.  
+  * `bodymssg` — body of the note to be added. This field can be empty if the field `headermssg` is empty too.  
 
 Restrictions that are imposed on the `reblog` action:  
   * It is not allowed to perform `reblog` of own post, that is, the author of which is the account` rebloger`.
-  * It is not allowed to `reblog` only one title of post-original. The body of the post-original must be present too.
+  * If a title of the note `headermssg` is specified, then its body `bodymssg` must be present too (reblogging without a header, as well as without a header and body is allowed).
   * The title length of the added note should not exceed 256 characters.
 
 To perform the `reblog` action it is required that the transaction should be signed by the account name `rebloger`.
+
+## erasereblog
+The `erasereblog` action is used to remove a previously posted reblog. The `erasereblog` action has the following form:  
+```cpp
+void erasereblog(
+    name rebloger,
+    mssgid message_id
+)
+```
+**Parameters:**  
+  * `rebloger` — account name removing the reblog.
+  * `message_id` — identifier of the post-original.  
+
+A transaction containing the `erasereblog` action should be signed by the `rebloger` account. 
 
 ## setcurprcnt
 
@@ -234,15 +268,15 @@ The `setcurprcnt` action is used by author of a post to set or change previously
 The `setcurprcnt` action has the following form:
 ```
 void set_curators_prcnt(
-    structures::mssgid message_id,
+    mssgid message_id,
     uint16_t curators_prcnt
 )
 ```
 **Parameters:**  
-  * `message_id` — identifier of the post for which amount of fee to curators is setting. The parameter contains the fields: `author` — author of the post, `permlink` — unique name of the post within publications of this author.
-  * `curators_prcnt`— a share (in percent) of reward deducted to curators from total amount of rewards for the post.  
+  * `message_id` — identifier of the post.
+  * `curators_prcnt`— a share (_percentage_) of reward deducted to curators from total amount of rewards for the post.  
 
- After the start of voting for a post, any change in the share of payment to curators is unacceptable.  
+After the start of voting for a post, any change in the share of payment to curators is unacceptable.  
 
 To perform the `setcurprcnt` action it is required that the transaction should be signed by the post author `message_id.author`.
 
@@ -262,8 +296,8 @@ void setmaxpayout(
 
 
  The following restrictions apply to changing the `max_payout` parameter:  
-   * the parameter can only be changed for open messages;  
-   * the parameter can only be changed for messages that do not have votes;  
+   * the parameter can only be changed for open messages.  
+   * the parameter can only be changed for messages that do not have votes.  
    * the parameter can only be decreased in relation to its previous value. It must be positive. Retaining old value of the parameter is unacceptable.  
  
 To perform the `setmaxpayout` action it is required that the transaction should be signed by the author of message.  
@@ -288,13 +322,29 @@ To perform the `calcrwrdwt` action it is required that the transaction should be
 
 
 ## paymssgrwrd
-The `paymssgrwrd` action is internal and unavailable to the user. It is used to pay remuneration for a post to curators, beneficiaries and author. The action has the following form:
+The `paymssgrwrd` action is internal and unavailable to the user. It is used to pay rewards for a «closed» message to curators, beneficiaries and author. The action has the following form:
 ```
 void paymssgrwrd(mssgid message_id)
-```  
-`message_id` — identifier of the post for which awards are paid. The parameter contains the fields: `author` — author of the post, `permlink` — unique name of the post within publications of this author.
+``` 
+**Parameter:**  
+  * `message_id` — identifier of the message for which awards are paid.  
 
-To perform the `paymssgrwrd` action it is required that the transaction should be signed by the `golos.publication` smart contract account. 
+Reward may be partially paid when calling `paymssgrwrd`. In this case, repeated calls of `paymssgrwrd` are allowed.
+
+This action can be performed by any account.
+
+## deletevotes
+The `deletevotes` is an inner action. It is used to free up memory occupied by voting records for messages for which rewards have been paid. The action has the following form:
+```cpp
+void deletevotes(int64_t message_id, name author)
+```
+**Parameters:**  
+  * `message_id` — internal message identifier.
+  * `author` — post author.  
+
+When calling `deletevotes`, the votes may be removed only partially not to completely. In this case, repeated calls of `deletevotes` are allowed.  
+
+A transaction containing the `deletevotes` action must be signed by the `golos.publication` contract account.
 
 ## setparams
 
@@ -302,16 +352,20 @@ The `setparams` action is used to configure the parameters of `golos.publication
 ```
 void set_params(std::vector<posting_params> params)
 ```  
-`params` — value as a structure containing fields with configurable parameters.  
+**Parameter:**  
+  * `params` — list of structures with variable contract parameters.  
 
-## Other parameters which are used and set in the golos.publication smart contract
+### Other parameters which are used and set in the golos.publication smart contract
  There are other parameters in the `golos.publication` smart contract that can be set by calling `set_params`:  
-  * `cashout_window` — time interval after which payment of rewards for a publication is possible.  
-  * `max_vote_changes` — maximum possible number of user's re-votes (it shows how many times a user can change her/his vote for the same post).  
+  * `cashout_window` — payout window options:
+      * `window` — time interval after which a message reward is paid;
+      * `upvote_lockout` — the time interval before «closing» a post.  During this interval the positive voice «upvote» is prohibited, but allowed the negative voice «downvote».
   * `max_beneficiaries` — maximum possible number of beneficiaries.
-  * `max_comment_depth` — maximum allowable nesting level of comments (it shows the allowed nesting level of child comments relative to parent one).  
-  * `social_acc` — account name of the `golos.social` smart contract.  
-  * `referral_acc` — account name of the `golos.referral` smart contract.  
-  * `curators_prcnt` — a share (in percent) of reward deducted to curators from total amount of rewards for a post. The parameter sets thresholds within which the post author can specify her/his own percentage value of curators fee. 
+  * `max_comment_depth` — maximum allowable nesting level of comments (it shows the allowed nesting level of child comments relative to root one).  
+  * `social_acc` — account name of the `social` contact.  
+  * `referral_acc` — account name of the `referral` contact.  
+  * `curators_prcnt` — a share (in percent) of reward deducted to curators from total amount of rewards for a message. The parameter sets thresholds (`min_curators_prcnt` and `max_curators_prcnt`) within which the author can specify her/his own percentage value of curators fee.
+  * `bwprovider` — account of the `bandwidth` resource provider as well as  the permission used (type `permission_level`).
+  * `min_abs_rshares` — minimum absolute value of `rshares` for voting operations. Votes with a lower value are rejected.
   
 ****
