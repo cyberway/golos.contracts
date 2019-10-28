@@ -335,6 +335,10 @@ void publication::delpermlink(structures::mssgid msg) {
     auto idx = tbl.get_index<"byvalue"_n>();
     auto itr = idx.find(msg.permlink);
     eosio::check(itr != idx.end(), "Permlink doesn't exist");
+
+    tables::message_table message_table(_self, _self.value);
+    eosio::check(message_table.find(itr->id) == message_table.end(), "Message exists in cashout window.");
+
     idx.erase(itr);
 }
 
