@@ -308,7 +308,7 @@ void publication::addpermlink(structures::mssgid msg, structures::mssgid parent,
     } else {
         eosio::check(msg.permlink.size() > 0, "Permlink must not be empty");
         eosio::check(msg.permlink.size() < config::max_length, "Permlink must be less than 256 symbols");
-        eosio::check(validate_permlink(msg.permlink), "Permlink must only contain 0-9, a-z and _ symbols");
+        eosio::check(validate_permlink(msg.permlink), "Permlink must only contain 0-9, a-z and - symbols");
         eosio::check(0 == level, "Root permlink must have 0 level");
         eosio::check(parent.permlink.size() == 0, "Root permlink must have empty parent");
     }

@@ -53,7 +53,7 @@ protected:
         const string plnk_bad_children  = amsg("Parent permlink should have children");
         const string plnk_empty         = amsg("Permlink must not be empty");
         const string plnk_too_long      = amsg("Permlink must be less than 256 symbols");
-        const string plnk_invalid       = amsg("Permlink must only contain 0-9, a-z and _ symbols");
+        const string plnk_invalid       = amsg("Permlink must only contain 0-9, a-z and - symbols");
         const string plnk_bad_root_lvl  = amsg("Root permlink must have 0 level");
         const string plnk_root_parent   = amsg("Root permlink must have empty parent");
         const string plnk_no_author     = amsg("Author account must exist");
