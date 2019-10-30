@@ -45,6 +45,7 @@ static const auto invoice_name = "invoice"_n;          // for golos.vesting:reti
 static const auto issue_name = "issue"_n;              // for golos.emit:emit
 static const auto issuer_name = "issuer"_n;
 static const auto changevest_name = "changevest"_n;    // for golos.ctrl:changevest
+static const auto one_name = "witn.one"_n;
 static const auto super_majority_name = "witn.smajor"_n;
 static const auto majority_name = "witn.major"_n;
 static const auto minority_name = "witn.minor"_n;

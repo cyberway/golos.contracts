@@ -327,6 +327,7 @@ void control::update_auths() {
 
     auto& thrs = props().msig_perms;
     vector<std::pair<name,uint16_t>> auths = {
+        {config::one_name, 1},
         {config::minority_name, thrs.minority_threshold(max_witn)},
         {config::majority_name, thrs.majority_threshold(max_witn)},
         {config::super_majority_name, thrs.super_majority_threshold(max_witn)}
