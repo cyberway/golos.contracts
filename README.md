@@ -1,7 +1,7 @@
 <img width="400" src="./docs/logo.jpg" />  
 
 *****  
-[![buildkite](https://badge.buildkite.com/cbc4061f218d570917e365bfff8a251c03996f43f35f4deb66.svg?branch=master)](https://buildkite.com/cyberway.contracts)
+[![buildkite](https://badge.buildkite.com/cbc4061f218d570917e365bfff8a251c03996f43f35f4deb66.svg?branch=master)](https://buildkite.com/golos.contracts)
 [![GitHub](https://img.shields.io/github/license/cyberway/cyberway.contracts.svg)](https://github.com/cyberway/cyberway.contracts/blob/master/LICENSE) 
 
 # golos dapp prototype contracts
