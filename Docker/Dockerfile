@@ -1,8 +1,11 @@
-ARG buildtype=stable
-FROM cyberway/cyberway:$buildtype as cyberway
-FROM cyberway/cyberway.cdt:$buildtype as cdt
+ARG cw_tag=stable
+ARG cdt_tag=stable
+ARG builder_tag=stable
 
-FROM cyberway/builder:$buildtype as builder
+FROM cyberway/cyberway:$cw_tag as cyberway
+FROM cyberway/cyberway.cdt:$cdt_tag as cdt
+FROM cyberway/builder:$builder_tag as builder
+
 COPY --from=cdt /opt/cyberway.cdt /opt/cyberway.cdt
 COPY --from=cyberway /opt/cyberway /opt/cyberway
 
