@@ -32,13 +32,13 @@ struct vesting_params_setter: set_params_visitor<vesting_state> {
     }
 };
 
-void vesting::validateprms(symbol symbol, std::vector<vesting_param> params) {
-    vesting_params_singleton cfg(_self, symbol.code().raw());
-    param_helper::check_params(params, cfg.exists());
+void vesting::validateprms(symbol symbol, std::vector<param_wrapper<vesting_withdraw,2>> params) {
+    //vesting_params_singleton cfg(_self, symbol.code().raw());
+    //param_helper::check_params(params, cfg.exists());
 }
 
-void vesting::setparams(symbol symbol, std::vector<vesting_param> params) {
-    eosio::check(symbol.is_valid(), "not valid symbol");
+void vesting::setparams(symbol symbol, std::vector<param_wrapper<vesting_withdraw,2>> params) {
+    /*eosio::check(symbol.is_valid(), "not valid symbol");
 
     require_auth(name(token::get_issuer(config::token_name, symbol.code())));
 
@@ -49,7 +49,7 @@ void vesting::setparams(symbol symbol, std::vector<vesting_param> params) {
         if (provider.actor != name()) {
             dispatch_inline("cyber"_n, "providebw"_n, {provider}, std::make_tuple(provider.actor, _self));
         }
-    }
+    }*/
 }
 
 // memo can contain real recipient if formatted like "send to: RECIPIENT; comment" (';' and comment part are optional)

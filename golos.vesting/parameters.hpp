@@ -54,7 +54,7 @@ struct bwprovider: parameter {
 };
 using bwprovider_param = param_wrapper<bwprovider,1>;
 
-using vesting_param = std::variant<vesting_withdraw_param, vesting_min_amount_param, delegation_param, bwprovider_param>;
+using vesting_param = std::variant<param_wrapper<vesting_withdraw,2>, param_wrapper<vesting_min_amount,1>, param_wrapper<vesting_delegation,5>, param_wrapper<bwprovider,1>>;
 
 struct [[eosio::table]] vesting_state {
     vesting_withdraw_param withdraw;

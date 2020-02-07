@@ -11,12 +11,12 @@ namespace golos {
 
 using namespace eosio;
 
-class vesting : public contract {
+class [[eosio::contract("golos.vesting")]] vesting : public contract {
 public:
     using contract::contract;
 
-    [[eosio::action]] void validateprms(symbol symbol, std::vector<vesting_param>);
-    [[eosio::action]] void setparams(symbol symbol, std::vector<vesting_param>);
+    [[eosio::action]] void validateprms(symbol symbol, std::vector<param_wrapper<vesting_withdraw,2>>);
+    [[eosio::action]] void setparams(symbol symbol, std::vector<param_wrapper<vesting_withdraw,2>>);
 
     [[eosio::action]] void retire(asset quantity, name user);
     [[eosio::action]] void unlocklimit(name owner, asset quantity);
