@@ -43,7 +43,7 @@
             "base": "",
             "fields": [
                 {"type": "name", "name": "actor"},
-                {"type": "name", "name": "permission"}],
+                {"type": "name", "name": "permission"}]
         }, {
             "name": "emit_state",
             "fields": [
@@ -122,5 +122,6 @@
             }]
         }
     ],
+    "events": [],
     "abi_extensions": []
 }

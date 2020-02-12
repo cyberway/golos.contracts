@@ -1,4 +1,4 @@
-#include "golos.emit/golos.emit.hpp"
+#include <golos.emit/golos.emit.hpp>
 #include <common/parameter_ops.hpp>
 #include <eosio/transaction.hpp>
 #include <eosio/time.hpp>
@@ -20,22 +20,22 @@ emission::emission(name self, name code, datastream<const char*> ds)
 }
 
 struct emit_params_setter: set_params_visitor<emit_state> {
-    std::optional<bwprovider> new_bwprovider;
+    std::optional<bwprovider_t> new_bwprovider;
     using set_params_visitor::set_params_visitor; // enable constructor
 
-    bool operator()(const infrate_params& p) {
+    bool operator()(const inflation_rate& p) {
         return set_param(p, &emit_state::infrate);
     }
-    bool operator()(const reward_pools_param& p) {
+    bool operator()(const reward_pools& p) {
         return set_param(p, &emit_state::pools);
     }
-    bool operator()(const emit_token_params& p) {
+    bool operator()(const emit_token& p) {
         return set_param(p, &emit_state::token);
     }
-    bool operator()(const emit_interval_param& p) {
+    bool operator()(const emit_interval& p) {
         return set_param(p, &emit_state::interval);
     }
-    bool operator()(const bwprovider_param& p) {
+    bool operator()(const bwprovider& p) {
         new_bwprovider = p;
         return set_param(p, &emit_state::bwprovider);
     }
@@ -50,9 +50,10 @@ void emission::setparams(vector<emit_param> params) {
     require_auth(_self);
     auto setter = param_helper::set_parameters<emit_params_setter>(params, _cfg, _self);
     if (setter.new_bwprovider) {
-        auto provider = setter.new_bwprovider->provider;
-        if (provider.actor != name()) {
-            dispatch_inline("cyber"_n, "providebw"_n, {provider}, std::make_tuple(provider.actor, _self));
+        auto actor = setter.new_bwprovider->actor;
+        auto permission = setter.new_bwprovider->permission;
+        if (actor != name()) {
+            dispatch_inline("cyber"_n, "providebw"_n, {permission_level{actor, permission}}, std::make_tuple(actor, _self));
         }
     }
 }
@@ -156,15 +157,15 @@ void emission::emit() {
 
 void emission::schedule_next(uint32_t delay) {
     auto sender_id = cfg().token.symbol.raw();
-    auto& provider = cfg().bwprovider.provider;
+    auto& provider = cfg().bwprovider;
     auto& pools = cfg().pools.pools;
 
     transaction trx;
     trx.actions.emplace_back(action{permission_level(_self, config::code_name), _self, "emit"_n, std::tuple<>()});
     if (provider.actor != name()) {
-        trx.actions.emplace_back(action{provider, "cyber"_n, "providebw"_n, std::make_tuple(provider.actor, _self)});
+        trx.actions.emplace_back(action{{provider.actor, provider.permission}, "cyber"_n, "providebw"_n, std::make_tuple(provider.actor, _self)});
         for (const auto& pool: pools) {
-            trx.actions.emplace_back(action{provider, "cyber"_n, "providebw"_n, std::make_tuple(provider.actor, pool)});
+            trx.actions.emplace_back(action{{provider.actor, provider.permission}, "cyber"_n, "providebw"_n, std::make_tuple(provider.actor, pool)});
         }
     }
     trx.delay_sec = delay;

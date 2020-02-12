@@ -8,7 +8,7 @@ namespace golos {
 
     using namespace eosio;
 
-    struct st_max_vote_changes : parameter {
+    struct st_max_vote_changes_t : parameter {
         uint8_t max_vote_changes;
     };
     using max_vote_changes_prm = param_wrapper<st_max_vote_changes, 1>;
@@ -24,12 +24,12 @@ namespace golos {
     };
     using cashout_window_prm = param_wrapper<st_cashout_window, 2>;
 
-    struct st_max_beneficiaries : parameter {
+    struct st_max_beneficiaries_t : parameter {
         uint8_t max_beneficiaries;
     };
     using max_beneficiaries_prm = param_wrapper<st_max_beneficiaries, 1>;
 
-    struct st_max_comment_depth : parameter {
+    struct st_max_comment_depth_t : parameter {
         uint16_t max_comment_depth;
 
         void validate() const override {
@@ -38,7 +38,7 @@ namespace golos {
     };
     using max_comment_depth_prm = param_wrapper<st_max_comment_depth, 1>;
 
-    struct st_social_acc : parameter {
+    struct st_social_acc_t : parameter {
         name account;
 
         void validate() const override {
@@ -49,7 +49,7 @@ namespace golos {
     };
     using social_acc_prm = param_wrapper<st_social_acc, 1>;
 
-    struct st_referral_acc : parameter {
+    struct st_referral_acc_t : parameter {
         name account;
 
         void validate() const override {
@@ -60,7 +60,7 @@ namespace golos {
     };
     using referral_acc_prm = param_wrapper<st_referral_acc, 1>;
 
-    struct st_curators_prcnt : parameter {
+    struct st_curators_prcnt_t : parameter {
         uint16_t min_curators_prcnt;
         uint16_t max_curators_prcnt;
 
@@ -78,36 +78,37 @@ namespace golos {
     };
     using curators_prcnt_prm = param_wrapper<st_curators_prcnt, 2>;
 
-    struct st_bwprovider: parameter {
-        permission_level provider;
+    struct st_bwprovider_t: parameter {
+        name actor;
+        name permission;
 
         void validate() const override {
-            eosio::check((provider.actor != name()) == (provider.permission != name()), "actor and permission must be set together");
+            eosio::check((actor != name()) == (permission != name()), "actor and permission must be set together");
             // check that contract can use cyber:providebw done in setparams
             // (we need know contract account to make this check)
         }
     };
-    using bwprovider_prm = param_wrapper<st_bwprovider,1>;
+    using st_bwprovider = param_wrapper<st_bwprovider_t,2>;
 
     struct st_min_abs_rshares : parameter {
         uint64_t value;
     };
-    using min_abs_rshares_prm = param_wrapper<st_min_abs_rshares, 1>;
+    using st_min_abs_rshares = param_wrapper<st_min_abs_rshares_t, 1>;
 
-    using posting_params = std::variant<max_vote_changes_prm, cashout_window_prm, max_beneficiaries_prm,
-          max_comment_depth_prm, social_acc_prm, referral_acc_prm, curators_prcnt_prm, bwprovider_prm,
-          min_abs_rshares_prm>;
+    #define posting_params std::variant<st_max_vote_changes, st_cashout_window, st_max_beneficiaries, \
+          st_max_comment_depth, st_social_acc, st_referral_acc, st_curators_prcnt, st_bwprovider, \
+          st_min_abs_rshares>
 
-    struct [[eosio::table]] posting_state {
-        max_vote_changes_prm max_vote_changes_param;
-        cashout_window_prm cashout_window_param;
-        max_beneficiaries_prm max_beneficiaries_param;
-        max_comment_depth_prm max_comment_depth_param;
-        social_acc_prm social_acc_param;
-        referral_acc_prm referral_acc_param;
-        curators_prcnt_prm curators_prcnt_param;
-        bwprovider_prm bwprovider_param;
-        min_abs_rshares_prm min_abs_rshares_param;
+    struct posting_state {
+        st_max_vote_changes max_vote_changes_param;
+        st_cashout_window cashout_window_param;
+        st_max_beneficiaries max_beneficiaries_param;
+        st_max_comment_depth max_comment_depth_param;
+        st_social_acc social_acc_param;
+        st_referral_acc referral_acc_param;
+        st_curators_prcnt curators_prcnt_param;
+        st_bwprovider bwprovider_param;
+        st_min_abs_rshares min_abs_rshares_param;
 
         static constexpr int params_count = 9;
     };

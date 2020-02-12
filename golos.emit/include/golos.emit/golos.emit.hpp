@@ -9,20 +9,20 @@ namespace golos {
 
 using namespace eosio;
 
-struct [[eosio::table]] state {
+struct state {
     uint64_t prev_emit;
     uint64_t start_time;
     bool active;
 };
-using state_singleton = eosio::singleton<"state"_n, state>;
+using state_singleton [[using eosio: order("id","asc"), contract("golos.emit")]] = eosio::singleton<"state"_n, state>;
 
 
-class emission: public contract {
+class [[eosio::contract("golos.emit")]] emission: public contract {
 public:
     emission(name self, name, datastream<const char*>);
 
-    [[eosio::action]] void validateprms(std::vector<emit_param>);
-    [[eosio::action]] void setparams(std::vector<emit_param>);
+    [[eosio::action]] void validateprms(std::vector<emit_param> params);
+    [[eosio::action]] void setparams(std::vector<emit_param> params);
 
     [[eosio::action]] void emit();
     [[eosio::action]] void start();

@@ -11,27 +11,53 @@ class publication : public contract {
 public:
     using contract::contract;
 
-    void set_limit(std::string act, symbol_code token_code, uint8_t charge_id, int64_t price, int64_t cutoff, int64_t vesting_price, int64_t min_vesting);
-    void set_rules(const funcparams& mainfunc, const funcparams& curationfunc, const funcparams& timepenalty,
+    [[eosio::action]]
+    void setlimit(std::string act, symbol_code token_code, uint8_t charge_id, int64_t price, int64_t cutoff, int64_t vesting_price, int64_t min_vesting);
+
+    [[eosio::action]]
+    void setrules(const funcparams& mainfunc, const funcparams& curationfunc, const funcparams& timepenalty,
         uint16_t maxtokenprop, symbol tokensymbol);
+
     void on_transfer(name from, name to, asset quantity, std::string memo = "");
-    void create_message(structures::mssgid message_id, structures::mssgid parent_id,
-        std::vector<structures::beneficiary> beneficiaries, uint16_t tokenprop, bool vestpayment,
-        std::string headermssg, std::string bodymssg, std::string languagemssg, std::vector<std::string> tags,
-        std::string jsonmetadata, std::optional<uint16_t> curators_prcnt, std::optional<asset> max_payout);
-    void update_message(structures::mssgid message_id, std::string headermssg, std::string bodymssg,
+
+    [[eosio::action]]
+    void createmssg(structures::mssgid message_id, structures::mssgid parent_id,
+                    std::vector<structures::beneficiary> beneficiaries, uint16_t tokenprop, bool vestpayment,
+                    std::string headermssg, std::string bodymssg, std::string languagemssg, std::vector<std::string> tags,
+                    std::string jsonmetadata, std::optional<uint16_t> curators_prcnt, std::optional<asset> max_payout);
+
+    [[eosio::action]]
+    void updatemssg(structures::mssgid message_id, std::string headermssg, std::string bodymssg,
                         std::string languagemssg, std::vector<std::string> tags, std::string jsonmetadata);
-    void delete_message(structures::mssgid message_id);
+
+    [[eosio::action]]
+    void deletemssg(structures::mssgid message_id);
+
+    [[eosio::action]]
     void upvote(name voter, structures::mssgid message_id, uint16_t weight);
+
+    [[eosio::action]]
     void downvote(name voter, structures::mssgid message_id, uint16_t weight);
+
+    [[eosio::action]]
     void unvote(name voter, structures::mssgid message_id);
     void close_messages(name payer);
     void set_params(std::vector<posting_params> params);
     void reblog(name rebloger, structures::mssgid message_id, std::string headermssg, std::string bodymssg);
-    void erase_reblog(name rebloger, structures::mssgid message_id);
-    void set_curators_prcnt(structures::mssgid message_id, uint16_t curators_prcnt);
-    void set_max_payout(structures::mssgid message_id, asset max_payout);
+
+    [[eosio::action]]
+    void erasereblog(name rebloger, structures::mssgid message_id);
+
+    [[eosio::action]]
+    void setcurprcnt(structures::mssgid message_id, uint16_t curators_prcnt);
+
+    [[eosio::action]]
+    void setmaxpayout(structures::mssgid message_id, asset max_payout);
+
+    [[eosio::action]]
     void calcrwrdwt(name account, int64_t mssg_id, int64_t post_charge);
+
+    [[eosio::action]]
     void paymssgrwrd(structures::mssgid message_id);
     void deletevotes(int64_t message_id, name author);
 

@@ -80,30 +80,30 @@ struct posting_params_setter: set_params_visitor<posting_state> {
     std::optional<st_bwprovider> new_bwprovider;
     using set_params_visitor::set_params_visitor;
 
-    bool operator()(const max_vote_changes_prm& param) {
+    bool operator()(const st_max_vote_changes& param) {
         return set_param(param, &posting_state::max_vote_changes_param);
     }
 
-    bool operator()(const cashout_window_prm& param) {
+    bool operator()(const st_cashout_window& param) {
         return set_param(param, &posting_state::cashout_window_param);
     }
 
-    bool operator()(const max_beneficiaries_prm& param) {
+    bool operator()(const st_max_beneficiaries& param) {
         return set_param(param, &posting_state::max_beneficiaries_param);
     }
 
-    bool operator()(const max_comment_depth_prm& param) {
+    bool operator()(const st_max_comment_depth& param) {
         return set_param(param, &posting_state::max_comment_depth_param);
     }
 
-    bool operator()(const social_acc_prm& param) {
+    bool operator()(const st_social_acc& param) {
         return set_param(param, &posting_state::social_acc_param);
     }
 
-    bool operator()(const referral_acc_prm& param) {
+    bool operator()(const st_referral_acc& param) {
         return set_param(param, &posting_state::referral_acc_param);
     }
-    bool operator()(const curators_prcnt_prm& param) {
+    bool operator()(const st_curators_prcnt& param) {
         return set_param(param, &posting_state::curators_prcnt_param);
     }
 
@@ -112,7 +112,7 @@ struct posting_params_setter: set_params_visitor<posting_state> {
         return set_param(p, &posting_state::bwprovider_param);
     }
 
-    bool operator()(const min_abs_rshares_prm& param) {
+    bool operator()(const st_min_abs_rshares& param) {
         return set_param(param, &posting_state::min_abs_rshares_param);
     }
 };
@@ -613,14 +613,15 @@ void publication::send_postreward_trx(uint64_t id, const structures::mssgid& mes
 void publication::send_deletevotes_trx(int64_t message_id, name author, name payer) {
     transaction trx(eosio::current_time_point() + eosio::seconds(config::deletevotes_expiration_sec));
     trx.actions.emplace_back(action{permission_level(_self, config::code_name), _self, "deletevotes"_n, std::make_tuple(message_id, author)});
-    providebw_for_trx(trx, params().bwprovider_param.provider);
+    auto provider = params().bwprovider_param;
+    providebw_for_trx(trx, permission_level{provider.actor, provider.permission});
     trx.delay_sec = 0;
     trx.send((static_cast<uint128_t>(message_id) << 64) | author.value, payer);
 }
 
 void publication::close_messages(name payer) {
     auto cur_time = static_cast<uint64_t>(eosio::current_time_point().time_since_epoch().count());
-    auto provider = params().bwprovider_param.provider;
+    auto provider = params().bwprovider_param;
 
     tables::reward_pools pools_table(_self, _self.value);
     std::map<uint64_t, structures::rewardpool> pools;
@@ -632,7 +633,7 @@ void publication::close_messages(name payer) {
         if (i++ >= config::max_closed_posts_per_action) {
             transaction trx(eosio::current_time_point() + eosio::seconds(config::closemssgs_expiration_sec));
             trx.actions.emplace_back(action{permission_level(_self, config::code_name), _self, "closemssgs"_n, std::make_tuple(_self)});
-            providebw_for_trx(trx, provider);
+            providebw_for_trx(trx, permission_level{provider.actor, provider.permission});
             trx.delay_sec = 0;
             trx.send(static_cast<uint128_t>(config::closemssgs_sender_id) << 64, payer, true);
             break;
@@ -709,7 +710,7 @@ void publication::close_messages(name payer) {
 
         tables::permlink_table permlink_table(_self, mssg_itr->author.value);
         auto permlink_itr = permlink_table.find(mssg_itr->id);
-        send_postreward_trx(mssg_itr->id, structures::mssgid{mssg_itr->author, permlink_itr->value}, payer, provider);
+        send_postreward_trx(mssg_itr->id, structures::mssgid{mssg_itr->author, permlink_itr->value}, payer, permission_level{provider.actor, provider.permission});
     }
 
     for (auto& pool_kv : pools) {
@@ -834,7 +835,8 @@ void publication::paymssgrwrd(structures::mssgid message_id) {
     else {
         pay_to(std::move(vesting_payouts), true);
         message_table.modify(mssg_itr, eosio::same_payer, [&]( auto &item ) { item.paid_amount += paid; });
-        send_postreward_trx(mssg_itr->id, message_id, _self, params().bwprovider_param.provider);
+        auto provider = params().bwprovider_param;
+        send_postreward_trx(mssg_itr->id, message_id, _self, permission_level{provider.actor, provider.permission});
     }
 }
 
@@ -1088,7 +1090,7 @@ void publication::set_limit(
 }
 
 // TODO: move maxtokenprop to setparams #828
-void publication::set_rules(const funcparams& mainfunc, const funcparams& curationfunc, const funcparams& timepenalty,
+void publication::setrules(const funcparams& mainfunc, const funcparams& curationfunc, const funcparams& timepenalty,
     uint16_t maxtokenprop, eosio::symbol tokensymbol
 ) {
     eosio::check(tokensymbol == token::get_supply(config::token_name, tokensymbol.code()).symbol, "symbol precision mismatch");
@@ -1212,9 +1214,9 @@ void publication::set_params(std::vector<posting_params> params) {
     param_helper::check_params(params, cfg.exists());
     auto setter = param_helper::set_parameters<posting_params_setter>(params, cfg, _self);
     if (setter.new_bwprovider) {
-        auto provider = setter.new_bwprovider->provider;
-        if (provider.actor != name()) {
-            dispatch_inline("cyber"_n, "providebw"_n, {provider}, std::make_tuple(provider.actor, _self));
+        auto provider = setter.new_bwprovider;
+        if (provider->actor != name()) {
+            dispatch_inline("cyber"_n, "providebw"_n, {permission_level{provider->actor, provider->permission}}, std::make_tuple(provider->actor, _self));
         }
     }
 }
@@ -1277,7 +1279,7 @@ const auto& publication::get_message(const tables::message_table& messages, cons
     return *message_itr;
 }
 
-void publication::set_curators_prcnt(structures::mssgid message_id, uint16_t curators_prcnt) {
+void publication::setcurprcnt(structures::mssgid message_id, uint16_t curators_prcnt) {
     require_auth(message_id.author);
 
     const auto& param = params().curators_prcnt_param;

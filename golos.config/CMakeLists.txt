@@ -1,4 +1,5 @@
-add_contract_with_abi(golos.config abi/golos.config.abi src/golos.config.cpp)
+add_contract(golos.config golos.config src/golos.config.cpp)
+install_contract(golos.config)
 target_include_directories(golos.config.wasm
    PUBLIC
    ${TOKEN_INCLUDE_PATH}

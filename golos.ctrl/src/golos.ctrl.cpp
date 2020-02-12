@@ -1,5 +1,5 @@
-#include "golos.ctrl/golos.ctrl.hpp"
-#include "golos.ctrl/config.hpp"
+#include <golos.ctrl/golos.ctrl.hpp>
+#include <golos.ctrl/config.hpp>
 #include <golos.vesting/golos.vesting.hpp>
 #include <common/parameter_ops.hpp>
 #include <common/dispatchers.hpp>
@@ -19,9 +19,9 @@ namespace param {
 constexpr uint16_t calc_thrs(uint16_t val, uint16_t top, uint16_t num, uint16_t denom) {
     return 0 == val ? uint32_t(top) * num / denom + 1 : val;
 }
-uint16_t msig_permissions::super_majority_threshold(uint16_t top) const { return calc_thrs(super_majority, top, 2, 3); };
-uint16_t msig_permissions::majority_threshold(uint16_t top) const { return calc_thrs(majority, top, 1, 2); };
-uint16_t msig_permissions::minority_threshold(uint16_t top) const { return calc_thrs(minority, top, 1, 3); };
+uint16_t multisig_perms_t::super_majority_threshold(uint16_t top) const { return calc_thrs(super_majority, top, 2, 3); };
+uint16_t multisig_perms_t::majority_threshold(uint16_t top) const { return calc_thrs(majority, top, 1, 2); };
+uint16_t multisig_perms_t::minority_threshold(uint16_t top) const { return calc_thrs(minority, top, 1, 3); };
 }
 
 
@@ -36,14 +36,14 @@ struct ctrl_params_setter: set_params_visitor<ctrl_state> {
 
     bool recheck_msig_perms = false;
 
-    bool operator()(const ctrl_token_param& p) {
+    bool operator()(const ctrl_token& p) {
         return set_param(p, &ctrl_state::token);
     }
-    bool operator()(const multisig_acc_param& p) {
+    bool operator()(const multisig_acc& p) {
         // TODO: if change multisig account, then must set auths
         return set_param(p, &ctrl_state::multisig);
     }
-    bool operator()(const max_witnesses_param& p) {
+    bool operator()(const max_witnesses& p) {
         // TODO: if change max_witnesses, then must set auths
         bool changed = set_param(p, &ctrl_state::witnesses);
         if (changed) {
@@ -53,7 +53,7 @@ struct ctrl_params_setter: set_params_visitor<ctrl_state> {
         return changed;
     }
 
-    void check_msig_perms(const msig_perms_param& p) {
+    void check_msig_perms(const multisig_perms& p) {
         const auto max = state.witnesses.max;
         const auto smaj = p.super_majority_threshold(max);
         const auto maj = p.majority_threshold(max);
@@ -65,7 +65,7 @@ struct ctrl_params_setter: set_params_visitor<ctrl_state> {
         eosio::check(min <= smaj, "minority must not be greater than super_majority");
         eosio::check(min <= maj, "minority must not be greater than majority");
     }
-    bool operator()(const msig_perms_param& p) {
+    bool operator()(const multisig_perms& p) {
         bool changed = set_param(p, &ctrl_state::msig_perms);
         if (changed) {
             // additionals checks against max_witnesses, which is not accessible in `validate()`
@@ -74,10 +74,10 @@ struct ctrl_params_setter: set_params_visitor<ctrl_state> {
         }
         return changed;
     }
-    bool operator()(const witness_votes_param& p) {
+    bool operator()(const max_witness_votes& p) {
         return set_param(p, &ctrl_state::witness_votes);
     }
-    bool operator()(const update_auth_param& p) {
+    bool operator()(const update_auth& p) {
         return set_param(p, &ctrl_state::update_auth_period);
     }
 };
@@ -353,7 +353,8 @@ void control::update_auths() {
 }
 
 void control::send_witness_event(const witness_info& wi) {
-    eosio::event(_self, "witnessstate"_n, std::make_tuple(wi.name, wi.total_weight, wi.active)).send();
+    witnessstate data{wi.name, wi.total_weight, wi.active};
+    eosio::event(_self, "witnessstate"_n, data).send();
 }
 
 void control::active_witness(name witness, bool flag) {

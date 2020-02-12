@@ -105,6 +105,7 @@
                 {"type": "uint32", "name": "period"}]
         }, {
             "name": "ctrl_state",
+            "base": "",
             "fields": [
                 {"type": "uint64",              "name": "id"},
                 {"type": "ctrl_token",          "name": "token"},
@@ -115,10 +116,12 @@
                 {"type": "update_auth",         "name": "update_auth_period"}]
         }, {
             "name": "setparams",
+            "base": "",
             "fields": [
                 {"type": "ctrl_param[]", "name": "params"}]
         }, {
             "name": "witnessstate",
+            "base": "",
             "fields": [
                 {"type": "name", "name": "witness"},
                 {"type": "uint64", "name": "weight"},
@@ -126,10 +129,11 @@
             ]
         }, {
             "name": "msig_auths",
+            "base": "",
             "fields": [
                 {"type": "uint64", "name": "id"},
                 {"type": "name[]", "name": "witnesses"},
-                {"type": "time_point_sec", "name": "last_update"},
+                {"type": "time_point_sec", "name": "last_update"}
             ]
         }
     ],
