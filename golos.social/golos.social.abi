@@ -58,7 +58,39 @@
         ]
      },
      {
+        "name": "addpin",
+        "base": "",
+        "fields": [
+           {"name": "pinner",    "type": "name"},
+           {"name": "pinning",   "type": "name"}
+        ]
+     },
+     {
+        "name": "unpin",
+        "base": "",
+        "fields": [
+           {"name": "pinner",    "type": "name"},
+           {"name": "pinning",   "type": "name"}
+        ]
+     },
+     {
         "name": "block",
+        "base": "",
+        "fields": [
+           {"name": "blocker",   "type": "name"},
+           {"name": "blocking",  "type": "name"}
+        ]
+     },
+     {
+        "name": "addblock",
+        "base": "",
+        "fields": [
+           {"name": "blocker",   "type": "name"},
+           {"name": "blocking",  "type": "name"}
+        ]
+     },
+     {
+        "name": "unblock",
         "base": "",
         "fields": [
            {"name": "blocker",   "type": "name"},
@@ -74,7 +106,7 @@
         ]
      },
      {
-        "name": "delete",
+        "name": "deletemeta",
         "base": "",
         "fields": [
            {"name": "account",   "type": "name"}
@@ -83,13 +115,13 @@
   ],
   "actions": [
      {"name": "pin",          "type": "pin"},
-     {"name": "addpin",       "type": "pin"},
-     {"name": "unpin",        "type": "pin"},
+     {"name": "addpin",       "type": "addpin"},
+     {"name": "unpin",        "type": "unpin"},
      {"name": "block",        "type": "block"},
-     {"name": "addblock",     "type": "block"},
-     {"name": "unblock",      "type": "block"},
+     {"name": "addblock",     "type": "addblock"},
+     {"name": "unblock",      "type": "unblock"},
      {"name": "updatemeta",   "type": "updatemeta"},
-     {"name": "deletemeta",   "type": "delete"}
+     {"name": "deletemeta",   "type": "deletemeta"}
   ],
   "events": [ ],
   "tables": [

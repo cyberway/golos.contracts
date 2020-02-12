@@ -1,10 +1,22 @@
 {
     "version": "cyberway::abi/1.1",
-    "types": [],
+    "types": [
+        {
+            "new_type_name": "breakout_parametrs",
+            "type": "breakout_parametrs_t"
+        },
+        {
+            "new_type_name": "expire_parametrs",
+            "type": "expire_parametrs_t"
+        },
+        {
+            "new_type_name": "percent_parametrs",
+            "type": "percent_parametrs_t"
+        }],
     "events": [],
     "variants": [
         {
-          "name": "referral_param",
+          "name": "variant_breakout_parametrs_expire_parametrs_percent_parametrs",
           "types": [
                 "breakout_parametrs",
                 "expire_parametrs",
@@ -13,6 +25,32 @@
         }
     ],
     "structs": [
+        {
+            "name": "add_referral",
+            "base": "",
+            "fields": [
+                {
+                    "name": "referrer",
+                    "type": "name"
+                },
+                {
+                    "name": "referral",
+                    "type": "name"
+                },
+                {
+                    "name": "percent",
+                    "type": "uint16"
+                },
+                {
+                    "name": "expire",
+                    "type": "uint64"
+                },
+                {
+                    "name": "breakout",
+                    "type": "asset"
+                }
+            ]
+        },
         {
             "name": "addreferral",
             "base": "",
@@ -25,23 +63,28 @@
             ]
         },
         {
-           "name": "breakout_parametrs",
+           "name": "parameter",
            "base": "",
+           "fields": []
+        },
+        {
+           "name": "breakout_parametrs_t",
+           "base": "parameter",
            "fields": [
               {"name": "min_breakout", "type": "asset"},
               {"name": "max_breakout", "type": "asset"}
            ]
         },
         {
-           "name": "expire_parametrs",
-           "base": "",
+           "name": "expire_parametrs_t",
+           "base": "parameter",
            "fields": [
               {"name": "max_expire", "type": "uint64"}
            ]
         },
         {
-           "name": "percent_parametrs",
-           "base": "",
+           "name": "percent_parametrs_t",
+           "base": "parameter",
            "fields": [
               {"name": "max_percent", "type": "uint16"}
            ]
@@ -57,14 +100,21 @@
            ]
         },
         {
-           "name": "setparams",
+           "name": "validateprms",
            "base": "",
            "fields": [
-              {"name": "params", "type": "referral_param[]"}
+              {"name": "params", "type": "variant_breakout_parametrs_expire_parametrs_percent_parametrs[]"}
            ]
         },
         {
-           "name": "empty",
+           "name": "setparams",
+           "base": "",
+           "fields": [
+              {"name": "params", "type": "variant_breakout_parametrs_expire_parametrs_percent_parametrs[]"}
+           ]
+        },
+        {
+           "name": "closeoldref",
            "base": "",
            "fields": [ ]
         }
@@ -72,11 +122,11 @@
     "actions": [
         {
             "name": "addreferral",
-            "type": "addreferral"
+            "type": "add_referral"
         },
         {
             "name": "validateprms",
-            "type": "setparams"
+            "type": "validateprms"
         },
         {
             "name": "setparams",
@@ -84,7 +134,7 @@
         },
         {
             "name": "closeoldref",
-            "type": "empty"
+            "type": "closeoldref"
         }
     ],
     "tables": [
