@@ -21,7 +21,7 @@ class [[eosio::contract("golos.emit")]] emission: public contract {
 public:
     emission(name self, name, datastream<const char*>);
 
-    [[eosio::action]] void validateprms(std::vector<emit_param> params);
+    void validateprms(std::vector<emit_param> params);
     [[eosio::action]] void setparams(std::vector<emit_param> params);
 
     [[eosio::action]] void emit();

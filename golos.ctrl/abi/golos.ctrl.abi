@@ -1,8 +1,33 @@
 {
     "version": "cyberway::abi/1.1",
-    "types": [],
+    "types": [
+        {
+            "new_type_name": "ctrl_token",
+            "type": "ctrl_token_t"
+        },
+        {
+            "new_type_name": "max_witness_votes",
+            "type": "max_witness_votes_t"
+        },
+        {
+            "new_type_name": "max_witnesses",
+            "type": "max_witnesses_t"
+        },
+        {
+            "new_type_name": "multisig_acc",
+            "type": "multisig_acc_t"
+        },
+        {
+            "new_type_name": "multisig_perms",
+            "type": "multisig_perms_t"
+        },
+        {
+            "new_type_name": "update_auth",
+            "type": "update_auth_t"
+        }
+    ],
     "variants": [{
-        "name": "ctrl_param",
+        "name": "variant_ctrl_token_multisig_acc_max_witnesses_multisig_perms_max_witness_votes_update_auth",
         "types": [
             "ctrl_token",
             "multisig_acc",
@@ -27,7 +52,13 @@
                 {"type": "name",   "name": "witness"}
             ]
         }, {
-            "name": "witness_name",
+            "name": "startwitness",
+            "base": "",
+            "fields": [
+                {"type": "name",   "name": "witness"}
+            ]
+        }, {
+            "name": "stopwitness",
             "base": "",
             "fields": [
                 {"type": "name",   "name": "witness"}
@@ -71,36 +102,53 @@
                 {"type": "name[]", "name": "witnesses"}
             ]
         }, {
-            "name": "ctrl_token",
+            "name": "parameter",
             "base": "",
+            "fields": []
+        }, {
+            "name": "immutable_parameter",
+            "base": "parameter",
+            "fields": []
+        }, {
+            "name": "ctrl_token_t",
+            "base": "immutable_parameter",
+            "fields": [
+                {
+                    "name": "code",
+                    "type": "symbol_code"
+                }
+            ]
+        }, {
+            "name": "ctrl_token_t",
+            "base": "immutable_parameter",
             "fields": [
                 {"type": "symbol_code", "name": "code"}]
         }, {
-            "name": "multisig_acc",
-            "base": "",
+            "name": "multisig_acc_t",
+            "base": "parameter",
             "fields": [
                 {"type": "name", "name": "name"}]
         }, {
-            "name": "max_witnesses",
-            "base": "",
+            "name": "max_witnesses_t",
+            "base": "parameter",
             "fields": [
                 {"type": "uint16", "name": "max"}]
         }, {
-            "name": "multisig_perms",
-            "base": "",
+            "name": "multisig_perms_t",
+            "base": "parameter",
             "fields": [
                 {"type": "uint16", "name": "super_majority"},
                 {"type": "uint16", "name": "majority"},
                 {"type": "uint16", "name": "minority"}
             ]
         }, {
-            "name": "max_witness_votes",
-            "base": "",
+            "name": "max_witness_votes_t",
+            "base": "immutable_parameter",
             "fields": [
                 {"type": "uint16", "name": "max"}]
         }, {
-            "name": "update_auth",
-            "base": "",
+            "name": "update_auth_t",
+            "base": "parameter",
             "fields": [
                 {"type": "uint32", "name": "period"}]
         }, {
@@ -118,7 +166,12 @@
             "name": "setparams",
             "base": "",
             "fields": [
-                {"type": "ctrl_param[]", "name": "params"}]
+                {"type": "variant_ctrl_token_multisig_acc_max_witnesses_multisig_perms_max_witness_votes_update_auth[]", "name": "params"}]
+        }, {
+            "name": "validateprms",
+            "base": "",
+            "fields": [
+                {"type": "variant_ctrl_token_multisig_acc_max_witnesses_multisig_perms_max_witness_votes_update_auth[]", "name": "params"}]
         }, {
             "name": "witnessstate",
             "base": "",
@@ -146,7 +199,7 @@
             "type": "setparams"
         }, {
             "name": "validateprms",
-            "type": "setparams"
+            "type": "validateprms"
         }, {
             "name": "regwitness",
             "type": "regwitness"
@@ -155,10 +208,10 @@
             "type": "unregwitness"
         }, {
             "name": "startwitness",
-            "type": "witness_name"
+            "type": "startwitness"
         }, {
             "name": "stopwitness",
-            "type": "witness_name"
+            "type": "stopwitness"
         }, {
             "name": "votewitness",
             "type": "votewitness"

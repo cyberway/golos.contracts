@@ -34,6 +34,10 @@ RUN cd golos.contracts/cyberway.contracts \
     && /opt/cyberway.cdt/bin/cyberway-abidiff /opt/golos.contracts/golos.memo/golos.memo.abi ./golos.memo/golos.memo.abi \
     && /opt/cyberway.cdt/bin/cyberway-abidiff /opt/golos.contracts/golos.vesting/golos.vesting.abi ./golos.vesting/golos.vesting.abi \
     && /opt/cyberway.cdt/bin/cyberway-abidiff /opt/golos.contracts/golos.referral/golos.referral.abi ./golos.referral/abi/golos.referral.abi \
+    && /opt/cyberway.cdt/bin/cyberway-abidiff /opt/golos.contracts/golos.ctrl/golos.ctrl.abi ./golos.ctrl/abi/golos.ctrl.abi \
+    && /opt/cyberway.cdt/bin/cyberway-abidiff /opt/golos.contracts/golos.emit/golos.emit.abi ./golos.emit/abi/golos.emit.abi \
+    && /opt/cyberway.cdt/bin/cyberway-abidiff /opt/golos.contracts/golos.charge/golos.charge.abi ./golos.charge/golos.charge.abi \
+    && /opt/cyberway.cdt/bin/cyberway-abidiff /opt/golos.contracts/golos.publication/golos.publication.abi ./golos.publication/golos.publication.abi \
     && echo "abidiff check passed"
 
 

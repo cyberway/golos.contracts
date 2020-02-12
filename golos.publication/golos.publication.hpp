@@ -7,7 +7,7 @@ namespace golos {
 
 using namespace eosio;
 
-class publication : public contract {
+class [[eosio::contract("golos.publication")]] publication : public contract {
 public:
     using contract::contract;
 
@@ -16,13 +16,13 @@ public:
 
     [[eosio::action]]
     void setrules(const funcparams& mainfunc, const funcparams& curationfunc, const funcparams& timepenalty,
-        uint16_t maxtokenprop, symbol tokensymbol);
+        percent_t maxtokenprop, symbol tokensymbol);
 
     void on_transfer(name from, name to, asset quantity, std::string memo = "");
 
     [[eosio::action]]
     void createmssg(structures::mssgid message_id, structures::mssgid parent_id,
-                    std::vector<structures::beneficiary> beneficiaries, uint16_t tokenprop, bool vestpayment,
+                    std::vector<structures::beneficiary> beneficiaries, percent_t tokenprop, bool vestpayment,
                     std::string headermssg, std::string bodymssg, std::string languagemssg, std::vector<std::string> tags,
                     std::string jsonmetadata, std::optional<uint16_t> curators_prcnt, std::optional<asset> max_payout);
 
@@ -34,43 +34,58 @@ public:
     void deletemssg(structures::mssgid message_id);
 
     [[eosio::action]]
-    void upvote(name voter, structures::mssgid message_id, uint16_t weight);
+    void upvote(name voter, structures::mssgid message_id, percent_t weight);
 
     [[eosio::action]]
-    void downvote(name voter, structures::mssgid message_id, uint16_t weight);
+    void downvote(name voter, structures::mssgid message_id, percent_t weight);
 
     [[eosio::action]]
     void unvote(name voter, structures::mssgid message_id);
-    void close_messages(name payer);
-    void set_params(std::vector<posting_params> params);
+
+    [[eosio::action]]
+    void closemssgs(name payer);
+
+    [[eosio::action]] 
+    void setparams(std::vector<posting_params> params);
+
+    [[eosio::action]]
     void reblog(name rebloger, structures::mssgid message_id, std::string headermssg, std::string bodymssg);
 
     [[eosio::action]]
     void erasereblog(name rebloger, structures::mssgid message_id);
 
     [[eosio::action]]
-    void setcurprcnt(structures::mssgid message_id, uint16_t curators_prcnt);
+    void setcurprcnt(structures::mssgid message_id, percent_t curators_prcnt);
 
     [[eosio::action]]
     void setmaxpayout(structures::mssgid message_id, asset max_payout);
 
     [[eosio::action]]
-    void calcrwrdwt(name account, int64_t mssg_id, int64_t post_charge);
+    void calcrwrdwt(name account, int64_t mssg_id, base_t post_charge);
 
     [[eosio::action]]
     void paymssgrwrd(structures::mssgid message_id);
+
+    [[eosio::action]]
     void deletevotes(int64_t message_id, name author);
 
     [[eosio::action]]
     void addpermlink(structures::mssgid msg, structures::mssgid parent, uint16_t level, uint32_t childcount);
-    [[eosio::action]] void delpermlink(structures::mssgid msg);
-    [[eosio::action]] void addpermlinks(std::vector<structures::permlink_info> permlinks);
-    [[eosio::action]] void delpermlinks(std::vector<structures::mssgid> permlinks);
 
+    [[eosio::action]]
+    void delpermlink(structures::mssgid msg);
+
+    [[eosio::action]]
+    void addpermlinks(std::vector<structures::permlink_info> permlinks);
+
+    [[eosio::action]]
+    void delpermlinks(std::vector<structures::mssgid> permlinks);
+
+    [[eosio::action]]
     void syncpool(std::optional<symbol> tokensymbol);
 private:
     const posting_state& params();
-    void set_vote(name voter, const structures::mssgid &message_id, int16_t weight);
+    void set_vote(name voter, const structures::mssgid &message_id, signed_percent_t weight);
     void fill_depleted_pool(tables::reward_pools& pools, asset quantity,
         tables::reward_pools::const_iterator excluded);
     auto get_pool(tables::reward_pools& pools, uint64_t time);
@@ -97,7 +112,7 @@ private:
                         name account, int64_t eff_vesting, symbol_code token_code, bool vestpayment, int16_t weight = config::_100percent);
     void use_postbw_charge(tables::limit_table& lims, name issuer, name account, symbol_code token_code, int64_t mssg_id);
 
-    fixp_t calc_available_rshares(name voter, int16_t weight, uint64_t cur_time, const structures::rewardpool& pool);
+    fixp_t calc_available_rshares(name voter, signed_percent_t weight, uint64_t cur_time, const structures::rewardpool& pool);
     void check_upvote_time(uint64_t cur_time, uint64_t mssg_date);
     static bool validate_permlink(std::string permlink);
 
