@@ -53,7 +53,7 @@ protected:
         const string plnk_bad_children  = amsg("Parent permlink should have children");
         const string plnk_empty         = amsg("Permlink must not be empty");
         const string plnk_too_long      = amsg("Permlink must be less than 256 symbols");
-        const string plnk_invalid       = amsg("Permlink must only contain 0-9, a-z and _ symbols");
+        const string plnk_invalid       = amsg("Permlink must only contain 0-9, a-z and - symbols");
         const string plnk_bad_root_lvl  = amsg("Root permlink must have 0 level");
         const string plnk_root_parent   = amsg("Root permlink must have empty parent");
         const string plnk_no_author     = amsg("Author account must exist");
@@ -61,6 +61,7 @@ protected:
         const string plnk_not_found     = amsg("Permlink doesn't exist");
         const string plnk_empty_vector  = amsg("`permlinks` must not be empty");
 
+        const string msg_exists_in_cashout  = amsg("Message exists in cashout window.");
     } err;
 
 public:
@@ -426,39 +427,54 @@ BOOST_FIXTURE_TEST_CASE(permlinks_internal_test, posting_tester) try {
     auto path = boost::filesystem::absolute(boost::filesystem::path(filename));
     if (!boost::filesystem::exists(path)) {
         BOOST_TEST_MESSAGE("------ skip, '" << filename << "' not found");
-        return;
-    }
-    boost::filesystem::ifstream in(path);
-    std::map<name,bool> accs;
-    std::vector<permlink_info> permlinks;
-    std::vector<std::string> parts;
-    std::string line;
-    auto current_max_size = 1, max_size = 500;
-    while (in >> line) {
-        boost::split(parts, line, boost::is_any_of(";"));
-        auto level = std::stol(parts[4]);
-        uint32_t count = std::stol(parts[5]);
-        BOOST_REQUIRE(level >= 0 && level < 65536 & count >= 0);
+    } else {
+        boost::filesystem::ifstream in(path);
+        std::map<name,bool> accs;
+        std::vector<permlink_info> permlinks;
+        std::vector<std::string> parts;
+        std::string line;
+        auto current_max_size = 1, max_size = 500;
+        while (in >> line) {
+            boost::split(parts, line, boost::is_any_of(";"));
+            auto level = std::stol(parts[4]);
+            uint32_t count = std::stol(parts[5]);
+            BOOST_REQUIRE(level >= 0 && level < 65536 & count >= 0);
 
-        name author{parts[0]};
-        if (accs.count(author) == 0) {
-            accs.emplace(author, true);
-            create_account(author);
+            name author{parts[0]};
+            if (accs.count(author) == 0) {
+                accs.emplace(author, true);
+                create_account(author);
+            }
+            permlinks.emplace_back(permlink_info{{author, parts[1]}, {name{parts[2]}, parts[3]}, uint16_t(level), count});
+            if (permlinks.size() >= current_max_size) {
+                BOOST_TEST_MESSAGE("... " << line);
+                BOOST_REQUIRE_EQUAL(success(), post.add_permlinks(permlinks));
+                permlinks.clear();
+                if (current_max_size < max_size)
+                    current_max_size++;
+                produce_block();
+            }
+        };
+        if (permlinks.size()) {
+            BOOST_CHECK_EQUAL(success(), post.add_permlinks(permlinks));
         }
-        permlinks.emplace_back(permlink_info{{author, parts[1]}, {name{parts[2]}, parts[3]}, uint16_t(level), count});
-        if (permlinks.size() >= current_max_size) {
-            BOOST_TEST_MESSAGE("... " << line);
-            BOOST_REQUIRE_EQUAL(success(), post.add_permlinks(permlinks));
-            permlinks.clear();
-            if (current_max_size < max_size)
-                current_max_size++;
-            produce_block();
-        }
-    };
-    if (permlinks.size()) {
-        BOOST_CHECK_EQUAL(success(), post.add_permlinks(permlinks));
     }
 
+    BOOST_TEST_MESSAGE("--- buy vests and create pool to test internal permlink actions on real messages");
+    buy_vesting_for_users({author}, 10);
+    produce_block();
+    set_rules_with_preset(fn_preset::linear, lim_preset::real);
+    BOOST_CHECK_EQUAL(success(), post.set_params("["+post.get_str_cashout_window(posts_window, post.upvote_lockout)+"]"));
+    produce_block();
+
+    BOOST_TEST_MESSAGE("--- test deleting permlink in cashout window");
+    mssgid inwind{author, "msg-in-cashout-window"};
+    BOOST_CHECK_EQUAL(success(), post.create_msg(inwind));
+    BOOST_CHECK_EQUAL(err.msg_exists_in_cashout, post.del_permlink(inwind));
+    produce_blocks(golos::seconds_to_blocks(posts_window));
+    BOOST_CHECK_EQUAL(success(), post.closemssgs());
+    produce_block();
+    BOOST_CHECK_EQUAL(success(), post.del_permlink(inwind));
 } FC_LOG_AND_RETHROW()
 
 BOOST_AUTO_TEST_SUITE_END()
