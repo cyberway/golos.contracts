@@ -9,7 +9,7 @@ namespace golos {
 using namespace eosio;
 
 template<typename T, int L>
-struct param_wrapper: T {
+struct [[eosio::ignore]] param_wrapper: T {
     param_wrapper() = default;
     param_wrapper(T& x): T(x) {};
     param_wrapper(T&& x): T(std::move(x)) {};

@@ -1,5 +1,7 @@
 {
     "version": "cyberway::abi/1.1",
+    "types": [],
+    "events": [],
     "variants": [
         {
           "name": "referral_param",

@@ -1,4 +1,5 @@
-add_contract_with_abi(golos.referral abi/golos.referral.abi src/golos.referral.cpp)
+add_contract(golos.referral golos.referral src/golos.referral.cpp)
+install_contract(golos.referral)
 target_include_directories(golos.referral.wasm
    PUBLIC
    ${TOKEN_INCLUDE_PATH}

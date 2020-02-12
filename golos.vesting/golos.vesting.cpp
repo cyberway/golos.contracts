@@ -11,22 +11,22 @@ namespace golos {
 using namespace eosio;
 
 struct vesting_params_setter: set_params_visitor<vesting_state> {
-    std::optional<bwprovider> new_bwprovider;
+    std::optional<vesting_bwprovider_t> new_bwprovider;
     using set_params_visitor::set_params_visitor; // enable constructor
 
-    bool operator()(const vesting_withdraw_param& p) {
+    bool operator()(const vesting_withdraw& p) {
         return set_param(p, &vesting_state::withdraw);
     }
 
-    bool operator()(const vesting_min_amount_param& p) {
+    bool operator()(const vesting_amount& p) {
         return set_param(p, &vesting_state::min_amount);
     }
 
-    bool operator()(const delegation_param& p) {
+    bool operator()(const vesting_delegation& p) {
         return set_param(p, &vesting_state::delegation);
     }
 
-    bool operator()(const bwprovider_param& p) {
+    bool operator()(const vesting_bwprovider& p) {
         new_bwprovider = p;
         return set_param(p, &vesting_state::bwprovider);
     }
@@ -45,9 +45,10 @@ void vesting::setparams(symbol symbol, std::vector<vesting_param> params) {
     vesting_params_singleton cfg(_self, symbol.code().raw());
     auto setter = param_helper::set_parameters<vesting_params_setter>(params, cfg, name(token::get_issuer(config::token_name, symbol.code())));
     if (setter.new_bwprovider) {
-        auto provider = setter.new_bwprovider->provider;
-        if (provider.actor != name()) {
-            dispatch_inline("cyber"_n, "providebw"_n, {provider}, std::make_tuple(provider.actor, _self));
+        auto actor = setter.new_bwprovider->actor;
+        auto permission = setter.new_bwprovider->permission;
+        if (actor != name()) {
+            dispatch_inline("cyber"_n, "providebw"_n, {permission_level{actor, permission}}, std::make_tuple(actor, _self));
         }
     }
 }
@@ -194,16 +195,16 @@ void vesting::withdraw(name from, name to, asset quantity) {
         table.modify(record, from, fill_record);
     } else {
         table.emplace(from, [&](auto& item) {
-            item.from = from;
+            item.owner = from;
             fill_record(item);
         });
     }
 }
 
-void vesting::stopwithdraw(name owner, symbol sym) {
+void vesting::stopwithdraw(name owner, symbol symbol) {
     require_auth(owner);
 
-    withdraw_table table(_self, sym.code().raw());
+    withdraw_table table(_self, symbol.code().raw());
     auto record = table.find(owner.value);
     eosio::check(record != table.end(), "Not found convert record sender"); // TODO: test #744
     table.erase(record);
@@ -379,7 +380,7 @@ bool vesting::process_withdraws(eosio::time_point now, symbol symbol, name payer
             last_payment = obj->remaining_payments == 1;
             auto to_send = last_payment ? obj->to_withdraw : obj->withdraw_rate;
             const name to = obj->to;
-            const name from = obj->from;
+            const name from = obj->owner;
             account_table accounts(_self, from.value);
             auto balance = accounts.find(to_send.symbol.code().raw());
             fail =
@@ -447,7 +448,8 @@ void vesting::procwaiting(symbol symbol, name payer) {
         vesting_params_singleton cfg(_self, symbol.code().raw());
         transaction trx(now + eosio::seconds(3*60*60));
         trx.actions.emplace_back(action{permission_level(_self, config::code_name), _self, "procwaiting"_n, std::make_tuple(symbol, _self)});
-        providebw_for_trx(trx, cfg.get().bwprovider.provider);
+        auto bwprovider = cfg.get().bwprovider;
+        providebw_for_trx(trx, permission_level{bwprovider.actor, bwprovider.permission});
         trx.delay_sec = 120;
         trx.send(static_cast<uint128_t>(config::procwaiting_sender_id) << 64, payer, true);
     }
@@ -536,11 +538,13 @@ void vesting::add_balance(name owner, asset value, name ram_payer) {
 }
 
 void vesting::send_account_event(name account, const struct account& balance) {
-    eosio::event(_self, "balance"_n, std::make_tuple(account, balance)).send();
+    balance_event data{account, balance.vesting, balance.delegated, balance.received};
+    eosio::event(_self, "balance"_n, data).send();
 }
 
 void vesting::send_stat_event(const vesting_stats& info) {
-    eosio::event(_self, "stat"_n, info.supply).send();
+    vesting_supply data{info.supply};
+    eosio::event(_self, "stat"_n, data).send();
 }
 
 int64_t fix_precision(const asset from, const symbol to) {

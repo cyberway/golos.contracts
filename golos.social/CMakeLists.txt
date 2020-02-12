@@ -1,4 +1,5 @@
-add_contract_with_abi(golos.social golos.social.abi golos.social.cpp)
+add_contract(golos.social golos.social golos.social.cpp)
+install_contract(golos.social)
 target_include_directories(golos.social.wasm
    PUBLIC
    ${TOKEN_INCLUDE_PATH}

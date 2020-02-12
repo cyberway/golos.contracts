@@ -89,7 +89,7 @@
      {"name": "addblock",     "type": "block"},
      {"name": "unblock",      "type": "block"},
      {"name": "updatemeta",   "type": "updatemeta"},
-     {"name": "deletemeta",   "type": "delete"},
+     {"name": "deletemeta",   "type": "delete"}
   ],
   "events": [ ],
   "tables": [
@@ -105,8 +105,9 @@
               ]
            }
         ]
-     },
+     }
   ],
   "error_messages": [ ],
-  "abi_extensions": [ ]
+  "abi_extensions": [ ],
+  "variants": [ ]
 }
