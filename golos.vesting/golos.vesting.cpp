@@ -292,7 +292,7 @@ void vesting::delegate(name from, name to, asset quantity, uint16_t interest_rat
     eosio::check(balance_recipient->received.amount >= delegation_params.min_remainder, "delegated vesting withdrawn");
 }
 
-void vesting::undelegate(name from, name to, asset quantity) {
+void vesting::undelegate(name from, name to, asset quantity) { // from is delegator, to is delegatee
     bool delegator_signed = has_auth(from);
     eosio::check(delegator_signed || has_auth(to), "missing required authority");
 

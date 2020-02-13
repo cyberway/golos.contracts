@@ -24,7 +24,7 @@ public:
     [[eosio::action]] void withdraw(name from, name to, asset quantity);
     [[eosio::action]] void stopwithdraw(name owner, symbol symbol);
     [[eosio::action]] void delegate(name from, name to, asset quantity, uint16_t interest_rate);
-    [[eosio::action]] void undelegate(name from, name to, asset quantity);
+    [[eosio::action]] void undelegate(name from, name to, asset quantity); // from is delegator, to is delegatee
 
     [[eosio::action]] void create(symbol symbol, name notify_acc);
 

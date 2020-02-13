@@ -55,7 +55,7 @@ struct vesting_bwprovider_t: parameter {
 };
 using vesting_bwprovider = param_wrapper<vesting_bwprovider_t,2>;
 
-#define vesting_param std::variant<vesting_withdraw, vesting_amount, vesting_delegation, vesting_bwprovider>
+using vesting_param = std::variant<vesting_withdraw, vesting_amount, vesting_delegation, vesting_bwprovider>;
 
 struct vesting_state {
     vesting_withdraw withdraw;

@@ -12,6 +12,10 @@
         {
             "new_type_name": "percent_parametrs",
             "type": "percent_parametrs_t"
+        },
+        {
+            "new_type_name": "referral_params",
+            "type": "variant_breakout_parametrs_expire_parametrs_percent_parametrs"
         }],
     "events": [],
     "variants": [
@@ -103,14 +107,14 @@
            "name": "validateprms",
            "base": "",
            "fields": [
-              {"name": "params", "type": "variant_breakout_parametrs_expire_parametrs_percent_parametrs[]"}
+              {"name": "params", "type": "referral_params[]"}
            ]
         },
         {
            "name": "setparams",
            "base": "",
            "fields": [
-              {"name": "params", "type": "variant_breakout_parametrs_expire_parametrs_percent_parametrs[]"}
+              {"name": "params", "type": "referral_params[]"}
            ]
         },
         {

@@ -43,7 +43,7 @@ struct percent_parametrs_t : parameter {
 };
 using percent_parametrs = param_wrapper<percent_parametrs_t,1>;
 
-#define referral_params std::variant<breakout_parametrs, expire_parametrs, percent_parametrs>
+using referral_params = std::variant<breakout_parametrs, expire_parametrs, percent_parametrs>;
 
 struct referral_state {
     breakout_parametrs breakout_params;

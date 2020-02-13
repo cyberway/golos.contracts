@@ -16,6 +16,10 @@
         {
             "new_type_name": "vesting_withdraw",
             "type": "vesting_withdraw_t"
+        },
+        {
+            "new_type_name": "vesting_param",
+            "type": "variant_vesting_withdraw_vesting_amount_vesting_delegation_vesting_bwprovider"
         }],
   "variants": [{
       "name": "variant_vesting_withdraw_vesting_amount_vesting_delegation_vesting_bwprovider",
@@ -130,7 +134,7 @@
        "base": "",
        "fields": [
           {"name":"symbol", "type":"symbol"},
-          {"name":"params", "type":"variant_vesting_withdraw_vesting_amount_vesting_delegation_vesting_bwprovider[]"}
+          {"name":"params", "type":"vesting_param[]"}
        ]
     },
     {
@@ -138,7 +142,7 @@
        "base": "",
        "fields": [
           {"name":"symbol", "type":"symbol"},
-          {"name":"params", "type":"variant_vesting_withdraw_vesting_amount_vesting_delegation_vesting_bwprovider[]"}
+          {"name":"params", "type":"vesting_param[]"}
        ]
     },
 
