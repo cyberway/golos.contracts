@@ -29,7 +29,12 @@ RUN cd golos.contracts/cyberway.contracts \
         -DCMAKE_INSTALL_PREFIX=/opt/golos.contracts/ \
         -Dcyberway.cdt_DIR=/opt/cyberway.cdt/lib/cmake/cyberway.cdt \
         -DEOSIO_ROOT=/opt/cyberway \
-    && cmake --build build --target install
+    && cmake --build build --target install \
+    && /opt/cyberway.cdt/bin/cyberway-abidiff /opt/golos.contracts/golos.social/golos.social.abi ./golos.social/golos.social.abi \
+    && /opt/cyberway.cdt/bin/cyberway-abidiff /opt/golos.contracts/golos.memo/golos.memo.abi ./golos.memo/golos.memo.abi \
+    && /opt/cyberway.cdt/bin/cyberway-abidiff /opt/golos.contracts/golos.vesting/golos.vesting.abi ./golos.vesting/golos.vesting.abi \
+    && /opt/cyberway.cdt/bin/cyberway-abidiff /opt/golos.contracts/golos.referral/golos.referral.abi ./golos.referral/abi/golos.referral.abi \
+    && echo "abidiff check passed"
 
 
 FROM ubuntu:18.04

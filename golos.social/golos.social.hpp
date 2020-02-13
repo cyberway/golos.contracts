@@ -5,20 +5,20 @@ namespace golos {
 
 using namespace eosio;
 
-class social : public contract {
+class [[eosio::contract("golos.social")]] social : public contract {
 private:
     using contract::contract;
 public:
-    void pin(name pinner, name pinning);
-    void addpin(name pinner, name pinning);
-    void unpin(name pinner, name pinning);
+    [[eosio::action]] void pin(name pinner, name pinning);
+    [[eosio::action]] void addpin(name pinner, name pinning);
+    [[eosio::action]] void unpin(name pinner, name pinning);
 
-    void block(name blocker, name blocking);
-    void addblock(name blocker, name blocking);
-    void unblock(name blocker, name blocking);
+    [[eosio::action]] void block(name blocker, name blocking);
+    [[eosio::action]] void addblock(name blocker, name blocking);
+    [[eosio::action]] void unblock(name blocker, name blocking);
 
-    void updatemeta(name account, accountmeta meta);
-    void deletemeta(name account);
+    [[eosio::action]] void updatemeta(name account, accountmeta meta);
+    [[eosio::action]] void deletemeta(name account);
 
     // TODO: Temporarily disabled - not all blockings stored in table and now this method can return wrong
     // static inline bool is_blocking(name code, name blocker, name blocking) {

@@ -10,7 +10,7 @@ using namespace eosio;
 // class [[eosio::contract("golos.memo")]] memo: public contract {
 class memo {
 
-    struct [[eosio::table("memo")]] memo_key {
+    struct memo_key {
         name name;
         public_key key;
 
@@ -18,7 +18,7 @@ class memo {
             return name.value;
         }
     };
-    using memo_tbl = eosio::multi_index<"memo"_n, memo_key>;
+    using memo_tbl [[using eosio: order("name","asc"), contract("golos.memo")]] = eosio::multi_index<"memo"_n, memo_key>;
 
 public:
     // using contract::contract;

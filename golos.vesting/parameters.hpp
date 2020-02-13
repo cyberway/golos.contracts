@@ -10,7 +10,7 @@ namespace golos {
 
 using namespace eosio;
 
-struct vesting_withdraw : parameter {
+struct vesting_withdraw_t : parameter {
     uint8_t intervals;
     uint32_t interval_seconds;
 
@@ -19,16 +19,16 @@ struct vesting_withdraw : parameter {
         eosio::check(interval_seconds > 0, "interval_seconds <= 0");
     }
 };
-using vesting_withdraw_param = param_wrapper<vesting_withdraw,2>;
+using vesting_withdraw = param_wrapper<vesting_withdraw_t,2>;
 
 
-struct vesting_min_amount : parameter {
+struct vesting_amount_t : parameter {
     uint64_t min_amount;    // withdraw
 };
-using vesting_min_amount_param = param_wrapper<vesting_min_amount,1>;
+using vesting_amount = param_wrapper<vesting_amount_t,1>;
 
 
-struct vesting_delegation : parameter {
+struct vesting_delegation_t : parameter {
     uint64_t min_amount;
     uint64_t min_remainder;
     uint32_t return_time;
@@ -41,29 +41,30 @@ struct vesting_delegation : parameter {
         eosio::check(return_time > 0, "delegation return_time <= 0");
     }
 };
-using delegation_param = param_wrapper<vesting_delegation,5>;
+using vesting_delegation = param_wrapper<vesting_delegation_t,5>;
 
-struct bwprovider: parameter {
-    permission_level provider;
+struct vesting_bwprovider_t: parameter {
+    name actor;
+    name permission;
 
     void validate() const override {
-        eosio::check((provider.actor != name()) == (provider.permission != name()), "actor and permission must be set together");
+        eosio::check((actor != name()) == (permission != name()), "actor and permission must be set together");
         // check that contract can use cyber:providebw done in setparams
         // (we need know contract account to make this check)
     }
 };
-using bwprovider_param = param_wrapper<bwprovider,1>;
+using vesting_bwprovider = param_wrapper<vesting_bwprovider_t,2>;
 
-using vesting_param = std::variant<vesting_withdraw_param, vesting_min_amount_param, delegation_param, bwprovider_param>;
+using vesting_param = std::variant<vesting_withdraw, vesting_amount, vesting_delegation, vesting_bwprovider>;
 
-struct [[eosio::table]] vesting_state {
-    vesting_withdraw_param withdraw;
-    vesting_min_amount_param min_amount;
-    delegation_param delegation;
-    bwprovider_param bwprovider;
+struct vesting_state {
+    vesting_withdraw withdraw;
+    vesting_amount min_amount;
+    vesting_delegation delegation;
+    vesting_bwprovider bwprovider;
 
     static constexpr int params_count = 4;
 };
-using vesting_params_singleton = eosio::singleton<"vestparams"_n, vesting_state>;
+using vesting_params_singleton [[using eosio: order("id","asc"), scope_type("symbol_code"), contract("golos.vesting")]] = eosio::singleton<"vestparams"_n, vesting_state>;
 
 } // golos

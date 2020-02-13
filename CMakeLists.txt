@@ -32,12 +32,16 @@ else()
    set(TEST_BUILD_TYPE ${CMAKE_BUILD_TYPE})
 endif()
 
+macro(install_contract TARGET)
+   install (TARGETS ${TARGET}.wasm DESTINATION ${CMAKE_INSTALL_PREFIX}/${TARGET}/)
+   install (FILES ${CMAKE_CURRENT_BINARY_DIR}/${TARGET}.abi DESTINATION ${CMAKE_INSTALL_PREFIX}/${TARGET}/)
+endmacro()
+
 macro(add_contract_with_abi TARGET ABIFILE)
    add_executable( ${TARGET}.wasm ${ARGN} )
    target_compile_options( ${TARGET}.wasm PUBLIC -std=c++17)
    configure_file(${ABIFILE} ${CMAKE_CURRENT_BINARY_DIR}/${TARGET}.abi COPYONLY)
-   install (TARGETS ${TARGET}.wasm DESTINATION ${CMAKE_INSTALL_PREFIX}/${TARGET}/)
-   install (FILES ${CMAKE_CURRENT_BINARY_DIR}/${TARGET}.abi DESTINATION ${CMAKE_INSTALL_PREFIX}/${TARGET}/)
+   install_contract(${TARGET})
 endmacro()
 
 if (NOT DEFINED TOKEN_INCLUDE_PATH)

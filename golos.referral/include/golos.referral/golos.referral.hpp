@@ -7,7 +7,7 @@ namespace golos {
 
 using namespace eosio;
 
-class referral: public contract {
+class [[eosio::contract("golos.referral")]] referral: public contract {
 public:
     using contract::contract;
 
@@ -17,8 +17,8 @@ public:
     [[eosio::action]]
     void setparams(std::vector<referral_params> params);
 
-    [[eosio::action]]
-    void addreferral(name referrer, name referral, uint16_t percent, uint64_t expire, asset breakout);
+    [[eosio::action("addreferral")]]
+    void add_referral(name referrer, name referral, uint16_t percent, uint64_t expire, asset breakout);
 
     [[eosio::action]]
     void closeoldref();
@@ -26,7 +26,7 @@ public:
     void on_transfer(name from, name to, asset quantity, std::string memo);
 
 private:
-    struct obj_referral {
+    struct addreferral {
         name referrer;
         name referral;
         uint16_t percent;
@@ -42,12 +42,16 @@ private:
             return status;
         }
     };
-    using referrals_table = eosio::multi_index< "referrals"_n, obj_referral,
-                            eosio::indexed_by< "referrerkey"_n, eosio::const_mem_fun<obj_referral, uint64_t, &obj_referral::referrer_key> >,
-                            eosio::indexed_by< "expirekey"_n, eosio::const_mem_fun<obj_referral, uint64_t, &obj_referral::expire_key> > >;
+
+    using key_index [[using eosio: order("referrer", "asc"), non_unique]] =
+        eosio::indexed_by<"referrerkey"_n, eosio::const_mem_fun<addreferral, uint64_t, &addreferral::referrer_key>>;
+    using expirekey_index [[using eosio: order("expire", "asc"), non_unique]] =
+        eosio::indexed_by<"expirekey"_n, eosio::const_mem_fun<addreferral, uint64_t, &addreferral::expire_key>>;
+    using referrals_table [[eosio::order("referral", "asc")]] =
+        eosio::multi_index<"referrals"_n, addreferral, key_index, expirekey_index>;
 
 public:
-    static inline obj_referral account_referrer(name contract_name, name referral) {
+    static inline addreferral account_referrer(name contract_name, name referral) {
         referrals_table referrals(contract_name, contract_name.value);
         auto itr = referrals.find(referral.value);
         if (itr != referrals.end()) {
@@ -56,7 +60,7 @@ public:
                 return *itr;
             }
         }
-        return obj_referral();
+        return addreferral();
     }
 
 };
