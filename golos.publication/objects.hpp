@@ -8,14 +8,20 @@
 #include <eosio/singleton.hpp>
 #include <eosio/crypto.hpp>
 
-namespace golos { namespace structures {
+namespace golos { 
+
+using percent_t = uint16_t;
+using signed_percent_t = int16_t;
+
+namespace structures {
 
 using namespace eosio;
 
 using counter_t = uint64_t;
+
 struct beneficiary {
     name account;
-    uint16_t weight;    // percent
+    percent_t weight;
 };
 
 struct mssgid {
@@ -45,11 +51,11 @@ struct message {
     uint64_t id;
     uint64_t date;
     uint64_t pool_date;
-    uint16_t tokenprop;     // percent
+    percent_t tokenprop;
     std::vector<structures::beneficiary> beneficiaries;
-    uint16_t rewardweight;  // percent
+    percent_t rewardweight;
     messagestate state;
-    uint16_t curators_prcnt;
+    percent_t curators_prcnt;
     uint64_t cashout_time;
     eosio::asset mssg_reward;
     eosio::asset max_payout;
@@ -98,7 +104,7 @@ struct delegate_voter {
     delegate_voter() = default;
 
     name delegator;
-    uint16_t interest_rate;
+    percent_t interest_rate;
 };
 
 struct voteinfo {
@@ -107,7 +113,7 @@ struct voteinfo {
     uint64_t id;
     uint64_t message_id;
     name voter;
-    int16_t weight;
+    signed_percent_t weight;
     uint64_t time;
     uint8_t count;
     std::vector<delegate_voter> delegators;
@@ -133,7 +139,7 @@ struct rewardrules {
     funcinfo mainfunc;
     funcinfo curationfunc;
     funcinfo timepenalty;
-    uint16_t maxtokenprop;  // percent  // TODO: move to params #828
+    percent_t maxtokenprop; // TODO: move to params #828
 };
 
 struct poolstate {
@@ -164,7 +170,7 @@ struct rewardpool {
     EOSLIB_SERIALIZE(rewardpool, (created)(rules)(state))
 };
 
-struct post_event {
+struct [[using eosio: event("poststate"), contract("golos.publication")]] post_event {
     name author;
     std::string permlink;
 
@@ -175,16 +181,16 @@ struct post_event {
     base_t sharesfn;
 };
 
-struct vote_event {
+struct [[using eosio: event("votestate"), contract("golos.publication")]] vote_event {
     name voter;
     name author;
     std::string permlink;
-    int16_t weight;
+    signed_percent_t weight;
     base_t curatorsw;
     base_t rshares;
 };
 
-struct pool_event {
+struct [[using eosio: event("poolstate"), contract("golos.publication")]] pool_event {
     uint64_t created;
     counter_t msgs;
     eosio::asset funds;
@@ -192,12 +198,16 @@ struct pool_event {
     wide_t rsharesfn;
 };
 
-struct reward_weight_event {
-    mssgid message_id;
-    uint16_t rewardweight;
+struct [[using eosio: event("poolerase"), contract("golos.publication")]] pool_erase_event {
+    uint64_t created;
 };
 
-struct post_reward_event {
+struct [[using eosio: event("rewardweight"), contract("golos.publication")]] reward_weight_event {
+    mssgid message_id;
+    percent_t rewardweight;
+};
+
+struct [[using eosio: event("postreward"), contract("golos.publication")]] post_reward_event {
     mssgid message_id;
     asset author_reward;
     asset benefactor_reward;
@@ -229,25 +239,26 @@ namespace tables {
 
 using namespace eosio;
 
-using id_index = indexed_by<N(primary), const_mem_fun<structures::message, uint64_t, &structures::message::primary_key>>;
-using cashout_index = indexed_by<N(bycashout), const_mem_fun<structures::message, uint64_t, &structures::message::by_cashout>>;
-using message_table = multi_index<N(message), structures::message, id_index, cashout_index>;
+using cashout_index [[using eosio: order("cashout_time","asc"), non_unique, contract("golos.publication")]] =
+    indexed_by<N(bycashout), const_mem_fun<structures::message, uint64_t, &structures::message::by_cashout>>;
+using message_table [[using eosio: order("id","asc"), contract("golos.publication")]] = multi_index<N(message), structures::message, cashout_index>;
 
-using permlink_id_index = indexed_by<N(primary), const_mem_fun<structures::permlink, uint64_t, &structures::permlink::primary_key>>;
-using permlink_value_index = indexed_by<N(byvalue), const_mem_fun<structures::permlink, std::string, &structures::permlink::secondary_key>>;
-using permlink_table = multi_index<N(permlink), structures::permlink, permlink_id_index, permlink_value_index>;
+using permlink_value_index [[using eosio: order("value","asc"), contract("golos.publication")]] =
+    indexed_by<N(byvalue), const_mem_fun<structures::permlink, std::string, &structures::permlink::secondary_key>>;
+using permlink_table [[using eosio: order("id","asc"), contract("golos.publication")]] = multi_index<N(permlink), structures::permlink, permlink_value_index>;
 
-using vote_id_index = indexed_by<N(id), const_mem_fun<structures::voteinfo, uint64_t, &structures::voteinfo::primary_key>>;
-using vote_messageid_index = indexed_by<N(messageid), eosio::composite_key<structures::voteinfo,
-      eosio::member<structures::voteinfo, uint64_t, &structures::voteinfo::message_id>,
-      eosio::member<structures::voteinfo, base_t, &structures::voteinfo::curatorsw>>>;
-using vote_group_index = indexed_by<N(byvoter), eosio::composite_key<structures::voteinfo,
-      eosio::member<structures::voteinfo, uint64_t, &structures::voteinfo::message_id>,
-      eosio::member<structures::voteinfo, name, &structures::voteinfo::voter>>>;
-using vote_table = multi_index<N(vote), structures::voteinfo, vote_id_index, vote_messageid_index, vote_group_index>;
+using vote_messageid_index [[using eosio: order("message_id","asc"), order("curatorsw","desc"), non_unique, contract("golos.publication")]] =
+    indexed_by<N(messageid), eosio::composite_key<structures::voteinfo,
+        eosio::member<structures::voteinfo, uint64_t, &structures::voteinfo::message_id>,
+        eosio::member<structures::voteinfo, base_t, &structures::voteinfo::curatorsw>>>;
+using vote_group_index [[using eosio: order("message_id","asc"), order("voter","asc"), contract("golos.publication")]] =
+    indexed_by<N(byvoter), eosio::composite_key<structures::voteinfo,
+        eosio::member<structures::voteinfo, uint64_t, &structures::voteinfo::message_id>,
+        eosio::member<structures::voteinfo, name, &structures::voteinfo::voter>>>;
+using vote_table [[using eosio: order("id","asc"), contract("golos.publication")]] = multi_index<N(vote), structures::voteinfo, vote_messageid_index, vote_group_index>;
 
-using reward_pools = multi_index<N(rewardpools), structures::rewardpool>;
-using limit_table = multi_index<N(limit), structures::limitparams>;
+using reward_pools [[using eosio: order("created","asc"), contract("golos.publication")]] = multi_index<N(rewardpools), structures::rewardpool>;
+using limit_table [[using eosio: order("act","asc"), contract("golos.publication")]] = multi_index<N(limit), structures::limitparams>;
 
 }
 

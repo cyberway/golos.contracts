@@ -21,7 +21,7 @@ bool operator<(const reward_pool& l, const reward_pool& r) {
     return std::tie(l.name, l.percent) < std::tie(r.name, r.percent);
 }
 
-struct reward_pools: parameter {
+struct reward_pools_t: parameter {
     std::vector<reward_pool> pools;
 
     void validate() const override {
@@ -53,9 +53,9 @@ struct reward_pools: parameter {
         eosio::check(have0, "1 of pools must have 0% value (remainig to 100%)");
     }
 };
-using reward_pools_param = param_wrapper<reward_pools,1>;
+using reward_pools = param_wrapper<reward_pools_t,1>;
 
-struct inflation_rate: parameter {
+struct inflation_rate_t: parameter {
     uint16_t start;         // INFLATION_RATE_START_PERCENT
     uint16_t stop;          // INFLATION_RATE_STOP_PERCENT
     uint32_t narrowing;     // INFLATION_NARROWING_PERIOD
@@ -65,45 +65,46 @@ struct inflation_rate: parameter {
         eosio::check(start != stop || narrowing == 0, "inflation_rate: if start == stop then narrowing must be 0");
     }
 };
-using infrate_params = param_wrapper<inflation_rate,3>;
+using inflation_rate = param_wrapper<inflation_rate_t,3>;
 
-struct emit_token: parameter {
+struct emit_token_t: parameter {
     symbol symbol;
 };
-using emit_token_params = param_wrapper<emit_token,1>;
+using emit_token = param_wrapper<emit_token_t,1>;
 
-struct emit_interval: parameter {
+struct emit_interval_t: parameter {
     uint16_t value;
     
     void validate() const override {
         eosio::check(value > 0, "interval must be positive");
     }
 };
-using emit_interval_param = param_wrapper<emit_interval,1>;
+using emit_interval = param_wrapper<emit_interval_t,1>;
 
-struct bwprovider: parameter {
-    permission_level provider;
+struct bwprovider_t: parameter {
+    name actor;
+    name permission;
 
     void validate() const override {
-        eosio::check((provider.actor != name()) == (provider.permission != name()), "actor and permission must be set together");
+        eosio::check((actor != name()) == (permission != name()), "actor and permission must be set together");
         // check that contract can use cyber:providebw done in setparams
         // (we need know contract account to make this check)
     }
 };
-using bwprovider_param = param_wrapper<bwprovider,1>;
+using bwprovider = param_wrapper<bwprovider_t,2>;
 
-using emit_param = std::variant<infrate_params, reward_pools_param, emit_token_params, emit_interval_param, bwprovider_param>;
+using emit_param = std::variant<inflation_rate, reward_pools, emit_token, emit_interval, bwprovider>;
 
-struct [[eosio::table]] emit_state {
-    infrate_params infrate;
-    reward_pools_param pools;
-    emit_token_params token;
-    emit_interval_param interval; 
-    bwprovider_param bwprovider;
+struct emit_state {
+    inflation_rate infrate;
+    reward_pools pools;
+    emit_token token;
+    emit_interval interval; 
+    bwprovider bwprovider;
 
     static constexpr int params_count = 5;
 };
-using emit_params_singleton = eosio::singleton<"emitparams"_n, emit_state>;
+using emit_params_singleton [[using eosio: order("id","asc"), contract("golos.emit")]] = eosio::singleton<"emitparams"_n, emit_state>;
 
 
 } // golos

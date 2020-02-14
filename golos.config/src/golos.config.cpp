@@ -1,5 +1,5 @@
-#include "golos.config/golos.config.hpp"
-#include "golos.config/config.hpp"
+#include <golos.config/golos.config.hpp>
+#include <golos.config/config.hpp>
 #include <common/parameter_ops.hpp>
 #include <eosio/transaction.hpp>
 
@@ -12,19 +12,19 @@ using std::vector;
 struct emit_params_setter: set_params_visitor<emit_state> {
     using set_params_visitor::set_params_visitor; // enable constructor
 
-    bool operator()(const infrate_params& p) {
+    bool operator()(const inflation_rate& p) {
         return set_param(p, &emit_state::infrate);
     }
-    bool operator()(const reward_pools_param& p) {
+    bool operator()(const reward_pools& p) {
         return set_param(p, &emit_state::pools);
     }
-    bool operator()(const emit_token_params& p) {
+    bool operator()(const emit_token& p) {
         return set_param(p, &emit_state::token);
     }
-    bool operator()(const emit_interval_param& p) {
+    bool operator()(const emit_interval& p) {
         return set_param(p, &emit_state::interval);
     }
-    bool operator()(const bwprovider_param& p) {
+    bool operator()(const bwprovider& p) {
         return set_param(p, &emit_state::bwprovider);
     }
 };
@@ -59,13 +59,13 @@ struct emit_state_updater: state_params_update_visitor<emit_state> {
 
     static const int THRESHOLD = 3; // test only; TODO: get from cfg_params_singleton
 
-    void operator()(const infrate_params& p) {
+    void operator()(const inflation_rate& p) {
         update_state(&emit_state::infrate, THRESHOLD);
     }
-    void operator()(const reward_pools_param& p) {
+    void operator()(const reward_pools& p) {
         update_state(&emit_state::pools, THRESHOLD);
     }
-    void operator()(const emit_token_params& p) {
+    void operator()(const emit_token& p) {
         update_state(&emit_state::token, THRESHOLD);
     }
 };

@@ -1,22 +1,17 @@
 {
-  "version": "cyberway::abi/1.0",
+  "version": "cyberway::abi/1.1",
   "types": [{
       "new_type_name": "base_t",
       "type": "int64"
-    },{
-      "new_type_name": "wide_t",
-      "type": "int128"
     },{
       "new_type_name": "index_t",
       "type": "uint64"
     },{
       "new_type_name": "enum_t",
       "type": "uint8"
-    },{
-      "new_type_name": "counter_t",
-      "type": "uint64"
     }
   ],
+  "variants": [],
   "structs": [
   {
     "name": "value",
@@ -119,33 +114,7 @@
     ]
   },
   {
-    "name": "useandstore",
-    "base": "",
-    "fields": [
-        {
-            "name": "user",
-            "type": "name"
-        },
-        {
-            "name": "token_code",
-            "type": "symbol_code"
-        },
-        {
-            "name": "charge_id",
-            "type": "uint8"
-        },
-        {
-            "name": "stamp_id",
-            "type": "uint64"
-        },
-        {
-            "name": "price",
-            "type": "int64"
-        }
-    ]
-  },
-  {
-    "name": "useandnotify",
+    "name": "usenotifygt",
     "base": "",
     "fields": [
         {
@@ -166,7 +135,7 @@
         },
         {
             "name": "id",
-            "type": "uint64"
+            "type": "int64"
         },
         {
             "name": "code",
@@ -183,7 +152,7 @@
     ]
   },
   {
-    "name": "removestored",
+    "name": "usenotifylt",
     "base": "",
     "fields": [
         {
@@ -199,8 +168,24 @@
             "type": "uint8"
         },
         {
-            "name": "stamp_id",
-            "type": "uint64"
+            "name": "price_arg",
+            "type": "int64"
+        },
+        {
+            "name": "id",
+            "type": "int64"
+        },
+        {
+            "name": "code",
+            "type": "name"
+        },
+        {
+            "name": "action_name",
+            "type": "name"
+        },
+        {
+            "name": "cutoff",
+            "type": "int64"
         }
     ]
   },
@@ -311,10 +296,10 @@
             "type": "base_t"
         }
     ]
-  },
+  }
   ],
   "events": [
-    {"name": "chargestate", "type": "chargestate"},
+    {"name": "chargestate", "type": "chargestate"}
   ],
   "actions": [
   {
@@ -327,19 +312,11 @@
   },
   {
     "name": "usenotifygt",
-    "type": "useandnotify"
+    "type": "usenotifygt"
   },
   {
     "name": "usenotifylt",
-    "type": "useandnotify"
-  },
-  {
-    "name": "useandstore",
-    "type": "useandstore"
-  },
-  {
-    "name": "removestored",
-    "type": "removestored"
+    "type": "usenotifylt"
   }
   ],
   "tables": [

@@ -22,10 +22,50 @@
     },{
       "new_type_name": "signed_percent_t",
       "type": "int16"
+    },
+    {
+        "new_type_name": "st_bwprovider",
+        "type": "st_bwprovider_t"
+    },
+    {
+        "new_type_name": "st_cashout_window",
+        "type": "st_cashout_window_t"
+    },
+    {
+        "new_type_name": "st_curators_prcnt",
+        "type": "st_curators_prcnt_t"
+    },
+    {
+        "new_type_name": "st_max_beneficiaries",
+        "type": "st_max_beneficiaries_t"
+    },
+    {
+        "new_type_name": "st_max_comment_depth",
+        "type": "st_max_comment_depth_t"
+    },
+    {
+        "new_type_name": "st_max_vote_changes",
+        "type": "st_max_vote_changes_t"
+    },
+    {
+        "new_type_name": "st_min_abs_rshares",
+        "type": "st_min_abs_rshares_t"
+    },
+    {
+        "new_type_name": "st_referral_acc",
+        "type": "st_referral_acc_t"
+    },
+    {
+        "new_type_name": "st_social_acc",
+        "type": "st_social_acc_t"
+    },
+    {
+        "new_type_name": "posting_params",
+        "type": "variant_st_max_vote_changes_st_cashout_window_st_max_beneficiaries_st_max_comment_depth_st_social_acc_st_referral_acc_st_curators_prcnt_st_bwprovider_st_min_abs_rshares"
     }
   ],
   "variants": [{
-    "name": "posting_param",
+    "name": "variant_st_max_vote_changes_st_cashout_window_st_max_beneficiaries_st_max_comment_depth_st_social_acc_st_referral_acc_st_curators_prcnt_st_bwprovider_st_min_abs_rshares",
     "types": [
       "st_max_vote_changes",
       "st_cashout_window",
@@ -346,7 +386,25 @@
     ]
   },
   {
-    "name": "vote",
+    "name": "upvote",
+    "base": "",
+    "fields": [
+      {
+        "name": "voter",
+        "type": "name"
+      },
+      {
+        "name": "message_id",
+        "type": "mssgid"
+      },
+      {
+        "name": "weight",
+        "type": "percent_t"
+      }
+    ]
+  },
+  {
+    "name": "downvote",
     "base": "",
     "fields": [
       {
@@ -600,8 +658,13 @@
     ]
   },
   {
-    "name": "st_max_vote_changes",
-    "base": "",
+      "name": "parameter",
+      "base": "",
+      "fields": []
+  },
+  {
+    "name": "st_max_vote_changes_t",
+    "base": "parameter",
     "fields": [
       {
         "name": "value",
@@ -610,8 +673,8 @@
     ]
   },
   {
-    "name": "st_cashout_window",
-    "base": "",
+    "name": "st_cashout_window_t",
+    "base": "parameter",
     "fields": [
       {
         "name": "window",
@@ -624,8 +687,8 @@
     ]
   },
   {
-    "name": "st_max_beneficiaries",
-    "base": "",
+    "name": "st_max_beneficiaries_t",
+    "base": "parameter",
     "fields": [
       {
         "name": "value",
@@ -634,8 +697,8 @@
     ]
   },
   {
-    "name": "st_max_comment_depth",
-    "base": "",
+    "name": "st_max_comment_depth_t",
+    "base": "parameter",
     "fields": [
       {
         "name": "value",
@@ -644,8 +707,8 @@
     ]
   },
   {
-    "name": "st_social_acc",
-    "base": "",
+    "name": "st_social_acc_t",
+    "base": "parameter",
     "fields": [
       {
         "name": "value",
@@ -654,8 +717,8 @@
     ]
   },
   {
-    "name": "st_referral_acc",
-    "base": "",
+    "name": "st_referral_acc_t",
+    "base": "parameter",
     "fields": [
       {
         "name": "value",
@@ -664,8 +727,8 @@
     ]
   },
   {
-    "name": "st_curators_prcnt",
-    "base": "",
+    "name": "st_curators_prcnt_t",
+    "base": "parameter",
     "fields": [
       {
         "name": "min_curators_prcnt",
@@ -678,16 +741,16 @@
     ]
   },
   {
-     "name": "st_bwprovider",
-     "base": "",
+     "name": "st_bwprovider_t",
+     "base": "parameter",
      "fields": [
         {"type": "name", "name": "actor"},
         {"type": "name", "name": "permission"}
      ]
   },
   {
-     "name": "st_min_abs_rshares",
-     "base": "",
+     "name": "st_min_abs_rshares_t",
+     "base": "parameter",
      "fields": [
         {"type": "uint64", "name": "value"}
      ]
@@ -744,7 +807,7 @@
     "fields": [
       {
         "name": "params",
-        "type": "posting_param[]"
+        "type": "posting_params[]"
       }
     ]
   },
@@ -841,24 +904,6 @@
     ]
   },
   {
-    "name": "recipient",
-    "base": "",
-    "fields": [
-        {
-            "name": "to",
-            "type": "name"
-        },
-        {
-            "name": "quantity",
-            "type": "asset"
-        },
-        {
-            "name": "memo",
-            "type": "string"
-        }
-    ]
-  },
-  {
     "name": "setmaxpayout",
     "base": "",
     "fields": [
@@ -882,6 +927,15 @@
       { "type": "uint32", "name": "childcount" }
     ]
   },{
+    "name": "permlink_info",
+    "base": "",
+    "fields": [
+      { "type": "mssgid", "name": "msg" },
+      { "type": "mssgid", "name": "parent" },
+      { "type": "uint16", "name": "level" },
+      { "type": "uint32", "name": "childcount" }
+    ]
+  },{
     "name": "delpermlink",
     "base": "",
     "fields": [
@@ -891,7 +945,7 @@
     "name": "addpermlinks",
     "base": "",
     "fields": [
-      { "type": "addpermlink[]", "name": "permlinks" }
+      { "type": "permlink_info[]", "name": "permlinks" }
     ]
   },{
     "name": "delpermlinks",
@@ -985,11 +1039,11 @@
   },
   {
     "name": "upvote",
-    "type": "vote"
+    "type": "upvote"
   },
   {
     "name": "downvote",
-    "type": "vote"
+    "type": "downvote"
   },
   {
     "name": "unvote",

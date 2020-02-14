@@ -1,4 +1,5 @@
-add_contract_with_abi(golos.emit abi/golos.emit.abi src/golos.emit.cpp)
+add_contract(golos.emit golos.emit src/golos.emit.cpp)
+install_contract(golos.emit)
 target_include_directories(golos.emit.wasm
    PUBLIC
    ${TOKEN_INCLUDE_PATH}

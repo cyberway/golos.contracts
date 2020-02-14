@@ -15,13 +15,13 @@ public:
     using contract::contract;
 
     // own parameters
-    [[eosio::action]] void validateprms(std::vector<cfg_param>);
-    [[eosio::action]] void setparams(std::vector<cfg_param>);
+    void validateprms(std::vector<cfg_param>);
+    void setparams(std::vector<cfg_param>);
 
     // base for recalculatable parameters
-    [[eosio::action]] void updateparams(name, std::vector<cfg_param>);
-    [[eosio::action]] void updateparamse(name, std::vector<emit_param>);    // TODO: maybe combine into 1 action accepting all params
-    [[eosio::action]] void notifytop(std::vector<name>);
+    void updateparams(name, std::vector<cfg_param>);
+    [[eosio::action]] void updateparamse(name who, std::vector<emit_param> params);    // TODO: maybe combine into 1 action accepting all params
+    [[eosio::action]] void notifytop(std::vector<name> top);
 
 private:
     std::vector<name> get_top_witnesses();
