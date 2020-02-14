@@ -22,6 +22,9 @@ inline eosio::chain::name operator ""_n() {
 using token = ${TOKEN_CLASS};
 #endif
 
+#define CYBER_TOKEN "${TOKEN_NAME}"
+#define GOLOS_VESTING "${VESTING_NAME}"
+
 namespace golos { namespace config {
 
 // contracts

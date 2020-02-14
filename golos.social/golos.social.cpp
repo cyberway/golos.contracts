@@ -5,8 +5,6 @@ namespace golos {
 
 using namespace eosio;
 
-EOSIO_DISPATCH(social, (pin)(addpin)(unpin)(block)(addblock)(unblock)(updatemeta)(deletemeta))
-
 void social::pin(name pinner, name pinning) {
     require_auth(pinner);
 

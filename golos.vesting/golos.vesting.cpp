@@ -592,7 +592,3 @@ void vesting::providebw_for_trx(transaction& trx, const permission_level& provid
 }
 
 } // golos
-
-DISPATCH_WITH_BULK_TRANSFER(golos::vesting, on_transfer, on_bulk_transfer, (validateprms)(setparams)
-        (retire)(unlocklimit)(withdraw)(stopwithdraw)(delegate)(undelegate)(create)
-        (open)(close)(procwaiting))

@@ -174,5 +174,3 @@ void emission::schedule_next(uint32_t delay) {
 
 
 } // golos
-
-EOSIO_DISPATCH(golos::emission, (setparams)(validateprms)(emit)(start)(stop))
