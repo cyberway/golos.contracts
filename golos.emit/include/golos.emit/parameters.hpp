@@ -93,7 +93,7 @@ struct bwprovider_t: parameter {
 };
 using bwprovider = param_wrapper<bwprovider_t,2>;
 
-#define emit_param std::variant<inflation_rate, reward_pools, emit_token, emit_interval, bwprovider>
+using emit_param = std::variant<inflation_rate, reward_pools, emit_token, emit_interval, bwprovider>;
 
 struct emit_state {
     inflation_rate infrate;

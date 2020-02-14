@@ -24,6 +24,10 @@
         {
             "new_type_name": "update_auth",
             "type": "update_auth_t"
+        },
+        {
+            "new_type_name": "ctrl_param",
+            "type": "variant_ctrl_token_multisig_acc_max_witnesses_multisig_perms_max_witness_votes_update_auth"
         }
     ],
     "variants": [{
@@ -166,12 +170,12 @@
             "name": "setparams",
             "base": "",
             "fields": [
-                {"type": "variant_ctrl_token_multisig_acc_max_witnesses_multisig_perms_max_witness_votes_update_auth[]", "name": "params"}]
+                {"type": "ctrl_param[]", "name": "params"}]
         }, {
             "name": "validateprms",
             "base": "",
             "fields": [
-                {"type": "variant_ctrl_token_multisig_acc_max_witnesses_multisig_perms_max_witness_votes_update_auth[]", "name": "params"}]
+                {"type": "ctrl_param[]", "name": "params"}]
         }, {
             "name": "witnessstate",
             "base": "",

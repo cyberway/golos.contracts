@@ -95,9 +95,9 @@ namespace golos {
     };
     using st_min_abs_rshares = param_wrapper<st_min_abs_rshares_t, 1>;
 
-    #define posting_params std::variant<st_max_vote_changes, st_cashout_window, st_max_beneficiaries, \
-          st_max_comment_depth, st_social_acc, st_referral_acc, st_curators_prcnt, st_bwprovider, \
-          st_min_abs_rshares>
+    using posting_params = std::variant<st_max_vote_changes, st_cashout_window, st_max_beneficiaries,
+          st_max_comment_depth, st_social_acc, st_referral_acc, st_curators_prcnt, st_bwprovider,
+          st_min_abs_rshares>;
 
     struct posting_state {
         st_max_vote_changes max_vote_changes;

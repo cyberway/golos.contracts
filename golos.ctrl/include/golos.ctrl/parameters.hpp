@@ -75,7 +75,7 @@ using multisig_perms = param_wrapper<param::multisig_perms_t,3>;
 using max_witness_votes = param_wrapper<param::max_witness_votes_t,1>;
 using update_auth = param_wrapper<param::update_auth_t,1>;
 
-#define ctrl_param std::variant<ctrl_token, multisig_acc, max_witnesses, multisig_perms, max_witness_votes, update_auth>
+using ctrl_param = std::variant<ctrl_token, multisig_acc, max_witnesses, multisig_perms, max_witness_votes, update_auth>;
 
 struct ctrl_state {
     ctrl_token        token;

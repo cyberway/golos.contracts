@@ -58,6 +58,10 @@
     {
         "new_type_name": "st_social_acc",
         "type": "st_social_acc_t"
+    },
+    {
+        "new_type_name": "posting_params",
+        "type": "variant_st_max_vote_changes_st_cashout_window_st_max_beneficiaries_st_max_comment_depth_st_social_acc_st_referral_acc_st_curators_prcnt_st_bwprovider_st_min_abs_rshares"
     }
   ],
   "variants": [{
@@ -803,7 +807,7 @@
     "fields": [
       {
         "name": "params",
-        "type": "variant_st_max_vote_changes_st_cashout_window_st_max_beneficiaries_st_max_comment_depth_st_social_acc_st_referral_acc_st_curators_prcnt_st_bwprovider_st_min_abs_rshares[]"
+        "type": "posting_params[]"
       }
     ]
   },

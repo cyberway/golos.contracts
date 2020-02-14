@@ -19,6 +19,10 @@
     {
         "new_type_name": "reward_pools",
         "type": "reward_pools_t"
+    },
+    {
+        "new_type_name": "emit_param",
+        "type": "variant_inflation_rate_reward_pools_emit_token_emit_interval_bwprovider"
     }],
     "variants": [{
         "name": "variant_inflation_rate_reward_pools_emit_token_emit_interval_bwprovider",
@@ -80,7 +84,7 @@
             "name": "setparams",
             "base": "",
             "fields": [
-                {"type": "variant_inflation_rate_reward_pools_emit_token_emit_interval_bwprovider[]", "name": "params"}]
+                {"type": "emit_param[]", "name": "params"}]
         }, {
             "name": "state",
             "base": "",
