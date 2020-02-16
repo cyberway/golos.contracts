@@ -9,6 +9,7 @@
 #include <eosio/crypto.hpp>
 #include <vector>
 #include <string>
+#include <common/dispatchers.hpp>
 
 namespace golos {
 
@@ -74,6 +75,8 @@ public:
     [[eosio::action]] void unvotewitn(name voter, name witness);
 
     [[eosio::action]] void changevest(name who, asset diff);
+
+    ON_TRANSFER(CYBER_TOKEN, on_transfer)
     void on_transfer(name from, name to, asset quantity, std::string memo);
 
 private:

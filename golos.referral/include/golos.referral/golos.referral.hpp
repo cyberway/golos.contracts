@@ -2,6 +2,7 @@
 #include <eosio/eosio.hpp>
 #include <eosio/time.hpp>
 #include "parameters.hpp"
+#include <common/dispatchers.hpp>
 
 namespace golos {
 
@@ -23,6 +24,7 @@ public:
     [[eosio::action]]
     void closeoldref();
 
+    ON_TRANSFER(CYBER_TOKEN, on_transfer)
     void on_transfer(name from, name to, asset quantity, std::string memo);
 
 private:

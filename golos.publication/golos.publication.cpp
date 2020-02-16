@@ -13,69 +13,6 @@ namespace golos {
 
 using namespace atmsp::storable;
 
-extern "C" {
-    void apply(uint64_t receiver, uint64_t code, uint64_t action) {
-        //publication(receiver).apply(code, action);
-        auto execute_action = [&](const auto fn) {
-            return eosio::execute_action(eosio::name(receiver), eosio::name(code), fn);
-        };
-
-#define NN(x) N(x).value
-
-        if (NN(transfer) == action && config::token_name.value == code)
-            execute_action(&publication::on_transfer);
-
-        if (receiver != code)
-            return;
-
-        if (NN(createmssg) == action)
-            execute_action(&publication::createmssg);
-        if (NN(updatemssg) == action)
-            execute_action(&publication::updatemssg);
-        if (NN(deletemssg) == action)
-            execute_action(&publication::deletemssg);
-        if (NN(upvote) == action)
-            execute_action(&publication::upvote);
-        if (NN(downvote) == action)
-            execute_action(&publication::downvote);
-        if (NN(unvote) == action)
-            execute_action(&publication::unvote);
-        if (NN(closemssgs) == action)
-            execute_action(&publication::closemssgs);
-        if (NN(setrules) == action)
-            execute_action(&publication::setrules);
-        if (NN(setlimit) == action)
-            execute_action(&publication::setlimit);
-        if (NN(setparams) == action)
-            execute_action(&publication::setparams);
-        if (NN(reblog) == action)
-            execute_action(&publication::reblog);
-        if (NN(erasereblog) == action)
-            execute_action(&publication::erasereblog);
-        if (NN(setcurprcnt) == action)
-            execute_action(&publication::setcurprcnt);
-        if (NN(calcrwrdwt) == action)
-            execute_action(&publication::calcrwrdwt);
-        if (NN(paymssgrwrd) == action)
-            execute_action(&publication::paymssgrwrd);
-        if (NN(setmaxpayout) == action)
-            execute_action(&publication::setmaxpayout);
-        if (NN(deletevotes) == action)
-            execute_action(&publication::deletevotes);
-        if (NN(addpermlink) == action)
-            execute_action(&publication::addpermlink);
-        if (NN(delpermlink) == action)
-            execute_action(&publication::delpermlink);
-        if (NN(addpermlinks) == action)
-            execute_action(&publication::addpermlinks);
-        if (NN(delpermlinks) == action)
-            execute_action(&publication::delpermlinks);
-        if (NN(syncpool) == action)
-            execute_action(&publication::syncpool);
-    }
-#undef NN
-}
-
 struct posting_params_setter: set_params_visitor<posting_state> {
     std::optional<st_bwprovider_t> new_bwprovider;
     using set_params_visitor::set_params_visitor;

@@ -173,11 +173,4 @@ void charge::usenotifylt(name user, symbol_code token_code, uint8_t charge_id, i
         [](auto value, auto limit) {return value < limit;});
 }
 
-EOSIO_DISPATCH(charge, (use)(usenotifygt)(usenotifylt)
-#ifndef DISABLE_CHARGE_STORABLE
-    (useandstore)(removestored)
-#endif
-    (setrestorer)
-)
-
 } /// namespace golos

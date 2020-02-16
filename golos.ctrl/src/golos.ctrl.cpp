@@ -2,7 +2,6 @@
 #include <golos.ctrl/config.hpp>
 #include <golos.vesting/golos.vesting.hpp>
 #include <common/parameter_ops.hpp>
-#include <common/dispatchers.hpp>
 #include <cyber.bios/cyber.bios.hpp>
 #include <eosio/transaction.hpp>
 #include <eosio/event.hpp>
@@ -395,9 +394,3 @@ vector<name> control::top_witnesses() {
 }
 
 } // golos
-
-DISPATCH_WITH_TRANSFER(golos::control, on_transfer,
-    (validateprms)(setparams)
-    (regwitness)(unregwitness)
-    (startwitness)(stopwitness)
-    (votewitness)(unvotewitn)(changevest))

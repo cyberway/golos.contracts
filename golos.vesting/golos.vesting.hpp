@@ -5,6 +5,7 @@
 #include <eosio/eosio.hpp>
 #include <eosio/transaction.hpp>
 #include "config.hpp"
+#include <common/dispatchers.hpp>
 
 namespace golos {
 
@@ -33,8 +34,8 @@ public:
 
     [[eosio::action]] void procwaiting(symbol symbol, name payer);
 
-    void on_transfer(name from, name to, asset quantity, std::string memo);
-    void on_bulk_transfer(name from, std::vector<token::recipient> recipients);
+    ON_SIMPLE_TRANSFER(CYBER_TOKEN) void on_transfer(name from, name to, asset quantity, std::string memo);
+    ON_BULK_TRANSFER(CYBER_TOKEN) void on_bulk_transfer(name from, std::vector<token::recipient> recipients);
 
     // tables
     struct vesting_stats {

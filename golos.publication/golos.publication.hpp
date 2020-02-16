@@ -2,6 +2,7 @@
 #include "objects.hpp"
 #include "parameters.hpp"
 #include <eosio/transaction.hpp>
+#include <common/dispatchers.hpp>
 
 namespace golos {
 
@@ -18,6 +19,7 @@ public:
     void setrules(const funcparams& mainfunc, const funcparams& curationfunc, const funcparams& timepenalty,
         percent_t maxtokenprop, symbol tokensymbol);
 
+    ON_SIMPLE_TRANSFER(CYBER_TOKEN)
     void on_transfer(name from, name to, asset quantity, std::string memo = "");
 
     [[eosio::action]]

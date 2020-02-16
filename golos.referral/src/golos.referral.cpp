@@ -7,33 +7,6 @@ namespace golos {
 
 using namespace eosio;
 
-extern "C" {
-    void apply(uint64_t receiver, uint64_t code, uint64_t action) {
-        //referral(receiver).apply(code, action);
-        auto execute_action = [&](const auto fn) {
-            return eosio::execute_action(eosio::name(receiver), eosio::name(code), fn);
-        };
-
-#define NN(x) N(x).value
-
-        if (NN(transfer) == action && config::token_name.value == code)
-            execute_action(&referral::on_transfer);
-
-        if (receiver != code)
-            return;
-
-        if (NN(validateprms) == action)
-            execute_action(&referral::validateprms);
-        if (NN(setparams) == action)
-            execute_action(&referral::setparams);
-        if (NN(addreferral) == action)
-            execute_action(&referral::add_referral);
-        if (NN(closeoldref) == action)
-            execute_action(&referral::closeoldref);
-    }
-#undef NN
-}
-
 struct referral_params_setter: set_params_visitor<referral_state> {
     using set_params_visitor::set_params_visitor; // enable constructor
 

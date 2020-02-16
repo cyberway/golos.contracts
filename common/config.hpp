@@ -18,12 +18,12 @@ inline eosio::chain::name operator ""_n() {
 }
 #pragma clang diagnostic pop
 #else
-#include <${TOKEN_HEADER_FILE}>
-using token = ${TOKEN_CLASS};
+#include <cyber.token/cyber.token.hpp>
+using token = eosio::token;
 #endif
 
-#define CYBER_TOKEN "${TOKEN_NAME}"
-#define GOLOS_VESTING "${VESTING_NAME}"
+#define CYBER_TOKEN "cyber.token"
+#define GOLOS_VESTING "gls.vesting"
 
 namespace golos { namespace config {
 
@@ -37,8 +37,8 @@ static const auto workers_name  = "gls.worker"_n;
 static const auto referral_name = "gls.referral"_n;
 
 static const auto internal_name = "cyber"_n;
-static const auto token_name    = "${TOKEN_NAME}"_n;
-static const auto vesting_name  = "${VESTING_NAME}"_n;
+static const auto token_name    = "cyber.token"_n;
+static const auto vesting_name  = "gls.vesting"_n;
 
 // permissions
 static const auto code_name = "code"_n;
