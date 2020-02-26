@@ -12,7 +12,7 @@ find_package(cyberway.cdt)
 
 ### Check the version of cyberway.cdt
 set(VERSION_MATCH_ERROR_MSG "")
-EOSIO_CHECK_VERSION(VERSION_OUTPUT "${CYBERWAY_CDT_VERSION}"
+CYBERWAY_CHECK_VERSION(VERSION_OUTPUT "${CYBERWAY_CDT_VERSION}"
                                    "${CYBERWAY_CDT_VERSION_MIN}"
                                    "${CYBERWAY_CDT_VERSION_SOFT_MAX}"
                                    "${CYBERWAY_CDT_VERSION_HARD_MAX}"

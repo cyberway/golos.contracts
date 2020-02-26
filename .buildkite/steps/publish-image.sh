@@ -1,21 +1,23 @@
 #!/bin/bash
 set -euo pipefail
 
-IMAGETAG=${BUILDKITE_BRANCH:-master}
-BRANCHNAME=${BUILDKITE_BRANCH:-master}
+REVISION=$(git rev-parse HEAD)
 
 docker images
 
 docker login -u=$DHUBU -p=$DHUBP
-docker push cyberway/golos.contracts:${IMAGETAG}
 
-if [[ "${IMAGETAG}" == "master" ]]; then
-    docker tag cyberway/golos.contracts:${IMAGETAG} cyberway/golos.contracts:stable
-    docker push cyberway/golos.contracts:stable
+if [[ ${BUILDKITE_BRANCH} == "master" ]]; then
+    TAG=stable
+elif [[ ${BUILDKITE_BRANCH} == "develop" ]]; then
+    TAG=latest
+else
+    TAG=${BUILDKITE_BRANCH}
 fi
 
-if [[ "${IMAGETAG}" == "develop" ]]; then
-    docker tag cyberway/golos.contracts:${IMAGETAG} cyberway/golos.contracts:latest
-    docker push cyberway/golos.contracts:latest
-fi
+docker pull cyberway/golos.contracts:${REVISION}
+docker tag cyberway/golos.contracts:${REVISION} cyberway/golos.contracts:${TAG}
+docker push cyberway/golos.contracts:${TAG}
+
+
 
