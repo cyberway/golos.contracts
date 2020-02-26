@@ -6,14 +6,10 @@ FROM cyberway/builder:$buildtype as builder
 COPY --from=cdt /opt/cyberway.cdt /opt/cyberway.cdt
 COPY --from=cyberway /opt/cyberway /opt/cyberway
 
-ARG branch=master
-ARG ref=heads/$branch
+COPY . ./golos.contracts
 
-ADD https://api.github.com/repos/cyberway/golos.contracts/git/refs/$ref /etc/version.json
-RUN git clone -b $branch https://github.com/cyberway/golos.contracts.git --recursive
 
 RUN cd golos.contracts/cyberway.contracts \
-    && echo ":$(git rev-parse HEAD)" > version \
     && cmake -H. -B"build" \
         -GNinja \
         -DCMAKE_BUILD_TYPE=Release \
@@ -33,20 +29,15 @@ RUN cd golos.contracts/cyberway.contracts \
 
 
 FROM ubuntu:18.04
+ARG version=unknown
+ARG cyberway_contracts_version=unknown
 
-RUN apt-get update \
-    && DEBIAN_FRONTEND=noninteractive apt-get -y install openssl ca-certificates python3 python3-numpy python3-bson libusb-1.0-0-dev libcurl4-gnutls-dev \
-    && rm -rf /var/lib/apt/lists/*
-
-COPY --from=builder /golos.contracts/version /opt/golos.contracts/version
+COPY --from=builder /opt/golos.contracts/ /opt/golos.contracts/
 COPY --from=builder /opt/golos.contracts/ /opt/golos.contracts/
 COPY --from=builder /golos.contracts/build/tests/unit_test /opt/golos.contracts/unit_test
-
-COPY --from=builder /golos.contracts/cyberway.contracts/version /opt/cyberway.contracts/version
 COPY --from=builder /opt/cyberway.contracts/ /opt/cyberway.contracts/
 COPY --from=builder /golos.contracts/cyberway.contracts/build/tests/unit_test /opt/cyberway.contracts/unit_test
 COPY --from=builder /golos.contracts/cyberway.contracts/tests/test_contracts /opt/cyberway.contracts/test_contracts
-
 COPY --from=builder /golos.contracts/cyberway.contracts/scripts/bios-boot-sequence /opt/cyberway.contracts/scripts/bios-boot-sequence
 COPY --from=builder /golos.contracts/scripts /opt/golos.contracts/scripts
 COPY --from=builder /golos.contracts/scripts/boot-sequence.py /opt/golos.contracts/scripts/boot-sequence.py
@@ -57,7 +48,13 @@ COPY --from=cyberway /opt/cyberway/bin/cleos /opt/cyberway/bin/cleos
 COPY --from=cyberway /opt/cyberway/bin/keosd /opt/cyberway/bin/keosd
 COPY --from=cyberway /opt/cyberway/bin/create-genesis /opt/cyberway/bin/create-genesis
 
-RUN ldconfig && ln -s ../cyberway.contracts /opt/golos.contracts/cyberway.contracts
+RUN apt-get update \
+    && DEBIAN_FRONTEND=noninteractive apt-get -y install openssl ca-certificates python3 python3-numpy python3-bson libusb-1.0-0-dev libcurl4-gnutls-dev \
+    && rm -rf /var/lib/apt/lists/* \
+    && echo $version > /opt/golos.contracts/version \
+    && echo $cyberway_contracts_version > /opt/cyberway.contracts/version \
+    && ldconfig \
+    && ln -s ../cyberway.contracts /opt/golos.contracts/cyberway.contracts
 
 ENV CYBERWAY_TEST_CONTRACTS /opt/cyberway.contracts/test_contracts/
 ENV CYBERWAY_CONTRACTS /opt/cyberway.contracts/
