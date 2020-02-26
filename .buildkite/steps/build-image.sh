@@ -2,7 +2,6 @@
 set -euo pipefail
 
 REVISION=$(git rev-parse HEAD)
-MASTER_REVISION=$(git rev-parse origin/master)
 
 pushd cyberway.contracts
 
@@ -10,10 +9,7 @@ CYBERWAY_CONTRACTS_REVISION=$(git rev-parse HEAD)
 
 popd
 
-TAGREF=${BUILDKITE_TAG:+"tags/$BUILDKITE_TAG"}
-REF=${TAGREF:-"heads/$BUILDKITE_BRANCH"}
-
-if [[ ${REVISION} == ${MASTER_REVISION} ]]; then
+if [[ "${BUILDKITE_BRANCH}" == "master" ]]; then
     BUILDTYPE="stable"
 else
     BUILDTYPE="latest"
