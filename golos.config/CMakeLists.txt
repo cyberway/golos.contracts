@@ -1,4 +1,4 @@
-add_contract(golos.config golos.config src/golos.config.cpp)
+add_contract_with_checked_abi(golos.config golos.config golos.config.abi src/golos.config.cpp)
 install_contract(golos.config)
 target_include_directories(golos.config.wasm
    PUBLIC

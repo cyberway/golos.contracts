@@ -1,3 +1,6 @@
 [submodule "cyberway.contracts"]
 	path = cyberway.contracts
 	url = https://github.com/cyberway/cyberway.contracts
+[submodule "scripts/deployutils"]
+	path = scripts/deployutils
+	url = https://github.com/cyberway/deployutils.git

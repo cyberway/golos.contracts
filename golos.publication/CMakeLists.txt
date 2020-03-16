@@ -1,4 +1,4 @@
-add_contract(golos.publication golos.publication golos.publication.cpp)
+add_contract_with_checked_abi(golos.publication golos.publication golos.publication.abi golos.publication.cpp)
 install_contract(golos.publication)
 target_include_directories(golos.publication.wasm
    PUBLIC
