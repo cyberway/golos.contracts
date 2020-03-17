@@ -602,17 +602,17 @@ BOOST_FIXTURE_TEST_CASE(delegate, golos_vesting_tester) try {
     BOOST_CHECK_EQUAL(err.missing_auth(N(pasha)), vest.delegate_unauthorized(N(sania), N(pasha), amount, true));
 
     BOOST_TEST_MESSAGE("--- fail when delegate more than scheduled to withdraw");
-    BOOST_CHECK_EQUAL(success(), vest.msig_delegate(N(sania), N(pasha), amount, 0));
-    BOOST_CHECK_EQUAL(success(), vest.msig_delegate(N(sania), N(tania), amount, 0));
+    BOOST_CHECK_EQUAL(success(), vest.delegate(N(sania), N(pasha), amount, 0));
+    BOOST_CHECK_EQUAL(success(), vest.delegate(N(sania), N(tania), amount, 0));
     BOOST_CHECK_EQUAL(success(), vest.withdraw(N(sania), N(sania), vest.make_asset(100-3*min_remainder)));
     BOOST_CHECK_EQUAL(err.delegation_no_funds, vest.delegate(N(sania), N(vania), vest.make_asset(min_remainder+1)));
     BOOST_TEST_MESSAGE("--- succeed when withdraval counted");
-    BOOST_CHECK_EQUAL(success(), vest.msig_delegate(N(sania), N(vania), amount));
+    BOOST_CHECK_EQUAL(success(), vest.delegate(N(sania), N(vania), amount));
 
     BOOST_TEST_MESSAGE("--- charge limit test");
     BOOST_CHECK_EQUAL(success(), charge.use(_issuer, N(pasha), 0, charge_prop * cfg::_100percent, cfg::_100percent));
     BOOST_CHECK_EQUAL(err.cutoff, vest.delegate(N(pasha), N(vania), vest.make_asset(default_vesting_amount * (1.01 - charge_prop))));
-    BOOST_CHECK_EQUAL(success(), vest.msig_delegate(N(pasha), N(vania), vest.make_asset(default_vesting_amount * (1.0 - charge_prop))));
+    BOOST_CHECK_EQUAL(success(), vest.delegate(N(pasha), N(vania), vest.make_asset(default_vesting_amount * (1.0 - charge_prop))));
 
     BOOST_TEST_MESSAGE("--- check max delegators limit");
     auto additional_users = add_accounts_with_vests(delegation_max_delegators + 1 - 2); // 2 are already delegated

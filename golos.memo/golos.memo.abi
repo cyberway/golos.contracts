@@ -1,0 +1,27 @@
+{
+    "____comment": "This file was generated with eosio-abigen. DO NOT EDIT ", 
+    "version": "cyberway::abi/1.1", 
+    "types": [], 
+    "structs": [{
+            "name": "memo_key", "base": "", 
+            "fields": [
+                {"name": "name", "type": "name"}, 
+                {"name": "key", "type": "public_key"}
+            ]
+        }
+    ], 
+    "actions": [], 
+    "events": [], 
+    "tables": [{
+            "name": "memo", "type": "memo_key", 
+            "indexes": [{
+                    "name": "primary", "unique": true, 
+                    "orders": [
+                        {"field": "name", "order": "asc"}
+                    ]
+                }
+            ]
+        }
+    ], 
+    "variants": []
+}

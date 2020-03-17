@@ -1,0 +1,116 @@
+{
+    "____comment": "This file was generated with eosio-abigen. DO NOT EDIT ", 
+    "version": "cyberway::abi/1.1", 
+    "types": [
+        {"new_type_name": "breakout_parametrs", "type": "breakout_parametrs_t"}, 
+        {"new_type_name": "expire_parametrs", "type": "expire_parametrs_t"}, 
+        {"new_type_name": "percent_parametrs", "type": "percent_parametrs_t"}, 
+        {"new_type_name": "referral_params", "type": "variant_breakout_parametrs_expire_parametrs_percent_parametrs"}
+    ], 
+    "structs": [{
+            "name": "add_referral", "base": "", 
+            "fields": [
+                {"name": "referrer", "type": "name"}, 
+                {"name": "referral", "type": "name"}, 
+                {"name": "percent", "type": "uint16"}, 
+                {"name": "expire", "type": "uint64"}, 
+                {"name": "breakout", "type": "asset"}
+            ]
+        }, {
+            "name": "addreferral", "base": "", 
+            "fields": [
+                {"name": "referrer", "type": "name"}, 
+                {"name": "referral", "type": "name"}, 
+                {"name": "percent", "type": "uint16"}, 
+                {"name": "expire", "type": "uint64"}, 
+                {"name": "breakout", "type": "asset"}
+            ]
+        }, {
+            "name": "breakout_parametrs_t", "base": "parameter", 
+            "fields": [
+                {"name": "min_breakout", "type": "asset"}, 
+                {"name": "max_breakout", "type": "asset"}
+            ]
+        }, {
+            "name": "closeoldref", "base": "", 
+            "fields": []
+        }, {
+            "name": "expire_parametrs_t", "base": "parameter", 
+            "fields": [
+                {"name": "max_expire", "type": "uint64"}
+            ]
+        }, {
+            "name": "parameter", "base": "", 
+            "fields": []
+        }, {
+            "name": "percent_parametrs_t", "base": "parameter", 
+            "fields": [
+                {"name": "max_percent", "type": "uint16"}
+            ]
+        }, {
+            "name": "referral_state", "base": "", 
+            "fields": [
+                {"name": "id", "type": "uint64"}, 
+                {"name": "breakout_params", "type": "breakout_parametrs"}, 
+                {"name": "expire_params", "type": "expire_parametrs"}, 
+                {"name": "percent_params", "type": "percent_parametrs"}
+            ]
+        }, {
+            "name": "setparams", "base": "", 
+            "fields": [
+                {"name": "params", "type": "referral_params[]"}
+            ]
+        }, {
+            "name": "validateprms", "base": "", 
+            "fields": [
+                {"name": "params", "type": "referral_params[]"}
+            ]
+        }
+    ], 
+    "actions": [
+        {"name": "addreferral", "type": "add_referral"}, 
+        {"name": "closeoldref", "type": "closeoldref"}, 
+        {"name": "setparams", "type": "setparams"}, 
+        {"name": "validateprms", "type": "validateprms"}
+    ], 
+    "events": [], 
+    "tables": [{
+            "name": "referrals", "type": "addreferral", 
+            "indexes": [{
+                    "name": "primary", "unique": true, 
+                    "orders": [
+                        {"field": "referral", "order": "asc"}
+                    ]
+                }, {
+                    "name": "referrerkey", "unique": false, 
+                    "orders": [
+                        {"field": "referrer", "order": "asc"}
+                    ]
+                }, {
+                    "name": "expirekey", "unique": false, 
+                    "orders": [
+                        {"field": "expire", "order": "asc"}
+                    ]
+                }
+            ]
+        }, {
+            "name": "refparams", "type": "referral_state", 
+            "indexes": [{
+                    "name": "primary", "unique": true, 
+                    "orders": [
+                        {"field": "id", "order": "asc"}
+                    ]
+                }
+            ]
+        }
+    ], 
+    "variants": [{
+            "name": "variant_breakout_parametrs_expire_parametrs_percent_parametrs", 
+            "types": [
+                "breakout_parametrs", 
+                "expire_parametrs", 
+                "percent_parametrs"
+            ]
+        }
+    ]
+}
