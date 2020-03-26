@@ -13,6 +13,8 @@ COPY --from=cyberway /opt/cyberway /opt/cyberway
 
 COPY . ./golos.contracts
 
+ARG ci_build=false
+
 RUN cd golos.contracts \
     && cmake -H. -B"build" \
         -GNinja \
@@ -20,6 +22,7 @@ RUN cd golos.contracts \
         -DCMAKE_INSTALL_PREFIX=/opt/golos.contracts/ \
         -Dcyberway.cdt_DIR=/opt/cyberway.cdt/lib/cmake/cyberway.cdt \
         -DEOSIO_ROOT=/opt/cyberway \
+        -DABICHECK=$ci_build \
     && cmake --build build --target install
 
 

@@ -29,4 +29,11 @@ if [[ -z ${SYSTEM_CONTRACTS_TAG+x} ]]; then
     docker pull cyberway/cyberway.contracts:${SYSTEM_CONTRACTS_TAG}
 fi
 
-docker build -t cyberway/golos.contracts:${REVISION} --build-arg=cw_tag=${CW_TAG} --build-arg=cdt_tag=${CDT_TAG} --build-arg=system_contracts_tag=${SYSTEM_CONTRACTS_TAG} --build-arg=builder_tag=${BUILDER_TAG} --build-arg=version=${REVISION} -f Docker/Dockerfile .
+docker build -t cyberway/golos.contracts:${REVISION} \
+        --build-arg=cw_tag=${CW_TAG} \
+        --build-arg=cdt_tag=${CDT_TAG} \
+        --build-arg=system_contracts_tag=${SYSTEM_CONTRACTS_TAG} \
+        --build-arg=builder_tag=${BUILDER_TAG} \
+        --build-arg=version=${REVISION} \
+        --build-arg=ci_build=${CI} \
+        -f Docker/Dockerfile .
