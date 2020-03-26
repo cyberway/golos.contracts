@@ -40,12 +40,17 @@ endmacro()
 macro(add_contract_with_checked_abi CONTRACT_NAME TARGET ABIFILE)
     add_contract(${CONTRACT_NAME} ${TARGET} ${ARGN})
     get_target_property(BINOUTPUT ${TARGET}.wasm BINARY_DIR)
-    add_custom_command(TARGET ${TARGET}.wasm POST_BUILD
-        COMMAND ${PROJECT_SOURCE_DIR}/scripts/deployutils/abiprinter.py <${BINOUTPUT}/${TARGET}.abi >${BINOUTPUT}/${TARGET}.abi.pretty)
-    add_custom_target(${TARGET}.abicheck ALL
-        COMMAND ${CYBERWAY_ABIDIFF} ${CMAKE_CURRENT_SOURCE_DIR}/${ABIFILE} ${BINOUTPUT}/${TARGET}.abi
-        DEPENDS ${TARGET}.wasm ${ABIFILE}
-    )
+    if(ABICHECK STREQUAL "true")
+      add_custom_command(TARGET ${TARGET}.wasm POST_BUILD
+         COMMAND ${PROJECT_SOURCE_DIR}/scripts/deployutils/abiprinter.py <${BINOUTPUT}/${TARGET}.abi >${BINOUTPUT}/${TARGET}.abi.pretty)
+      add_custom_target(${TARGET}.abicheck ALL
+         COMMAND ${CYBERWAY_ABIDIFF} ${CMAKE_CURRENT_SOURCE_DIR}/${ABIFILE} ${BINOUTPUT}/${TARGET}.abi
+         DEPENDS ${TARGET}.wasm ${ABIFILE}
+      )
+    else()
+      add_custom_command(TARGET ${TARGET}.wasm POST_BUILD
+      COMMAND ${PROJECT_SOURCE_DIR}/scripts/deployutils/abiprinter.py <${BINOUTPUT}/${TARGET}.abi >${CMAKE_CURRENT_SOURCE_DIR}/${ABIFILE})
+   endif()
 endmacro()
 
 macro(add_contract_with_abi TARGET ABIFILE)
