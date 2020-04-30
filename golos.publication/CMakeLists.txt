@@ -5,4 +5,5 @@ target_include_directories(golos.publication.wasm
    ${TOKEN_INCLUDE_PATH}
    ${CMAKE_CURRENT_SOURCE_DIR}/../golos.vesting
    ${CMAKE_CURRENT_SOURCE_DIR}/../golos.referral/include
+   ${CMAKE_CURRENT_SOURCE_DIR}/../golos.ctrl/include
    ${CMAKE_CURRENT_SOURCE_DIR}/..)

@@ -11,6 +11,16 @@
         {"new_type_name": "update_auth", "type": "update_auth_t"}
     ], 
     "structs": [{
+            "name": "ban", "base": "", 
+            "fields": [
+                {"name": "account", "type": "name"}
+            ]
+        }, {
+            "name": "ban_account", "base": "", 
+            "fields": [
+                {"name": "account", "type": "name"}
+            ]
+        }, {
             "name": "changevest", "base": "", 
             "fields": [
                 {"name": "who", "type": "name"}, 
@@ -89,6 +99,11 @@
                 {"name": "witness", "type": "name"}
             ]
         }, {
+            "name": "unban", "base": "", 
+            "fields": [
+                {"name": "account", "type": "name"}
+            ]
+        }, {
             "name": "unregwitness", "base": "", 
             "fields": [
                 {"name": "witness", "type": "name"}
@@ -140,11 +155,13 @@
         }
     ], 
     "actions": [
+        {"name": "ban", "type": "ban"}, 
         {"name": "changevest", "type": "changevest"}, 
         {"name": "regwitness", "type": "regwitness"}, 
         {"name": "setparams", "type": "setparams"}, 
         {"name": "startwitness", "type": "startwitness"}, 
         {"name": "stopwitness", "type": "stopwitness"}, 
+        {"name": "unban", "type": "unban"}, 
         {"name": "unregwitness", "type": "unregwitness"}, 
         {"name": "unvotewitn", "type": "unvotewitn"}, 
         {"name": "validateprms", "type": "validateprms"}, 
@@ -154,6 +171,15 @@
         {"name": "witnessstate", "type": "witnessstate"}
     ], 
     "tables": [{
+            "name": "banaccount", "type": "ban_account", 
+            "indexes": [{
+                    "name": "primary", "unique": true, 
+                    "orders": [
+                        {"field": "account", "order": "asc"}
+                    ]
+                }
+            ]
+        }, {
             "name": "ctrlparams", "type": "ctrl_state", 
             "indexes": [{
                     "name": "primary", "unique": true, 

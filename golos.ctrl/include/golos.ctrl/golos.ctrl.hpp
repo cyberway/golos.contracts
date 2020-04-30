@@ -55,6 +55,15 @@ struct msig_auths {
 };
 using msig_auth_singleton [[using eosio: order("id","asc"), contract("golos.ctrl")]] = eosio::singleton<"msigauths"_n, msig_auths>;
 
+struct ban_account {
+    name account;
+
+    uint64_t primary_key() const {
+        return account.value;
+    }
+};
+using ban_accounts_tbl [[using eosio: order("account","asc"), contract("golos.ctrl")]] =
+    eosio::multi_index<"banaccount"_n, ban_account>;
 
 class [[eosio::contract("golos.ctrl")]] control: public contract {
 public:
@@ -76,8 +85,16 @@ public:
 
     [[eosio::action]] void changevest(name who, asset diff);
 
+    [[eosio::action]] void ban(name account);
+    [[eosio::action]] void unban(name account);
+
     ON_TRANSFER(CYBER_TOKEN, on_transfer)
     void on_transfer(name from, name to, asset quantity, std::string memo);
+
+    static inline bool is_blocking(name code, name account) {
+        ban_accounts_tbl tbl(code, code.value);
+        return (tbl.end() != tbl.find(account.value));
+    }
 
 private:
     ctrl_params_singleton _cfg;

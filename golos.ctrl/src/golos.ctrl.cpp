@@ -133,6 +133,7 @@ void control::on_transfer(name from, name to, asset quantity, string memo) {
 }
 
 void control::regwitness(name witness, string url) {
+    eosio::check(!control::is_blocking(config::control_name, witness), "You are blocked.");
     assert_started();
     eosio::check(url.length() <= config::witness_max_url_size, "url too long");
     require_auth(witness);
@@ -170,6 +171,7 @@ void control::stopwitness(name witness) {
 }
 
 void control::startwitness(name witness) {
+    eosio::check(!control::is_blocking(config::control_name, witness), "You are blocked.");
     assert_started();
     require_auth(witness);
     active_witness(witness, true);
@@ -177,6 +179,7 @@ void control::startwitness(name witness) {
 
 // Note: if not weighted, it's possible to pass all witnesses in vector like in BP actions
 void control::votewitness(name voter, name witness) {
+    eosio::check(!control::is_blocking(config::control_name, voter), "You are blocked.");
     assert_started();
     require_auth(voter);
 
@@ -242,6 +245,37 @@ void control::changevest(name who, asset diff) {
     change_voter_vests(who, diff.amount);
 }
 
+void control::ban(name account) {
+    require_auth(_self);
+
+    eosio::check(is_account(account), "blocking account doesn't exist");
+
+    ban_accounts_tbl ban_tbl(_self, _self.value);
+    auto itr = ban_tbl.find(account.value);
+    eosio::check(ban_tbl.end() == itr, "account is already banned");
+    ban_tbl.emplace(_self, [&](auto& item){
+        item.account = account;
+    });
+
+    witness_tbl wit_tbl(_self, _self.value);
+    auto wtr = wit_tbl.find(account.value);
+    if (wit_tbl.end() != wtr && wtr->active) {
+        wit_tbl.modify(wtr, eosio::same_payer, [&](auto& item){
+            item.active = false;
+            send_witness_event(item);
+        });
+        update_auths();
+    }
+}
+
+void control::unban(name account) {
+    require_auth(_self);
+
+    ban_accounts_tbl tbl(_self, _self.value);
+    auto itr = tbl.find(account.value);
+    eosio::check(tbl.end() != itr, "account isn't banned");
+    tbl.erase(itr);
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 
