@@ -100,13 +100,12 @@ void publication::createmssg(
         curators_prcnt = curators_prcnt_param.min_curators_prcnt;
     }
 
-    // TODO: Temporarily disabled - not all blockings stored in table and now this check anyway should be in client
-    // if (parent_id.author) {
-    //     if (social_acc_param.value) {
-    //         eosio::check(!social::is_blocking(social_acc_param.value, parent_id.author, message_id.author),
-    //                 "You are blocked by this account");
-    //     }
-    // }
+     if (parent_id.author) {
+         if (social_acc_param.value) {
+             eosio::check(!social::is_blocking(social_acc_param.value, parent_id.author, message_id.author),
+                     "You are blocked by this account");
+         }
+     }
 
     // close after basic checks. or else it can consume CPU on closing and fail later on bad input params
     closemssgs(message_id.author);

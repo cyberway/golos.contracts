@@ -2,6 +2,7 @@
 #include "golos_tester.hpp"
 #include "golos.posting_test_api.hpp"
 #include "golos.vesting_test_api.hpp"
+#include "golos.ctrl_test_api.hpp"
 #include "cyber.token_test_api.hpp"
 #include "golos.social_test_api.hpp"
 #include <common/config.hpp>
@@ -24,6 +25,7 @@ protected:
     golos_vesting_api vest;
     cyber_token_api token;
     golos_social_api social;
+    golos_ctrl_api ctrl;
 
     std::vector<account_name> _users;
 public:
@@ -34,6 +36,7 @@ public:
         , vest({this, cfg::vesting_name, _vesting_sym})
         , token({this, cfg::token_name, _token_sym})
         , social({this, _code})
+        , ctrl({this, cfg::control_name})
         , _users{"dave"_n, "erin"_n} {
 
         produce_block();
@@ -47,6 +50,7 @@ public:
         vest.initialize_contract(cfg::token_name);
         post.initialize_contract(cfg::token_name, cfg::charge_name);
         social.initialize_contract();
+        ctrl.initialize_contract(cfg::token_name);
 
         produce_block();
     }
@@ -273,13 +277,12 @@ BOOST_FIXTURE_TEST_CASE(golos_blocked_commenting_test, golos_social_tester) try 
     BOOST_CHECK_EQUAL(success(), social.block("dave"_n, "erin"_n));
     produce_block();
 
-    // TODO: checking removed
-    // BOOST_TEST_MESSAGE("--- create comment: erin to dave again (fail)");
-    // BOOST_CHECK_EQUAL(err.you_are_blocked, post.create_msg({"erin"_n, "permlink3"},
-    //                                                        {"dave"_n, "permlink"}));
-    BOOST_TEST_MESSAGE("--- create comment: erin to dave again (success)");
-    BOOST_CHECK_EQUAL(success(), post.create_msg({"erin"_n, "permlink3"},
+    BOOST_TEST_MESSAGE("--- create comment: erin to dave again (fail)");
+    BOOST_CHECK_EQUAL(err.you_are_blocked, post.create_msg({"erin"_n, "permlink3"},
                                                            {"dave"_n, "permlink"}));
+//    BOOST_TEST_MESSAGE("--- create comment: erin to dave again (success)");
+//    BOOST_CHECK_EQUAL(success(), post.create_msg({"erin"_n, "permlink3"},
+//                                                           {"dave"_n, "permlink"}));
     produce_block();
 } FC_LOG_AND_RETHROW()
 
