@@ -7,13 +7,13 @@
 using namespace fixed_point_utils;
 namespace atmsp { namespace storable {
 using index_t = uint64_t;
-struct [[eosio::table]] value {
+struct value {
     enum kind_t: enum_t {NUM, VAR, CONST, UNDEF};
     enum_t kind = UNDEF;
     index_t idx = 0;
 };
 
-struct [[eosio::table]] bytecode {
+struct bytecode {
     index_t varssize;
     std::vector<index_t> operators;
     std::vector<value> values;

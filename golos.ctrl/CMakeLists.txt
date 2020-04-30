@@ -1,4 +1,5 @@
-add_contract_with_abi(golos.ctrl abi/golos.ctrl.abi src/golos.ctrl.cpp)
+add_contract_with_checked_abi(golos.ctrl golos.ctrl golos.ctrl.abi src/golos.ctrl.cpp)
+install_contract(golos.ctrl)
 target_include_directories(golos.ctrl.wasm
    PUBLIC
    ${TOKEN_INCLUDE_PATH}

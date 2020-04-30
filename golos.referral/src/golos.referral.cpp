@@ -1,5 +1,5 @@
-#include "golos.referral/golos.referral.hpp"
-#include "golos.referral/config.hpp"
+#include <golos.referral/golos.referral.hpp>
+#include <golos.referral/config.hpp>
 #include <common/dispatchers.hpp>
 #include <eosio/transaction.hpp>
 
@@ -10,15 +10,15 @@ using namespace eosio;
 struct referral_params_setter: set_params_visitor<referral_state> {
     using set_params_visitor::set_params_visitor; // enable constructor
 
-    bool operator()(const breakout_param& p) {
-        return set_param(p, &referral_state::breakout_params, &breakout_param::not_equal);
+    bool operator()(const breakout_parametrs& p) {
+        return set_param(p, &referral_state::breakout_params, &breakout_parametrs::not_equal);
     }
 
-    bool operator()(const expire_param& p) {
+    bool operator()(const expire_parametrs& p) {
         return set_param(p, &referral_state::expire_params);
     }
 
-    bool operator()(const percent_param& p) {
+    bool operator()(const percent_parametrs& p) {
         return set_param(p, &referral_state::percent_params);
     }
 };
@@ -33,7 +33,7 @@ void referral::setparams(std::vector<referral_params> params) {
     param_helper::set_parameters<referral_params_setter>(params, cfg, _self);
 }
 
-void referral::addreferral(name referrer, name referral, uint16_t percent, uint64_t expire, asset breakout) {
+void referral::add_referral(name referrer, name referral, uint16_t percent, uint64_t expire, asset breakout) {
     require_auth(_self);
 
     closeoldref();
@@ -98,5 +98,3 @@ void referral::closeoldref() {
 }
 
 }
-
-DISPATCH_WITH_TRANSFER(golos::referral, on_transfer, (addreferral)(validateprms)(setparams)(closeoldref))

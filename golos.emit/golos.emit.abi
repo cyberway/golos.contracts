@@ -1,0 +1,121 @@
+{
+    "____comment": "This file was generated with eosio-abigen. DO NOT EDIT ", 
+    "version": "cyberway::abi/1.1", 
+    "types": [
+        {"new_type_name": "bwprovider", "type": "bwprovider_t"}, 
+        {"new_type_name": "emit_interval", "type": "emit_interval_t"}, 
+        {"new_type_name": "emit_param", "type": "variant_inflation_rate_reward_pools_emit_token_emit_interval_bwprovider"}, 
+        {"new_type_name": "emit_token", "type": "emit_token_t"}, 
+        {"new_type_name": "inflation_rate", "type": "inflation_rate_t"}, 
+        {"new_type_name": "reward_pools", "type": "reward_pools_t"}
+    ], 
+    "structs": [{
+            "name": "bwprovider_t", "base": "parameter", 
+            "fields": [
+                {"name": "actor", "type": "name"}, 
+                {"name": "permission", "type": "name"}
+            ]
+        }, {
+            "name": "emit", "base": "", 
+            "fields": []
+        }, {
+            "name": "emit_interval_t", "base": "parameter", 
+            "fields": [
+                {"name": "value", "type": "uint16"}
+            ]
+        }, {
+            "name": "emit_state", "base": "", 
+            "fields": [
+                {"name": "id", "type": "uint64"}, 
+                {"name": "infrate", "type": "inflation_rate"}, 
+                {"name": "pools", "type": "reward_pools"}, 
+                {"name": "token", "type": "emit_token"}, 
+                {"name": "interval", "type": "emit_interval"}, 
+                {"name": "bwprovider", "type": "bwprovider"}
+            ]
+        }, {
+            "name": "emit_token_t", "base": "parameter", 
+            "fields": [
+                {"name": "symbol", "type": "symbol"}
+            ]
+        }, {
+            "name": "inflation_rate_t", "base": "parameter", 
+            "fields": [
+                {"name": "start", "type": "uint16"}, 
+                {"name": "stop", "type": "uint16"}, 
+                {"name": "narrowing", "type": "uint32"}
+            ]
+        }, {
+            "name": "parameter", "base": "", 
+            "fields": []
+        }, {
+            "name": "reward_pool", "base": "", 
+            "fields": [
+                {"name": "name", "type": "name"}, 
+                {"name": "percent", "type": "uint16"}
+            ]
+        }, {
+            "name": "reward_pools_t", "base": "parameter", 
+            "fields": [
+                {"name": "pools", "type": "reward_pool[]"}
+            ]
+        }, {
+            "name": "setparams", "base": "", 
+            "fields": [
+                {"name": "params", "type": "emit_param[]"}
+            ]
+        }, {
+            "name": "start", "base": "", 
+            "fields": []
+        }, {
+            "name": "state", "base": "", 
+            "fields": [
+                {"name": "id", "type": "uint64"}, 
+                {"name": "prev_emit", "type": "uint64"}, 
+                {"name": "start_time", "type": "uint64"}, 
+                {"name": "active", "type": "bool"}
+            ]
+        }, {
+            "name": "stop", "base": "", 
+            "fields": []
+        }
+    ], 
+    "actions": [
+        {"name": "emit", "type": "emit"}, 
+        {"name": "setparams", "type": "setparams"}, 
+        {"name": "start", "type": "start"}, 
+        {"name": "stop", "type": "stop"}
+    ], 
+    "events": [], 
+    "tables": [{
+            "name": "emitparams", "type": "emit_state", 
+            "indexes": [{
+                    "name": "primary", "unique": true, 
+                    "orders": [
+                        {"field": "id", "order": "asc"}
+                    ]
+                }
+            ]
+        }, {
+            "name": "state", "type": "state", 
+            "indexes": [{
+                    "name": "primary", "unique": true, 
+                    "orders": [
+                        {"field": "id", "order": "asc"}
+                    ]
+                }
+            ]
+        }
+    ], 
+    "variants": [{
+            "name": "variant_inflation_rate_reward_pools_emit_token_emit_interval_bwprovider", 
+            "types": [
+                "inflation_rate", 
+                "reward_pools", 
+                "emit_token", 
+                "emit_interval", 
+                "bwprovider"
+            ]
+        }
+    ]
+}

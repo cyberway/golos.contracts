@@ -1,1164 +1,551 @@
 {
-  "version": "cyberway::abi/1.1",
-  "types": [
-    {
-      "new_type_name": "base_t",
-      "type": "int64"
-    },{
-      "new_type_name": "wide_t",
-      "type": "int128"
-    },{
-      "new_type_name": "index_t",
-      "type": "uint64"
-    },{
-      "new_type_name": "enum_t",
-      "type": "uint8"
-    },{
-      "new_type_name": "counter_t",
-      "type": "uint64"
-    },{
-      "new_type_name": "percent_t",
-      "type": "uint16"
-    },{
-      "new_type_name": "signed_percent_t",
-      "type": "int16"
-    }
-  ],
-  "variants": [{
-    "name": "posting_param",
+    "____comment": "This file was generated with eosio-abigen. DO NOT EDIT ", 
+    "version": "cyberway::abi/1.1", 
     "types": [
-      "st_max_vote_changes",
-      "st_cashout_window",
-      "st_max_beneficiaries",
-      "st_max_comment_depth",
-      "st_social_acc",
-      "st_referral_acc",
-      "st_curators_prcnt",
-      "st_bwprovider",
-      "st_min_abs_rshares"
-    ]
-  }],
-  "structs": [
-  {
-    "name":"mssgid",
-    "base": "",
-    "fields": [
-        {
-            "name": "author",
-            "type": "name"
-        },
-        {
-            "name": "permlink",
-            "type": "string"
-        }
-    ]
-  },
-  {
-    "name": "value",
-    "base": "",
-    "fields": [
-        {
-            "name": "kind",
-            "type": "enum_t"
-        },
-        {
-            "name": "idx",
-            "type": "index_t"
-        }
-    ]
-  },
-  {
-    "name": "funcparams",
-    "base": "",
-    "fields": [
-        {
-            "name": "str",
-            "type": "string"
-        },
-        {
-            "name": "maxarg",
-            "type": "base_t"
-        }
-    ]
-  },
-  {
-    "name": "bytecode",
-    "base": "",
-    "fields": [
-        {
-            "name": "varssize",
-            "type": "index_t"
-        },
-        {
-            "name": "operators",
-            "type": "index_t[]"
-        },
-        {
-            "name": "values",
-            "type": "value[]"
-        },
-        {
-            "name": "nums",
-            "type": "base_t[]"
-        },
-        {
-            "name": "consts",
-            "type": "base_t[]"
-        }
-    ]
-  },
-  {
-    "name": "closemssgs",
-    "base": "",
-    "fields": [
-      {
-        "name": "payer",
-        "type": "name"
-      }
-    ]
-  },
-  {
-    "name": "beneficiary",
-    "base": "",
-    "fields": [
-      {
-        "name": "account",
-        "type": "name"
-      },
-      {
-        "name": "weight",
-        "type": "percent_t"
-      }
-    ]
-  },
-  {
-    "name": "delegate_voter",
-    "base": "",
-    "fields": [
-      {
-        "name": "delegator",
-        "type": "name"
-      },
-      {
-        "name": "interest_rate",
-        "type": "percent_t"
-      }
-    ]
-  },
-  {
-    "name": "messagestate",
-    "base": "",
-    "fields": [
-        {
-            "name": "netshares",
-            "type": "base_t"
-        },
-        {
-            "name": "voteshares",
-            "type": "base_t"
-        },
-        {
-            "name": "sumcuratorsw",
-            "type": "base_t"
-        }
-    ]
-  },
-  {
-    "name": "message",
-    "base": "",
-    "fields": [
-      {
-        "name": "author",
-        "type": "name"
-      },
-      {
-        "name": "id",
-        "type": "uint64"
-      },
-      {
-        "name": "date",
-        "type": "uint64"
-      },
-      {
-        "name": "pool_date",
-        "type": "uint64"
-      },
-      {
-        "name": "tokenprop",
-        "type": "percent_t"
-      },
-      {
-        "name": "beneficiaries",
-        "type": "beneficiary[]"
-      },
-      {
-        "name": "rewardweight",
-        "type": "percent_t"
-      },
-      {
-        "name": "state",
-        "type": "messagestate"
-      },
-      {
-        "name": "curators_prcnt",
-        "type": "percent_t"
-      },
-      {
-        "name": "cashout_time",
-        "type": "uint64"
-      },
-      {
-        "name": "mssg_reward",
-        "type": "asset"
-      },
-      {
-        "name": "max_payout",
-        "type": "asset"
-      },
-      {
-        "name": "paid_amount",
-        "type": "int64"
-      }
-    ]
-  },
-  {
-      "name": "permlink",
-      "base": "",
-      "fields": [
-        {
-          "name": "id",
-          "type": "uint64"
-        },
-        {
-          "name": "parentacc",
-          "type": "name"
-        },
-        {
-          "name": "parent_id",
-          "type": "uint64"
-        },
-        {
-          "name": "value",
-          "type": "string"
-        },
-        {
-          "name": "level",
-          "type": "uint16"
-        },
-        {
-          "name": "childcount",
-          "type": "uint32"
-        }
-      ]
-  },
-  {
-    "name": "createmssg",
-    "base": "",
-    "fields": [
-      {
-        "name": "message_id",
-        "type": "mssgid"
-      },
-      {
-        "name": "parent_id",
-        "type": "mssgid"
-      },
-      {
-        "name": "beneficiaries",
-        "type": "beneficiary[]"
-      },
-      {
-        "name": "tokenprop",
-        "type": "percent_t"
-      },
-      {
-        "name": "vestpayment",
-        "type": "bool"
-      },
-      {
-        "name": "headermssg",
-        "type": "string"
-      },
-      {
-        "name": "bodymssg",
-        "type": "string"
-      },
-      {
-        "name": "languagemssg",
-        "type": "string"
-      },
-      {
-        "name": "tags",
-        "type": "string[]"
-      },
-      {
-        "name": "jsonmetadata",
-        "type": "string"
-      },
-      {
-        "name": "curators_prcnt",
-        "type": "uint16?"
-      },
-      {
-        "name": "max_payout",
-        "type": "asset?"
-      }
-    ]
-  },
-  {
-    "name": "updatemssg",
-    "base": "",
-    "fields": [
-      {
-        "name": "message_id",
-        "type": "mssgid"
-      },
-      {
-        "name": "headermssg",
-        "type": "string"
-      },
-      {
-        "name": "bodymssg",
-        "type": "string"
-      },
-      {
-        "name": "languagemssg",
-        "type": "string"
-      },
-      {
-        "name": "tags",
-        "type": "string[]"
-      },
-      {
-        "name": "jsonmetadata",
-        "type": "string"
-      }
-    ]
-  },
-  {
-    "name": "deletemssg",
-    "base": "",
-    "fields": [
-      {
-        "name": "message_id",
-        "type": "mssgid"
-      }
-    ]
-  },
-  {
-    "name": "vote",
-    "base": "",
-    "fields": [
-      {
-        "name": "voter",
-        "type": "name"
-      },
-      {
-        "name": "message_id",
-        "type": "mssgid"
-      },
-      {
-        "name": "weight",
-        "type": "percent_t"
-      }
-    ]
-  },
-  {
-    "name": "unvote",
-    "base": "",
-    "fields": [
-      {
-        "name": "voter",
-        "type": "name"
-      },
-      {
-        "name": "message_id",
-        "type": "mssgid"
-      }
-    ]
-  },
-  {
-    "name": "voteinfo",
-    "base": "",
-    "fields": [
-      {
-        "name": "id",
-        "type": "uint64"
-      },
-      {
-        "name": "message_id",
-        "type": "uint64"
-      },
-      {
-        "name": "voter",
-        "type": "name"
-      },
-      {
-        "name": "weight",
-        "type": "signed_percent_t"
-      },
-      {
-        "name": "time",
-        "type": "uint64"
-      },
-      {
-        "name": "count",
-        "type": "uint8"
-      },
-      {
-        "name": "delegators",
-        "type": "delegate_voter[]"
-      },
-      {
-        "name": "curatorsw",
-        "type": "base_t"
-      },
-      {
-        "name": "rshares",
-        "type": "base_t"
-      },
-      {
-        "name": "paid_amount",
-        "type": "int64"
-      }
-    ]
-  },
-  {
-    "name": "funcinfo",
-    "base": "",
-    "fields": [
-        {
-            "name": "code",
-            "type": "bytecode"
-        },
-        {
-            "name": "maxarg",
-            "type": "base_t"
-        }
-    ]
-  },
-  {
-    "name": "rewardrules",
-    "base": "",
-    "fields": [
-        {
-            "name": "mainfunc",
-            "type": "funcinfo"
-        },
-        {
-            "name": "curationfunc",
-            "type": "funcinfo"
-        },
-        {
-            "name": "timepenalty",
-            "type": "funcinfo"
-        },
-        {
-            "name": "maxtokenprop",
-            "type": "percent_t"
-        }
-    ]
-  },
-  {
-    "name": "poolstate",
-    "base": "",
-    "fields": [
-        {
-            "name": "msgs",
-            "type": "counter_t"
-        },
-        {
-            "name": "funds",
-            "type": "asset"
-        },
-        {
-            "name": "rshares",
-            "type": "wide_t"
-        },
-        {
-            "name": "rsharesfn",
-            "type": "wide_t"
-        }
-    ]
-  },
-  {
-    "name": "rewardpool",
-    "base": "",
-    "fields": [
-        {
-            "name": "created",
-            "type": "uint64"
-        },
-        {
-            "name": "rules",
-            "type": "rewardrules"
-        },
-        {
-            "name": "state",
-            "type": "poolstate"
-        }
-    ]
-  },
-  {
-    "name": "limitparams",
-    "base": "",
-    "fields": [
-        {
-            "name": "act",
-            "type": "uint64"
-        },
-        {
-            "name": "charge_id",
-            "type": "uint8"
-        },
-        {
-            "name": "price",
-            "type": "int64"
-        },
-        {
-            "name": "cutoff",
-            "type": "int64"
-        },
-        {
-            "name": "vesting_price",
-            "type": "int64"
-        },
-        {
-            "name": "min_vesting",
-            "type": "int64"
-        }
-    ]
-  },
-  {
-    "name": "setlimit",
-    "base": "",
-    "fields": [
-        {
-            "name": "act",
-            "type": "string"
-        },
-        {
-            "name": "token_code",
-            "type": "symbol_code"
-        },
-        {
-            "name": "charge_id",
-            "type": "uint8"
-        },
-        {
-            "name": "price",
-            "type": "int64"
-        },
-        {
-            "name": "cutoff",
-            "type": "int64"
-        },
-        {
-            "name": "vesting_price",
-            "type": "int64"
-        },
-        {
-            "name": "min_vesting",
-            "type": "int64"
-        }
-    ]
-  },
-  {
-    "name": "setrules",
-    "base": "",
-    "fields": [
-        {
-            "name": "mainfunc",
-            "type": "funcparams"
-        },
-        {
-            "name": "curationfunc",
-            "type": "funcparams"
-        },
-        {
-            "name": "timepenalty",
-            "type": "funcparams"
-        },
-        {
-            "name": "maxtokenprop",
-            "type": "percent_t"
-        },
-        {
-            "name": "tokensymbol",
-            "type": "symbol"
-        }
-    ]
-  },
-  {
-    "name": "syncpool",
-    "base": "",
-    "fields": [
-        {
-            "name": "tokensymbol",
-            "type": "symbol?"
-        }
-    ]
-  },
-  {
-    "name": "st_max_vote_changes",
-    "base": "",
-    "fields": [
-      {
-        "name": "value",
-        "type": "uint8"
-      }
-    ]
-  },
-  {
-    "name": "st_cashout_window",
-    "base": "",
-    "fields": [
-      {
-        "name": "window",
-        "type": "uint32"
-      },
-      {
-        "name": "upvote_lockout",
-        "type": "uint32"
-      }
-    ]
-  },
-  {
-    "name": "st_max_beneficiaries",
-    "base": "",
-    "fields": [
-      {
-        "name": "value",
-        "type": "uint8"
-      }
-    ]
-  },
-  {
-    "name": "st_max_comment_depth",
-    "base": "",
-    "fields": [
-      {
-        "name": "value",
-        "type": "uint16"
-      }
-    ]
-  },
-  {
-    "name": "st_social_acc",
-    "base": "",
-    "fields": [
-      {
-        "name": "value",
-        "type": "name"
-      }
-    ]
-  },
-  {
-    "name": "st_referral_acc",
-    "base": "",
-    "fields": [
-      {
-        "name": "value",
-        "type": "name"
-      }
-    ]
-  },
-  {
-    "name": "st_curators_prcnt",
-    "base": "",
-    "fields": [
-      {
-        "name": "min_curators_prcnt",
-        "type": "percent_t"
-      },
-      {
-        "name": "max_curators_prcnt",
-        "type": "percent_t"
-      }
-    ]
-  },
-  {
-     "name": "st_bwprovider",
-     "base": "",
-     "fields": [
-        {"type": "name", "name": "actor"},
-        {"type": "name", "name": "permission"}
-     ]
-  },
-  {
-     "name": "st_min_abs_rshares",
-     "base": "",
-     "fields": [
-        {"type": "uint64", "name": "value"}
-     ]
-  },
-  {
-    "name": "posting_state",
-    "base": "",
-    "fields": [
-      {
-        "name": "id",
-        "type": "uint64"
-      },
-      {
-        "name": "max_vote_changes",
-        "type": "st_max_vote_changes"
-      },
-      {
-        "name": "cashout_window",
-        "type": "st_cashout_window"
-      },
-      {
-        "name": "max_beneficiaries",
-        "type": "st_max_beneficiaries"
-      },
-      {
-        "name": "max_comment_depth",
-        "type": "st_max_comment_depth"
-      },
-      {
-        "name": "social_acc",
-        "type": "st_social_acc"
-      },
-      {
-        "name": "referral_acc",
-        "type": "st_referral_acc"
-      },
-      {
-        "name": "curators_prcnt",
-        "type": "st_curators_prcnt"
-      },
-      {
-        "name": "bwprovider",
-        "type": "st_bwprovider"
-      },
-      {
-        "name": "min_abs_rshares",
-        "type": "st_min_abs_rshares"
-      }
-    ]
-  },
-  {
-    "name": "setparams",
-    "base": "",
-    "fields": [
-      {
-        "name": "params",
-        "type": "posting_param[]"
-      }
-    ]
-  },
-  {
-    "name": "reblog",
-    "base": "",
-    "fields": [
-        {
-            "name": "rebloger",
-            "type": "name"
-        },
-        {
-            "name": "message_id",
-            "type": "mssgid"
-        },
-        {
-            "name": "headermssg",
-            "type": "string"
-        },
-        {
-            "name": "bodymssg",
-            "type": "string"
-        }
-    ]
-  },
-  {
-    "name": "erasereblog",
-    "base": "",
-    "fields": [
-        {
-            "name": "rebloger",
-            "type": "name"
-        },
-        {
-            "name": "message_id",
-            "type": "mssgid"
-        }
-    ]
-  },
-  {
-    "name": "setcurprcnt",
-    "base": "",
-    "fields": [
-        {
-            "name": "message_id",
-            "type": "mssgid"
-        },
-        {
-            "name": "curators_prcnt",
-            "type": "percent_t"
-        }
-    ]
-  },
-  {
-    "name": "calcrwrdwt",
-    "base": "",
-    "fields": [
-        {
-            "name": "account",
-            "type": "name"
-        },
-        {
-            "name": "mssg_id",
-            "type": "int64"
-        },
-        {
-            "name": "post_charge",
-            "type": "base_t"
-        }
-    ]
-  },
-  {
-    "name": "paymssgrwrd",
-    "base": "",
-    "fields": [
-        {
-            "name": "message_id",
-            "type": "mssgid"
-        }
-    ]
-  },
-  {
-    "name": "deletevotes",
-    "base": "",
-    "fields": [
-        {
-            "name": "message_id",
-            "type": "int64"
-        },
-        {
-            "name": "author",
-            "type": "name"
-        }
-    ]
-  },
-  {
-    "name": "recipient",
-    "base": "",
-    "fields": [
-        {
-            "name": "to",
-            "type": "name"
-        },
-        {
-            "name": "quantity",
-            "type": "asset"
-        },
-        {
-            "name": "memo",
-            "type": "string"
-        }
-    ]
-  },
-  {
-    "name": "setmaxpayout",
-    "base": "",
-    "fields": [
-        {
-            "name": "message_id",
-            "type": "mssgid"
-        },
-        {
-            "name": "max_payout",
-            "type": "asset"
-        }
-    ]
-  },
-  {
-    "name": "addpermlink",
-    "base": "",
-    "fields": [
-      { "type": "mssgid", "name": "msg" },
-      { "type": "mssgid", "name": "parent" },
-      { "type": "uint16", "name": "level" },
-      { "type": "uint32", "name": "childcount" }
-    ]
-  },{
-    "name": "delpermlink",
-    "base": "",
-    "fields": [
-      { "type": "mssgid", "name": "msg" }
-    ]
-  },{
-    "name": "addpermlinks",
-    "base": "",
-    "fields": [
-      { "type": "addpermlink[]", "name": "permlinks" }
-    ]
-  },{
-    "name": "delpermlinks",
-    "base": "",
-    "fields": [
-      { "type": "mssgid[]", "name": "permlinks" }
-    ]
-  },
-  {
-    "name": "post_event",
-    "base": "",
-    "fields": [
-        {"name": "author", "type": "name"},
-        {"name": "permlink", "type": "string"},
-        {"name": "netshares", "type": "base_t"},
-        {"name": "voteshares", "type": "base_t"},
-        {"name": "sumcuratorsw", "type": "base_t"},
-        {"name": "sharesfn", "type": "base_t"}
-    ]
-  },
-  {
-    "name": "vote_event",
-    "base": "",
-    "fields": [
-        {"name": "voter", "type": "name"},
-        {"name": "author", "type": "name"},
-        {"name": "permlink", "type": "string"},
-        {"name": "weight", "type": "signed_percent_t"},
-        {"name": "curatorsw", "type": "base_t"},
-        {"name": "rshares", "type": "base_t"}
-    ]
-  },
-  {
-    "name": "pool_event",
-    "base": "",
-    "fields": [
-        {"name": "created", "type": "uint64"},
-        {"name": "msgs", "type": "counter_t"},
-        {"name": "funds", "type": "asset"},
-        {"name": "rshares", "type": "wide_t"},
-        {"name": "rsharesfn", "type": "wide_t"}
-    ]
-  },
-  {
-    "name": "pool_erase_event",
-    "base": "",
-    "fields": [
-        {"name": "created", "type": "uint64"}
-    ]
-  },
-  {
-    "name": "reward_weight_event",
-    "base": "",
-    "fields": [
-        {"name": "message_id", "type": "mssgid"},
-        {"name": "rewardweight", "type": "percent_t"}
-    ]
-  },
-  {
-    "name": "post_reward_event",
-    "base": "",
-    "fields": [
-        {"name": "message_id", "type": "mssgid"},
-        {"name": "author_reward", "type": "asset"},
-        {"name": "benefactor_reward", "type": "asset"},
-        {"name": "curator_reward", "type": "asset"},
-        {"name": "unclaimed_reward", "type": "asset"}
-    ]
-  }
-  ],
-  "events": [
-    {"name": "poolstate", "type": "pool_event"},
-    {"name": "poolerase", "type": "pool_erase_event"},
-    {"name": "poststate", "type": "post_event"},
-    {"name": "votestate", "type": "vote_event"},
-    {"name": "rewardweight", "type": "reward_weight_event"},
-    {"name": "postreward", "type": "post_reward_event"}
-  ],
-  "actions": [
-  {
-    "name": "createmssg",
-    "type": "createmssg"
-  },
-  {
-    "name": "updatemssg",
-    "type": "updatemssg"
-  },
-  {
-    "name": "deletemssg",
-    "type": "deletemssg"
-  },
-  {
-    "name": "upvote",
-    "type": "vote"
-  },
-  {
-    "name": "downvote",
-    "type": "vote"
-  },
-  {
-    "name": "unvote",
-    "type": "unvote"
-  },
-  {
-    "name": "closemssgs",
-    "type": "closemssgs"
-  },
-  {
-    "name": "setrules",
-    "type": "setrules"
-  },
-  {
-    "name": "syncpool",
-    "type": "syncpool"
-  },
-  {
-    "name": "setlimit",
-    "type": "setlimit"
-  },
-  {
-    "name": "setparams",
-    "type": "setparams"
-  },
-  {
-    "name": "reblog",
-    "type": "reblog"
-  },
-  {
-    "name": "erasereblog",
-    "type": "erasereblog"
-  },
-  {
-    "name": "setcurprcnt",
-    "type": "setcurprcnt"
-  },
-  {
-    "name": "calcrwrdwt",
-    "type": "calcrwrdwt"
-  },
-  {
-    "name": "paymssgrwrd",
-    "type": "paymssgrwrd"
-  },
-  {
-    "name": "deletevotes",
-    "type": "deletevotes"
-  },
-  {
-    "name": "setmaxpayout",
-    "type": "setmaxpayout"
-  },
-
-    { "name": "addpermlink",  "type": "addpermlink" },
-    { "name": "delpermlink",  "type": "delpermlink" },
-    { "name": "addpermlinks", "type": "addpermlinks" },
-    { "name": "delpermlinks", "type": "delpermlinks" }
-  ],
-  "tables": [
-  {
-    "name": "message",
-    "type": "message",
-    "indexes": [
-       {
-          "name": "primary",
-          "unique": "true",
-          "orders": [
-              {"field": "id", "order": "asc"}
-          ]
-       },
-       {
-          "name": "bycashout",
-          "unique": "false",
-          "orders": [
-              {"field": "cashout_time", "order": "asc"}
-          ]
-       }
-    ]
-  },
-  {
-      "name": "permlink",
-      "type": "permlink",
-      "indexes": [
-         {
-            "name": "primary",
-            "unique": "true",
-            "orders": [
-                {"field": "id", "order": "asc"}
+        {"new_type_name": "base_t", "type": "int64"}, 
+        {"new_type_name": "counter_t", "type": "uint64"}, 
+        {"new_type_name": "enum_t", "type": "uint8"}, 
+        {"new_type_name": "index_t", "type": "uint64"}, 
+        {"new_type_name": "percent_t", "type": "uint16"}, 
+        {"new_type_name": "posting_params", "type": "variant_st_max_vote_changes_st_cashout_window_st_max_beneficiaries_st_max_comment_depth_st_social_acc_st_referral_acc_st_curators_prcnt_st_bwprovider_st_min_abs_rshares"}, 
+        {"new_type_name": "signed_percent_t", "type": "int16"}, 
+        {"new_type_name": "st_bwprovider", "type": "st_bwprovider_t"}, 
+        {"new_type_name": "st_cashout_window", "type": "st_cashout_window_t"}, 
+        {"new_type_name": "st_curators_prcnt", "type": "st_curators_prcnt_t"}, 
+        {"new_type_name": "st_max_beneficiaries", "type": "st_max_beneficiaries_t"}, 
+        {"new_type_name": "st_max_comment_depth", "type": "st_max_comment_depth_t"}, 
+        {"new_type_name": "st_max_vote_changes", "type": "st_max_vote_changes_t"}, 
+        {"new_type_name": "st_min_abs_rshares", "type": "st_min_abs_rshares_t"}, 
+        {"new_type_name": "st_referral_acc", "type": "st_referral_acc_t"}, 
+        {"new_type_name": "st_social_acc", "type": "st_social_acc_t"}, 
+        {"new_type_name": "wide_t", "type": "int128"}
+    ], 
+    "structs": [{
+            "name": "addpermlink", "base": "", 
+            "fields": [
+                {"name": "msg", "type": "mssgid"}, 
+                {"name": "parent", "type": "mssgid"}, 
+                {"name": "level", "type": "uint16"}, 
+                {"name": "childcount", "type": "uint32"}
             ]
-         },
-         {
-            "name": "byvalue",
-            "unique": "true",
-            "orders": [
-                {"field": "value", "order": "asc"}
+        }, {
+            "name": "addpermlinks", "base": "", 
+            "fields": [
+                {"name": "permlinks", "type": "permlink_info[]"}
             ]
-         }
-      ]
-  },
-  {
-    "name": "vote",
-    "type": "voteinfo",
-    "indexes": [
-       {
-          "name": "primary",
-          "unique": "true",
-          "orders": [
-              {"field": "id", "order": "asc"}
-          ]
-       },
-       {
-          "name": "messageid",
-          "unique": "false",
-          "orders": [
-              {"field": "message_id", "order": "asc"},
-              {"field": "curatorsw", "order": "desc"}
-          ]
-       },
-       {
-          "name": "byvoter",
-          "unique": "true",
-          "orders": [
-              {"field": "message_id", "order": "asc"},
-              {"field": "voter", "order": "asc"}
-          ]
-       }
+        }, {
+            "name": "beneficiary", "base": "", 
+            "fields": [
+                {"name": "account", "type": "name"}, 
+                {"name": "weight", "type": "percent_t"}
+            ]
+        }, {
+            "name": "bytecode", "base": "", 
+            "fields": [
+                {"name": "varssize", "type": "index_t"}, 
+                {"name": "operators", "type": "index_t[]"}, 
+                {"name": "values", "type": "value[]"}, 
+                {"name": "nums", "type": "base_t[]"}, 
+                {"name": "consts", "type": "base_t[]"}
+            ]
+        }, {
+            "name": "calcrwrdwt", "base": "", 
+            "fields": [
+                {"name": "account", "type": "name"}, 
+                {"name": "mssg_id", "type": "int64"}, 
+                {"name": "post_charge", "type": "base_t"}
+            ]
+        }, {
+            "name": "closemssgs", "base": "", 
+            "fields": [
+                {"name": "payer", "type": "name"}
+            ]
+        }, {
+            "name": "createmssg", "base": "", 
+            "fields": [
+                {"name": "message_id", "type": "mssgid"}, 
+                {"name": "parent_id", "type": "mssgid"}, 
+                {"name": "beneficiaries", "type": "beneficiary[]"}, 
+                {"name": "tokenprop", "type": "percent_t"}, 
+                {"name": "vestpayment", "type": "bool"}, 
+                {"name": "headermssg", "type": "string"}, 
+                {"name": "bodymssg", "type": "string"}, 
+                {"name": "languagemssg", "type": "string"}, 
+                {"name": "tags", "type": "string[]"}, 
+                {"name": "jsonmetadata", "type": "string"}, 
+                {"name": "curators_prcnt", "type": "uint16?"}, 
+                {"name": "max_payout", "type": "asset?"}
+            ]
+        }, {
+            "name": "delegate_voter", "base": "", 
+            "fields": [
+                {"name": "delegator", "type": "name"}, 
+                {"name": "interest_rate", "type": "percent_t"}
+            ]
+        }, {
+            "name": "deletemssg", "base": "", 
+            "fields": [
+                {"name": "message_id", "type": "mssgid"}
+            ]
+        }, {
+            "name": "deletevotes", "base": "", 
+            "fields": [
+                {"name": "message_id", "type": "int64"}, 
+                {"name": "author", "type": "name"}
+            ]
+        }, {
+            "name": "delpermlink", "base": "", 
+            "fields": [
+                {"name": "msg", "type": "mssgid"}
+            ]
+        }, {
+            "name": "delpermlinks", "base": "", 
+            "fields": [
+                {"name": "permlinks", "type": "mssgid[]"}
+            ]
+        }, {
+            "name": "downvote", "base": "", 
+            "fields": [
+                {"name": "voter", "type": "name"}, 
+                {"name": "message_id", "type": "mssgid"}, 
+                {"name": "weight", "type": "percent_t"}
+            ]
+        }, {
+            "name": "erasereblog", "base": "", 
+            "fields": [
+                {"name": "rebloger", "type": "name"}, 
+                {"name": "message_id", "type": "mssgid"}
+            ]
+        }, {
+            "name": "funcinfo", "base": "", 
+            "fields": [
+                {"name": "code", "type": "bytecode"}, 
+                {"name": "maxarg", "type": "base_t"}
+            ]
+        }, {
+            "name": "funcparams", "base": "", 
+            "fields": [
+                {"name": "str", "type": "string"}, 
+                {"name": "maxarg", "type": "base_t"}
+            ]
+        }, {
+            "name": "limitparams", "base": "", 
+            "fields": [
+                {"name": "act", "type": "uint64"}, 
+                {"name": "charge_id", "type": "uint8"}, 
+                {"name": "price", "type": "int64"}, 
+                {"name": "cutoff", "type": "int64"}, 
+                {"name": "vesting_price", "type": "int64"}, 
+                {"name": "min_vesting", "type": "int64"}
+            ]
+        }, {
+            "name": "message", "base": "", 
+            "fields": [
+                {"name": "author", "type": "name"}, 
+                {"name": "id", "type": "uint64"}, 
+                {"name": "date", "type": "uint64"}, 
+                {"name": "pool_date", "type": "uint64"}, 
+                {"name": "tokenprop", "type": "percent_t"}, 
+                {"name": "beneficiaries", "type": "beneficiary[]"}, 
+                {"name": "rewardweight", "type": "percent_t"}, 
+                {"name": "state", "type": "messagestate"}, 
+                {"name": "curators_prcnt", "type": "percent_t"}, 
+                {"name": "cashout_time", "type": "uint64"}, 
+                {"name": "mssg_reward", "type": "asset"}, 
+                {"name": "max_payout", "type": "asset"}, 
+                {"name": "paid_amount", "type": "int64"}
+            ]
+        }, {
+            "name": "messagestate", "base": "", 
+            "fields": [
+                {"name": "netshares", "type": "base_t"}, 
+                {"name": "voteshares", "type": "base_t"}, 
+                {"name": "sumcuratorsw", "type": "base_t"}
+            ]
+        }, {
+            "name": "mssgid", "base": "", 
+            "fields": [
+                {"name": "author", "type": "name"}, 
+                {"name": "permlink", "type": "string"}
+            ]
+        }, {
+            "name": "parameter", "base": "", 
+            "fields": []
+        }, {
+            "name": "paymssgrwrd", "base": "", 
+            "fields": [
+                {"name": "message_id", "type": "mssgid"}
+            ]
+        }, {
+            "name": "permlink", "base": "", 
+            "fields": [
+                {"name": "id", "type": "uint64"}, 
+                {"name": "parentacc", "type": "name"}, 
+                {"name": "parent_id", "type": "uint64"}, 
+                {"name": "value", "type": "string"}, 
+                {"name": "level", "type": "uint16"}, 
+                {"name": "childcount", "type": "uint32"}
+            ]
+        }, {
+            "name": "permlink_info", "base": "", 
+            "fields": [
+                {"name": "msg", "type": "mssgid"}, 
+                {"name": "parent", "type": "mssgid"}, 
+                {"name": "level", "type": "uint16"}, 
+                {"name": "childcount", "type": "uint32"}
+            ]
+        }, {
+            "name": "pool_erase_event", "base": "", 
+            "fields": [
+                {"name": "created", "type": "uint64"}
+            ]
+        }, {
+            "name": "pool_event", "base": "", 
+            "fields": [
+                {"name": "created", "type": "uint64"}, 
+                {"name": "msgs", "type": "counter_t"}, 
+                {"name": "funds", "type": "asset"}, 
+                {"name": "rshares", "type": "wide_t"}, 
+                {"name": "rsharesfn", "type": "wide_t"}
+            ]
+        }, {
+            "name": "poolstate", "base": "", 
+            "fields": [
+                {"name": "msgs", "type": "counter_t"}, 
+                {"name": "funds", "type": "asset"}, 
+                {"name": "rshares", "type": "wide_t"}, 
+                {"name": "rsharesfn", "type": "wide_t"}
+            ]
+        }, {
+            "name": "post_event", "base": "", 
+            "fields": [
+                {"name": "author", "type": "name"}, 
+                {"name": "permlink", "type": "string"}, 
+                {"name": "netshares", "type": "base_t"}, 
+                {"name": "voteshares", "type": "base_t"}, 
+                {"name": "sumcuratorsw", "type": "base_t"}, 
+                {"name": "sharesfn", "type": "base_t"}
+            ]
+        }, {
+            "name": "post_reward_event", "base": "", 
+            "fields": [
+                {"name": "message_id", "type": "mssgid"}, 
+                {"name": "author_reward", "type": "asset"}, 
+                {"name": "benefactor_reward", "type": "asset"}, 
+                {"name": "curator_reward", "type": "asset"}, 
+                {"name": "unclaimed_reward", "type": "asset"}
+            ]
+        }, {
+            "name": "posting_state", "base": "", 
+            "fields": [
+                {"name": "id", "type": "uint64"}, 
+                {"name": "max_vote_changes", "type": "st_max_vote_changes"}, 
+                {"name": "cashout_window", "type": "st_cashout_window"}, 
+                {"name": "max_beneficiaries", "type": "st_max_beneficiaries"}, 
+                {"name": "max_comment_depth", "type": "st_max_comment_depth"}, 
+                {"name": "social_acc", "type": "st_social_acc"}, 
+                {"name": "referral_acc", "type": "st_referral_acc"}, 
+                {"name": "curators_prcnt", "type": "st_curators_prcnt"}, 
+                {"name": "bwprovider", "type": "st_bwprovider"}, 
+                {"name": "min_abs_rshares", "type": "st_min_abs_rshares"}
+            ]
+        }, {
+            "name": "reblog", "base": "", 
+            "fields": [
+                {"name": "rebloger", "type": "name"}, 
+                {"name": "message_id", "type": "mssgid"}, 
+                {"name": "headermssg", "type": "string"}, 
+                {"name": "bodymssg", "type": "string"}
+            ]
+        }, {
+            "name": "reward_weight_event", "base": "", 
+            "fields": [
+                {"name": "message_id", "type": "mssgid"}, 
+                {"name": "rewardweight", "type": "percent_t"}
+            ]
+        }, {
+            "name": "rewardpool", "base": "", 
+            "fields": [
+                {"name": "created", "type": "uint64"}, 
+                {"name": "rules", "type": "rewardrules"}, 
+                {"name": "state", "type": "poolstate"}
+            ]
+        }, {
+            "name": "rewardrules", "base": "", 
+            "fields": [
+                {"name": "mainfunc", "type": "funcinfo"}, 
+                {"name": "curationfunc", "type": "funcinfo"}, 
+                {"name": "timepenalty", "type": "funcinfo"}, 
+                {"name": "maxtokenprop", "type": "percent_t"}
+            ]
+        }, {
+            "name": "setcurprcnt", "base": "", 
+            "fields": [
+                {"name": "message_id", "type": "mssgid"}, 
+                {"name": "curators_prcnt", "type": "percent_t"}
+            ]
+        }, {
+            "name": "setlimit", "base": "", 
+            "fields": [
+                {"name": "act", "type": "string"}, 
+                {"name": "token_code", "type": "symbol_code"}, 
+                {"name": "charge_id", "type": "uint8"}, 
+                {"name": "price", "type": "int64"}, 
+                {"name": "cutoff", "type": "int64"}, 
+                {"name": "vesting_price", "type": "int64"}, 
+                {"name": "min_vesting", "type": "int64"}
+            ]
+        }, {
+            "name": "setmaxpayout", "base": "", 
+            "fields": [
+                {"name": "message_id", "type": "mssgid"}, 
+                {"name": "max_payout", "type": "asset"}
+            ]
+        }, {
+            "name": "setparams", "base": "", 
+            "fields": [
+                {"name": "params", "type": "posting_params[]"}
+            ]
+        }, {
+            "name": "setrules", "base": "", 
+            "fields": [
+                {"name": "mainfunc", "type": "funcparams"}, 
+                {"name": "curationfunc", "type": "funcparams"}, 
+                {"name": "timepenalty", "type": "funcparams"}, 
+                {"name": "maxtokenprop", "type": "percent_t"}, 
+                {"name": "tokensymbol", "type": "symbol"}
+            ]
+        }, {
+            "name": "st_bwprovider_t", "base": "parameter", 
+            "fields": [
+                {"name": "actor", "type": "name"}, 
+                {"name": "permission", "type": "name"}
+            ]
+        }, {
+            "name": "st_cashout_window_t", "base": "parameter", 
+            "fields": [
+                {"name": "window", "type": "uint32"}, 
+                {"name": "upvote_lockout", "type": "uint32"}
+            ]
+        }, {
+            "name": "st_curators_prcnt_t", "base": "parameter", 
+            "fields": [
+                {"name": "min_curators_prcnt", "type": "percent_t"}, 
+                {"name": "max_curators_prcnt", "type": "percent_t"}
+            ]
+        }, {
+            "name": "st_max_beneficiaries_t", "base": "parameter", 
+            "fields": [
+                {"name": "value", "type": "uint8"}
+            ]
+        }, {
+            "name": "st_max_comment_depth_t", "base": "parameter", 
+            "fields": [
+                {"name": "value", "type": "uint16"}
+            ]
+        }, {
+            "name": "st_max_vote_changes_t", "base": "parameter", 
+            "fields": [
+                {"name": "value", "type": "uint8"}
+            ]
+        }, {
+            "name": "st_min_abs_rshares_t", "base": "parameter", 
+            "fields": [
+                {"name": "value", "type": "uint64"}
+            ]
+        }, {
+            "name": "st_referral_acc_t", "base": "parameter", 
+            "fields": [
+                {"name": "value", "type": "name"}
+            ]
+        }, {
+            "name": "st_social_acc_t", "base": "parameter", 
+            "fields": [
+                {"name": "value", "type": "name"}
+            ]
+        }, {
+            "name": "syncpool", "base": "", 
+            "fields": [
+                {"name": "tokensymbol", "type": "symbol?"}
+            ]
+        }, {
+            "name": "unvote", "base": "", 
+            "fields": [
+                {"name": "voter", "type": "name"}, 
+                {"name": "message_id", "type": "mssgid"}
+            ]
+        }, {
+            "name": "updatemssg", "base": "", 
+            "fields": [
+                {"name": "message_id", "type": "mssgid"}, 
+                {"name": "headermssg", "type": "string"}, 
+                {"name": "bodymssg", "type": "string"}, 
+                {"name": "languagemssg", "type": "string"}, 
+                {"name": "tags", "type": "string[]"}, 
+                {"name": "jsonmetadata", "type": "string"}
+            ]
+        }, {
+            "name": "upvote", "base": "", 
+            "fields": [
+                {"name": "voter", "type": "name"}, 
+                {"name": "message_id", "type": "mssgid"}, 
+                {"name": "weight", "type": "percent_t"}
+            ]
+        }, {
+            "name": "value", "base": "", 
+            "fields": [
+                {"name": "kind", "type": "enum_t"}, 
+                {"name": "idx", "type": "index_t"}
+            ]
+        }, {
+            "name": "vote_event", "base": "", 
+            "fields": [
+                {"name": "voter", "type": "name"}, 
+                {"name": "author", "type": "name"}, 
+                {"name": "permlink", "type": "string"}, 
+                {"name": "weight", "type": "signed_percent_t"}, 
+                {"name": "curatorsw", "type": "base_t"}, 
+                {"name": "rshares", "type": "base_t"}
+            ]
+        }, {
+            "name": "voteinfo", "base": "", 
+            "fields": [
+                {"name": "id", "type": "uint64"}, 
+                {"name": "message_id", "type": "uint64"}, 
+                {"name": "voter", "type": "name"}, 
+                {"name": "weight", "type": "signed_percent_t"}, 
+                {"name": "time", "type": "uint64"}, 
+                {"name": "count", "type": "uint8"}, 
+                {"name": "delegators", "type": "delegate_voter[]"}, 
+                {"name": "curatorsw", "type": "base_t"}, 
+                {"name": "rshares", "type": "base_t"}, 
+                {"name": "paid_amount", "type": "int64"}
+            ]
+        }
+    ], 
+    "actions": [
+        {"name": "addpermlink", "type": "addpermlink"}, 
+        {"name": "addpermlinks", "type": "addpermlinks"}, 
+        {"name": "calcrwrdwt", "type": "calcrwrdwt"}, 
+        {"name": "closemssgs", "type": "closemssgs"}, 
+        {"name": "createmssg", "type": "createmssg"}, 
+        {"name": "deletemssg", "type": "deletemssg"}, 
+        {"name": "deletevotes", "type": "deletevotes"}, 
+        {"name": "delpermlink", "type": "delpermlink"}, 
+        {"name": "delpermlinks", "type": "delpermlinks"}, 
+        {"name": "downvote", "type": "downvote"}, 
+        {"name": "erasereblog", "type": "erasereblog"}, 
+        {"name": "paymssgrwrd", "type": "paymssgrwrd"}, 
+        {"name": "reblog", "type": "reblog"}, 
+        {"name": "setcurprcnt", "type": "setcurprcnt"}, 
+        {"name": "setlimit", "type": "setlimit"}, 
+        {"name": "setmaxpayout", "type": "setmaxpayout"}, 
+        {"name": "setparams", "type": "setparams"}, 
+        {"name": "setrules", "type": "setrules"}, 
+        {"name": "syncpool", "type": "syncpool"}, 
+        {"name": "unvote", "type": "unvote"}, 
+        {"name": "updatemssg", "type": "updatemssg"}, 
+        {"name": "upvote", "type": "upvote"}
+    ], 
+    "events": [
+        {"name": "poolerase", "type": "pool_erase_event"}, 
+        {"name": "poolstate", "type": "pool_event"}, 
+        {"name": "postreward", "type": "post_reward_event"}, 
+        {"name": "poststate", "type": "post_event"}, 
+        {"name": "rewardweight", "type": "reward_weight_event"}, 
+        {"name": "votestate", "type": "vote_event"}
+    ], 
+    "tables": [{
+            "name": "limit", "type": "limitparams", 
+            "indexes": [{
+                    "name": "primary", "unique": true, 
+                    "orders": [
+                        {"field": "act", "order": "asc"}
+                    ]
+                }
+            ]
+        }, {
+            "name": "message", "type": "message", 
+            "indexes": [{
+                    "name": "primary", "unique": true, 
+                    "orders": [
+                        {"field": "id", "order": "asc"}
+                    ]
+                }, {
+                    "name": "bycashout", "unique": false, 
+                    "orders": [
+                        {"field": "cashout_time", "order": "asc"}
+                    ]
+                }
+            ]
+        }, {
+            "name": "permlink", "type": "permlink", 
+            "indexes": [{
+                    "name": "primary", "unique": true, 
+                    "orders": [
+                        {"field": "id", "order": "asc"}
+                    ]
+                }, {
+                    "name": "byvalue", "unique": true, 
+                    "orders": [
+                        {"field": "value", "order": "asc"}
+                    ]
+                }
+            ]
+        }, {
+            "name": "pstngparams", "type": "posting_state", 
+            "indexes": [{
+                    "name": "primary", "unique": true, 
+                    "orders": [
+                        {"field": "id", "order": "asc"}
+                    ]
+                }
+            ]
+        }, {
+            "name": "rewardpools", "type": "rewardpool", 
+            "indexes": [{
+                    "name": "primary", "unique": true, 
+                    "orders": [
+                        {"field": "created", "order": "asc"}
+                    ]
+                }
+            ]
+        }, {
+            "name": "vote", "type": "voteinfo", 
+            "indexes": [{
+                    "name": "primary", "unique": true, 
+                    "orders": [
+                        {"field": "id", "order": "asc"}
+                    ]
+                }, {
+                    "name": "messageid", "unique": false, 
+                    "orders": [
+                        {"field": "message_id", "order": "asc"}, 
+                        {"field": "curatorsw", "order": "desc"}
+                    ]
+                }, {
+                    "name": "byvoter", "unique": true, 
+                    "orders": [
+                        {"field": "message_id", "order": "asc"}, 
+                        {"field": "voter", "order": "asc"}
+                    ]
+                }
+            ]
+        }
+    ], 
+    "variants": [{
+            "name": "variant_st_max_vote_changes_st_cashout_window_st_max_beneficiaries_st_max_comment_depth_st_social_acc_st_referral_acc_st_curators_prcnt_st_bwprovider_st_min_abs_rshares", 
+            "types": [
+                "st_max_vote_changes", 
+                "st_cashout_window", 
+                "st_max_beneficiaries", 
+                "st_max_comment_depth", 
+                "st_social_acc", 
+                "st_referral_acc", 
+                "st_curators_prcnt", 
+                "st_bwprovider", 
+                "st_min_abs_rshares"
+            ]
+        }
     ]
-  },
-  {
-    "name": "rewardpools",
-    "type": "rewardpool",
-    "indexes": [
-       {
-          "name": "primary",
-          "unique": "true",
-          "orders": [
-              {"field": "created", "order": "asc"}
-          ]
-       }
-    ]
-  },
-  {
-    "name": "limit",
-    "type": "limitparams",
-    "indexes": [
-       {
-          "name": "primary",
-          "unique": "true",
-          "orders": [
-              {"field": "act", "order": "asc"}
-          ]
-       }
-    ]
-  },
-  {
-    "name": "pstngparams",
-    "type": "posting_state",
-    "indexes": [
-       {
-          "name": "primary",
-          "unique": "true",
-          "orders": [
-              {"field": "id", "order": "asc"}
-          ]
-       }
-    ]
-  }
-  ],
-  "error_messages": [],
-  "abi_extensions": []
 }

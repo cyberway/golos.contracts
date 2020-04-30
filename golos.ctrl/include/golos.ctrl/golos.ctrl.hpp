@@ -9,6 +9,7 @@
 #include <eosio/crypto.hpp>
 #include <vector>
 #include <string>
+#include <common/dispatchers.hpp>
 
 namespace golos {
 
@@ -16,7 +17,7 @@ using namespace eosio;
 using share_type = int64_t;
 
 
-struct [[eosio::table]] witness_info {
+struct witness_info {
     name name;
     std::string url;        // not sure it's should be in db (but can be useful to get witness info)
     bool active;            // can check key instead or even remove record
@@ -31,11 +32,13 @@ struct [[eosio::table]] witness_info {
         return total_weight;
     }
 };
-using witness_weight_idx = indexed_by<"byweight"_n, const_mem_fun<witness_info, uint64_t, &witness_info::weight_key>>;
-using witness_tbl = eosio::multi_index<"witness"_n, witness_info, witness_weight_idx>;
+using witness_weight_idx [[using eosio: order("total_weight","desc"), non_unique]] =
+    indexed_by<"byweight"_n, const_mem_fun<witness_info, uint64_t, &witness_info::weight_key>>;
+using witness_tbl [[using eosio: order("name","asc"), contract("golos.ctrl")]] =
+    eosio::multi_index<"witness"_n, witness_info, witness_weight_idx>;
 
 
-struct [[eosio::table]] witness_voter {
+struct witness_voter {
     name voter;
     std::vector<name> witnesses;
 
@@ -43,16 +46,26 @@ struct [[eosio::table]] witness_voter {
         return voter.value;
     }
 };
-using witness_vote_tbl = eosio::multi_index<"witnessvote"_n, witness_voter>;
+using witness_vote_tbl [[using eosio: order("voter","asc"), contract("golos.ctrl")]] =
+    eosio::multi_index<"witnessvote"_n, witness_voter>;
 
-struct [[eosio::table]] msig_auths {
+struct msig_auths {
     std::vector<name> witnesses;
     time_point_sec last_update;
 };
-using msig_auth_singleton = eosio::singleton<"msigauths"_n, msig_auths>;
+using msig_auth_singleton [[using eosio: order("id","asc"), contract("golos.ctrl")]] = eosio::singleton<"msigauths"_n, msig_auths>;
 
+struct ban_account {
+    name account;
 
-class control: public contract {
+    uint64_t primary_key() const {
+        return account.value;
+    }
+};
+using ban_accounts_tbl [[using eosio: order("account","asc"), contract("golos.ctrl")]] =
+    eosio::multi_index<"banaccount"_n, ban_account>;
+
+class [[eosio::contract("golos.ctrl")]] control: public contract {
 public:
     control(name self, name code, datastream<const char*> ds)
         : contract(self, code, ds)
@@ -60,8 +73,8 @@ public:
     {
     }
 
-    [[eosio::action]] void validateprms(std::vector<ctrl_param>);
-    [[eosio::action]] void setparams(std::vector<ctrl_param>);
+    [[eosio::action]] void validateprms(std::vector<ctrl_param> params);
+    [[eosio::action]] void setparams(std::vector<ctrl_param> params);
 
     [[eosio::action]] void regwitness(name witness, std::string url);
     [[eosio::action]] void unregwitness(name witness);
@@ -71,7 +84,17 @@ public:
     [[eosio::action]] void unvotewitn(name voter, name witness);
 
     [[eosio::action]] void changevest(name who, asset diff);
+
+    [[eosio::action]] void ban(name account);
+    [[eosio::action]] void unban(name account);
+
+    ON_TRANSFER(CYBER_TOKEN, on_transfer)
     void on_transfer(name from, name to, asset quantity, std::string memo);
+
+    static inline bool is_blocking(name code, name account) {
+        ban_accounts_tbl tbl(code, code.value);
+        return (tbl.end() != tbl.find(account.value));
+    }
 
 private:
     ctrl_params_singleton _cfg;
@@ -97,6 +120,13 @@ private:
     void apply_vote_weight(name voter, name witness, bool add);
     void update_witnesses_weights(std::vector<name> witnesses, share_type diff);
     void update_auths();
+
+    struct [[eosio::event]] witnessstate {
+        name witness;
+        uint64_t weight;
+        bool active;
+    };
+
     void send_witness_event(const witness_info& wi);
     void active_witness(golos::name witness, bool flag);
 };

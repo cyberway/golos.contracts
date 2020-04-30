@@ -8,12 +8,12 @@ namespace golos {
 
     using namespace eosio;
 
-    struct st_max_vote_changes : parameter {
-        uint8_t max_vote_changes;
+    struct st_max_vote_changes_t : parameter {
+        uint8_t value;
     };
-    using max_vote_changes_prm = param_wrapper<st_max_vote_changes, 1>;
+    using st_max_vote_changes = param_wrapper<st_max_vote_changes_t, 1>;
 
-    struct st_cashout_window : parameter {
+    struct st_cashout_window_t : parameter {
         uint32_t window;
         uint32_t upvote_lockout;
 
@@ -22,47 +22,47 @@ namespace golos {
             eosio::check(window > upvote_lockout, "Cashout window can't be less than upvote lockout.");
         }
     };
-    using cashout_window_prm = param_wrapper<st_cashout_window, 2>;
+    using st_cashout_window = param_wrapper<st_cashout_window_t, 2>;
 
-    struct st_max_beneficiaries : parameter {
-        uint8_t max_beneficiaries;
+    struct st_max_beneficiaries_t : parameter {
+        uint8_t value;
     };
-    using max_beneficiaries_prm = param_wrapper<st_max_beneficiaries, 1>;
+    using st_max_beneficiaries = param_wrapper<st_max_beneficiaries_t, 1>;
 
-    struct st_max_comment_depth : parameter {
-        uint16_t max_comment_depth;
+    struct st_max_comment_depth_t : parameter {
+        uint16_t value;
 
         void validate() const override {
-            eosio::check(max_comment_depth > 0, "Max comment depth must be greater than 0.");
+            eosio::check(value > 0, "Max comment depth must be greater than 0.");
         }
     };
-    using max_comment_depth_prm = param_wrapper<st_max_comment_depth, 1>;
+    using st_max_comment_depth = param_wrapper<st_max_comment_depth_t, 1>;
 
-    struct st_social_acc : parameter {
-        name account;
+    struct st_social_acc_t : parameter {
+        name value;
 
         void validate() const override {
-            if (account != name()) {
-                eosio::check(is_account(account), "Social account doesn't exist.");
+            if (value != name()) {
+                eosio::check(is_account(value), "Social account doesn't exist.");
             }
         }
     };
-    using social_acc_prm = param_wrapper<st_social_acc, 1>;
+    using st_social_acc = param_wrapper<st_social_acc_t, 1>;
 
-    struct st_referral_acc : parameter {
-        name account;
+    struct st_referral_acc_t : parameter {
+        name value;
 
         void validate() const override {
-            if (account != name()) {
-                eosio::check(is_account(account), "Referral account doesn't exist.");
+            if (value != name()) {
+                eosio::check(is_account(value), "Referral account doesn't exist.");
             }
         }
     };
-    using referral_acc_prm = param_wrapper<st_referral_acc, 1>;
+    using st_referral_acc = param_wrapper<st_referral_acc_t, 1>;
 
-    struct st_curators_prcnt : parameter {
-        uint16_t min_curators_prcnt;
-        uint16_t max_curators_prcnt;
+    struct st_curators_prcnt_t : parameter {
+        percent_t min_curators_prcnt;
+        percent_t max_curators_prcnt;
 
         void validate() const override {
             eosio::check(min_curators_prcnt <= config::_100percent,
@@ -71,46 +71,47 @@ namespace golos {
                     "Min curators percent must be less than max curators percent or equal.");
             eosio::check(max_curators_prcnt <= config::_100percent, "Max curators percent must be less than 100 or equal.");
         }
-        void validate_value(uint16_t x) const {
+        void validate_value(percent_t x) const {
             eosio::check(x >= min_curators_prcnt, "Curators percent is less than min curators percent.");
             eosio::check(x <= max_curators_prcnt, "Curators percent is greater than max curators percent.");
         }
     };
-    using curators_prcnt_prm = param_wrapper<st_curators_prcnt, 2>;
+    using st_curators_prcnt = param_wrapper<st_curators_prcnt_t, 2>;
 
-    struct st_bwprovider: parameter {
-        permission_level provider;
+    struct st_bwprovider_t: parameter {
+        name actor;
+        name permission;
 
         void validate() const override {
-            eosio::check((provider.actor != name()) == (provider.permission != name()), "actor and permission must be set together");
+            eosio::check((actor != name()) == (permission != name()), "actor and permission must be set together");
             // check that contract can use cyber:providebw done in setparams
             // (we need know contract account to make this check)
         }
     };
-    using bwprovider_prm = param_wrapper<st_bwprovider,1>;
+    using st_bwprovider = param_wrapper<st_bwprovider_t,2>;
 
-    struct st_min_abs_rshares : parameter {
+    struct st_min_abs_rshares_t : parameter {
         uint64_t value;
     };
-    using min_abs_rshares_prm = param_wrapper<st_min_abs_rshares, 1>;
+    using st_min_abs_rshares = param_wrapper<st_min_abs_rshares_t, 1>;
 
-    using posting_params = std::variant<max_vote_changes_prm, cashout_window_prm, max_beneficiaries_prm,
-          max_comment_depth_prm, social_acc_prm, referral_acc_prm, curators_prcnt_prm, bwprovider_prm,
-          min_abs_rshares_prm>;
+    using posting_params = std::variant<st_max_vote_changes, st_cashout_window, st_max_beneficiaries,
+          st_max_comment_depth, st_social_acc, st_referral_acc, st_curators_prcnt, st_bwprovider,
+          st_min_abs_rshares>;
 
-    struct [[eosio::table]] posting_state {
-        max_vote_changes_prm max_vote_changes_param;
-        cashout_window_prm cashout_window_param;
-        max_beneficiaries_prm max_beneficiaries_param;
-        max_comment_depth_prm max_comment_depth_param;
-        social_acc_prm social_acc_param;
-        referral_acc_prm referral_acc_param;
-        curators_prcnt_prm curators_prcnt_param;
-        bwprovider_prm bwprovider_param;
-        min_abs_rshares_prm min_abs_rshares_param;
+    struct posting_state {
+        st_max_vote_changes max_vote_changes;
+        st_cashout_window cashout_window;
+        st_max_beneficiaries max_beneficiaries;
+        st_max_comment_depth max_comment_depth;
+        st_social_acc social_acc;
+        st_referral_acc referral_acc;
+        st_curators_prcnt curators_prcnt;
+        st_bwprovider bwprovider;
+        st_min_abs_rshares min_abs_rshares;
 
         static constexpr int params_count = 9;
     };
-    using posting_params_singleton = eosio::singleton<"pstngparams"_n, posting_state>;
+    using posting_params_singleton [[using eosio: order("id","asc"), contract("golos.publication")]] = eosio::singleton<"pstngparams"_n, posting_state>;
 
 } //golos

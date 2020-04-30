@@ -9,7 +9,7 @@ namespace golos {
 using namespace eosio;
 
 template<typename T, int L>
-struct param_wrapper: T {
+struct [[eosio::ignore]] param_wrapper: T {
     param_wrapper() = default;
     param_wrapper(T& x): T(x) {};
     param_wrapper(T&& x): T(std::move(x)) {};
@@ -106,7 +106,7 @@ struct param_helper {
      */
     template<typename V, typename T, typename S>
     static V set_parameters(std::vector<T> params, S& singleton, name ram_payer) {
-        using state_type = decltype(singleton.get());
+        using state_type = typename std::decay<decltype(singleton.get())>::type;
         auto update = singleton.exists();
         eosio::check(update || params.size() == state_type::params_count, "must provide all parameters in initial set");
         check_params(params, update);

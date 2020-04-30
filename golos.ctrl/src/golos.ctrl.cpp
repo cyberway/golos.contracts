@@ -1,8 +1,7 @@
-#include "golos.ctrl/golos.ctrl.hpp"
-#include "golos.ctrl/config.hpp"
+#include <golos.ctrl/golos.ctrl.hpp>
+#include <golos.ctrl/config.hpp>
 #include <golos.vesting/golos.vesting.hpp>
 #include <common/parameter_ops.hpp>
-#include <common/dispatchers.hpp>
 #include <cyber.bios/cyber.bios.hpp>
 #include <eosio/transaction.hpp>
 #include <eosio/event.hpp>
@@ -19,9 +18,9 @@ namespace param {
 constexpr uint16_t calc_thrs(uint16_t val, uint16_t top, uint16_t num, uint16_t denom) {
     return 0 == val ? uint32_t(top) * num / denom + 1 : val;
 }
-uint16_t msig_permissions::super_majority_threshold(uint16_t top) const { return calc_thrs(super_majority, top, 2, 3); };
-uint16_t msig_permissions::majority_threshold(uint16_t top) const { return calc_thrs(majority, top, 1, 2); };
-uint16_t msig_permissions::minority_threshold(uint16_t top) const { return calc_thrs(minority, top, 1, 3); };
+uint16_t multisig_perms_t::super_majority_threshold(uint16_t top) const { return calc_thrs(super_majority, top, 2, 3); };
+uint16_t multisig_perms_t::majority_threshold(uint16_t top) const { return calc_thrs(majority, top, 1, 2); };
+uint16_t multisig_perms_t::minority_threshold(uint16_t top) const { return calc_thrs(minority, top, 1, 3); };
 }
 
 
@@ -36,14 +35,14 @@ struct ctrl_params_setter: set_params_visitor<ctrl_state> {
 
     bool recheck_msig_perms = false;
 
-    bool operator()(const ctrl_token_param& p) {
+    bool operator()(const ctrl_token& p) {
         return set_param(p, &ctrl_state::token);
     }
-    bool operator()(const multisig_acc_param& p) {
+    bool operator()(const multisig_acc& p) {
         // TODO: if change multisig account, then must set auths
         return set_param(p, &ctrl_state::multisig);
     }
-    bool operator()(const max_witnesses_param& p) {
+    bool operator()(const max_witnesses& p) {
         // TODO: if change max_witnesses, then must set auths
         bool changed = set_param(p, &ctrl_state::witnesses);
         if (changed) {
@@ -53,7 +52,7 @@ struct ctrl_params_setter: set_params_visitor<ctrl_state> {
         return changed;
     }
 
-    void check_msig_perms(const msig_perms_param& p) {
+    void check_msig_perms(const multisig_perms& p) {
         const auto max = state.witnesses.max;
         const auto smaj = p.super_majority_threshold(max);
         const auto maj = p.majority_threshold(max);
@@ -65,7 +64,7 @@ struct ctrl_params_setter: set_params_visitor<ctrl_state> {
         eosio::check(min <= smaj, "minority must not be greater than super_majority");
         eosio::check(min <= maj, "minority must not be greater than majority");
     }
-    bool operator()(const msig_perms_param& p) {
+    bool operator()(const multisig_perms& p) {
         bool changed = set_param(p, &ctrl_state::msig_perms);
         if (changed) {
             // additionals checks against max_witnesses, which is not accessible in `validate()`
@@ -74,10 +73,10 @@ struct ctrl_params_setter: set_params_visitor<ctrl_state> {
         }
         return changed;
     }
-    bool operator()(const witness_votes_param& p) {
+    bool operator()(const max_witness_votes& p) {
         return set_param(p, &ctrl_state::witness_votes);
     }
-    bool operator()(const update_auth_param& p) {
+    bool operator()(const update_auth& p) {
         return set_param(p, &ctrl_state::update_auth_period);
     }
 };
@@ -134,6 +133,7 @@ void control::on_transfer(name from, name to, asset quantity, string memo) {
 }
 
 void control::regwitness(name witness, string url) {
+    eosio::check(!control::is_blocking(config::control_name, witness), "You are blocked.");
     assert_started();
     eosio::check(url.length() <= config::witness_max_url_size, "url too long");
     require_auth(witness);
@@ -171,6 +171,7 @@ void control::stopwitness(name witness) {
 }
 
 void control::startwitness(name witness) {
+    eosio::check(!control::is_blocking(config::control_name, witness), "You are blocked.");
     assert_started();
     require_auth(witness);
     active_witness(witness, true);
@@ -178,6 +179,7 @@ void control::startwitness(name witness) {
 
 // Note: if not weighted, it's possible to pass all witnesses in vector like in BP actions
 void control::votewitness(name voter, name witness) {
+    eosio::check(!control::is_blocking(config::control_name, voter), "You are blocked.");
     assert_started();
     require_auth(voter);
 
@@ -243,6 +245,37 @@ void control::changevest(name who, asset diff) {
     change_voter_vests(who, diff.amount);
 }
 
+void control::ban(name account) {
+    require_auth(_self);
+
+    eosio::check(is_account(account), "blocking account doesn't exist");
+
+    ban_accounts_tbl ban_tbl(_self, _self.value);
+    auto itr = ban_tbl.find(account.value);
+    eosio::check(ban_tbl.end() == itr, "account is already banned");
+    ban_tbl.emplace(_self, [&](auto& item){
+        item.account = account;
+    });
+
+    witness_tbl wit_tbl(_self, _self.value);
+    auto wtr = wit_tbl.find(account.value);
+    if (wit_tbl.end() != wtr && wtr->active) {
+        wit_tbl.modify(wtr, eosio::same_payer, [&](auto& item){
+            item.active = false;
+            send_witness_event(item);
+        });
+        update_auths();
+    }
+}
+
+void control::unban(name account) {
+    require_auth(_self);
+
+    ban_accounts_tbl tbl(_self, _self.value);
+    auto itr = tbl.find(account.value);
+    eosio::check(tbl.end() != itr, "account isn't banned");
+    tbl.erase(itr);
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -353,7 +386,8 @@ void control::update_auths() {
 }
 
 void control::send_witness_event(const witness_info& wi) {
-    eosio::event(_self, "witnessstate"_n, std::make_tuple(wi.name, wi.total_weight, wi.active)).send();
+    witnessstate data{wi.name, wi.total_weight, wi.active};
+    eosio::event(_self, "witnessstate"_n, data).send();
 }
 
 void control::active_witness(name witness, bool flag) {
@@ -394,9 +428,3 @@ vector<name> control::top_witnesses() {
 }
 
 } // golos
-
-DISPATCH_WITH_TRANSFER(golos::control, on_transfer,
-    (validateprms)(setparams)
-    (regwitness)(unregwitness)
-    (startwitness)(stopwitness)
-    (votewitness)(unvotewitn)(changevest))

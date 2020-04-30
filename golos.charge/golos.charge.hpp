@@ -21,7 +21,7 @@
 namespace golos {
 using namespace eosio;
 
-class charge : public contract {
+class [[eosio::contract("golos.charge")]] charge : public contract {
     fixp_t consume_charge(name issuer, name user, symbol_code token_code, uint8_t charge_id, int64_t price, int64_t cutoff = -1, int64_t vesting_price = -1);
     static inline fixp_t to_fixp(int64_t arg)   { return fp_cast<fixp_t>(arg); }
     static inline int64_t from_fixp(fixp_t arg) { return fp_cast<int64_t>( arg, false ); }
@@ -98,10 +98,10 @@ private:
         }
     };
 
-    using balances = eosio::multi_index<"balances"_n, balance>;
-    using restorers = eosio::multi_index<"restorers"_n, restorer>;
-    using stored_key_idx = indexed_by<"symbolstamp"_n, const_mem_fun<stored, uint128_t, &stored::key> >;
-    using storedvals = eosio::multi_index<"storedvals"_n, stored, stored_key_idx>;
+    using balances [[eosio::order("charge_symbol","asc")]] = eosio::multi_index<"balances"_n, balance>;
+    using restorers [[eosio::order("charge_symbol","asc")]] = eosio::multi_index<"restorers"_n, restorer>;
+    using stored_key_idx [[eosio::order("symbol_stamp","asc")]] = indexed_by<"symbolstamp"_n, const_mem_fun<stored, uint128_t, &stored::key> >;
+    using storedvals [[eosio::order("id","asc")]] = eosio::multi_index<"storedvals"_n, stored, stored_key_idx>;
 
 
     static inline fixp_t calc_value(name code, name user, symbol_code token_code, const balance& user_balance, fixp_t price) {
@@ -134,6 +134,14 @@ private:
     }
 
 private:
+    struct [[eosio::event]] chargestate {
+        name user;
+        uint64_t charge_symbol;
+        symbol_code token_code;
+        uint8_t charge_id;
+        uint64_t last_update;
+        base_t value;
+    };
     void send_charge_event(name user, const balance& state);
 
 public:

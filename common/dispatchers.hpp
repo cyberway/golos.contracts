@@ -48,3 +48,18 @@ extern "C" { \
         } \
    } \
 } \
+
+#undef ON_SIMPLE_TRANSFER
+#define ON_SIMPLE_TRANSFER(TOKEN) [[eosio::on_notify(TOKEN "::transfer")]]
+
+#undef ON_BULK_TRANSFER
+#define ON_BULK_TRANSFER(TOKEN) [[eosio::on_notify(TOKEN "::bulktransfer")]]
+
+#undef ON_TRANSFER
+#define ON_TRANSFER(TOKEN, ON_TRANSFER_HANDLER) \
+   ON_BULK_TRANSFER(TOKEN) void on_bulk_transfer(name from, std::vector<eosio::token::recipient> recipients) { \
+      for (auto& recipient : recipients) { \
+         ON_TRANSFER_HANDLER(from, recipient.to, recipient.quantity, recipient.memo); \
+      } \
+   } \
+   ON_SIMPLE_TRANSFER(TOKEN)

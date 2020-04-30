@@ -1,6 +1,8 @@
 #include "golos_tester.hpp"
 #include "golos.ctrl_test_api.hpp"
 #include "golos.vesting_test_api.hpp"
+#include "golos.posting_test_api.hpp"
+#include "golos.charge_test_api.hpp"
 #include "cyber.token_test_api.hpp"
 #include "contracts.hpp"
 
@@ -13,23 +15,29 @@ using symbol_type = symbol;
 
 static const symbol _token = symbol(3,"GLS");
 static const int64_t _wmult = _token.precision();   // NOTE: actually, it must be vesting precision, which can be different
+static const auto _vesting = symbol(3, "GLS");
 
 class golos_ctrl_tester : public golos_tester {
 protected:
     golos_ctrl_api ctrl;
+    golos_posting_api post;
     golos_vesting_api vest;
     cyber_token_api token;
+    golos_charge_api charge;
 
 public:
     golos_ctrl_tester()
         : golos_tester(cfg::control_name)
         , ctrl({this, _code})
-        , vest({this, cfg::vesting_name, _token})
+        , post({this, cfg::publish_name, _token})
+        , vest({this, cfg::vesting_name, _vesting})
         , token({this, cfg::token_name, _token})
+        , charge({this, cfg::charge_name, _token})
     {
         create_accounts({_code, BLOG, N(witn1), N(witn2), N(witn3), N(witn4), N(witn5),
             _alice, _bob, _carol, _issuer,
-            cfg::vesting_name, cfg::token_name, cfg::workers_name, cfg::emission_name});
+            cfg::vesting_name, cfg::token_name, cfg::workers_name, cfg::emission_name,
+            cfg::publish_name, cfg::charge_name, cfg::social_name});
         produce_block();
 
         install_contract(cfg::token_name, contracts::token_wasm(), contracts::token_abi());
@@ -40,6 +48,32 @@ public:
         _test_params = ctrl.default_params(BLOG, _token, _max_witnesses, _max_witness_votes, _update_auth_period);
     }
 
+    void posting_init() {
+        post.initialize_contract(cfg::token_name, cfg::charge_name);
+        charge.initialize_contract();
+
+        BOOST_CHECK_EQUAL(success(), token.create(cfg::issuer_name, token.make_asset(1000000)));
+        BOOST_CHECK_EQUAL(success(), token.open(cfg::publish_name, _token, cfg::publish_name));
+        BOOST_CHECK_EQUAL(success(), vest.create_vesting(cfg::issuer_name));
+
+        funcparams fn{"0", 1};
+        BOOST_CHECK_EQUAL(success(), post.set_rules(fn, fn, fn, 5000));
+        BOOST_CHECK_EQUAL(success(), post.set_limit("post"));
+        BOOST_CHECK_EQUAL(success(), post.set_limit("comment"));
+        BOOST_CHECK_EQUAL(success(), post.set_limit("vote"));
+        BOOST_CHECK_EQUAL(success(), post.set_limit("post bandwidth"));
+
+        BOOST_CHECK_EQUAL(success(), post.init_default_params());
+
+        for (auto& u : {_alice, _bob}) {
+            BOOST_CHECK_EQUAL(success(), vest.open(u, _vesting, u));
+            produce_block();
+            BOOST_CHECK_EQUAL(success(), token.issue(cfg::issuer_name, u, token.make_asset(10), "add funds"));
+            produce_block();
+            BOOST_CHECK_EQUAL(success(), token.transfer(u, cfg::vesting_name, token.make_asset(10), "buy vesting "));
+            produce_block();
+        }
+    }
 
     asset dasset(double val = 0) const {
         return token.make_asset(val);
@@ -106,6 +140,12 @@ public:
 
         const string auth_period0       = amsg("update auth period can't be 0");
         const string assert_erase_wtnss = amsg("not possible to remove witness as there are votes");
+
+        const string bad_account        = amsg("blocking account doesn't exist");
+        const string banned_account     = amsg("account is already banned");
+        const string not_banned_account = amsg("account isn't banned");
+
+        const string blocked_action     = amsg("You are blocked.");
     } err;
 
     // prepare
@@ -516,6 +556,56 @@ BOOST_FIXTURE_TEST_CASE(payments_top_witness, golos_ctrl_tester) try {
 
 } FC_LOG_AND_RETHROW()
 
+BOOST_FIXTURE_TEST_CASE(ban_account, golos_ctrl_tester) try {
+    BOOST_TEST_MESSAGE("Check ban account");
 
+    posting_init();
+
+    BOOST_TEST_MESSAGE("--- fail to ban not exist user");
+    BOOST_CHECK_EQUAL(err.bad_account, ctrl.ban_account(N(sam)));
+
+    BOOST_TEST_MESSAGE("--- success to ban user");
+    BOOST_CHECK_EQUAL(success(), ctrl.ban_account(_alice));
+    produce_block();
+
+    BOOST_TEST_MESSAGE("------ checking blocked posting");
+    BOOST_CHECK_EQUAL(err.blocked_action, post.create_msg({_alice, "permlink"}));
+
+    BOOST_TEST_MESSAGE("------ checking success posting");
+    BOOST_CHECK_EQUAL(success(), post.create_msg({_bob, "permlink"}));
+
+    BOOST_TEST_MESSAGE("------ checking blocked reblog");
+    BOOST_CHECK_EQUAL(err.blocked_action, post.reblog_msg(_alice, {_bob, "permlink"}));
+
+    BOOST_TEST_MESSAGE("------ checking blocked upvoting");
+    BOOST_CHECK_EQUAL(err.blocked_action, post.upvote(_alice, {_bob, "permlink"}, 10000));
+
+    BOOST_TEST_MESSAGE("------ checking blocked downvoting");
+    BOOST_CHECK_EQUAL(err.blocked_action, post.downvote(_alice, {_bob, "permlink"}, 10000));
+
+    BOOST_TEST_MESSAGE("------ checking blocked registering witness");
+    BOOST_CHECK_EQUAL(err.blocked_action, ctrl.reg_witness(_alice, "http://www.ru"));
+
+    BOOST_TEST_MESSAGE("------ checking blocked starting witness");
+    BOOST_CHECK_EQUAL(err.blocked_action, ctrl.start_witness(_alice));
+
+    BOOST_TEST_MESSAGE("------ checking blocked vote witness");
+    BOOST_CHECK_EQUAL(err.blocked_action, ctrl.vote_witness(_alice, _bob));
+
+    produce_block();
+
+    BOOST_TEST_MESSAGE("--- fail to ban already banned user");
+    BOOST_CHECK_EQUAL(err.banned_account, ctrl.ban_account(_alice));
+    produce_block();
+
+    BOOST_TEST_MESSAGE("--- success to unban user");
+    BOOST_CHECK_EQUAL(success(), ctrl.unban_account(_alice));
+    produce_block();
+
+    BOOST_TEST_MESSAGE("--- fail to unban notbanned user");
+    BOOST_CHECK_EQUAL(err.not_banned_account, ctrl.unban_account(_alice));
+    produce_block();
+
+} FC_LOG_AND_RETHROW()
 
 BOOST_AUTO_TEST_SUITE_END()

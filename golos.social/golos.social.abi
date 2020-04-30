@@ -1,112 +1,120 @@
 {
-  "version": "cyberway::abi/1.1",
-  "types": [ ],
-  "structs": [
-     {
-        "name": "pinblock_record",
-        "base": "",
-        "fields": [
-           {"name": "account",   "type": "name"},
-           {"name": "pinning",   "type": "bool"},
-           {"name": "blocking",  "type": "bool"}
-        ]
-     },
-     {
-        "name": "accountmeta",
-        "base": "",
-        "fields": [
-           {"name": "type",              "type": "string?"},
-           {"name": "app",               "type": "string?"},
-           {"name": "email",             "type": "string?"},
-           {"name": "phone",             "type": "string?"},
-           {"name": "facebook",          "type": "string?"},
-           {"name": "instagram",         "type": "string?"},
-           {"name": "telegram",          "type": "string?"},
-           {"name": "vk",                "type": "string?"},
-           {"name": "whatsapp",          "type": "string?"},
-           {"name": "wechat",            "type": "string?"},
-           {"name": "website",           "type": "string?"},
-           {"name": "first_name",        "type": "string?"},
-           {"name": "last_name",         "type": "string?"},
-           {"name": "name",              "type": "string?"},
-           {"name": "birth_date",        "type": "string?"},
-           {"name": "gender",            "type": "string?"},
-           {"name": "location",          "type": "string?"},
-           {"name": "city",              "type": "string?"},
-           {"name": "about",             "type": "string?"},
-           {"name": "occupation",        "type": "string?"},
-           {"name": "i_can",             "type": "string?"},
-           {"name": "looking_for",       "type": "string?"},
-           {"name": "business_category", "type": "string?"},
-           {"name": "background_image",  "type": "string?"},
-           {"name": "cover_image",       "type": "string?"},
-           {"name": "profile_image",     "type": "string?"},
-           {"name": "user_image",        "type": "string?"},
-           {"name": "ico_address",       "type": "string?"},
-           {"name": "target_date",       "type": "string?"},
-           {"name": "target_plan",       "type": "string?"},
-           {"name": "target_point_a",    "type": "string?"},
-           {"name": "target_point_b",    "type": "string?"}
-        ]
-     },
-     {
-        "name": "pin",
-        "base": "",
-        "fields": [
-           {"name": "pinner",    "type": "name"},
-           {"name": "pinning",   "type": "name"}
-        ]
-     },
-     {
-        "name": "block",
-        "base": "",
-        "fields": [
-           {"name": "blocker",   "type": "name"},
-           {"name": "blocking",  "type": "name"}
-        ]
-     },
-     {
-        "name": "updatemeta",
-        "base": "",
-        "fields": [
-           {"name": "account",   "type": "name"},
-           {"name": "meta",      "type": "accountmeta"}
-        ]
-     },
-     {
-        "name": "delete",
-        "base": "",
-        "fields": [
-           {"name": "account",   "type": "name"}
-        ]
-     }
-  ],
-  "actions": [
-     {"name": "pin",          "type": "pin"},
-     {"name": "addpin",       "type": "pin"},
-     {"name": "unpin",        "type": "pin"},
-     {"name": "block",        "type": "block"},
-     {"name": "addblock",     "type": "block"},
-     {"name": "unblock",      "type": "block"},
-     {"name": "updatemeta",   "type": "updatemeta"},
-     {"name": "deletemeta",   "type": "delete"},
-  ],
-  "events": [ ],
-  "tables": [
-     {
-        "name": "pinblock",
-        "type": "pinblock_record",
-        "indexes": [
-           {
-              "name": "primary",
-              "unique": "true",
-              "orders": [
-                 {"field": "account", "order": "asc"}
-              ]
-           }
-        ]
-     },
-  ],
-  "error_messages": [ ],
-  "abi_extensions": [ ]
+    "____comment": "This file was generated with eosio-abigen. DO NOT EDIT ", 
+    "version": "cyberway::abi/1.1", 
+    "types": [], 
+    "structs": [{
+            "name": "accountmeta", "base": "", 
+            "fields": [
+                {"name": "type", "type": "string?"}, 
+                {"name": "app", "type": "string?"}, 
+                {"name": "email", "type": "string?"}, 
+                {"name": "phone", "type": "string?"}, 
+                {"name": "facebook", "type": "string?"}, 
+                {"name": "instagram", "type": "string?"}, 
+                {"name": "telegram", "type": "string?"}, 
+                {"name": "vk", "type": "string?"}, 
+                {"name": "whatsapp", "type": "string?"}, 
+                {"name": "wechat", "type": "string?"}, 
+                {"name": "website", "type": "string?"}, 
+                {"name": "first_name", "type": "string?"}, 
+                {"name": "last_name", "type": "string?"}, 
+                {"name": "name", "type": "string?"}, 
+                {"name": "birth_date", "type": "string?"}, 
+                {"name": "gender", "type": "string?"}, 
+                {"name": "location", "type": "string?"}, 
+                {"name": "city", "type": "string?"}, 
+                {"name": "about", "type": "string?"}, 
+                {"name": "occupation", "type": "string?"}, 
+                {"name": "i_can", "type": "string?"}, 
+                {"name": "looking_for", "type": "string?"}, 
+                {"name": "business_category", "type": "string?"}, 
+                {"name": "background_image", "type": "string?"}, 
+                {"name": "cover_image", "type": "string?"}, 
+                {"name": "profile_image", "type": "string?"}, 
+                {"name": "user_image", "type": "string?"}, 
+                {"name": "ico_address", "type": "string?"}, 
+                {"name": "target_date", "type": "string?"}, 
+                {"name": "target_plan", "type": "string?"}, 
+                {"name": "target_point_a", "type": "string?"}, 
+                {"name": "target_point_b", "type": "string?"}
+            ]
+        }, {
+            "name": "addblock", "base": "", 
+            "fields": [
+                {"name": "blocker", "type": "name"}, 
+                {"name": "blocking", "type": "name"}
+            ]
+        }, {
+            "name": "addpin", "base": "", 
+            "fields": [
+                {"name": "pinner", "type": "name"}, 
+                {"name": "pinning", "type": "name"}
+            ]
+        }, {
+            "name": "block", "base": "", 
+            "fields": [
+                {"name": "blocker", "type": "name"}, 
+                {"name": "blocking", "type": "name"}
+            ]
+        }, {
+            "name": "deletemeta", "base": "", 
+            "fields": [
+                {"name": "account", "type": "name"}
+            ]
+        }, {
+            "name": "pin", "base": "", 
+            "fields": [
+                {"name": "pinner", "type": "name"}, 
+                {"name": "pinning", "type": "name"}
+            ]
+        }, {
+            "name": "pinblock_record", "base": "", 
+            "fields": [
+                {"name": "account", "type": "name"}, 
+                {"name": "pinning", "type": "bool"}, 
+                {"name": "blocking", "type": "bool"}
+            ]
+        }, {
+            "name": "unblock", "base": "", 
+            "fields": [
+                {"name": "blocker", "type": "name"}, 
+                {"name": "blocking", "type": "name"}
+            ]
+        }, {
+            "name": "unpin", "base": "", 
+            "fields": [
+                {"name": "pinner", "type": "name"}, 
+                {"name": "pinning", "type": "name"}
+            ]
+        }, {
+            "name": "updatemeta", "base": "", 
+            "fields": [
+                {"name": "account", "type": "name"}, 
+                {"name": "meta", "type": "accountmeta"}
+            ]
+        }
+    ], 
+    "actions": [
+        {"name": "addblock", "type": "addblock"}, 
+        {"name": "addpin", "type": "addpin"}, 
+        {"name": "block", "type": "block"}, 
+        {"name": "deletemeta", "type": "deletemeta"}, 
+        {"name": "pin", "type": "pin"}, 
+        {"name": "unblock", "type": "unblock"}, 
+        {"name": "unpin", "type": "unpin"}, 
+        {"name": "updatemeta", "type": "updatemeta"}
+    ], 
+    "events": [], 
+    "tables": [{
+            "name": "pinblock", "type": "pinblock_record", 
+            "indexes": [{
+                    "name": "primary", "unique": true, 
+                    "orders": [
+                        {"field": "account", "order": "asc"}
+                    ]
+                }
+            ]
+        }
+    ], 
+    "variants": []
 }

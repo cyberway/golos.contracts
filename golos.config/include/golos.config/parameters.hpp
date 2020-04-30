@@ -27,14 +27,14 @@ using emit_token_symbol_threshold_param = param_wrapper<base_threshold<&_name_to
 
 using cfg_param = std::variant<emit_pools_threshold_param, emit_infrate_threshold_param, emit_token_symbol_threshold_param>;
 
-struct [[eosio::table]] cfg_state {
+struct cfg_state {
     emit_pools_threshold_param pools_threshold;
     emit_infrate_threshold_param infrate_threshold;
     emit_token_symbol_threshold_param token_symbol_threshold;
 
     static constexpr int params_count = 3;
 };
-using cfg_params_singleton = eosio::singleton<N(cfgparams), cfg_state>;
+using cfg_params_singleton [[using eosio: order("id","asc")]] = eosio::singleton<N(cfgparams), cfg_state>;
 
 
 } // golos

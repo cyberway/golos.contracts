@@ -140,8 +140,8 @@ void charge::setrestorer(symbol_code token_code, uint8_t charge_id, std::string 
 }
 
 void charge::send_charge_event(name user, const balance& state) {
-    auto data = std::make_tuple(
-        user, state.charge_symbol, state.token_code, state.charge_id, state.last_update, int_cast(FP(state.value)));
+    auto data = chargestate{
+        user, state.charge_symbol, state.token_code, state.charge_id, state.last_update, int_cast(FP(state.value))};
     eosio::event(_self, "chargestate"_n, data).send();
 }
 
@@ -172,12 +172,5 @@ void charge::usenotifylt(name user, symbol_code token_code, uint8_t charge_id, i
     consume_and_notify(user, token_code, charge_id, price_arg, id, code, action_name, cutoff,
         [](auto value, auto limit) {return value < limit;});
 }
-
-EOSIO_DISPATCH(charge, (use)(usenotifygt)(usenotifylt)
-#ifndef DISABLE_CHARGE_STORABLE
-    (useandstore)(removestored)
-#endif
-    (setrestorer)
-)
 
 } /// namespace golos

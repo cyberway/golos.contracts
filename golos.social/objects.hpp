@@ -30,7 +30,7 @@ namespace tables {
 
 using namespace eosio;
 
-using pinblock_table = multi_index<"pinblock"_n, structures::pinblock_record>;
+using pinblock_table [[using eosio: order("account","asc"), contract("golos.social")]] = multi_index<"pinblock"_n, structures::pinblock_record>;
 }
 
 

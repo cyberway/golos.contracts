@@ -5,26 +5,27 @@
 #include <eosio/eosio.hpp>
 #include <eosio/transaction.hpp>
 #include "config.hpp"
+#include <common/dispatchers.hpp>
 
 namespace golos {
 
 
 using namespace eosio;
 
-class vesting : public contract {
+class [[eosio::contract("golos.vesting")]] vesting : public contract {
 public:
     using contract::contract;
 
-    [[eosio::action]] void validateprms(symbol symbol, std::vector<vesting_param>);
-    [[eosio::action]] void setparams(symbol symbol, std::vector<vesting_param>);
+    [[eosio::action]] void validateprms(symbol symbol, std::vector<vesting_param> params);
+    [[eosio::action]] void setparams(symbol symbol, std::vector<vesting_param> params);
 
     [[eosio::action]] void retire(asset quantity, name user);
     [[eosio::action]] void unlocklimit(name owner, asset quantity);
 
     [[eosio::action]] void withdraw(name from, name to, asset quantity);
-    [[eosio::action]] void stopwithdraw(name owner, symbol type);
-    [[eosio::action]] void delegate(name delegator, name delegatee, asset quantity, uint16_t interest_rate);
-    [[eosio::action]] void undelegate(name delegator, name delegatee, asset quantity);
+    [[eosio::action]] void stopwithdraw(name owner, symbol symbol);
+    [[eosio::action]] void delegate(name from, name to, asset quantity, uint16_t interest_rate);
+    [[eosio::action]] void undelegate(name from, name to, asset quantity); // from is delegator, to is delegatee
 
     [[eosio::action]] void create(symbol symbol, name notify_acc);
 
@@ -33,11 +34,11 @@ public:
 
     [[eosio::action]] void procwaiting(symbol symbol, name payer);
 
-    void on_transfer(name from, name to, asset quantity, std::string memo);
-    void on_bulk_transfer(name from, std::vector<token::recipient> recipients);
+    ON_SIMPLE_TRANSFER(CYBER_TOKEN) void on_transfer(name from, name to, asset quantity, std::string memo);
+    ON_BULK_TRANSFER(CYBER_TOKEN) void on_bulk_transfer(name from, std::vector<token::recipient> recipients);
 
     // tables
-    struct [[eosio::table]] vesting_stats {
+    struct vesting_stats {
         asset supply;
         name notify_acc;
 
@@ -46,7 +47,7 @@ public:
         }
     };
 
-    struct [[eosio::table]] account {
+    struct account {
         asset vesting;
         asset delegated;        // TODO: this (incl. 2 fields below) can be share_type to reduce memory usage #554
         asset received;
@@ -70,7 +71,7 @@ public:
         }
     };
 
-    struct [[eosio::table]] delegation {
+    struct delegation {
         uint64_t id;
         name delegator;
         name delegatee;
@@ -83,7 +84,7 @@ public:
         }
     };
 
-    struct [[eosio::table]] return_delegation {
+    struct return_delegation {
         uint64_t id;
         name delegator;
         asset quantity;
@@ -94,8 +95,8 @@ public:
         }
     };
 
-    struct [[eosio::table]] withdraw_record {
-        name from;
+    struct withdrawal {
+        name owner;
         name to;
         uint32_t interval_seconds;
         uint8_t remaining_payments; // decreasing counter
@@ -104,24 +105,31 @@ public:
         asset to_withdraw;          // remaining amount of vesting to withdraw
 
         uint64_t primary_key() const {
-            return from.value;
+            return owner.value;
         }
     };
 
-    using vesting_table = multi_index<"stat"_n, vesting_stats>;
-    using account_table = multi_index<"accounts"_n, account>;
+    using vesting_table [[eosio::order("supply._sym","asc")]] = multi_index<"stat"_n, vesting_stats>;
+    using account_table [[eosio::order("vesting._sym","asc")]] = multi_index<"accounts"_n, account>;
 
-    using delegation_table = multi_index<"delegation"_n, delegation,
+    using delegator_index [[using eosio: order("delegator","asc"), order("delegatee","asc")]] =
         indexed_by<"delegator"_n, composite_key<delegation,
             member<delegation, name, &delegation::delegator>,
-            member<delegation, name, &delegation::delegatee>>>,
-        indexed_by<"delegatee"_n, member<delegation, name, &delegation::delegatee>>>;
+            member<delegation, name, &delegation::delegatee>>>;
+    using delegatee_index [[using eosio: order("delegatee","asc"), non_unique]] =
+        indexed_by<"delegatee"_n, member<delegation, name, &delegation::delegatee>>;
+    using delegation_table [[using eosio: order("id","asc"), scope_type("symbol_code")]] =
+        multi_index<"delegation"_n, delegation, delegator_index, delegatee_index>;
 
-    using return_delegation_table = multi_index<"rdelegation"_n, return_delegation,
-        indexed_by<"date"_n, member<return_delegation, time_point_sec, &return_delegation::date>>>;
+    using date_index [[using eosio: order("date","asc"), non_unique]] =
+        indexed_by<"date"_n, member<return_delegation, time_point_sec, &return_delegation::date>>;
+    using return_delegation_table [[eosio::order("id","asc")]] =
+        multi_index<"rdelegation"_n, return_delegation, date_index>;
 
-    using withdraw_table = multi_index<"withdrawal"_n, withdraw_record,
-        indexed_by<"nextpayout"_n, member<withdraw_record, time_point_sec, &withdraw_record::next_payout>>>;
+    using next_payout_index [[using eosio: order("next_payout","asc"), non_unique]] =
+        indexed_by<"nextpayout"_n, member<withdrawal, time_point_sec, &withdrawal::next_payout>>;
+    using withdraw_table [[using eosio: order("owner","asc"), scope_type("symbol_code")]] =
+        multi_index<"withdrawal"_n, withdrawal, next_payout_index>;
 
 
     // interface for external contracts
@@ -177,6 +185,17 @@ public:
         }
         return result;
     }
+
+    struct [[eosio::event("stat")]] vesting_supply {
+        asset supply;
+    };
+
+    struct [[eosio::event("balance")]] balance_event {
+        name account;
+        asset vesting;
+        asset delegated;
+        asset received;
+    };
 
 private:
     void providebw_for_trx(eosio::transaction& trx, const permission_level& provider);

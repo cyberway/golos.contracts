@@ -12,7 +12,7 @@ find_package(cyberway.cdt)
 
 ### Check the version of cyberway.cdt
 set(VERSION_MATCH_ERROR_MSG "")
-EOSIO_CHECK_VERSION(VERSION_OUTPUT "${CYBERWAY_CDT_VERSION}"
+CYBERWAY_CHECK_VERSION(VERSION_OUTPUT "${CYBERWAY_CDT_VERSION}"
                                    "${CYBERWAY_CDT_VERSION_MIN}"
                                    "${CYBERWAY_CDT_VERSION_SOFT_MAX}"
                                    "${CYBERWAY_CDT_VERSION_HARD_MAX}"
@@ -32,12 +32,32 @@ else()
    set(TEST_BUILD_TYPE ${CMAKE_BUILD_TYPE})
 endif()
 
+macro(install_contract TARGET)
+   install (TARGETS ${TARGET}.wasm DESTINATION ${CMAKE_INSTALL_PREFIX}/${TARGET}/)
+   install (FILES ${CMAKE_CURRENT_BINARY_DIR}/${TARGET}.abi DESTINATION ${CMAKE_INSTALL_PREFIX}/${TARGET}/)
+endmacro()
+
+macro(add_contract_with_checked_abi CONTRACT_NAME TARGET ABIFILE)
+    add_contract(${CONTRACT_NAME} ${TARGET} ${ARGN})
+    get_target_property(BINOUTPUT ${TARGET}.wasm BINARY_DIR)
+    if(ABICHECK STREQUAL "true")
+      add_custom_command(TARGET ${TARGET}.wasm POST_BUILD
+         COMMAND ${PROJECT_SOURCE_DIR}/scripts/deployutils/abiprinter.py <${BINOUTPUT}/${TARGET}.abi >${BINOUTPUT}/${TARGET}.abi.pretty)
+      add_custom_target(${TARGET}.abicheck ALL
+         COMMAND ${CYBERWAY_ABIDIFF} ${CMAKE_CURRENT_SOURCE_DIR}/${ABIFILE} ${BINOUTPUT}/${TARGET}.abi
+         DEPENDS ${TARGET}.wasm ${ABIFILE}
+      )
+    else()
+      add_custom_command(TARGET ${TARGET}.wasm POST_BUILD
+      COMMAND ${PROJECT_SOURCE_DIR}/scripts/deployutils/abiprinter.py <${BINOUTPUT}/${TARGET}.abi >${CMAKE_CURRENT_SOURCE_DIR}/${ABIFILE})
+   endif()
+endmacro()
+
 macro(add_contract_with_abi TARGET ABIFILE)
    add_executable( ${TARGET}.wasm ${ARGN} )
    target_compile_options( ${TARGET}.wasm PUBLIC -std=c++17)
    configure_file(${ABIFILE} ${CMAKE_CURRENT_BINARY_DIR}/${TARGET}.abi COPYONLY)
-   install (TARGETS ${TARGET}.wasm DESTINATION ${CMAKE_INSTALL_PREFIX}/${TARGET}/)
-   install (FILES ${CMAKE_CURRENT_BINARY_DIR}/${TARGET}.abi DESTINATION ${CMAKE_INSTALL_PREFIX}/${TARGET}/)
+   install_contract(${TARGET})
 endmacro()
 
 if (NOT DEFINED TOKEN_INCLUDE_PATH)
@@ -61,6 +81,7 @@ if (NOT DEFINED VESTING_NAME)
 endif(NOT DEFINED VESTING_NAME)
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/common/config.hpp.in ${CMAKE_CURRENT_SOURCE_DIR}/common/config.hpp)
+set(CYBERWAY_ABIDIFF ${CYBERWAY_CDT_ROOT}/bin/cyberway-abidiff)
 
 # include_directories(AFTER ${BOOST_ROOT}/include)
 add_subdirectory(golos.ctrl)
