@@ -6,6 +6,7 @@
 #include "golos.posting_test_api.hpp"
 #include "golos.vesting_test_api.hpp"
 #include "golos.charge_test_api.hpp"
+#include "golos.ctrl_test_api.hpp"
 #include "cyber.token_test_api.hpp"
 #include "../golos.publication/types.h"
 #include "../golos.publication/config.hpp"
@@ -38,6 +39,7 @@ protected:
     golos_vesting_api vest;
     golos_charge_api charge;
     cyber_token_api token;
+    golos_ctrl_api ctrl;
 
     account_name _forum_name;
     account_name _issuer;
@@ -72,6 +74,7 @@ public:
         , vest({this, cfg::vesting_name, _token_symbol})
         , charge({this, cfg::charge_name, _token_symbol})
         , token({this, cfg::token_name, _token_symbol})
+        , ctrl({this, cfg::control_name})
 
         , _issuer(N(issuer))
         , _users{N(alice), N(bob), N(carol), N(user), N(u1), N(u2), N(u3), N(u4), N(u5)} {
@@ -85,6 +88,7 @@ public:
         vest.initialize_contract(cfg::token_name);
         charge.initialize_contract();
         post.initialize_contract(cfg::token_name, cfg::charge_name);
+        ctrl.initialize_contract(cfg::token_name);
 
         set_authority(_issuer, cfg::invoice_name, create_code_authority({charge._code, post._code}), "active");
         link_authority(_issuer, charge._code, cfg::invoice_name, N(use));

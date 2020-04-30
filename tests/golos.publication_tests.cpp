@@ -4,6 +4,7 @@
 #include "golos.charge_test_api.hpp"
 #include "cyber.token_test_api.hpp"
 #include "golos.social_test_api.hpp"
+#include "golos.ctrl_test_api.hpp"
 #include "../golos.publication/types.h"
 #include "contracts.hpp"
 #include <eosio/chain/asset.hpp>
@@ -24,6 +25,7 @@ protected:
     golos_vesting_api vest;
     golos_charge_api charge;
     cyber_token_api token;
+    golos_ctrl_api ctrl;
 
     std::vector<account_name> _users;
 public:
@@ -35,6 +37,7 @@ public:
         , vest({this, cfg::vesting_name, _sym})
         , charge({this, cfg::charge_name, _sym})
         , token({this, cfg::token_name, _sym})
+        , ctrl({this, cfg::control_name})
         , _users{_code, N(jackiechan), N(brucelee), N(chucknorris)} {
 
         produce_block();
@@ -47,6 +50,7 @@ public:
         vest.initialize_contract(cfg::token_name);
         charge.initialize_contract();
         post.initialize_contract(cfg::token_name, cfg::charge_name);
+        ctrl.initialize_contract(cfg::token_name);
     }
 
     void init() {
