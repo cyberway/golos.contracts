@@ -3,6 +3,7 @@
 #include <golos.social/golos.social.hpp>
 #include <golos.vesting/golos.vesting.hpp>
 #include <golos.referral/golos.referral.hpp>
+#include <golos.ctrl/golos.ctrl.hpp>
 #include <golos.charge/golos.charge.hpp>
 #include <common/upsert.hpp>
 #include "utils.hpp"
@@ -75,6 +76,7 @@ void publication::createmssg(
     std::optional<asset> max_payout = std::nullopt
 ) {
     require_auth(message_id.author);
+    eosio::check(!control::is_blocking(config::control_name, message_id.author), "You are blocked.");
 
 #   ifdef DISABLE_CHARGE_VESTING
     eosio::check(!vestpayment, "vestpayment disabled");
@@ -98,13 +100,12 @@ void publication::createmssg(
         curators_prcnt = curators_prcnt_param.min_curators_prcnt;
     }
 
-    // TODO: Temporarily disabled - not all blockings stored in table and now this check anyway should be in client
-    // if (parent_id.author) {
-    //     if (social_acc_param.value) {
-    //         eosio::check(!social::is_blocking(social_acc_param.value, parent_id.author, message_id.author),
-    //                 "You are blocked by this account");
-    //     }
-    // }
+     if (parent_id.author) {
+         if (social_acc_param.value) {
+             eosio::check(!social::is_blocking(social_acc_param.value, parent_id.author, message_id.author),
+                     "You are blocked by this account");
+         }
+     }
 
     // close after basic checks. or else it can consume CPU on closing and fail later on bad input params
     closemssgs(message_id.author);
@@ -298,6 +299,7 @@ void publication::updatemssg(structures::mssgid message_id,
                              std::string languagemssg, std::vector<std::string> tags,
                              std::string jsonmetadata) {
     require_auth(message_id.author);
+    eosio::check(!control::is_blocking(config::control_name, message_id.author), "You are blocked.");
     tables::permlink_table permlink_table(_self, message_id.author.value);
     auto permlink_index = permlink_table.get_index<"byvalue"_n>();
     auto permlink_itr = permlink_index.find(message_id.permlink);
@@ -314,7 +316,6 @@ auto publication::get_pool(tables::reward_pools& pools, uint64_t time) {
 
 void publication::deletemssg(structures::mssgid message_id) {
     require_auth(message_id.author);
-
     tables::permlink_table permlink_table(_self, message_id.author.value);
     auto permlink_index = permlink_table.get_index<"byvalue"_n>();
     auto permlink_itr = permlink_index.find(message_id.permlink);
@@ -355,12 +356,14 @@ void publication::deletemssg(structures::mssgid message_id) {
 }
 
 void publication::upvote(name voter, structures::mssgid message_id, percent_t weight) {
+    eosio::check(!control::is_blocking(config::control_name, voter), "You are blocked.");
     eosio::check(weight > 0, "weight can't be 0.");
     eosio::check(weight <= config::_100percent, "weight can't be more than 100%.");
     set_vote(voter, message_id, weight);
 }
 
 void publication::downvote(name voter, structures::mssgid message_id, percent_t weight) {
+    eosio::check(!control::is_blocking(config::control_name, voter), "You are blocked.");
     eosio::check(weight > 0, "weight can't be 0.");
     eosio::check(weight <= config::_100percent, "weight can't be more than 100%.");
     set_vote(voter, message_id, -weight);
@@ -1161,7 +1164,7 @@ void publication::setparams(std::vector<posting_params> params) {
 
 void publication::reblog(name rebloger, structures::mssgid message_id, std::string headermssg, std::string bodymssg) {
     require_auth(rebloger);
-
+    eosio::check(!control::is_blocking(config::control_name, rebloger), "You are blocked.");
     eosio::check(rebloger != message_id.author, "You cannot reblog your own content.");
     eosio::check(headermssg.length() < config::max_length, "Title length is more than 256.");
     eosio::check(

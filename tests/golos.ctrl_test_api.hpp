@@ -21,6 +21,8 @@ struct golos_ctrl_api: base_contract_api {
         _tester->link_authority(_code, token, cfg::code_name, N(transfer));
         _tester->link_authority(_code, token, cfg::code_name, N(payment));
         _tester->link_authority(_code, token, cfg::code_name, N(bulkpayment));
+        _tester->link_authority(_code, _code, cfg::code_name, N(ban));
+        _tester->link_authority(_code, _code, cfg::code_name, N(unban));
     }
 
     //// control actions
@@ -82,6 +84,14 @@ struct golos_ctrl_api: base_contract_api {
         return push(N(changevest), who, args()
             ("who", who)
             ("diff", diff));
+    }
+
+    action_result ban_account(name account) {
+        return push(N(ban), _code, args()("account", account));
+    }
+
+    action_result unban_account(name account) {
+        return push(N(unban), _code, args()("account", account));
     }
 
     variant get_params() const {
