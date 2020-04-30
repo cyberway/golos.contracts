@@ -3,6 +3,8 @@
 #include "golos.vesting_test_api.hpp"
 #include "golos.referral_test_api.hpp"
 #include "cyber.token_test_api.hpp"
+#include "golos.vesting_test_api.hpp"
+#include "golos.ctrl_test_api.hpp"
 #include "contracts.hpp"
 
 
@@ -21,6 +23,7 @@ public:
         , vest({this, cfg::vesting_name, _sym_vest})
         , referral({this, _code})
         , token({this, cfg::token_name, _sym})
+        , ctrl({this, cfg::control_name})
         , _users{N(sania), N(pasha), N(tania), N(vania), N(issuer)}
     {
         create_accounts({N(sania), N(pasha), N(tania), N(vania), _code,
@@ -34,6 +37,7 @@ public:
         vest.initialize_contract(cfg::token_name);
         post.initialize_contract(cfg::token_name, cfg::charge_name);
         referral.initialize_contract(cfg::token_name);
+        ctrl.initialize_contract(cfg::token_name);
 
         BOOST_CHECK_EQUAL(success(), token.create(cfg::issuer_name, token.make_asset(10000)));
         BOOST_CHECK_EQUAL(success(), token.open(cfg::publish_name, _sym, cfg::publish_name));
@@ -108,6 +112,7 @@ protected:
     golos_vesting_api vest;
     golos_referral_api referral;
     cyber_token_api token;
+    golos_ctrl_api ctrl;
 
     const asset min_breakout = token.make_asset(10);
     const asset max_breakout = token.make_asset(100);
