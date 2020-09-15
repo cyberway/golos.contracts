@@ -137,7 +137,8 @@
                 {"name": "url", "type": "string"}, 
                 {"name": "active", "type": "bool"}, 
                 {"name": "total_weight", "type": "uint64"}, 
-                {"name": "counter_votes", "type": "uint64"}
+                {"name": "counter_votes", "type": "uint64"}, 
+                {"name": "last_update", "type": "time_point_sec$"}
             ]
         }, {
             "name": "witness_voter", "base": "", 
@@ -150,7 +151,8 @@
             "fields": [
                 {"name": "witness", "type": "name"}, 
                 {"name": "weight", "type": "uint64"}, 
-                {"name": "active", "type": "bool"}
+                {"name": "active", "type": "bool"}, 
+                {"name": "last_update", "type": "time_point_sec"}
             ]
         }
     ], 

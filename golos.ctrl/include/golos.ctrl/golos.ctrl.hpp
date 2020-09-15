@@ -7,6 +7,7 @@
 #include <eosio/asset.hpp>
 #include <eosio/singleton.hpp>
 #include <eosio/crypto.hpp>
+#include <eosio/binary_extension.hpp>
 #include <vector>
 #include <string>
 #include <common/dispatchers.hpp>
@@ -24,6 +25,10 @@ struct witness_info {
 
     uint64_t total_weight;
     uint64_t counter_votes;
+
+    // binary_extension is for compatibility with old DB before contract upgraded
+    // note: it can be added only to end of table
+    eosio::binary_extension<time_point_sec, eosio::write_strategy::no_value> last_update;
 
     uint64_t primary_key() const {
         return name.value;
@@ -125,10 +130,10 @@ private:
         name witness;
         uint64_t weight;
         bool active;
+        time_point_sec last_update;
     };
 
     void send_witness_event(const witness_info& wi);
-    void active_witness(golos::name witness, bool flag);
 };
 
 

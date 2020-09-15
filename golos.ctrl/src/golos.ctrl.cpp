@@ -144,6 +144,7 @@ void control::regwitness(name witness, string url) {
             w.name = witness;
             w.url = url;
             w.active = true;
+            w.last_update.emplace(eosio::current_time_point());
         };
     });
 
@@ -166,15 +167,38 @@ void control::unregwitness(name witness) {
 
 void control::stopwitness(name witness) {
     assert_started();
-    require_auth(witness);
-    active_witness(witness, false);
+    const auto now = eosio::current_time_point();
+
+    // TODO: simplify upsert to allow passing just inner lambda
+    bool exists = upsert_tbl<witness_tbl>(witness, [&](bool) {
+        return [&](witness_info& w) {
+            eosio::check(w.active, "active flag not updated");
+            if (!has_auth(witness)) {
+                eosio::check(now - w.last_update.value_or() > eosio::seconds(config::witness_expiration_sec), "recently updated witness can be stopped only by itself");
+            }
+            w.active = false;
+            send_witness_event(w);
+        };
+    }, false);
+    eosio::check(exists, "witness not found");
+    update_auths();
 }
 
 void control::startwitness(name witness) {
     eosio::check(!control::is_blocking(config::control_name, witness), "You are blocked.");
     assert_started();
     require_auth(witness);
-    active_witness(witness, true);
+
+    // TODO: simplify upsert to allow passing just inner lambda
+    bool exists = upsert_tbl<witness_tbl>(witness, [&](bool) {
+        return [&](witness_info& w) {
+            w.active = true;
+            w.last_update.emplace(eosio::current_time_point());
+            send_witness_event(w);
+        };
+    }, false);
+    eosio::check(exists, "witness not found");
+    update_auths();
 }
 
 // Note: if not weighted, it's possible to pass all witnesses in vector like in BP actions
@@ -386,23 +410,8 @@ void control::update_auths() {
 }
 
 void control::send_witness_event(const witness_info& wi) {
-    witnessstate data{wi.name, wi.total_weight, wi.active};
+    witnessstate data{wi.name, wi.total_weight, wi.active, wi.last_update.value_or()};
     eosio::event(_self, "witnessstate"_n, data).send();
-}
-
-void control::active_witness(name witness, bool flag) {
-    // TODO: simplify upsert to allow passing just inner lambda
-    bool exists = upsert_tbl<witness_tbl>(witness, [&](bool) {
-        return [&](witness_info& w) {
-            eosio::check(flag != w.active, "active flag not updated");
-            w.active = flag;
-
-            send_witness_event(w);
-        };
-    }, false);
-    eosio::check(exists, "witness not found");
-
-    update_auths();
 }
 
 vector<witness_info> control::top_witness_info() {
